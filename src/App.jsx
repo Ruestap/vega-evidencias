@@ -2020,24 +2020,38 @@ function LoginScreen({pins,auditores,onLogin}){
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
         <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
 
-        {/* ── PANTALLA INICIO: 2 accesos claros ── */}
+        {/* ── PANTALLA INICIO: 3 accesos directos ── */}
         {step==="inicio"&&(
           <>
-            <p style={{margin:"0 0 20px",fontSize:13,color:"#5a7a9a"}}>¿Cómo deseas ingresar?</p>
+            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
+            {/* Auditor → DNI */}
             <button onClick={()=>{setStep("dni_auditor");setErr("");}}
-              style={{width:"100%",padding:"16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",fontSize:15,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-              <span style={{fontSize:22}}>🪪</span>
-              <div style={{textAlign:"left"}}>
-                <div style={{fontSize:14,fontWeight:800}}>Soy Auditor</div>
-                <div style={{fontSize:11,fontWeight:400,opacity:.8}}>Ingreso con mi DNI</div>
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <span style={{fontSize:24,flexShrink:0}}>🪪</span>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
+                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingreso con mi DNI</div>
               </div>
             </button>
+            {/* Admin → código */}
             <button onClick={()=>{setStep("pin_admin");setErr("");}}
-              style={{width:"100%",padding:"14px",borderRadius:14,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:14,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-              <span style={{fontSize:18}}>🔑</span>
-              <div style={{textAlign:"left"}}>
-                <div style={{fontSize:13,fontWeight:700}}>Admin / Gerencia</div>
-                <div style={{fontSize:11,fontWeight:400}}>Código de acceso</div>
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <span style={{fontSize:24,flexShrink:0}}>👑</span>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
+                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Código de acceso</div>
+              </div>
+            </button>
+            {/* Viewer → código directo */}
+            <button onClick={()=>{
+              const v=pins.viewer;
+              if(v){onLogin("viewer","Gerencia","");}
+            }}
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <span style={{fontSize:24,flexShrink:0}}>👁️</span>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor</div>
+                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Dashboard gerencial</div>
               </div>
             </button>
           </>
