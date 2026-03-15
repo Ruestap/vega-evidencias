@@ -97,10 +97,10 @@ const FMT = {
   Market:         {c:"#00b5b4",bg:"#e0fafa"},
 };
 const PUNTAJES = [
-  {pct:100,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
-  {pct:80, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
-  {pct:60, icon:"🥉",label:"BRONCE", c:"#a29bfe",bg:"#f0edff",key:"c60"},
-  {pct:0,  icon:"🔴",label:"FUERA",  c:"#d63031",bg:"#ffeae6",key:null},
+  {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
+  {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
+  {pct:6, icon:"🥉",label:"BRONCE", c:"#a29bfe",bg:"#f0edff",key:"c60"},
+  {pct:0, icon:"🔴",label:"FUERA",  c:"#d63031",bg:"#ffeae6",key:null},
 ];
 
 /* ══ UTILS ══════════════════════════════════════════════ */
@@ -113,9 +113,9 @@ const toMin    = h  => { if(!h)return 9999; const[hh,mm]=h.split(":").map(Number
 function calcP(hora, r) {
   if(!hora) return null;
   const R=r||RANGOS_DEFAULT, m=toMin(hora);
-  if(m<=toMin(R.c100)) return 100;
-  if(m<=toMin(R.c80))  return 80;
-  if(m<=toMin(R.c60))  return 60;
+  if(m<=toMin(R.c100)) return 10;
+  if(m<=toMin(R.c80))  return 8;
+  if(m<=toMin(R.c60))  return 6;
   return 0;
 }
 function primerEnvio(evs) {
@@ -129,14 +129,14 @@ function puntajeReg(reg, r) {
 }
 function getTier(s) {
   if(s===null||s===undefined) return {label:"S/D",icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
-  if(s>=100) return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
-  if(s>=80)  return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
-  if(s>=60)  return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
+  if(s>=10)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
+  if(s>=8)   return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
+  if(s>=6)   return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
   if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
   return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
-function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=85)return"#00b894";if(v>=75)return"#74b9ff";if(v>=60)return"#e17055";return"#d63031";}
-function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=85)return"#e8faf5";if(v>=75)return"#e8f4fd";if(v>=60)return"#fff1ee";return"#ffeae6";}
+function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=9.5)return"#f6a623";if(v>=8.5)return"#00b894";if(v>=7.5)return"#74b9ff";if(v>=6)return"#e17055";return"#d63031";}
+function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=9.5)return"#fff8ec";if(v>=8.5)return"#e8faf5";if(v>=7.5)return"#e8f4fd";if(v>=6)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
   const weeks=[], last=new Date(year,month+1,0).getDate();
@@ -262,7 +262,13 @@ export default function ChecklistApp() {
     const docId=k.replace(/\|/g,"--");
     return regs[docId]||regs[k]||null;
   },[regs]);
-  const isExc  = useCallback((tId,aId)=>exceps[tId+"|"+aId]===true,[exceps]);
+  const isExc = useCallback((tId,aId,fechaCheck)=>{
+    const v = exceps[tId+"|"+aId];
+    if(!v) return false;
+    if(v===true) return true; // legacy: permanente
+    if(Array.isArray(v)) return v.includes(fechaCheck||fecha);
+    return false;
+  },[exceps,fecha]);
 
   const showToast = msg=>{
     setToast(msg);
@@ -274,7 +280,7 @@ export default function ChecklistApp() {
   const kpisDia = useMemo(()=>{
     if(!actSel)return{total:0,IC:0,IP:0,SE:0,TR:0,SG:0,al100:0,conEnvio:0};
     const AR=getRangoActivo(actSel,fecha);
-    const ts=tiAct.filter(ti=>!isExc(ti.id,actSel));
+    const ts=tiAct.filter(ti=>!isExc(ti.id,actSel,fecha));
     const total=ts.length;
     const withEnv=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)!==null);
     const pts=ts.map(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR));
@@ -297,7 +303,7 @@ export default function ChecklistApp() {
     sem.days.forEach(day=>{
       const ds=dStr(vYear,vMonth,day);
       const dw=getDow(ds);
-      acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(tId,a.id)).forEach(a=>{
+      acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
         if(p!==null)scores.push(p);
       });
@@ -318,8 +324,8 @@ export default function ChecklistApp() {
   const tFilt = useMemo(()=>tiAct.filter(ti=>{
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
-    // N/A siempre visible (excepcion marcada por admin)
-    if(isExc(ti.id,actSel)) return true;
+    // N/A siempre visible solo si aplica para la fecha actual
+    if(isExc(ti.id,actSel,fecha)) return true;
     // registradas: ocultar siempre salvo admin con toggle activo
     if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
@@ -398,11 +404,21 @@ export default function ChecklistApp() {
   const toggleExcepcion = async (tId, aId) => {
     const key = tId+"|"+aId;
     const newExceps = {...exceps};
-    if(newExceps[key]) delete newExceps[key];
-    else newExceps[key] = true;
+    const cur = newExceps[key];
+    // cur puede ser: undefined, true (legacy), o array de fechas
+    const fechas = Array.isArray(cur) ? cur : (cur===true ? [] : []);
+    if(fechas.includes(fecha)){
+      // quitar esta fecha
+      const updated = fechas.filter(f=>f!==fecha);
+      if(updated.length===0) delete newExceps[key];
+      else newExceps[key] = updated;
+      showToast("✅ Excepción removida para esta fecha");
+    } else {
+      newExceps[key] = [...fechas, fecha];
+      showToast("⚠️ Tienda excluida solo para "+fecha);
+    }
     setExceps(newExceps);
     await saveConfig({excepciones: newExceps});
-    showToast(newExceps[key] ? "⚠️ Tienda excluida de esta actividad" : "✅ Excepción removida");
   };
 
   const navMes=(dir)=>{
@@ -509,17 +525,24 @@ export default function ChecklistApp() {
 
       {/* barra de estado — pendientes vs registradas */}
       {(()=>{
-        const tEvalAct = tiAct.filter(ti=>!isExc(ti.id,actSel));
-        const nTotal   = tEvalAct.length;
+        const tTotal   = tiAct; // todas activas
+        const tNA      = tiAct.filter(ti=>isExc(ti.id,actSel,fecha));
+        const tEvalAct = tiAct.filter(ti=>!isExc(ti.id,actSel,fecha));
+        const nTotal   = tTotal.length;
+        const nNA      = tNA.length;
+        const nEval    = tEvalAct.length;
         const nReg     = tEvalAct.filter(ti=>tRegistradas.has(ti.id)).length;
-        const nPend    = nTotal - nReg;
+        const nPend    = nEval - nReg;
         return(
       <div style={{padding:"8px 16px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{fontSize:12,color:"#8aaabb",fontWeight:700}}>{nPend} pendiente{nPend!==1?"s":""}</span>
+          <span style={{fontSize:11,color:"#5a7a9a",fontWeight:700}}>Total {nTotal}</span>
+          <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
+          <span style={{fontSize:11,color:"#1a2f4a",fontWeight:800}}>{nEval} disponible{nEval!==1?"s":""}</span>
           {nReg>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {nReg} registrada{nReg!==1?"s":""}</span>}
-          <span style={{fontSize:10,color:"#c8d8e8"}}>de {nTotal} evaluables</span>
-          {!isAdmin&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
+          {nPend>0&&<span style={S.pill("#0984e3","#e8f4fd")}>⏳ {nPend} pendiente{nPend!==1?"s":""}</span>}
+          {nNA>0&&<span style={S.pill("#854F0B","#FAEEDA")}>N/A {nNA}</span>}
+          {!isAdmin&&nNA===0&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           {isAdmin&&nReg>0&&(
@@ -528,9 +551,9 @@ export default function ChecklistApp() {
               {verRegistradas?"📋 Ver solo pendientes":"👁 Ver registradas también"}
             </button>
           )}
-          <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel)).map(ti=>ti.id)))}
+          <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).map(ti=>ti.id)))}
             style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
-            {tSel.size===tFilt.filter(ti=>!isExc(ti.id,actSel)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
+            {tSel.size===tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
           </button>
         </div>
       </div>
@@ -542,7 +565,7 @@ export default function ChecklistApp() {
         {tFilt.map(tienda=>{
           const sel=tSel.has(tienda.id);
           const reg=tRegistradas.has(tienda.id);
-          const exc=isExc(tienda.id,actSel);
+          const exc=isExc(tienda.id,actSel,fecha);
           const fc=FMT[tienda.f];
           return(
             <div key={tienda.id}
@@ -826,7 +849,7 @@ export default function ChecklistApp() {
                             })()}
                           </td>
                           {semsVis.map(sem=>actsActivas.map(a=>{
-                            const excepcion=isExc(tr.id,a.id);
+                            const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
                             const v=scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
@@ -847,9 +870,9 @@ export default function ChecklistApp() {
                                     onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
                                     onTouchEnd={()=>clearTimeout(longPressRef.current)}
                                     style={{cursor:"pointer"}}>
-                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
+                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v} pts</span>
                                     <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:2}}>
-                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
+                                      <div style={{height:"100%",width:`${v/10*100}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
                                   </div>
                                 ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
@@ -858,9 +881,9 @@ export default function ChecklistApp() {
                           }))}
                           {semsVis.map(sem=>{
                             const ps=calcSemana(tr.id,sem);
-                            return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
+                            return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps} pts</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
                           })}
-                          {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
+                          {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes} pts</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
                           <td style={{padding:"6px 8px",textAlign:"center"}}><span style={{fontSize:13}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                         </tr>
                       );
@@ -882,7 +905,7 @@ export default function ChecklistApp() {
     // filtrar por actividad
     const actsBase = dashAct==="Todas" ? acts.filter(a=>a.activa) : acts.filter(a=>a.activa&&a.id===dashAct);
     // tiendas evaluables: excluir las que tienen N/A en TODAS las actividades del filtro
-    const tsEval = tsBase.filter(ti=>actsBase.some(a=>!isExc(ti.id,a.id)));
+    const tsEval = tsBase.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
     // calcular score con filtros aplicados
     const calcScoreFiltrado = (tId)=>{
       const ws=semanasDelMes.map(s=>{
@@ -890,7 +913,7 @@ export default function ChecklistApp() {
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
           const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id)).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,fecha));
             // filtro horario
@@ -914,8 +937,8 @@ export default function ChecklistApp() {
     const validos=scoresMes.filter(s=>s.score!==null);
     const SG=validos.length>0?Math.round(validos.reduce((a,b)=>a+b.score,0)/validos.length):0;
     const IC=tsEval.length>0?Math.round((tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length/tsEval.length)*100):0;
-    const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsEval.length)*100):0;
-    const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsEval.length)*100):0;
+    const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=9.5).length/tsEval.length)*100):0;
+    const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<6).length/tsEval.length)*100):0;
     const tendencia=semanasDelMes.map(s=>{const ss=tsEval.map(ti=>calcSemana(ti.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
 
     // distribución horaria
@@ -936,7 +959,7 @@ export default function ChecklistApp() {
     // efectividad por actividad
     const actEfect=acts.filter(a=>a.activa).map(a=>{
       // excluir tiendas con N/A para esta actividad específica
-      const tsActEval=tsBase.filter(ti=>!isExc(ti.id,a.id));
+      const tsActEval=tsBase.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d)))));
       const ps=tsActEval.map(ti=>{
         const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
           const ds=dStr(vYear,vMonth,d);
@@ -1040,11 +1063,11 @@ export default function ChecklistApp() {
         {(()=>{
           const nEval=tsEval.length;
           const nCump=tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length;
-          const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
-          const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
-          const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=85?"✅ Buen desempeño general del equipo":SG>=75?"📈 Dentro del rango esperado, hay margen de mejora":SG>=60?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
+          const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=9.5).length;
+          const nRie=scoresMes.filter(s=>s.score!==null&&s.score<6).length;
+          const sgI=SG>=9.5?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=8.5?"✅ Buen desempeño general del equipo":SG>=7.5?"📈 Dentro del rango esperado, hay margen de mejora":SG>=6?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
           const icI=IC>=95?`✅ ${nCump} de ${nEval} tiendas con registro — excelente cobertura`:IC>=80?`📬 ${nCump} de ${nEval} tiendas registradas — ${nEval-nCump} aún sin evidencia`:`⚠️ Solo ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} pendientes`;
-          const seI=nExc===0?"Sin tiendas en nivel ORO aún — oportunidad de acelerar registros":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con score ≥95% — empujar al resto`:`${nExc} tiendas en excelencia (≥95%) — buen desempeño top`;
+          const seI=nExc===0?"Sin tiendas en nivel ORO aún — oportunidad de acelerar registros":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con puntaje ≥9.5 — empujar al resto`:`${nExc} tiendas en excelencia (puntaje ≥9.5) — buen desempeño top`;
           const trI=nRie===0?"✅ Ninguna tienda con score crítico (<60%) — control en verde":nRie<=3?`⚠️ ${nRie} tienda${nRie>1?"s":""} con score <60% — requieren atención`:` 🔴 ${nRie} tiendas en zona de riesgo — intervención urgente`;
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
@@ -1133,22 +1156,34 @@ export default function ChecklistApp() {
             const fc=FMT[fmt];
             const fts=tiAct.filter(ti=>ti.f===fmt);
             // solo las evaluables (sin excepción en todas las actividades)
-            const ftsEval=fts.filter(ti=>actsBase.some(a=>!isExc(ti.id,a.id)));
+            const ftsEval=fts.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
             const scores=ftsEval.map(ti=>calcMes(ti.id)).filter(v=>v!==null);
             const prom=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
             const tier=getTier(prom);
             const excCount=fts.length-ftsEval.length;
             return(
-              <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`}}>
+              <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
+                onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
+                onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
+                onTouchStart={e=>{const t=e.currentTarget.querySelector(".fmt-tip");t.style.display=t.style.display==="block"?"none":"block";}}>
                 <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>
-                  {ftsEval.length} evaluadas de {fts.length}
-                  {excCount>0&&<span style={{color:"#f6a623",marginLeft:4}}>· {excCount} N/A</span>}
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.6}}>
+                  <span style={{color:"#5a7a9a",fontWeight:700}}>Total {fts.length}</span>
+                  {" · "}<span style={{color:"#1a2f4a",fontWeight:800}}>{ftsEval.length} disponibles</span>
+                  {excCount>0&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{excCount} N/A</span>}
                 </div>
-                <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+"%":"—"}</div>
-                <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:2}}>{tier.icon} {tier.label}</div>
+                <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+" pts":"—"}</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:1}}>promedio de puntaje (máx. 10 pts)</div>
+                <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:4}}>{tier.icon} {tier.label}</div>
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
-                  <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
+                  <div style={{width:((prom||0)/10*100)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
+                </div>
+                <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
+                  <div style={{fontWeight:800,marginBottom:3}}>{fmt}</div>
+                  {prom!==null
+                    ?`${ftsEval.length} tiendas disponibles evaluadas. Promedio: ${prom} pts de 10. ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A), no se contabilizan.":""}`
+                    :"Sin registros suficientes para calcular eficiencia este período."}
+                  <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
               </div>
             );
@@ -1158,22 +1193,40 @@ export default function ChecklistApp() {
         {/* ranking top/bottom */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           <div style={{...S.card,padding:"14px"}}>
-            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a",marginBottom:10}}>🏅 Top 5</div>
+            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>🏅 Top 5</div>
+            <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>Mayor eficiencia de implementación</div>
             {top5.map((s,i)=>(
-              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                <span style={{fontSize:12,width:16}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":"·"}</span>
-                <span style={{fontSize:11,flex:1,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.t.n}</span>
-                <span style={{fontSize:11,fontWeight:700,color:sc(s.score)}}>{s.score}%</span>
+              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
+                <span style={{fontSize:12,width:16}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i===3?"🏅":"⭐"}</span>
+                <div style={{flex:1,overflow:"hidden"}}>
+                  <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
+                  <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
+                    <div style={{width:(s.score/10*100)+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
+                  </div>
+                </div>
+                <div style={{textAlign:"right",minWidth:40}}>
+                  <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score} pts</div>
+                  <div style={{fontSize:8,color:"#8aaabb"}}>de 10</div>
+                </div>
               </div>
             ))}
           </div>
           <div style={{...S.card,padding:"14px"}}>
-            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a",marginBottom:10}}>⚠️ Bottom 5</div>
+            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>⚠️ Bottom 5</div>
+            <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>Menor eficiencia — requieren atención</div>
             {bot5.map((s,i)=>(
-              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
                 <span style={{fontSize:12,width:16}}>🔴</span>
-                <span style={{fontSize:11,flex:1,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.t.n}</span>
-                <span style={{fontSize:11,fontWeight:700,color:sc(s.score)}}>{s.score}%</span>
+                <div style={{flex:1,overflow:"hidden"}}>
+                  <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
+                  <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
+                    <div style={{width:(s.score/10*100)+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
+                  </div>
+                </div>
+                <div style={{textAlign:"right",minWidth:40}}>
+                  <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score} pts</div>
+                  <div style={{fontSize:8,color:"#8aaabb"}}>de 10</div>
+                </div>
               </div>
             ))}
           </div>
@@ -1199,8 +1252,8 @@ export default function ChecklistApp() {
                       <td style={{padding:"8px 10px",fontWeight:800,color:i<3?"#f6a623":"#b2bec3",fontSize:i<3?13:11}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</td>
                       <td style={{padding:"8px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {ti.n}</td>
                       <td style={{padding:"8px 10px"}}><span style={S.pill(fc.c,fc.bg)}>{ti.f.slice(0,3)}</span></td>
-                      {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
-                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
+                      {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v} pts</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
+                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score} pts</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
                       <td style={{padding:"8px 10px",textAlign:"center"}}><span style={{fontSize:12}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                     </tr>
                   );
@@ -1286,7 +1339,7 @@ export default function ChecklistApp() {
                     ))}
                   </div>
                   <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
-                    {[["100%","#f6a623",`≤${RR.c100}`],["80%","#74b9ff",`${RR.c100}–${RR.c80}`],["60%","#a29bfe",`${RR.c80}–${RR.c60}`],["0%","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
+                    {[["10pts","#f6a623",`≤${RR.c100}`],["8pts","#74b9ff",`${RR.c100}–${RR.c80}`],["6pts","#a29bfe",`${RR.c80}–${RR.c60}`],["0pts","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
                       <span key={p} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{t}→{p}</span>
                     ))}
                   </div>
@@ -1426,7 +1479,7 @@ export default function ChecklistApp() {
                   ))}
                 </div>
                 <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                  {[["🥇","#f6a623",`≤${RR.c100}`],["🥈","#74b9ff",`${RR.c100}–${RR.c80}`],["🥉","#a29bfe",`${RR.c80}–${RR.c60}`],["🔴","#d63031",`>${RR.c60}`]].map(([ic,c,t])=>(
+                  {[["🥇 10pts","#f6a623",`≤${RR.c100}`],["🥈 8pts","#74b9ff",`${RR.c100}–${RR.c80}`],["🥉 6pts","#a29bfe",`${RR.c80}–${RR.c60}`],["🔴 0pts","#d63031",`>${RR.c60}`]].map(([ic,c,t])=>(
                     <span key={t} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{ic} {t}</span>
                   ))}
                 </div>
