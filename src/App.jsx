@@ -87,7 +87,6 @@ const ACTIVIDADES_INIT = [
   {id:"a08",n:"Material POP",        dias:[1,2,3,4,5], e:"🎯",c:"#a29bfe",cat:"Ad-hoc",    r:null,activa:true},
   {id:"a09",n:"Isla / Góndola",      dias:[1,2,3,4,5], e:"🏗️",c:"#fd79a8",cat:"Ad-hoc",   r:null,activa:true},
   {id:"a10",n:"Activación Especial", dias:[1,2,3,4,5], e:"⭐",c:"#fdcb6e",cat:"Ad-hoc",   r:null,activa:true},
-  {id:"a11",n:"Precios en Anaquel",  dias:[1,2,3,4,5], e:"🏷️",c:"#55efc4",cat:"Ad-hoc",  r:null,activa:true},
 ];
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -183,6 +182,7 @@ export default function ChecklistApp() {
   const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
   const [cfgTab,  setCfgTab]  = useState(0);
+  const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
@@ -225,6 +225,7 @@ export default function ChecklistApp() {
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
         if(d.excepciones) setExceps(d.excepciones);
+        if(d.rangosDia)  setRangosDia(d.rangosDia);
       }
     };
     loadCfg();
@@ -236,15 +237,22 @@ export default function ChecklistApp() {
       tiendas:     overrides.tiendas     ?? tiendas,
       pins:        overrides.pins        ?? pins,
       excepciones: overrides.excepciones ?? exceps,
+      rangosDia:   overrides.rangosDia   ?? rangosDia,
       updatedAt:   new Date().toISOString(),
     });
-  },[acts,tiendas,pins,exceps]);
+  },[acts,tiendas,pins,exceps,rangosDia]);
 
   const dow = getDow(fecha);
   const esFS = dow===0||dow===6;
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
   const actInfo = acts.find(a=>a.id===actSel);
+  const getRangoActivo = useCallback((actId, fechaStr)=>{
+    const override = rangosDia?.[actId]?.[fechaStr];
+    if(override) return override;
+    const act = acts.find(a=>a.id===actId);
+    return act?.r || RANGOS_DEFAULT;
+  },[rangosDia, acts]);
   const semanasDelMes = useMemo(()=>getWeeksOfMonth(vYear,vMonth),[vYear,vMonth]);
   const isAdmin   = role==="admin";
   const isAuditor = role==="admin"||role==="auditor";
@@ -265,7 +273,7 @@ export default function ChecklistApp() {
   /* ── cálculos KPI ── */
   const kpisDia = useMemo(()=>{
     if(!actSel)return{total:0,IC:0,IP:0,SE:0,TR:0,SG:0,al100:0,conEnvio:0};
-    const AR=actInfo?.r||RANGOS_DEFAULT;
+    const AR=getRangoActivo(actSel,fecha);
     const ts=tiAct.filter(ti=>!isExc(ti.id,actSel));
     const total=ts.length;
     const withEnv=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)!==null);
@@ -290,7 +298,7 @@ export default function ChecklistApp() {
       const ds=dStr(vYear,vMonth,day);
       const dw=getDow(ds);
       acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(tId,a.id)).forEach(a=>{
-        const p=puntajeReg(getReg(ds,tId,a.id),a.r||RANGOS_DEFAULT);
+        const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
         if(p!==null)scores.push(p);
       });
     });
@@ -310,8 +318,8 @@ export default function ChecklistApp() {
   const tFilt = useMemo(()=>tiAct.filter(ti=>{
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
-    // ocultar ya registradas salvo admin con toggle activo
-    if(!verRegistradas && tRegistradas.has(ti.id)) return false;
+    // auditor nunca ve registradas; admin solo si activó el toggle
+    if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
   }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas]);
 
@@ -414,7 +422,7 @@ export default function ChecklistApp() {
   };
 
   /* ══ LOGIN ══ */
-  if(!role) return <LoginScreen pins={pins} onLogin={(r,n)=>{setRole(r);setUName(n);setTab(r==="viewer"?1:0);}}/>;
+  if(!role) return <LoginScreen pins={pins} onLogin={(r,n)=>{setRole(r);setUName(n);setVerRegistradas(false);setTab(r==="viewer"?1:0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -423,7 +431,7 @@ export default function ChecklistApp() {
         {DIAS_N[dow].toUpperCase()} · {actsDia.length} ACTIVIDAD{actsDia.length!==1?"ES":""} PROGRAMADA{actsDia.length!==1?"S":""}
       </p>
       {actsDia.map(a=>(
-        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setTSel(new Set());setRango(null);setVerRegistradas(false);setRangoExt(null);}}
+        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setVerRegistradas(false);setTSel(new Set());setRango(null);setVerRegistradas(false);setRangoExt(null);}}
           style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,border:`2px solid ${actSel===a.id?a.c:"#e2e8f0"}`,background:actSel===a.id?a.c+"15":"#fff",cursor:"pointer",width:"100%",textAlign:"left",marginBottom:10}}>
           <span style={{fontSize:26}}>{a.e}</span>
           <div style={{flex:1}}>
@@ -501,13 +509,14 @@ export default function ChecklistApp() {
       <div style={{padding:"8px 16px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <span style={{fontSize:12,color:"#8aaabb"}}>{tFilt.length} pendientes</span>
-          {tRegistradas.size>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {tRegistradas.size} registradas</span>}
+          {isAdmin&&tRegistradas.size>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {tRegistradas.size} registradas</span>}
+          {!isAdmin&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          {isAdmin&&tRegistradas.size>0&&(
+          {isAdmin&&(
             <button onClick={()=>setVerRegistradas(v=>!v)}
               style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-              {verRegistradas?"Ocultar registradas":"Ver todas"}
+              {verRegistradas?"📋 Ver solo pendientes":"👁 Ver registradas también"}
             </button>
           )}
           <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel)).map(ti=>ti.id)))}
@@ -806,16 +815,19 @@ export default function ChecklistApp() {
                             })()}
                           </td>
                           {semsVis.map(sem=>actsActivas.map(a=>{
+                            const excepcion=isExc(tr.id,a.id);
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
-                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,a.r||RANGOS_DEFAULT);return p!==null?[p]:[];});
+                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
                             const v=scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
                             const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
                             const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
                             const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
                             return(
-                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative"}}>
+                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent"}}>
                                 {anulado?(
-                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anulado</span>
+                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
+                                ):excepcion?(
+                                  <span title="Excepción: tienda no aplica para esta actividad" style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"default"}}>N/A</span>
                                 ):v!==null?(
                                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
                                     onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
@@ -867,7 +879,7 @@ export default function ChecklistApp() {
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id)).forEach(a=>{
             const reg=getReg(ds,tId,a.id);
-            const p=puntajeReg(reg,a.r||RANGOS_DEFAULT);
+            const p=puntajeReg(reg,getRangoActivo(a.id,fecha));
             // filtro horario
             if(p!==null){
               const h=primerEnvio(reg?.evidencias);
@@ -914,7 +926,7 @@ export default function ChecklistApp() {
         const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(!a.dias.includes(getDow(ds)))return null;
-          return puntajeReg(getReg(ds,ti.id,a.id),a.r||RANGOS_DEFAULT);
+          return puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
         })).filter(p=>p!==null);
         return scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
       }).filter(v=>v!==null);
@@ -1163,7 +1175,7 @@ export default function ChecklistApp() {
   const renderConfig = ()=>(
     <div style={{padding:"16px"}}>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Actividades","Tiendas","Accesos"].map((l,i)=>(
+        {["Actividades","Tiendas","Accesos","Rangos Día"].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
@@ -1214,8 +1226,8 @@ export default function ChecklistApp() {
                 <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_er:!x._er}:x))}
                   style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._er?"#f0f4f8":"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,marginRight:4}}>⏱️</button>
                 <button onClick={()=>setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,activa:!x.activa}:x);saveConfig({actividades:np});return np;})}
-                  style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                  {a.activa?"Pausar":"Activar"}
+                  style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
+                  {a.activa?"⏸ Pausar":"▶ Activar"}
                 </button>
               </div>
               {a._er&&(
@@ -1310,6 +1322,78 @@ export default function ChecklistApp() {
             </div>
           ))}
           <button onClick={()=>showToast("✅ Códigos guardados")} style={S.btn("#00b5b4")}>Guardar cambios</button>
+        </div>
+      )}
+
+      {cfgTab===3&&(
+        <div>
+          <div style={{marginBottom:14}}>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Ajusta los horarios de puntaje para actividades Ad-hoc o Promocionales en una fecha específica. Los Always On usan su rango fijo.</div>
+          </div>
+          {/* Selector de fecha */}
+          <div style={{...S.card,padding:"12px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:12,fontWeight:700,color:"#5a7a9a"}}>📆 Fecha:</span>
+            <input type="date" defaultValue={fecha}
+              id="rango-fecha-input"
+              style={{...S.inp,flex:1,fontSize:13}}/>
+          </div>
+          {acts.filter(a=>a.activa&&a.cat!=="Always On").map(a=>{
+            const fechaInput = document.getElementById?.("rango-fecha-input")?.value||fecha;
+            const override = rangosDia?.[a.id]?.[fechaInput];
+            const base = a.r||RANGOS_DEFAULT;
+            const RR = override||base;
+            return(
+              <div key={a.id} style={{...S.card,padding:"12px 14px",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <span style={{fontSize:16}}>{a.e}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color:a.c}}>{a.n}</div>
+                    <div style={{fontSize:10,color:"#8aaabb"}}>{a.cat}{override&&<span style={{color:"#f6a623",marginLeft:6}}>⚡ Rango del día activo</span>}</div>
+                  </div>
+                  {override&&(
+                    <button onClick={()=>{
+                      const fi=document.getElementById("rango-fecha-input")?.value||fecha;
+                      setRangosDia(prev=>{
+                        const next={...prev};
+                        if(next[a.id]) { delete next[a.id][fi]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
+                        saveConfig({rangosDia:next});
+                        return next;
+                      });
+                      showToast("🗑️ Rango del día eliminado");
+                    }} style={{padding:"4px 10px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                      Quitar override
+                    </button>
+                  )}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                  {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
+                    <div key={f.k}>
+                      <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
+                      <input type="time" value={RR[f.k]}
+                        onChange={e=>{
+                          const fi=document.getElementById("rango-fecha-input")?.value||fecha;
+                          setRangosDia(prev=>{
+                            const next={...prev,[a.id]:{...(prev[a.id]||{}),[fi]:{...(prev[a.id]?.[fi]||base),[f.k]:e.target.value}}};
+                            saveConfig({rangosDia:next});
+                            return next;
+                          });
+                        }}
+                        style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${a.c}55`,background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center",boxSizing:"border-box"}}/>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                  {[["🥇","#f6a623",`≤${RR.c100}`],["🥈","#74b9ff",`${RR.c100}–${RR.c80}`],["🥉","#a29bfe",`${RR.c80}–${RR.c60}`],["🔴","#d63031",`>${RR.c60}`]].map(([ic,c,t])=>(
+                    <span key={t} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{ic} {t}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {acts.filter(a=>a.activa&&a.cat!=="Always On").length===0&&(
+            <div style={{textAlign:"center",padding:"30px",color:"#8aaabb",fontSize:13}}>No hay actividades Ad-hoc activas</div>
+          )}
         </div>
       )}
     </div>
