@@ -318,10 +318,12 @@ export default function ChecklistApp() {
   const tFilt = useMemo(()=>tiAct.filter(ti=>{
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
-    // auditor nunca ve registradas; admin solo si activó el toggle
+    // N/A siempre visible (excepcion marcada por admin)
+    if(isExc(ti.id,actSel)) return true;
+    // registradas: ocultar siempre salvo admin con toggle activo
     if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
-  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas]);
+  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel]);
 
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
@@ -870,6 +872,8 @@ export default function ChecklistApp() {
     const tsBase = dashFmt==="Todas" ? tiAct : tiAct.filter(ti=>ti.f===dashFmt);
     // filtrar por actividad
     const actsBase = dashAct==="Todas" ? acts.filter(a=>a.activa) : acts.filter(a=>a.activa&&a.id===dashAct);
+    // tiendas evaluables: excluir las que tienen N/A en TODAS las actividades del filtro
+    const tsEval = tsBase.filter(ti=>actsBase.some(a=>!isExc(ti.id,a.id)));
     // calcular score con filtros aplicados
     const calcScoreFiltrado = (tId)=>{
       const ws=semanasDelMes.map(s=>{
@@ -897,13 +901,13 @@ export default function ChecklistApp() {
       return ws.length>0?Math.round(ws.reduce((a,b)=>a+b,0)/ws.length):null;
     };
 
-    const scoresMes=tsBase.map(ti=>({t:ti,score:calcScoreFiltrado(ti.id)}));
+    const scoresMes=tsEval.map(ti=>({t:ti,score:calcScoreFiltrado(ti.id)}));
     const validos=scoresMes.filter(s=>s.score!==null);
     const SG=validos.length>0?Math.round(validos.reduce((a,b)=>a+b.score,0)/validos.length):0;
-    const IC=tsBase.length>0?Math.round((tsBase.filter(ti=>calcScoreFiltrado(ti.id)!==null).length/tsBase.length)*100):0;
-    const SE=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsBase.length)*100):0;
-    const TR=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsBase.length)*100):0;
-    const tendencia=semanasDelMes.map(s=>{const ss=tsBase.map(ti=>calcSemana(ti.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
+    const IC=tsEval.length>0?Math.round((tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length/tsEval.length)*100):0;
+    const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsEval.length)*100):0;
+    const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsEval.length)*100):0;
+    const tendencia=semanasDelMes.map(s=>{const ss=tsEval.map(ti=>calcSemana(ti.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
 
     // distribución horaria
     const allEvs=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]);
@@ -922,7 +926,9 @@ export default function ChecklistApp() {
 
     // efectividad por actividad
     const actEfect=acts.filter(a=>a.activa).map(a=>{
-      const ps=tsBase.map(ti=>{
+      // excluir tiendas con N/A para esta actividad específica
+      const tsActEval=tsBase.filter(ti=>!isExc(ti.id,a.id));
+      const ps=tsActEval.map(ti=>{
         const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(!a.dias.includes(getDow(ds)))return null;
@@ -1024,24 +1030,47 @@ export default function ChecklistApp() {
         </div>
 
         {/* KPIs */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-          {[
-            {k:"SG",label:"Score Global",v:SG+"%",c:sc(SG),icon:"🎯",tier:getTier(SG)},
-            {k:"IC",label:"Cumplimiento",v:IC+"%",c:"#0984e3",icon:"📬"},
-            {k:"SE",label:"Excelencia",v:SE+"%",c:"#f6a623",icon:"🏆"},
-            {k:"TR",label:"Tasa Riesgo",v:TR+"%",c:TR>20?"#d63031":"#b2bec3",icon:"⚠️"},
-          ].map(k=>(
-            <div key={k.k} style={{...S.card,padding:"14px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <span style={{fontSize:20}}>{k.icon}</span>
-                <span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>{k.k}</span>
+        {(()=>{
+          const nEval=tsEval.length;
+          const nCump=tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length;
+          const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
+          const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
+          const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=85?"✅ Buen desempeño general del equipo":SG>=75?"📈 Dentro del rango esperado, hay margen de mejora":SG>=60?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
+          const icI=IC>=95?`✅ ${nCump} de ${nEval} tiendas con registro — excelente cobertura`:IC>=80?`📬 ${nCump} de ${nEval} tiendas registradas — ${nEval-nCump} aún sin evidencia`:`⚠️ Solo ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} pendientes`;
+          const seI=nExc===0?"Sin tiendas en nivel ORO aún — oportunidad de acelerar registros":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con score ≥95% — empujar al resto`:`${nExc} tiendas en excelencia (≥95%) — buen desempeño top`;
+          const trI=nRie===0?"✅ Ninguna tienda con score crítico (<60%) — control en verde":nRie<=3?`⚠️ ${nRie} tienda${nRie>1?"s":""} con score <60% — requieren atención`:` 🔴 ${nRie} tiendas en zona de riesgo — intervención urgente`;
+          return(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+            {[
+              {k:"SG",label:"Score Global",  v:SG+"%", c:sc(SG),  icon:"🎯", insight:sgI, tier:getTier(SG)},
+              {k:"IC",label:"Cumplimiento",  v:IC+"%", c:"#0984e3",icon:"📬", insight:icI},
+              {k:"SE",label:"Excelencia",    v:SE+"%", c:"#f6a623",icon:"🏆", insight:seI},
+              {k:"TR",label:"Tasa Riesgo",   v:TR+"%", c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
+            ].map(k=>(
+              <div key={k.k} style={{...S.card,padding:"14px",cursor:"default",position:"relative"}}
+                onMouseEnter={e=>e.currentTarget.querySelector(".kpi-tip").style.display="block"}
+                onMouseLeave={e=>e.currentTarget.querySelector(".kpi-tip").style.display="none"}
+                onTouchStart={e=>{const t=e.currentTarget.querySelector(".kpi-tip");t.style.display=t.style.display==="block"?"none":"block";}}
+              >
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <span style={{fontSize:20}}>{k.icon}</span>
+                  <span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>{k.k}</span>
+                </div>
+                <div style={{fontWeight:800,fontSize:26,color:k.c,lineHeight:1,marginTop:6}}>{k.v}</div>
+                {k.tier&&<div style={{marginTop:4}}><span style={{...S.pill(k.tier.c,k.tier.bg)}}>{k.tier.icon} {k.tier.label}</span></div>}
+                <div style={{fontSize:10,color:"#5a7a9a",fontWeight:700,marginTop:4}}>{k.label}</div>
+                <div style={{height:3,borderRadius:2,background:k.c+"33",marginTop:8,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:k.v,background:k.c,borderRadius:2,transition:"width .6s"}}/>
+                </div>
+                <div className="kpi-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.5,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
+                  {k.insight}
+                  <div style={{position:"absolute",bottom:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                </div>
               </div>
-              <div style={{fontWeight:800,fontSize:26,color:k.c,lineHeight:1,marginTop:6}}>{k.v}</div>
-              {k.tier&&<div style={{marginTop:4}}><span style={{...S.pill(k.tier.c,k.tier.bg)}}>{k.tier.icon} {k.tier.label}</span></div>}
-              <div style={{fontSize:10,color:"#5a7a9a",fontWeight:700,marginTop:4}}>{k.label}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          );
+        })()}
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
@@ -1096,13 +1125,19 @@ export default function ChecklistApp() {
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
             const fc=FMT[fmt];
             const fts=tiAct.filter(ti=>ti.f===fmt);
-            const scores=fts.map(ti=>calcMes(ti.id)).filter(v=>v!==null);
+            // solo las evaluables (sin excepción en todas las actividades)
+            const ftsEval=fts.filter(ti=>actsBase.some(a=>!isExc(ti.id,a.id)));
+            const scores=ftsEval.map(ti=>calcMes(ti.id)).filter(v=>v!==null);
             const prom=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
             const tier=getTier(prom);
+            const excCount=fts.length-ftsEval.length;
             return(
               <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`}}>
                 <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>{fts.length} tiendas</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>
+                  {ftsEval.length} evaluadas de {fts.length}
+                  {excCount>0&&<span style={{color:"#f6a623",marginLeft:4}}>· {excCount} N/A</span>}
+                </div>
                 <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+"%":"—"}</div>
                 <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:2}}>{tier.icon} {tier.label}</div>
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
@@ -1422,6 +1457,7 @@ export default function ChecklistApp() {
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
+          {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
         <div style={{display:"flex",gap:0,overflowX:"auto"}}>
@@ -1558,16 +1594,7 @@ function LoginScreen({pins,onLogin}){
             <button onClick={tryPin} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:20}}>
               {err?"❌ Código incorrecto":"Ingresar →"}
             </button>
-            <div style={{background:"#f8fafc",borderRadius:12,padding:"14px",textAlign:"left",border:"1px solid #e2e8f0"}}>
-              <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,letterSpacing:".06em",marginBottom:10}}>DEMO — CREDENCIALES</div>
-              {[["👑","Admin","vega2026","#f6a623"],["📋","Auditor","auditor88","#00b5b4"],["👁️","Viewer","gerencia1","#74b9ff"]].map(([ic,r,p,c])=>(
-                <div key={r} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:14}}>{ic}</span>
-                  <span style={{fontSize:11,fontWeight:700,color:c,flex:1}}>{r}</span>
-                  <code style={{fontSize:11,background:c+"18",color:c,padding:"2px 8px",borderRadius:6}}>{p}</code>
-                </div>
-              ))}
-            </div>
+
           </>
         ):(
           <>
@@ -1590,19 +1617,28 @@ function LoginScreen({pins,onLogin}){
 
 function PinModal({pins,onSave,onClose}){
   const[p,setP]=useState({...pins});
+  const[show,setShow]=useState(false);
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,backdropFilter:"blur(4px)"}}>
-      <div style={{background:"#fff",borderRadius:16,padding:26,width:"90%",maxWidth:380,border:"1px solid #e2e8f0"}}>
-        <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:16}}>🔑 Cambiar Códigos</div>
-        {[{k:"admin",label:"👑 Admin"},{k:"auditor",label:"📋 Auditor"},{k:"viewer",label:"👁️ Viewer"}].map(f=>(
-          <div key={f.k} style={{marginBottom:12}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:4}}>{f.label}</label>
-            <input type="text" value={p[f.k]} onChange={e=>setP(x=>({...x,[f.k]:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",letterSpacing:3,fontFamily:"monospace",boxSizing:"border-box"}}/>
+    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,backdropFilter:"blur(4px)"}}>
+      <div style={{background:"#fff",borderRadius:20,padding:30,width:"90%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
+        <div style={{textAlign:"center",marginBottom:22}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔑</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#1a2f4a"}}>Gestionar Códigos de Acceso</div>
+        </div>
+        {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"auditor",label:"📋 Código Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
+          <div key={f.k} style={{marginBottom:14}}>
+            <label style={{fontSize:10,fontWeight:800,color:f.c,letterSpacing:".06em",display:"block",marginBottom:5}}>{f.label}</label>
+            <input type={show?"text":"password"} value={p[f.k]} onChange={e=>setP(x=>({...x,[f.k]:e.target.value}))}
+              style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1.5px solid ${f.c}44`,background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",letterSpacing:show?3:6,fontFamily:"monospace",boxSizing:"border-box"}}/>
           </div>
         ))}
-        <div style={{display:"flex",gap:8,marginTop:4}}>
-          <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancelar</button>
-          <button onClick={()=>onSave(p)} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Guardar</button>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
+          <input type="checkbox" id="show-pins" checked={show} onChange={e=>setShow(e.target.checked)} style={{width:16,height:16,cursor:"pointer"}}/>
+          <label htmlFor="show-pins" style={{fontSize:12,color:"#5a7a9a",cursor:"pointer"}}>Mostrar códigos</label>
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>Cancelar</button>
+          <button onClick={()=>onSave(p)} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar</button>
         </div>
       </div>
     </div>
