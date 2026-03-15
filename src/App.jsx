@@ -1553,7 +1553,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               ))}
             </div>
             {actEfectDetalle.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
-            {actEfectDetalle.map(({a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal})=>(
+            {actEfectDetalle.map(({a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal,nEvalAct})=>(
               <div key={a.id} style={{marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
