@@ -1313,20 +1313,39 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* KPIs */}
         {(()=>{
           const nEval=tsEval.length;
-          const nCump=tsEval.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>{const ds=dStr(vYear,vMonth,d);const dw=getDow(ds);return actsBase.some(a=>a.dias.includes(dw)&&getReg(ds,ti.id,a.id)?.evidencias?.length>0);}))).length;
+          // IC: tiendas con al menos 1 registro válido en el período (no anulado)
+          const nCump=tsEval.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>{
+            const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
+            return actsBase.some(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+          }))).length;
+          // SE: tiendas con eficiencia ≥95% en el período
           const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
+          // SE por formato para insight
+          const excPorFmt=["Mayorista","Supermayorista","Market"].map(f=>{
+            const n=scoresMes.filter(s=>s.t.f===f&&s.score!==null&&s.score>=95).length;
+            const tot=scoresMes.filter(s=>s.t.f===f&&s.score!==null).length;
+            return {f,n,tot};
+          }).filter(x=>x.tot>0);
+          // TR: tiendas con eficiencia <60%
           const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
-          const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=80?"✅ Buen desempeño general del equipo":SG>=60?"📈 Dentro del rango esperado, hay margen de mejora":SG>=40?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
-          const icI=IC>=95?`✅ ${nCump} de ${nEval} tiendas con algún registro — excelente cobertura`:IC>=80?`📬 ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} aún sin evidencia`:`⚠️ Solo ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} sin evidencia`;
-          const seI=nExc===0?"Sin tiendas en excelencia (≥95%) aún — oportunidad de mejorar":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con eficiencia ≥95% — impulsar al resto`:`${nExc} tiendas en excelencia (≥95% eficiencia) — excelente desempeño`;
-          const trI=nRie===0?"✅ Ninguna tienda con eficiencia crítica (<60%) — control en verde":nRie<=3?`⚠️ ${nRie} tienda${nRie>1?"s":""} con eficiencia <60% — requieren atención`:`🔴 ${nRie} tiendas en zona de riesgo — intervención urgente`;
+          const riePorFmt=["Mayorista","Supermayorista","Market"].map(f=>{
+            const n=scoresMes.filter(s=>s.t.f===f&&s.score!==null&&s.score<60).length;
+            return {f,n};
+          }).filter(x=>x.n>0);
+          // Insights claros para gerencia
+          const sgI=`${totalOb} de ${totalMx} pts posibles · ${nEval} tiendas evaluadas · excluye N/A por día/semana/actividad`;
+          const icI=`${nCump} de ${nEval} tiendas con al menos 1 registro válido. ${nEval-nCump>0?`${nEval-nCump} sin ningún registro aún.`:"Cobertura completa."}`;
+          const seI=nExc===0?`Ninguna tienda alcanza ≥95% aún. Top: ${scoresMes.filter(s=>s.score!==null).sort((a,b)=>b.score-a.score).slice(0,3).map(s=>`Vega ${s.t.n} ${s.score}%`).join(", ")}`:
+            `${nExc} tiendas ≥95%: ${excPorFmt.map(x=>`${x.f} ${x.n}/${x.tot}`).join(" · ")}`;
+          const trI=nRie===0?`✅ Todas las tiendas evaluadas superan 60%`:
+            `${nRie} tiendas <60%: ${riePorFmt.map(x=>`${x.f} (${x.n})`).join(", ")} — requieren atención`;
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
-              {k:"SG",label:"Eficiencia Global",  v:SG+"%",num:SG, c:sc(SG),  icon:"🎯", insight:sgI, tier:getTier(SG)},
-              {k:"IC",label:"Tiendas con Registro",v:IC+"%",num:IC, c:"#0984e3",icon:"📬", insight:icI},
-              {k:"SE",label:"Tiendas ≥95% (Oro)",  v:SE+"%",num:SE, c:"#f6a623",icon:"🏆", insight:seI},
-              {k:"TR",label:"Tiendas <60% (Riesgo)",v:TR+"%",num:TR, c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
+              {k:"SG",label:"Eficiencia Global",    sub:`${totalOb}/${totalMx} pts`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
+              {k:"IC",label:"Cobertura Registros",  sub:`${nCump}/${nEval} tiendas`,  v:IC+"%", num:IC, c:"#0984e3",icon:"📬", insight:icI},
+              {k:"SE",label:"Tiendas Excelencia",   sub:`${nExc}/${nEval} con ≥95%`,  v:SE+"%", num:SE, c:"#f6a623",icon:"🏆", insight:seI},
+              {k:"TR",label:"Tiendas Bajo Mínimo",  sub:`${nRie}/${nEval} con <60%`,  v:TR+"%", num:TR, c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
             ].map(k=>(
               <div key={k.k} style={{...S.card,padding:"14px",cursor:"default",position:"relative"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".kpi-tip").style.display="block"}
@@ -1338,12 +1357,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>{k.k}</span>
                 </div>
                 <div style={{fontWeight:800,fontSize:26,color:k.c,lineHeight:1,marginTop:6}}>{k.v}</div>
-                {k.tier&&<div style={{marginTop:4}}><span style={{...S.pill(k.tier.c,k.tier.bg)}}>{k.tier.icon} {k.tier.label}</span></div>}
-                <div style={{fontSize:10,color:"#5a7a9a",fontWeight:700,marginTop:4}}>{k.label}</div>
-                <div style={{height:3,borderRadius:2,background:k.c+"33",marginTop:8,overflow:"hidden"}}>
+                {k.tier&&<div style={{marginTop:3}}><span style={{...S.pill(k.tier.c,k.tier.bg)}}>{k.tier.icon} {k.tier.label}</span></div>}
+                <div style={{fontSize:10,color:"#5a7a9a",fontWeight:700,marginTop:3}}>{k.label}</div>
+                <div style={{fontSize:9,color:"#b2bec3",marginTop:1,lineHeight:1.3}}>{k.sub}</div>
+                <div style={{height:3,borderRadius:2,background:k.c+"33",marginTop:6,overflow:"hidden"}}>
                   <div style={{height:"100%",width:k.num+"%",background:k.c,borderRadius:2,transition:"width .6s"}}/>
                 </div>
-                <div className="kpi-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.5,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
+                <div className="kpi-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"10px 12px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   {k.insight}
                   <div style={{position:"absolute",bottom:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
@@ -1435,22 +1455,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
                 onTouchStart={e=>{const t=e.currentTarget.querySelector(".fmt-tip");t.style.display=t.style.display==="block"?"none":"block";}}>
                 <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.6}}>
-                  <span style={{color:"#5a7a9a",fontWeight:700}}>Total {fts.length}</span>
-                  {" · "}<span style={{color:"#1a2f4a",fontWeight:800}}>{ftsEval.length} disponibles</span>
-                  {excCount>0&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{excCount} N/A</span>}
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.7}}>
+                  <span style={{color:"#5a7a9a",fontWeight:700}}>{fts.length} tiendas</span>
+                  {ftsEval.length<fts.length&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{fts.length-ftsEval.length} excluidas N/A</span>}
+                  {ftsEval.length===fts.length&&<span style={{color:"#00b894",fontWeight:700}}> · todas activas</span>}
                 </div>
-                <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+"%":"—"}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:1}}>eficiencia de implementación</div>
-                <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:4}}>{tier.icon} {tier.label}</div>
+                <div style={{fontWeight:800,fontSize:26,color:sc(prom),marginTop:8,lineHeight:1}}>{prom!==null?prom+"%":"—"}</div>
+                <div style={{fontSize:9,color:"#b2bec3",marginTop:2}}>{fmtOb}/{fmtMx} pts · eficiencia período</div>
+                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{...S.pill(tier.c,tier.bg),fontSize:10}}>{tier.icon} {tier.label}</span>
+                  {(()=>{
+                    const nFmtExc=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score>=95).length;
+                    const nFmtRie=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score<60).length;
+                    return<span style={{fontSize:9,color:"#8aaabb",marginLeft:"auto"}}>{nFmtExc>0?`🥇 ${nFmtExc}`:""}{nFmtRie>0?` ⚠️ ${nFmtRie}`:""}</span>;
+                  })()}
+                </div>
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
                   <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
                 </div>
-                <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
-                  <div style={{fontWeight:800,marginBottom:3}}>{fmt}</div>
-                  {prom!==null
-                    ?`${ftsEval.length} tiendas evaluadas. Obtenidos: ${fmtOb} de ${fmtMx} pts posibles = ${prom}% eficiencia. ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A) sin contabilizar.":""}`
-                    :"Sin registros este período."}
+                <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"10px 12px",borderRadius:10,zIndex:20,lineHeight:1.7,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
+                  <div style={{fontWeight:800,marginBottom:4,fontSize:11}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
+                  {prom!==null&&<div>{fmtOb} pts obtenidos de {fmtMx} pts posibles</div>}
+                  <div>{ftsEval.length} de {fts.length} tiendas con días evaluables</div>
+                  {fts.length-ftsEval.length>0&&<div style={{color:"#FAC775"}}>⚠️ {fts.length-ftsEval.length} tienda{fts.length-ftsEval.length>1?"s":""} excluidas (N/A en toda actividad)</div>}
+                  <div style={{marginTop:4,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,opacity:.8}}>Los N/A por día individual ya están descontados del denominador</div>
                   <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
               </div>
