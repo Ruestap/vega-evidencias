@@ -234,15 +234,16 @@ export default function ChecklistApp() {
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
         if(d.excepciones){
+          // Siempre limpiar: solo conservar arrays con fechas válidas
           const exc=d.excepciones;
-          // limpiar entradas legacy (true) — solo conservar arrays con fechas
-          const cleaned=Object.fromEntries(Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0));
-          const hasLegacy=Object.values(exc).some(v=>v===true||(!Array.isArray(v)&&v));
+          const cleaned=Object.fromEntries(
+            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+          );
+          setExceps(cleaned);
+          // Si había entradas legacy (true u otros), guardar versión limpia
+          const hasLegacy=Object.values(exc).some(v=>!Array.isArray(v)||v.length===0);
           if(hasLegacy){
-            setExceps(cleaned);
             setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
-          } else {
-            setExceps(exc);
           }
         }
         if(d.rangosDia)  setRangosDia(d.rangosDia);
@@ -252,11 +253,16 @@ export default function ChecklistApp() {
   },[]);
 
   const saveConfig = useCallback(async (overrides={})=>{
+    // Filtrar excepciones legacy (true) antes de guardar
+    const excToSave = overrides.excepciones ?? exceps;
+    const excClean = Object.fromEntries(
+      Object.entries(excToSave).filter(([,v])=>Array.isArray(v)&&v.length>0)
+    );
     await setDoc(doc(db,"config","app"),{
       actividades: overrides.actividades ?? acts,
       tiendas:     overrides.tiendas     ?? tiendas,
       pins:        overrides.pins        ?? pins,
-      excepciones: overrides.excepciones ?? exceps,
+      excepciones: excClean,
       rangosDia:   overrides.rangosDia   ?? rangosDia,
       updatedAt:   new Date().toISOString(),
     });
@@ -285,10 +291,15 @@ export default function ChecklistApp() {
   const isExc = useCallback((tId,aId,fechaCheck)=>{
     const v = exceps[tId+"|"+aId];
     if(!v) return false;
-    // solo arrays de fechas son válidos — true legacy se ignora
-    if(Array.isArray(v)) return v.includes(fechaCheck||fecha);
+    // legacy true: ya no aplica — debe reregistrarse con fecha específica
+    if(v===true) return false;
+    // array de fechas: solo excluir si la fecha específica está en el array
+    if(Array.isArray(v)){
+      if(!fechaCheck) return false; // sin fecha = no excluir
+      return v.includes(fechaCheck);
+    }
     return false;
-  },[exceps,fecha]);
+  },[exceps]);
 
   const showToast = msg=>{
     setToast(msg);
