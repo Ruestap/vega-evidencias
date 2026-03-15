@@ -1179,7 +1179,7 @@ export default function ChecklistApp() {
         {/* KPIs */}
         {(()=>{
           const nEval=tsEval.length;
-          const nCump=tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length;
+          const nCump=tsEval.filter(ti=>calcEficienciaFiltrada(ti.id)!==null).length;
           const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
           const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
           const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=80?"✅ Buen desempeño general del equipo":SG>=60?"📈 Dentro del rango esperado, hay margen de mejora":SG>=40?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
