@@ -942,28 +942,28 @@ export default function ChecklistApp() {
           if(!tsFmt.length)return null;
           const fc=FMT[fmt];
           return(
-            <div key={fmt} style={{...S.card,marginBottom:16,overflow:"hidden"}}>
+            <div key={fmt} style={{...S.card,marginBottom:16,overflow:"visible"}}>
               <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f4f8",display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:4,height:18,borderRadius:2,background:fc.c}}/>
                 <span style={{fontWeight:800,fontSize:13,color:fc.c}}>{fmt.toUpperCase()}</span>
                 <span style={{fontSize:11,color:"#8aaabb"}}>{tsFmt.length} tiendas</span>
               </div>
-              <div style={{overflowX:"auto"}}>
+              <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"60vh"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
-                    <tr style={{background:"#f8fafc"}}>
+                    <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
                       {semsVis.map(s=>actsActivas.map(a=>(
-                        <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap"}}>{s.label}<br/>{a.e}</th>
+                        <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0}}>{s.label}<br/>{a.e}</th>
                       )))}
                       {semsVis.map(s=>(
-                        <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55}}>
+                        <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55,position:"sticky",top:0}}>
                           {s.label}<br/>EF.%
                         </th>
                       ))}
-                      {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55}}>MES</th>}
-                      <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55}}>EF</th>
+                      {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
+                      <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1029,11 +1029,22 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                           })}
                           {selWeek===null&&(()=>{
   const detMes=calcMesDetalle(tr.id);
+  // Calcular máximo teórico (si no hubiera N/A) para mostrar contexto
+  const allDaysMes=semanasDelMes.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+  const hoyM=todayStr();
+  let mxTeorico=0;
+  allDaysMes.forEach(d=>{
+    if(d>hoyM) return;
+    const dw=getDow(d);
+    actsActivas.filter(a=>a.dias.includes(dw)).forEach(()=>{ mxTeorico+=10; });
+  });
+  const pctBase=mxTeorico>0&&detMes?Math.round((detMes.maximos/mxTeorico)*100):null;
   return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>
     {pMes!==null
       ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
           <span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>
-          <span style={{fontSize:8,color:sc(pMes),opacity:.8}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>
+          <span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>
+          {pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>base {pctBase}%</span>}
         </div>
       :<span style={{color:"#b2bec3"}}>—</span>}
   </td>;
@@ -1481,43 +1492,119 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
         </div>
 
-        {/* efectividad por actividad */}
-        <div style={{...S.card,padding:"14px",marginBottom:14}}>
-          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:6}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
-          <div style={{fontSize:10,color:"#5a7a9a",marginBottom:12,padding:"6px 10px",background:"#f8fafc",borderRadius:8,lineHeight:1.5}}>
-            Pts obtenidos ÷ pts posibles por actividad en el mes. Solo incluye actividades con al menos 1 registro. Excluye tiendas con N/A y días futuros.
+        {/* efectividad por actividad — stacked bar gerencial */}
+        {(()=>{
+          // Para cada actividad, calcular distribución ORO/PLATA/BRONCE/FUERA
+          const actEfectDetalle=actEfect.map(({a,v,ob,mx})=>{
+            let nOro=0,nPlata=0,nBronce=0,nFuera=0,nTotal=0;
+            const hoy=todayStr();
+            tsBase.forEach(ti=>{
+              semanasDelMes.forEach(s=>{
+                s.days.forEach(day=>{
+                  const ds=dStr(vYear,vMonth,day);
+                  if(ds>hoy) return;
+                  if(!a.dias.includes(getDow(ds))) return;
+                  if(isExc(ti.id,a.id,ds)) return;
+                  const reg=getReg(ds,ti.id,a.id);
+                  const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                  if(p===null) return;
+                  nTotal++;
+                  if(p===10) nOro++;
+                  else if(p===8) nPlata++;
+                  else if(p===6) nBronce++;
+                  else nFuera++;
+                });
+              });
+            });
+            return {a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal};
+          });
+          return(
+          <div style={{...S.card,padding:"16px",marginBottom:14}}>
+            <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:4}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
+            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:14,lineHeight:1.4}}>
+              Barras apiladas: proporcion de registros ORO / PLATA / BRONCE / FUERA por actividad. El % final es eficiencia de pts obtenidos.
+            </div>
+            {actEfectDetalle.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
+            {actEfectDetalle.map(({a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal})=>(
+              <div key={a.id} style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:15}}>{a.e}</span>
+                    <span style={{fontSize:11,color:"#1a2f4a",fontWeight:700}}>{a.n}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    {nTotal>0&&<div style={{display:"flex",gap:4}}>
+                      {nOro>0&&<span style={{fontSize:9,fontWeight:700,color:"#f6a623",background:"#fff8ec",padding:"1px 6px",borderRadius:10}}>🥇{nOro}</span>}
+                      {nPlata>0&&<span style={{fontSize:9,fontWeight:700,color:"#74b9ff",background:"#e8f4fd",padding:"1px 6px",borderRadius:10}}>🥈{nPlata}</span>}
+                      {nBronce>0&&<span style={{fontSize:9,fontWeight:700,color:"#a29bfe",background:"#f0edff",padding:"1px 6px",borderRadius:10}}>🥉{nBronce}</span>}
+                      {nFuera>0&&<span style={{fontSize:9,fontWeight:700,color:"#d63031",background:"#ffeae6",padding:"1px 6px",borderRadius:10}}>🔴{nFuera}</span>}
+                    </div>}
+                    <span style={{fontSize:12,fontWeight:800,color:v!==null?sc(v):"#b2bec3",minWidth:36,textAlign:"right"}}>{v!==null?v+"%":"—"}</span>
+                  </div>
+                </div>
+                {nTotal>0?(
+                  <div style={{height:10,borderRadius:5,overflow:"hidden",display:"flex"}}>
+                    {nOro>0&&<div style={{width:(nOro/nTotal*100)+"%",background:"#f6a623",transition:"width .4s"}}/>}
+                    {nPlata>0&&<div style={{width:(nPlata/nTotal*100)+"%",background:"#74b9ff",transition:"width .4s"}}/>}
+                    {nBronce>0&&<div style={{width:(nBronce/nTotal*100)+"%",background:"#a29bfe",transition:"width .4s"}}/>}
+                    {nFuera>0&&<div style={{width:(nFuera/nTotal*100)+"%",background:"#d63031",transition:"width .4s"}}/>}
+                  </div>
+                ):(
+                  <div style={{height:10,borderRadius:5,background:"#f0f4f8"}}/>
+                )}
+                {mx>0&&<div style={{fontSize:8,color:"#b2bec3",marginTop:2}}>{ob}/{mx} pts · {nTotal} registros evaluados</div>}
+              </div>
+            ))}
           </div>
-          {actEfect.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
-          {actEfect.map(({a,v,ob,mx})=>(
-            <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <span style={{fontSize:16,width:22,flexShrink:0}}>{a.e}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:11,color:"#5a7a9a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.n}</span>
-                  <span style={{fontSize:11,fontWeight:800,color:v!==null?sc(v):"#b2bec3",flexShrink:0,marginLeft:8}}>{v!==null?v+"%":"—"}</span>
-                </div>
-                <div style={{height:6,background:"#f0f4f8",borderRadius:3,overflow:"hidden"}}>
-                  {v!==null&&<div style={{width:v+"%",height:"100%",background:a.c,borderRadius:3,transition:"width .4s"}}/>}
-                </div>
-                {mx>0&&<div style={{fontSize:9,color:"#b2bec3",marginTop:2}}>{ob}/{mx} pts posibles</div>}
-              </div>
-            </div>
-          ))}
-        </div>
+          );
+        })()}
 
-        {/* distribución horaria */}
-        <div style={{...S.card,padding:"14px",marginBottom:14}}>
-          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>⏱️ DISTRIBUCIÓN HORARIA</div>
-          {horasDist.map(h=>(
-            <div key={h.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <span style={{fontSize:11,color:"#5a7a9a",width:120,flexShrink:0}}>{h.l}</span>
-              <div style={{flex:1,height:8,background:"#f0f4f8",borderRadius:4,overflow:"hidden"}}>
-                <div style={{width:Math.round(h.n/totalEvs*100)+"%",height:"100%",background:h.c,borderRadius:4}}/>
-              </div>
-              <span style={{fontSize:11,fontWeight:700,color:h.c,width:32,textAlign:"right"}}>{Math.round(h.n/totalEvs*100)}%</span>
+        {/* distribución horaria — rediseñado gerencial */}
+        {(()=>{
+          const franjas=[
+            {l:"ORO",    icon:"🥇", c:"#f6a623", bg:"#fff8ec", pts:10, filter:e=>toMin(e.hora)<=toMin("08:00"),  desc:"Antes de 08:00"},
+            {l:"PLATA",  icon:"🥈", c:"#74b9ff", bg:"#e8f4fd", pts:8,  filter:e=>toMin(e.hora)>toMin("08:00")&&toMin(e.hora)<=toMin("09:00"), desc:"08:01 - 09:00"},
+            {l:"BRONCE", icon:"🥉", c:"#a29bfe", bg:"#f0edff", pts:6,  filter:e=>toMin(e.hora)>toMin("09:00")&&toMin(e.hora)<=toMin("10:00"), desc:"09:01 - 10:00"},
+            {l:"FUERA",  icon:"🔴", c:"#d63031", bg:"#ffeae6", pts:0,  filter:e=>toMin(e.hora)>toMin("10:00"),  desc:"Después de 10:00"},
+          ];
+          const franjaData=franjas.map(f=>({...f, n:allEvs.filter(f.filter).length}));
+          const maxN=Math.max(...franjaData.map(f=>f.n),1);
+          const ptsPromPorFranja=franjaData.map(f=>({...f, ptsProm:f.n>0?f.pts:null}));
+          // pts reales promedio = (registros en franja * pts de franja) / total registros
+          const ptsPonderado=totalEvs>1?Math.round(franjaData.reduce((acc,f)=>acc+f.n*f.pts,0)/(totalEvs-1)):null;
+          return(
+          <div style={{...S.card,padding:"16px",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+              <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ CALIDAD DE HORARIO</div>
+              {ptsPonderado!==null&&<div style={{textAlign:"right"}}>
+                <div style={{fontSize:18,fontWeight:800,color:sc(ptsPonderado/10*100)}}>{ptsPonderado}<span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span></div>
+              </div>}
             </div>
-          ))}
-        </div>
+            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:14,lineHeight:1.4}}>
+              Cuántos registros del mes llegaron a tiempo. ORO = máximo puntaje (10pts), FUERA = sin puntaje (0pts).
+            </div>
+            {/* stacked bar total */}
+            <div style={{height:18,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:12}}>
+              {franjaData.map(f=>f.n>0&&(
+                <div key={f.l} style={{width:Math.round(f.n/totalEvs*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",minWidth:f.n/totalEvs>0.05?20:0,transition:"width .4s"}}>
+                  {f.n/totalEvs>0.08&&<span style={{fontSize:8,color:"#fff",fontWeight:800}}>{Math.round(f.n/totalEvs*100)}%</span>}
+                </div>
+              ))}
+            </div>
+            {/* detalle por franja */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+              {franjaData.map(f=>(
+                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
+                  <div style={{fontSize:18,marginBottom:2}}>{f.icon}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:f.c}}>{Math.round(f.n/totalEvs*100)}%</div>
+                  <div style={{fontSize:9,color:f.c,fontWeight:700,marginBottom:4}}>{f.l}</div>
+                  <div style={{fontSize:8,color:"#8aaabb",lineHeight:1.4}}>{f.n} registros<br/>{f.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          );
+        })()}
 
         {/* por formato */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
@@ -1598,21 +1685,38 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <div style={{fontSize:8,color:"#8aaabb"}}>{det?`${det.obtenidos}/${det.maximos}pts`:""}</div>
                   </div>
                 </div>
-                <div className="rank-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"8px 10px",borderRadius:10,zIndex:30,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.3)"}}>
-                  <div style={{fontWeight:800,marginBottom:4}}>Vega {s.t.n} · {s.score}% eficiencia</div>
-                  {det&&<div style={{marginBottom:3}}>Obtuvo {det.obtenidos} de {det.maximos} pts posibles</div>}
-                  {det&&det.registros.length>0&&(
-                    <div style={{borderTop:"1px solid rgba(255,255,255,.15)",marginTop:4,paddingTop:4}}>
-                      {Object.entries(det.registros.reduce((acc,r)=>{acc[r.act]=(acc[r.act]||0)+r.pts;return acc;},{})).map(([a,p])=>(
-                        <div key={a} style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                          <span style={{opacity:.8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a}</span>
-                          <span style={{fontWeight:700,color:sc(p/10*100),flexShrink:0}}>{p} pts</span>
-                        </div>
-                      ))}
+                {(()=>{
+                  // franja breakdown for this tienda
+                  const tevs=Object.values(regs).filter(r=>r.tiendaId===s.t.id&&!r.anulado).flatMap(r=>r.evidencias||[]);
+                  const fOro=tevs.filter(e=>toMin(e.hora)<=toMin("08:00")).length;
+                  const fPlata=tevs.filter(e=>toMin(e.hora)>toMin("08:00")&&toMin(e.hora)<=toMin("09:00")).length;
+                  const fBronce=tevs.filter(e=>toMin(e.hora)>toMin("09:00")&&toMin(e.hora)<=toMin("10:00")).length;
+                  const fFuera=tevs.filter(e=>toMin(e.hora)>toMin("10:00")).length;
+                  const tTotal=tevs.length||1;
+                  return(
+                  <div className="rank-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"10px 12px",borderRadius:10,zIndex:30,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.3)"}}>
+                    <div style={{fontWeight:800,marginBottom:4,fontSize:11}}>Vega {s.t.n} · {s.score}% eficiencia</div>
+                    <div style={{marginBottom:6,color:"#8aaabb"}}>{det.obtenidos}/{det.maximos} pts · {s.t.f}</div>
+                    <div style={{borderTop:"1px solid rgba(255,255,255,.15)",paddingTop:6,marginTop:2}}>
+                      <div style={{fontSize:9,color:"#8aaabb",marginBottom:4,fontWeight:700}}>DISTRIBUCIÓN DE HORARIO</div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥇</span><span>ORO: {fOro} ({Math.round(fOro/tTotal*100)}%)</span></div>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥈</span><span>PLATA: {fPlata} ({Math.round(fPlata/tTotal*100)}%)</span></div>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥉</span><span>BRONCE: {fBronce} ({Math.round(fBronce/tTotal*100)}%)</span></div>
+                        <div style={{display:"flex",alignItems:"center",gap:4,color:fFuera>0?"#f17e7e":"inherit"}}><span>🔴</span><span>FUERA: {fFuera} ({Math.round(fFuera/tTotal*100)}%)</span></div>
+                      </div>
+                      {/* stacked bar */}
+                      <div style={{height:6,borderRadius:3,overflow:"hidden",display:"flex",marginTop:8}}>
+                        {fOro>0&&<div style={{width:(fOro/tTotal*100)+"%",background:"#f6a623"}}/>}
+                        {fPlata>0&&<div style={{width:(fPlata/tTotal*100)+"%",background:"#74b9ff"}}/>}
+                        {fBronce>0&&<div style={{width:(fBronce/tTotal*100)+"%",background:"#a29bfe"}}/>}
+                        {fFuera>0&&<div style={{width:(fFuera/tTotal*100)+"%",background:"#d63031"}}/>}
+                      </div>
                     </div>
-                  )}
-                  <div style={{position:"absolute",bottom:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
-                </div>
+                    <div style={{position:"absolute",bottom:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                  </div>
+                  );
+                })()}
               </div>
               );
             })}
