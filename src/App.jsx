@@ -1942,7 +1942,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div>
                 <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>PUNTAJE</div>
                 <select value={logPts} onChange={e=>setLogPts(e.target.value)} style={selSty}>
-                  {["Todos","10","8","6","0"].map(o=><option key={o} value={o}>{o==="Todos"?"Todos":o==="10"?"10pts — ORO":o==="8"?"8pts — PLATA":o==="6"?"6pts — BRONCE":"0pts — FUERA"}</option>)}
+                  {["Todos","10","8","6","0"].map(o=><option key={o} value={o}>{o==="Todos"?"Todos":o==="10"?"10pts ORO":o==="8"?"8pts PLATA":o==="6"?"6pts BRONCE":"0pts FUERA"}</option>)}
                 </select>
               </div>
             </div>
@@ -1958,13 +1958,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </div>
           </div>
           {!filtered.length
-            ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados con los filtros actuales</div>
+            ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados</div>
             :<div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <thead>
                   <tr style={{background:"#f8fafc"}}>
                     {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
-                      <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap",letterSpacing:".04em"}}>{h}</th>
+                      <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1988,66 +1988,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   })}
                 </tbody>
               </table>
-              {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length} — usa filtros para acotar</div>}
+              {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length}</div>}
             </div>
           }
         </div>
         );
       })()}
-          {!allLogs.length
-            ?<div style={{textAlign:"center",padding:"30px",color:"#8aaabb"}}>Sin registros este período</div>
-            :(()=>{
-              // Re-apply filters for table render
-              const getId=id=>document.getElementById?.(id)?.value||"";
-              const fFmt=getId("log-fmt");const fAct=getId("log-act");const fAud=getId("log-aud");const fPts=getId("log-pts");const fTxt=getId("log-txt")?.toLowerCase()||"";
-              const filtered=allLogs.filter(l=>{
-                if(fFmt&&fFmt!=="Todos"&&l.formato!==fFmt) return false;
-                if(fAct&&fAct!=="Todas"&&l.actividad!==fAct) return false;
-                if(fAud&&fAud!=="Todos"&&l.auditor!==fAud) return false;
-                if(fPts&&fPts!=="Todos"&&String(l.pts)!==fPts.split("pts")[0]) return false;
-                if(fTxt&&!(l.tienda.toLowerCase().includes(fTxt)||l.auditor.toLowerCase().includes(fTxt)||l.fecha.includes(fTxt))) return false;
-                return true;
-              });
-              if(!filtered.length) return <div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados con los filtros actuales</div>;
-              return(
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead>
-                    <tr style={{background:"#f8fafc"}}>
-                      {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
-                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap",letterSpacing:".04em"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.slice(0,200).map((l,i)=>{
-                      const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
-                      const ptsc=sc(l.pts/10*100);
-                      return(
-                        <tr key={i} style={{borderBottom:"1px solid #f5f7fa",background:l.anulado?"#fff8ec":"transparent",opacity:l.anulado?.7:1}}>
-                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#5a7a9a",whiteSpace:"nowrap"}}>{l.fecha}</td>
-                          <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
-                          <td style={{padding:"7px 10px"}}><span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
-                          <td style={{padding:"7px 10px",whiteSpace:"nowrap",fontSize:10,color:"#5a7a9a"}}>{l.actividad}</td>
-                          <td style={{padding:"7px 10px",fontWeight:700,color:"#0984e3"}}>{l.auditor}</td>
-                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#8aaabb"}}>{l.dni}</td>
-                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:11,fontWeight:700,color:ptsc}}>{l.hora}</td>
-                          <td style={{padding:"7px 10px"}}><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800,color:ptsc,background:sb(l.pts/10*100)}}>{l.pts}pts</span></td>
-                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:9,color:"#b2bec3"}}>{l.horaReg}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length} — usa filtros para acotar</div>}
-              </div>
-              );
-            })()
-          }
-        </div>
-        );
-      })()}
-
 {cfgTab===4&&(
         <div>
           <div style={{marginBottom:14}}>
