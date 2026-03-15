@@ -366,7 +366,7 @@ export default function ChecklistApp() {
     // registradas: ocultar siempre salvo admin con toggle activo
     if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
-  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel]);
+  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel,fecha]);
 
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
@@ -389,7 +389,7 @@ export default function ChecklistApp() {
       n++;
     });
     await Promise.all(promises);
-    showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct}% ${tier.icon}`);
+    showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
     setTSel(new Set());setRango(null);setHoraEx("07:00");setObsEx("");setPaso(1);setActSel(null);
   };
 
@@ -889,7 +889,10 @@ export default function ChecklistApp() {
                             const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
-                            const v=scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
+                            // eficiencia % = pts obtenidos / pts maximos posibles
+                            const diasConAct=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                            const maxPosible=diasConAct.length*10;
+                            const v=maxPosible>0?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
                             const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
                             const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
                             const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
@@ -952,7 +955,7 @@ export default function ChecklistApp() {
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
             const reg=getReg(ds,tId,a.id);
-            const p=puntajeReg(reg,getRangoActivo(a.id,fecha));
+            const p=puntajeReg(reg,getRangoActivo(a.id,ds));
             // filtro horario
             if(p!==null){
               const h=primerEnvio(reg?.evidencias);
