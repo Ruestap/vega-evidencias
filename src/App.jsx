@@ -350,8 +350,11 @@ export default function ChecklistApp() {
 
   /* ── tiendas filtradas para lista ── */
   const tRegistradas = useMemo(()=>new Set(
-    tiAct.filter(ti=>regs[rKey(fecha,ti.id,actSel||"")]?.evidencias?.length>0).map(ti=>ti.id)
-  ),[tiAct,regs,fecha,actSel]);
+    tiAct.filter(ti=>{
+      const reg=getReg(fecha,ti.id,actSel||"");
+      return reg?.evidencias?.length>0 && !reg?.anulado;
+    }).map(ti=>ti.id)
+  ),[tiAct,regs,fecha,actSel,getReg]);
 
   const tFilt = useMemo(()=>tiAct.filter(ti=>{
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
