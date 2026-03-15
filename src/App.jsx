@@ -177,8 +177,10 @@ export default function ChecklistApp() {
   const [horaEx,  setHoraEx]  = useState("");
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
-  const [fmtFilt, setFmtFilt] = useState("Todas");
-  const [busq,    setBusq]    = useState("");
+  const [fmtFilt,      setFmtFilt]      = useState("Todas");
+  const [busq,         setBusq]         = useState("");
+  const [verRegistradas, setVerRegistradas] = useState(false);
+  const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
   const [cfgTab,  setCfgTab]  = useState(0);
   const [showNT,  setShowNT]  = useState(false);
@@ -304,8 +306,10 @@ export default function ChecklistApp() {
   const tFilt = useMemo(()=>tiAct.filter(t=>{
     if(fmtFilt!=="Todas"&&t.f!==fmtFilt)return false;
     if(busq&&!t.n.toLowerCase().includes(busq.toLowerCase()))return false;
+    // ocultar ya registradas salvo admin con toggle activo
+    if(!verRegistradas && tRegistradas.has(t.id)) return false;
     return true;
-  }),[tiAct,fmtFilt,busq]);
+  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas]);
 
   const tRegistradas = useMemo(()=>new Set(
     tiAct.filter(t=>regs[rKey(fecha,t.id,actSel||"")]?.evidencias?.length>0).map(t=>t.id)
@@ -314,7 +318,7 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    const AR=actInfo?.r||RANGOS_DEFAULT;
+    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pct=calcP(horaEx,AR);
     const tier=getTier(pct);
     let n=0;
@@ -419,7 +423,7 @@ export default function ChecklistApp() {
         {DIAS_N[dow].toUpperCase()} · {actsDia.length} ACTIVIDAD{actsDia.length!==1?"ES":""} PROGRAMADA{actsDia.length!==1?"S":""}
       </p>
       {actsDia.map(a=>(
-        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setTSel(new Set());setRango(null);}}
+        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setTSel(new Set());setRango(null);setVerRegistradas(false);setRangoExt(null);}}
           style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,border:`2px solid ${actSel===a.id?a.c:"#e2e8f0"}`,background:actSel===a.id?a.c+"15":"#fff",cursor:"pointer",width:"100%",textAlign:"left",marginBottom:10}}>
           <span style={{fontSize:26}}>{a.e}</span>
           <div style={{flex:1}}>
@@ -440,7 +444,10 @@ export default function ChecklistApp() {
   );
 
   /* ══ PASO 2 — seleccionar tiendas ══ */
-  const renderPaso2 = ()=>(
+  const renderPaso2 = ()=>{
+    const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
+    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
+    return(
     <div>
       {/* info actividad */}
       <div style={{padding:"12px 16px 8px",background:"#fff",borderBottom:"1px solid #f0f4f8"}}>
@@ -450,6 +457,28 @@ export default function ChecklistApp() {
           <span style={{...S.pill("#8aaabb","#f0f4f8"),marginLeft:"auto"}}>{tSel.size} sel.</span>
           <span style={{...S.pill("#00b894","#e8faf5")}}>{tRegistradas.size} reg.</span>
         </div>
+
+        {/* rango extendido — solo para Ad-hoc y Promocional */}
+        {esAdHoc&&(
+          <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#854F0B",marginBottom:8}}>⏱️ VENTANA DE REGISTRO — {actInfo?.cat?.toUpperCase()}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6}}>
+              {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
+                <div key={f.k}>
+                  <div style={{fontSize:9,color:"#854F0B",fontWeight:700,marginBottom:3}}>{f.icon} {f.label}</div>
+                  <input type="time" value={AR[f.k]}
+                    onChange={e=>setRangoExt(r=>({...(r||actInfo?.r||RANGOS_DEFAULT),[f.k]:e.target.value}))}
+                    style={{width:"100%",padding:"7px",borderRadius:7,border:"1.5px solid #FAC775",background:"#fff",color:"#1a2f4a",fontSize:12,outline:"none",textAlign:"center"}}/>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:10,color:"#854F0B",flex:1}}>Ajusta si el horario de entrega cambió hoy</span>
+              {rangoExt&&<button onClick={()=>setRangoExt(null)} style={{fontSize:9,color:"#854F0B",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Restablecer</button>}
+            </div>
+          </div>
+        )}
+
         {/* filtro formato */}
         <div style={{display:"flex",gap:5,overflowX:"auto",marginBottom:8}}>
           {["Todas","Mayorista","Supermayorista","Market"].map(f=>{
@@ -469,13 +498,25 @@ export default function ChecklistApp() {
             style={{...S.inp,paddingLeft:36,fontSize:13}}/>
         </div>
       </div>
-      {/* seleccionar todas */}
-      <div style={{padding:"8px 16px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <span style={{fontSize:12,color:"#8aaabb"}}>{tFilt.length} tiendas</span>
-        <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.map(t=>t.id)))}
-          style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
-          {tSel.size===tFilt.length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
-        </button>
+
+      {/* barra de estado — pendientes vs registradas */}
+      <div style={{padding:"8px 16px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <span style={{fontSize:12,color:"#8aaabb"}}>{tFilt.length} pendientes</span>
+          {tRegistradas.size>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {tRegistradas.size} registradas</span>}
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {isAdmin&&tRegistradas.size>0&&(
+            <button onClick={()=>setVerRegistradas(v=>!v)}
+              style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+              {verRegistradas?"Ocultar registradas":"Ver todas"}
+            </button>
+          )}
+          <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(t=>!isExc(t.id,actSel)).map(t=>t.id)))}
+            style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
+            {tSel.size===tFilt.filter(t=>!isExc(t.id,actSel)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
+          </button>
+        </div>
       </div>
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
@@ -525,14 +566,14 @@ export default function ChecklistApp() {
         </div>
       )}
     </div>
-  );
+  );};
 
   /* ══ PASO 3 — hora de envío → puntaje automático ══ */
   const renderPaso3 = ()=>{
-    const AR=actInfo?.r||RANGOS_DEFAULT;
+    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pv = horaEx ? calcP(horaEx, AR) : null;
     const tier = getTier(pv);
-    // franjas de referencia para mostrar
+    const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
     const franjas=[
       {icon:"🥇",label:"ORO — 100%",   desde:"00:00",hasta:AR.c100,c:"#f6a623",bg:"#fff8ec"},
       {icon:"🥈",label:"PLATA — 80%",  desde:AR.c100,hasta:AR.c80, c:"#74b9ff",bg:"#e8f4fd"},
@@ -543,7 +584,17 @@ export default function ChecklistApp() {
 
     return(
       <div style={{padding:"16px"}}>
-        {/* tiendas seleccionadas */}
+        {/* aviso rango extendido */}
+        {rangoExt&&(
+          <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>⏱️</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#854F0B"}}>Rango extendido activo</div>
+              <div style={{fontSize:10,color:"#854F0B"}}>ORO ≤{rangoExt.c100} · PLATA ≤{rangoExt.c80} · BRONCE ≤{rangoExt.c60}</div>
+            </div>
+            <button onClick={()=>setRangoExt(null)} style={{fontSize:10,color:"#854F0B",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Quitar</button>
+          </div>
+        )}
         <div style={{...S.card,padding:"14px 16px",marginBottom:16}}>
           <div style={{fontSize:11,color:"#8aaabb",fontWeight:700,letterSpacing:".06em",marginBottom:8}}>
             {tSel.size} TIENDA{tSel.size!==1?"S":""} SELECCIONADA{tSel.size!==1?"S":""}
