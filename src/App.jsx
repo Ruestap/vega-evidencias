@@ -233,7 +233,18 @@ export default function ChecklistApp() {
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
-        if(d.excepciones) setExceps(d.excepciones);
+        if(d.excepciones){
+          const exc=d.excepciones;
+          // limpiar entradas legacy (true) — solo conservar arrays con fechas
+          const cleaned=Object.fromEntries(Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0));
+          const hasLegacy=Object.values(exc).some(v=>v===true||(!Array.isArray(v)&&v));
+          if(hasLegacy){
+            setExceps(cleaned);
+            setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
+          } else {
+            setExceps(exc);
+          }
+        }
         if(d.rangosDia)  setRangosDia(d.rangosDia);
       }
     };
@@ -274,7 +285,7 @@ export default function ChecklistApp() {
   const isExc = useCallback((tId,aId,fechaCheck)=>{
     const v = exceps[tId+"|"+aId];
     if(!v) return false;
-    if(v===true) return true; // legacy: permanente
+    // solo arrays de fechas son válidos — true legacy se ignora
     if(Array.isArray(v)) return v.includes(fechaCheck||fecha);
     return false;
   },[exceps,fecha]);
