@@ -582,10 +582,10 @@ export default function ChecklistApp() {
           {!isAdmin&&nNA===0&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          {isAdmin&&nReg>0&&(
+          {isAdmin&&(
             <button onClick={()=>setVerRegistradas(v=>!v)}
-              style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-              {verRegistradas?"📋 Ver solo pendientes":"👁 Ver registradas también"}
+              style={{padding:"6px 14px",borderRadius:9,border:`2px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",gap:5}}>
+              {verRegistradas?<>📋 Solo pendientes</>:<>👁 Ver registradas</>}
             </button>
           )}
           <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).map(ti=>ti.id)))}
@@ -889,10 +889,10 @@ export default function ChecklistApp() {
                             const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
-                            // eficiencia % = pts obtenidos / pts maximos posibles
+                            // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
                             const diasConAct=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
                             const maxPosible=diasConAct.length*10;
-                            const v=maxPosible>0?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
+                            const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
                             const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
                             const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
                             const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
@@ -912,7 +912,7 @@ export default function ChecklistApp() {
                                     style={{cursor:"pointer"}}>
                                     <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
                                     <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:2}}>
-                                      <div style={{height:"100%",width:`${v/10*100}%`,background:sc(v),borderRadius:1}}/>
+                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
                                   </div>
                                 ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
