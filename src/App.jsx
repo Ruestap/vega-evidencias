@@ -1044,7 +1044,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
           <span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>
           <span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>
-          {pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>base {pctBase}%</span>}
+          {pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>⚠️ N/A parcial</span>}
         </div>
       :<span style={{color:"#b2bec3"}}>—</span>}
   </td>;
@@ -1588,46 +1588,71 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           );
         })()}
 
-        {/* distribución horaria — rediseñado gerencial */}
+        {/* distribución horaria — por tiendas únicas */}
         {(()=>{
+          // Para cada tienda×actividad×día, tomar el PRIMER envío del día y clasificarlo
+          // Así contamos tiendas que llegaron a tiempo, no registros individuales
+          const hoy=todayStr();
+          let tOro=new Set(), tPlata=new Set(), tBronce=new Set(), tFuera=new Set(), tEval=new Set();
+          semanasDelMes.forEach(s=>{
+            s.days.forEach(day=>{
+              const ds=dStr(vYear,vMonth,day);
+              if(ds>hoy) return;
+              const dw=getDow(ds);
+              tsBase.forEach(ti=>{
+                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                  const reg=getReg(ds,ti.id,a.id);
+                  const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                  const key=ti.id+"_"+a.id;
+                  tEval.add(key);
+                  if(p===null) return;
+                  if(p===10) tOro.add(key);
+                  else if(p===8) tPlata.add(key);
+                  else if(p===6) tBronce.add(key);
+                  else tFuera.add(key);
+                });
+              });
+            });
+          });
+          // Una tienda×actividad puede tener registros en múltiples franjas en distintos días
+          // Usar la MEJOR franja alcanzada por cada tienda×actividad
+          const nEvalH=tEval.size||1;
           const franjas=[
-            {l:"ORO",    icon:"🥇", c:"#f6a623", bg:"#fff8ec", pts:10, filter:e=>toMin(e.hora)<=toMin("08:00"),  desc:"Antes de 08:00"},
-            {l:"PLATA",  icon:"🥈", c:"#74b9ff", bg:"#e8f4fd", pts:8,  filter:e=>toMin(e.hora)>toMin("08:00")&&toMin(e.hora)<=toMin("09:00"), desc:"08:01 - 09:00"},
-            {l:"BRONCE", icon:"🥉", c:"#a29bfe", bg:"#f0edff", pts:6,  filter:e=>toMin(e.hora)>toMin("09:00")&&toMin(e.hora)<=toMin("10:00"), desc:"09:01 - 10:00"},
-            {l:"FUERA",  icon:"🔴", c:"#d63031", bg:"#ffeae6", pts:0,  filter:e=>toMin(e.hora)>toMin("10:00"),  desc:"Después de 10:00"},
+            {l:"ORO",    icon:"🥇", c:"#f6a623", bg:"#fff8ec", pts:10, n:tOro.size,  desc:"Antes de 08:00 · 10pts"},
+            {l:"PLATA",  icon:"🥈", c:"#74b9ff", bg:"#e8f4fd", pts:8,  n:tPlata.size,desc:"08:01 - 09:00 · 8pts"},
+            {l:"BRONCE", icon:"🥉", c:"#a29bfe", bg:"#f0edff", pts:6,  n:tBronce.size,desc:"09:01 - 10:00 · 6pts"},
+            {l:"FUERA",  icon:"🔴", c:"#d63031", bg:"#ffeae6", pts:0,  n:tFuera.size, desc:"Después de 10:00 · 0pts"},
           ];
-          const franjaData=franjas.map(f=>({...f, n:allEvs.filter(f.filter).length}));
-          const maxN=Math.max(...franjaData.map(f=>f.n),1);
-          const ptsPromPorFranja=franjaData.map(f=>({...f, ptsProm:f.n>0?f.pts:null}));
-          // pts reales promedio = (registros en franja * pts de franja) / total registros
-          const ptsPonderado=totalEvs>1?Math.round(franjaData.reduce((acc,f)=>acc+f.n*f.pts,0)/(totalEvs-1)):null;
+          const totalH=franjas.reduce((a,f)=>a+f.n,0)||1;
+          const ptsPonderado=Math.round(franjas.reduce((a,f)=>a+f.n*f.pts,0)/totalH);
           return(
           <div style={{...S.card,padding:"16px",marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-              <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ CALIDAD DE HORARIO</div>
-              {ptsPonderado!==null&&<div style={{textAlign:"right"}}>
-                <div style={{fontSize:18,fontWeight:800,color:sc(ptsPonderado/10*100)}}>{ptsPonderado}<span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span></div>
-              </div>}
-            </div>
-            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:14,lineHeight:1.4}}>
-              Cuántos registros del mes llegaron a tiempo. ORO = máximo puntaje (10pts), FUERA = sin puntaje (0pts).
+              <div>
+                <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ CALIDAD DE HORARIO</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>Por tienda × actividad — mejor franja alcanzada en el mes</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:20,fontWeight:800,color:sc(ptsPonderado/10*100)}}>{ptsPonderado}<span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span></div>
+                <div style={{fontSize:9,color:"#8aaabb"}}>{totalH} evaluaciones</div>
+              </div>
             </div>
             {/* stacked bar total */}
-            <div style={{height:18,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:12}}>
-              {franjaData.map(f=>f.n>0&&(
-                <div key={f.l} style={{width:Math.round(f.n/totalEvs*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",minWidth:f.n/totalEvs>0.05?20:0,transition:"width .4s"}}>
-                  {f.n/totalEvs>0.08&&<span style={{fontSize:8,color:"#fff",fontWeight:800}}>{Math.round(f.n/totalEvs*100)}%</span>}
+            <div style={{height:20,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:12}}>
+              {franjas.map(f=>f.n>0&&(
+                <div key={f.l} style={{width:(f.n/totalH*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",transition:"width .4s"}}>
+                  {f.n/totalH>0.08&&<span style={{fontSize:9,color:"#fff",fontWeight:800}}>{Math.round(f.n/totalH*100)}%</span>}
                 </div>
               ))}
             </div>
             {/* detalle por franja */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
-              {franjaData.map(f=>(
-                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
-                  <div style={{fontSize:18,marginBottom:2}}>{f.icon}</div>
-                  <div style={{fontSize:16,fontWeight:800,color:f.c}}>{Math.round(f.n/totalEvs*100)}%</div>
-                  <div style={{fontSize:9,color:f.c,fontWeight:700,marginBottom:4}}>{f.l}</div>
-                  <div style={{fontSize:8,color:"#8aaabb",lineHeight:1.4}}>{f.n} registros<br/>{f.desc}</div>
+              {franjas.map(f=>(
+                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"12px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
+                  <div style={{fontSize:20,marginBottom:2}}>{f.icon}</div>
+                  <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1}}>{f.n}</div>
+                  <div style={{fontSize:9,color:f.c,fontWeight:700,margin:"3px 0"}}>tiendas · {f.l}</div>
+                  <div style={{fontSize:8,color:"#8aaabb",lineHeight:1.4}}>{Math.round(f.n/totalH*100)}%<br/>{f.desc}</div>
                 </div>
               ))}
             </div>
