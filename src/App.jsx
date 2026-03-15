@@ -336,15 +336,18 @@ export default function ChecklistApp() {
 
   // calcEficiencia: retorna {pct, obtenidos, maximos, registros}
   // pct = (pts obtenidos / pts máximos posibles) * 100
-  // actsConRegistro: actividades que tienen al menos 1 registro en Firebase
-  // Evita inflar el denominador con actividades nunca implementadas en el período
+  // actsConRegistroIds: actividades con al menos 1 registro en el MES EN VISTA
+  // Filtra por mes — evita columnas fantasma y maximos inflados → RIESGO falso.
   const actsConRegistroIds = useMemo(()=>{
     const ids = new Set();
-    Object.values(regs).forEach(r=>{
-      if(r?.actividadId&&r?.evidencias?.length>0&&!r.anulado) ids.add(r.actividadId);
+    const ymPrefix = `${vYear}-${String(vMonth+1).padStart(2,"0")}`;
+    Object.entries(regs).forEach(([,r])=>{
+      if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
+      const f = r.fecha||"";
+      if(f.startsWith(ymPrefix)) ids.add(r.actividadId);
     });
     return ids;
-  },[regs]);
+  },[regs,vYear,vMonth]);
 
   const calcEficiencia = useCallback((tId, days)=>{
     let obtenidos=0, maximos=0, registros=[];
@@ -892,7 +895,7 @@ export default function ChecklistApp() {
 
   /* ══ TAB REPORTE SEMANAL ══ */
   const renderReporte = ()=>{
-    const actsActivas=acts.filter(a=>a.activa);
+    const actsActivas=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)); // solo cols con historial en el mes
     const semsVis=selWeek!==null?[semanasDelMes[selWeek]]:semanasDelMes;
     return(
       <div style={{padding:"16px"}}>
