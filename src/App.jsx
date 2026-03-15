@@ -1105,6 +1105,78 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </div>
           );
         })}
+      {/* FILA GRAN TOTAL — suma todos los formatos */}
+      {(()=>{
+        const allDays=semsVis.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+        // Total global mes
+        let totOb=0,totMx=0;
+        tiAct.forEach(tr=>{ const ef=calcEficiencia(tr.id,allDays); if(ef){totOb+=ef.obtenidos;totMx+=ef.maximos;} });
+        const totEf=totMx>0?Math.round((totOb/totMx)*100):null;
+        const totTier=getTier(totEf);
+        // Totales por semana
+        const totSems=semsVis.map(sem=>{
+          let ob=0,mx=0;
+          tiAct.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
+          return {ob,mx,ef:mx>0?Math.round((ob/mx)*100):null};
+        });
+        return(
+        <div style={{...S.card,marginBottom:16,overflow:"hidden",border:"2px solid #1a2f4a"}}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <tbody>
+                <tr style={{background:"#1a2f4a"}}>
+                  <td style={{padding:"10px 14px",fontWeight:800,fontSize:11,color:"#fff",position:"sticky",left:0,background:"#1a2f4a",zIndex:2,whiteSpace:"nowrap",minWidth:140}}>
+                    🏁 TOTAL GENERAL
+                    <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
+                  </td>
+                  {/* celdas vacías para alinear con columnas actividad×semana */}
+                  {semsVis.flatMap(s=>actsActivas.map(a=>(
+                    <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
+                      {(()=>{
+                        let ob=0,mx=0;
+                        const ds=s.days.map(d=>dStr(vYear,vMonth,d));
+                        const hoyT=todayStr();
+                        tiAct.forEach(tr=>{
+                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)).forEach(d=>{
+                            mx+=10;
+                            const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
+                            if(p!==null) ob+=p;
+                          });
+                        });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        return mx>0
+                          ?<span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}<br/><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></span>
+                          :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
+                      })()}
+                    </td>
+                  )))}
+                  {/* totales EF.% por semana */}
+                  {totSems.map((ts,i)=>(
+                    <td key={"gs"+i} style={{padding:"6px 10px",textAlign:"center",background:"#0d1f35"}}>
+                      {ts.ef!==null
+                        ?<><span style={{fontSize:11,fontWeight:800,color:sc(ts.ef)}}>{ts.ef}%</span><br/><span style={{fontSize:8,color:"#8aaabb"}}>{ts.ob}/{ts.mx}pts</span></>
+                        :<span style={{color:"#5a7a9a"}}>—</span>}
+                    </td>
+                  ))}
+                  {/* total mes */}
+                  {selWeek===null&&(
+                    <td style={{padding:"8px 10px",textAlign:"center",background:totEf?sb(totEf):"#0d1f35"}}>
+                      {totEf!==null
+                        ?<><span style={{fontWeight:800,fontSize:13,color:sc(totEf)}}>{totEf}%</span><br/><span style={{fontSize:9,color:"#5a7a9a"}}>{totOb}/{totMx}pts</span></>
+                        :<span style={{color:"#b2bec3"}}>—</span>}
+                    </td>
+                  )}
+                  {/* tier global */}
+                  <td style={{padding:"6px 10px",textAlign:"center",background:totTier.bg}}>
+                    {totEf!==null?<><span style={{fontSize:16}}>{totTier.icon}</span><div style={{fontSize:9,fontWeight:800,color:totTier.c}}>{totTier.label}</div></>:<span style={{color:"#d1d5db"}}>—</span>}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        );
+      })()}
       </div>
     );
   };
@@ -1342,7 +1414,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
-              {k:"SG",label:"Eficiencia Global",    sub:`${totalOb}/${totalMx} pts`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
+              {k:"SG",label:"Eficiencia Global",    sub:`${totalOb}/${totalMx} pts · ${tsEval.length} tiendas evaluadas`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
               {k:"IC",label:"Cobertura Registros",  sub:`${nCump}/${nEval} tiendas`,  v:IC+"%", num:IC, c:"#0984e3",icon:"📬", insight:icI},
               {k:"SE",label:"Tiendas Excelencia",   sub:`${nExc}/${nEval} con ≥95%`,  v:SE+"%", num:SE, c:"#f6a623",icon:"🏆", insight:seI},
               {k:"TR",label:"Tiendas Bajo Mínimo",  sub:`${nRie}/${nEval} con <60%`,  v:TR+"%", num:TR, c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
@@ -1375,26 +1447,34 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>📈 EFICIENCIA SEMANAL</div>
-            <div style={{fontSize:9,color:"#8aaabb",fontWeight:600}}>pts obtenidos / pts posibles por semana</div>
+            <div style={{fontSize:9,color:"#8aaabb",fontWeight:600}}>Eficiencia = pts obtenidos ÷ pts posibles · excluye N/A y días futuros</div>
           </div>
-          <div style={{display:"flex",gap:10,alignItems:"flex-end",height:100}}>
+          <div style={{fontSize:10,color:"#5a7a9a",marginBottom:14,padding:"6px 10px",background:"#f8fafc",borderRadius:8,lineHeight:1.5}}>
+            Muestra qué % de los puntos posibles se obtuvieron cada semana. Una semana con 80% significa que de cada 10 pts posibles, se lograron 8.
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
             {semanasDelMes.map((s,i)=>{
               const v=tendencia[i];
-              // compute ob/mx for this week across tsEval
               let ob=0,mx=0;
               tsEval.forEach(ti=>{ const ef=calcEficienciaSem(ti.id,s); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
               const isFuture=s.days.every(d=>dStr(vYear,vMonth,d)>todayStr());
+              const maxV=Math.max(...tendencia.filter(x=>x!==null),1);
+              const barH=v!==null?Math.max(8,Math.round((v/maxV)*80)):0;
+              const trend=i>0&&tendencia[i-1]!==null&&v!==null?(v>tendencia[i-1]?"↑":v<tendencia[i-1]?"↓":"→"):null;
               return(
                 <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                  <div style={{fontSize:12,fontWeight:800,color:isFuture?"#b2bec3":sc(v)}}>{v!==null?v+"%":"—"}</div>
-                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",position:"relative"}}>
-                    {v!==null&&<div style={{width:"100%",height:v+"%",background:sc(v),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
-                    {isFuture&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700}}>PEND.</div>}
+                  {trend&&<div style={{fontSize:10,fontWeight:800,color:trend==="↑"?"#00b894":trend==="↓"?"#d63031":"#8aaabb"}}>{trend}</div>}
+                  {!trend&&<div style={{fontSize:10}}> </div>}
+                  <div style={{fontSize:13,fontWeight:800,color:isFuture?"#b2bec3":v!==null?sc(v):"#b2bec3"}}>{v!==null?v+"%":"—"}</div>
+                  <div style={{width:"100%",height:80,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",position:"relative"}}>
+                    {v!==null&&!isFuture&&<div style={{width:"100%",height:barH+"px",background:sc(v),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
+                    {isFuture&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700,flexDirection:"column",gap:2}}><span>⏳</span><span>PENDIENTE</span></div>}
                   </div>
-                  <div style={{fontSize:9,color:"#1a2f4a",fontWeight:800}}>{s.label}</div>
-                  {mx>0&&<div style={{fontSize:8,color:"#8aaabb",textAlign:"center"}}>{ob}/{mx}pts</div>}
+                  <div style={{fontSize:10,color:"#1a2f4a",fontWeight:800}}>{s.label}</div>
+                  {mx>0&&!isFuture&&<div style={{fontSize:9,color:"#8aaabb",textAlign:"center",lineHeight:1.3}}>{ob}/{mx}<br/>pts</div>}
+                  {isFuture&&<div style={{fontSize:8,color:"#b2bec3"}}>sin datos</div>}
                 </div>
               );
             })}
@@ -1403,7 +1483,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
         {/* efectividad por actividad */}
         <div style={{...S.card,padding:"14px",marginBottom:14}}>
-          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:6}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
+          <div style={{fontSize:10,color:"#5a7a9a",marginBottom:12,padding:"6px 10px",background:"#f8fafc",borderRadius:8,lineHeight:1.5}}>
+            Pts obtenidos ÷ pts posibles por actividad en el mes. Solo incluye actividades con al menos 1 registro. Excluye tiendas con N/A y días futuros.
+          </div>
           {actEfect.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
           {actEfect.map(({a,v,ob,mx})=>(
             <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
