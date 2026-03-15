@@ -135,6 +135,15 @@ function getTier(s) {
   if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
   return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
+// Para paso3: puntaje en pts (10/8/6/0)
+function getTierPts(p) {
+  if(p===null||p===undefined) return {label:"S/D",icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
+  if(p>=10)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
+  if(p>=8)   return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
+  if(p>=6)   return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
+  if(p>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+}
 function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
 function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
@@ -347,9 +356,12 @@ export default function ChecklistApp() {
   const tFilt = useMemo(()=>tiAct.filter(ti=>{
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
-    // N/A siempre visible solo si aplica para la fecha actual
-    if(isExc(ti.id,actSel,fecha)) return true;
-    // registradas: ocultar siempre salvo admin con toggle activo
+    const excHoy = isExc(ti.id,actSel,fecha);
+    // N/A: solo visible en modo "Todas" (verRegistradas=true) para que admin las vea
+    // En modo "Pendientes" se ocultan — no se pueden registrar de todos modos
+    if(excHoy && !verRegistradas) return false;
+    if(excHoy) return true; // en modo "Todas" sí aparece
+    // registradas: ocultar en modo Pendientes
     if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
   }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel,fecha]);
@@ -359,7 +371,7 @@ export default function ChecklistApp() {
     if(!horaEx||tSel.size===0||!actSel)return;
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pct=calcP(horaEx,AR);
-    const tier=getTier(pct);
+    const tier=getTierPts(pct);
     let n=0;
     const promises=[];
     tSel.forEach(tId=>{
@@ -609,7 +621,9 @@ export default function ChecklistApp() {
                 {sel&&!exc&&<span style={{fontSize:14,color:"#fff",fontWeight:700}}>✓</span>}
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {tienda.n}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {tienda.n}</div>
+                </div>
                 <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>
                   <span style={S.pill(fc.c,fc.bg)}>{tienda.f}</span>
                   {exc&&<span style={S.pill("#854F0B","#FAEEDA")}>⚠️ N/A · No aplica</span>}
@@ -643,7 +657,7 @@ export default function ChecklistApp() {
   const renderPaso3 = ()=>{
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pv = horaEx ? calcP(horaEx, AR) : null;
-    const tier = getTier(pv);
+    const tier = getTierPts(pv);
     const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
     const franjas=[
       {icon:"🥇",label:"ORO — 10 pts",   desde:"00:00",hasta:AR.c100,c:"#f6a623",bg:"#fff8ec"},
@@ -651,7 +665,7 @@ export default function ChecklistApp() {
       {icon:"🥉",label:"BRONCE — 6 pts", desde:AR.c80, hasta:AR.c60, c:"#a29bfe",bg:"#f0edff"},
       {icon:"🔴",label:"FUERA — 0 pts",  desde:AR.c60, hasta:"23:59",c:"#d63031",bg:"#ffeae6"},
     ];
-    const franjaActiva = pv===100?0:pv===80?1:pv===60?2:pv===0?3:-1;
+    const franjaActiva = pv===10?0:pv===8?1:pv===6?2:pv===0?3:-1;
 
     return(
       <div style={{padding:"16px"}}>
@@ -754,6 +768,29 @@ export default function ChecklistApp() {
         </div>
 
         {/* botón registrar */}
+        {pv!==null&&(
+          <div style={{...S.card,padding:"14px",marginBottom:12,background:tier.bg,border:`1.5px solid ${tier.c}44`}}>
+            <div style={{fontSize:11,color:tier.c,fontWeight:700,marginBottom:8}}>📋 RESUMEN DEL REGISTRO</div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:"#5a7a9a"}}>Actividad</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{actInfo?.e} {actInfo?.n}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:"#5a7a9a"}}>Fecha</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{fecha}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:"#5a7a9a"}}>Hora de evidencia</span>
+              <span style={{fontSize:12,fontWeight:700,color:tier.c}}>{horaEx} → {tier.icon} {pv} pts</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{fontSize:12,color:"#5a7a9a"}}>Tiendas</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{tSel.size} seleccionada{tSel.size!==1?"s":""}</span>
+            </div>
+            <div style={{height:1,background:tier.c+"33",margin:"10px 0"}}/>
+            <div style={{fontSize:10,color:tier.c,opacity:.8}}>⚠️ Verifica los datos antes de confirmar. Esta acción guardará el registro.</div>
+          </div>
+        )}
         <button
           onClick={confirmarRegistro}
           disabled={pv===null}
@@ -761,12 +798,13 @@ export default function ChecklistApp() {
             ...S.btn(pv!==null?tier.c:"#e2e8f0"),
             opacity:pv!==null?1:.5,
             cursor:pv!==null?"pointer":"not-allowed",
-            marginBottom:10,padding:"16px",fontSize:15,
+            marginBottom:10,padding:"18px",fontSize:16,fontWeight:800,
             background:pv!==null?`linear-gradient(135deg,${tier.c},#1a2f4a)`:"#e2e8f0",
-            color:pv!==null?"#fff":"#b2bec3"
+            color:pv!==null?"#fff":"#b2bec3",
+            letterSpacing:".02em"
           }}
         >
-          {pv!==null?`✅ Registrar ${tSel.size} tienda${tSel.size!==1?"s":""} · ${pv}%`:`Ingresa la hora para continuar`}
+          {pv!==null?`✅ Confirmar registro`:`Ingresa la hora para continuar`}
         </button>
         <button onClick={()=>setPaso(2)}
           style={{width:"100%",padding:"12px",borderRadius:12,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",fontSize:13,fontWeight:700,cursor:"pointer"}}>
