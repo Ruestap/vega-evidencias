@@ -194,6 +194,11 @@ export default function ChecklistApp() {
   const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
   const [cfgTab,  setCfgTab]  = useState(0);
+  const [logFmt,  setLogFmt]  = useState("Todos");
+  const [logAct,  setLogAct]  = useState("Todas");
+  const [logAud,  setLogAud]  = useState("Todos");
+  const [logPts,  setLogPts]  = useState("Todos");
+  const [logTxt,  setLogTxt]  = useState("");
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
@@ -653,6 +658,23 @@ export default function ChecklistApp() {
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
         {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: mantén presionado una tienda para marcarla como excepción (N/A)</div>}
+        {tFilt.length===0&&!verRegistradas&&(
+          <div style={{textAlign:"center",padding:"40px 20px"}}>
+            <div style={{fontSize:40,marginBottom:12}}>✅</div>
+            <div style={{fontWeight:800,fontSize:16,color:"#1a2f4a",marginBottom:6}}>Todas las tiendas registradas</div>
+            <div style={{fontSize:12,color:"#8aaabb",marginBottom:20}}>No quedan pendientes para esta actividad hoy</div>
+            {isAdmin&&(
+              <button onClick={()=>setVerRegistradas(true)}
+                style={{padding:"12px 24px",borderRadius:12,border:"none",background:"#0984e3",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",marginRight:10}}>
+                👁 Ver todas las tiendas
+              </button>
+            )}
+            <button onClick={()=>setPaso(1)}
+              style={{padding:"12px 24px",borderRadius:12,border:"1.5px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+              ← Cambiar actividad
+            </button>
+          </div>
+        )}
         {tFilt.map(tienda=>{
           const sel=tSel.has(tienda.id);
           const reg=tRegistradas.has(tienda.id);
@@ -930,7 +952,7 @@ export default function ChecklistApp() {
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
-                      <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap"}}>TIENDA</th>
+                      <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
                       {semsVis.map(s=>actsActivas.map(a=>(
                         <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap"}}>{s.label}<br/>{a.e}</th>
@@ -952,7 +974,7 @@ export default function ChecklistApp() {
                       const tier=getTier(pTier);
                       return(
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
-                          <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {tr.n}</td>
+                          <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
                           {semsVis.map(sem=>actsActivas.map(a=>{
                             const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
@@ -1024,7 +1046,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   {/* FILA TOTAL DEL FORMATO */}
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
-                      <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a"}}>TOTAL {fmt.toUpperCase()}</td>
+                      <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
                       {semsVis.map(sem=>actsActivas.map(a=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{
@@ -1065,7 +1087,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                           {ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}</span></span>:<span style={{color:"#b2bec3"}}>—</span>}
                         </td>;
                       })()}
-                      <td></td>
+                      {(()=>{
+                        // Medalla resumen del formato en el período visible
+                        const allDays=semsVis.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+                        let ob=0,mx=0;
+                        tsFmt.forEach(tr=>{ const ef=calcEficiencia(tr.id,allDays); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        const t=getTier(ef);
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:t.bg}}>
+                          {ef!==null?<><span style={{fontSize:14}}>{t.icon}</span><div style={{fontSize:8,fontWeight:800,color:t.c}}>{t.label}</div></>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                        </td>;
+                      })()}
                     </tr>
                   </tfoot>
                 </table>
@@ -1144,21 +1176,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     const IC=tsEval.length>0?Math.round((validos.length/tsEval.length)*100):0;
     const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsEval.length)*100):0; // >=95% eficiencia
     const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsEval.length)*100):0;
+    // tendencia: pts obtenidos / pts máximos por semana — mismo filtro que scoresMes
     const tendencia=semanasDelMes.map(s=>{
       let ob=0,mx=0;
       tsEval.forEach(ti=>{
-        let tob=0,tmx=0;
-        s.days.forEach(day=>{
-          const ds=dStr(vYear,vMonth,day);
-          if(ds>todayStr()) return;
-          const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
-            tmx+=10;
-            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-            if(p!==null) tob+=p;
-          });
-        });
-        ob+=tob; mx+=tmx;
+        const ef=calcEficienciaSem(ti.id,s);
+        if(ef){ ob+=ef.obtenidos; mx+=ef.maximos; }
       });
       return mx>0?Math.round((ob/mx)*100):null;
     });
@@ -1178,19 +1201,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     const top5=sorted.filter(s=>s.score!==null).slice(0,5);
     const bot5=[...sorted].reverse().filter(s=>s.score!==null).slice(0,5);
 
-    // efectividad por actividad
-    const actEfect=acts.filter(a=>a.activa).map(a=>{
-      // excluir tiendas con N/A para esta actividad específica
-      const tsActEval=tsBase.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d)))));
-      const ps=tsActEval.map(ti=>{
-        const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
-          const ds=dStr(vYear,vMonth,d);
-          if(!a.dias.includes(getDow(ds)))return null;
-          return puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-        })).filter(p=>p!==null);
-        return scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
-      }).filter(v=>v!==null);
-      return{a,v:ps.length>0?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null};
+    // efectividad por actividad — pts obtenidos / pts máximos (correcto, no promedio de promedios)
+    const actEfect=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+      let ob=0,mx=0;
+      const hoy=todayStr();
+      tsBase.forEach(ti=>{
+        semanasDelMes.forEach(s=>{
+          s.days.forEach(day=>{
+            const ds=dStr(vYear,vMonth,day);
+            if(ds>hoy) return;
+            if(!a.dias.includes(getDow(ds))) return;
+            if(isExc(ti.id,a.id,ds)) return;
+            mx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) ob+=p;
+          });
+        });
+      });
+      const v=mx>0?Math.round((ob/mx)*100):null;
+      return{a,v,ob,mx};
     });
 
     const exportPDF=window._vegaPDF=()=>{
@@ -1294,10 +1323,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
-              {k:"SG",label:"Score Global",  v:SG+"%", c:sc(SG),  icon:"🎯", insight:sgI, tier:getTier(SG)},
-              {k:"IC",label:"Cumplimiento",  v:IC+"%", c:"#0984e3",icon:"📬", insight:icI},
-              {k:"SE",label:"Excelencia",    v:SE+"%", c:"#f6a623",icon:"🏆", insight:seI},
-              {k:"TR",label:"Tasa Riesgo",   v:TR+"%", c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
+              {k:"SG",label:"Eficiencia Global",  v:SG+"%",num:SG, c:sc(SG),  icon:"🎯", insight:sgI, tier:getTier(SG)},
+              {k:"IC",label:"Tiendas con Registro",v:IC+"%",num:IC, c:"#0984e3",icon:"📬", insight:icI},
+              {k:"SE",label:"Tiendas ≥95% (Oro)",  v:SE+"%",num:SE, c:"#f6a623",icon:"🏆", insight:seI},
+              {k:"TR",label:"Tiendas <60% (Riesgo)",v:TR+"%",num:TR, c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
             ].map(k=>(
               <div key={k.k} style={{...S.card,padding:"14px",cursor:"default",position:"relative"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".kpi-tip").style.display="block"}
@@ -1312,7 +1341,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {k.tier&&<div style={{marginTop:4}}><span style={{...S.pill(k.tier.c,k.tier.bg)}}>{k.tier.icon} {k.tier.label}</span></div>}
                 <div style={{fontSize:10,color:"#5a7a9a",fontWeight:700,marginTop:4}}>{k.label}</div>
                 <div style={{height:3,borderRadius:2,background:k.c+"33",marginTop:8,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:k.v,background:k.c,borderRadius:2,transition:"width .6s"}}/>
+                  <div style={{height:"100%",width:k.num+"%",background:k.c,borderRadius:2,transition:"width .6s"}}/>
                 </div>
                 <div className="kpi-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.5,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   {k.insight}
@@ -1326,17 +1355,26 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
-          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:14}}>📈 TENDENCIA SEMANAL</div>
-          <div style={{display:"flex",gap:8,alignItems:"flex-end",height:80}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>📈 EFICIENCIA SEMANAL</div>
+            <div style={{fontSize:9,color:"#8aaabb",fontWeight:600}}>pts obtenidos / pts posibles por semana</div>
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"flex-end",height:100}}>
             {semanasDelMes.map((s,i)=>{
               const v=tendencia[i];
+              // compute ob/mx for this week across tsEval
+              let ob=0,mx=0;
+              tsEval.forEach(ti=>{ const ef=calcEficienciaSem(ti.id,s); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
+              const isFuture=s.days.every(d=>dStr(vYear,vMonth,d)>todayStr());
               return(
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                  <div style={{fontSize:11,fontWeight:800,color:sc(v)}}>{v!==null?v+"%":"—"}</div>
-                  <div style={{width:"100%",height:60,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
-                    {v!==null&&<div style={{width:"100%",height:v+"%",background:sc(v),borderRadius:"4px 4px 0 0"}}/>}
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <div style={{fontSize:12,fontWeight:800,color:isFuture?"#b2bec3":sc(v)}}>{v!==null?v+"%":"—"}</div>
+                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",position:"relative"}}>
+                    {v!==null&&<div style={{width:"100%",height:v+"%",background:sc(v),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
+                    {isFuture&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700}}>PEND.</div>}
                   </div>
-                  <div style={{fontSize:9,color:"#8aaabb",fontWeight:700}}>{s.label}</div>
+                  <div style={{fontSize:9,color:"#1a2f4a",fontWeight:800}}>{s.label}</div>
+                  {mx>0&&<div style={{fontSize:8,color:"#8aaabb",textAlign:"center"}}>{ob}/{mx}pts</div>}
                 </div>
               );
             })}
@@ -1346,14 +1384,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* efectividad por actividad */}
         <div style={{...S.card,padding:"14px",marginBottom:14}}>
           <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
-          {actEfect.map(({a,v})=>(
-            <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <span style={{fontSize:16,width:20}}>{a.e}</span>
-              <span style={{fontSize:11,color:"#5a7a9a",width:130,flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.n}</span>
-              <div style={{flex:1,height:8,background:"#f0f4f8",borderRadius:4,overflow:"hidden"}}>
-                {v!==null&&<div style={{width:v+"%",height:"100%",background:a.c,borderRadius:4}}/>}
+          {actEfect.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
+          {actEfect.map(({a,v,ob,mx})=>(
+            <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{fontSize:16,width:22,flexShrink:0}}>{a.e}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:11,color:"#5a7a9a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.n}</span>
+                  <span style={{fontSize:11,fontWeight:800,color:v!==null?sc(v):"#b2bec3",flexShrink:0,marginLeft:8}}>{v!==null?v+"%":"—"}</span>
+                </div>
+                <div style={{height:6,background:"#f0f4f8",borderRadius:3,overflow:"hidden"}}>
+                  {v!==null&&<div style={{width:v+"%",height:"100%",background:a.c,borderRadius:3,transition:"width .4s"}}/>}
+                </div>
+                {mx>0&&<div style={{fontSize:9,color:"#b2bec3",marginTop:2}}>{ob}/{mx} pts posibles</div>}
               </div>
-              <span style={{fontSize:11,fontWeight:700,color:v!==null?sc(v):"#b2bec3",width:32,textAlign:"right"}}>{v!==null?v+"%":"—"}</span>
             </div>
           ))}
         </div>
@@ -1733,61 +1777,165 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       )}
 
-{cfgTab===3&&(
+{cfgTab===3&&(()=>{
+        const allLogs=[];
+        Object.entries(regs).forEach(([key,reg])=>{
+          if(!reg?.evidencias?.length) return;
+          const parts=key.replace(/--/g,"|").split("|");
+          if(parts.length<3) return;
+          const [f,tId,aId]=parts;
+          const tienda=tiendas.find(t=>t.id===tId);
+          const act=acts.find(a=>a.id===aId);
+          if(!tienda||!act) return;
+          reg.evidencias.forEach(ev=>{
+            if(ev.auditor) allLogs.push({fecha:f,tienda:tienda.n,formato:tienda.f,actividad:act.n,auditor:ev.auditor,dni:ev.dni||"—",hora:ev.hora,pts:ev.puntaje,horaReg:ev.horaRegistro,ts:ev.timestamp,anulado:reg.anulado});
+          });
+        });
+        allLogs.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
+        const fmtOpts=["Todos",...[...new Set(allLogs.map(l=>l.formato))]];
+        const actOpts=["Todas",...[...new Set(allLogs.map(l=>l.actividad))]];
+        const audOpts=["Todos",...[...new Set(allLogs.map(l=>l.auditor))]];
+        const filtered=allLogs.filter(l=>{
+          if(logFmt!=="Todos"&&l.formato!==logFmt) return false;
+          if(logAct!=="Todas"&&l.actividad!==logAct) return false;
+          if(logAud!=="Todos"&&l.auditor!==logAud) return false;
+          if(logPts!=="Todos"&&String(l.pts)!==logPts) return false;
+          if(logTxt&&!(l.tienda.toLowerCase().includes(logTxt.toLowerCase())||l.auditor.toLowerCase().includes(logTxt.toLowerCase())||l.fecha.includes(logTxt))) return false;
+          return true;
+        });
+        const selSty={width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:11,outline:"none"};
+        return(
         <div>
-          <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>📋 Log de Auditoría</div>
-          <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>Registros del mes — quién registró qué y cuándo</div>
-          {(()=>{
-            const logs=[];
-            Object.entries(regs).forEach(([key,reg])=>{
-              if(!reg?.evidencias?.length) return;
-              const parts=key.replace(/--/g,"|").split("|");
-              if(parts.length<3) return;
-              const [f,tId,aId]=parts;
-              const tienda=tiendas.find(t=>t.id===tId);
-              const act=acts.find(a=>a.id===aId);
-              if(!tienda||!act) return;
-              reg.evidencias.forEach(ev=>{
-                if(ev.auditor) logs.push({fecha:f,tienda:tienda.n,formato:tienda.f,actividad:act.n,auditor:ev.auditor,dni:ev.dni||"—",hora:ev.hora,pts:ev.puntaje,horaReg:ev.horaRegistro,ts:ev.timestamp});
+          <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}>📋 Log de Auditoría</div>
+          <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>{allLogs.length} registros totales</div>
+          <div style={{...S.card,padding:"12px 14px",marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:8}}>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FORMATO</div>
+                <select value={logFmt} onChange={e=>setLogFmt(e.target.value)} style={selSty}>
+                  {fmtOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
+                <select value={logAct} onChange={e=>setLogAct(e.target.value)} style={selSty}>
+                  {actOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>AUDITOR</div>
+                <select value={logAud} onChange={e=>setLogAud(e.target.value)} style={selSty}>
+                  {audOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>PUNTAJE</div>
+                <select value={logPts} onChange={e=>setLogPts(e.target.value)} style={selSty}>
+                  {["Todos","10","8","6","0"].map(o=><option key={o} value={o}>{o==="Todos"?"Todos":o==="10"?"10pts — ORO":o==="8"?"8pts — PLATA":o==="6"?"6pts — BRONCE":"0pts — FUERA"}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>🔍</span>
+              <input value={logTxt} onChange={e=>setLogTxt(e.target.value)} placeholder="Buscar tienda, auditor o fecha..."
+                style={{...S.inp,paddingLeft:32,fontSize:12}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+              <span style={{fontSize:10,color:"#8aaabb"}}>{filtered.length} de {allLogs.length} registros</span>
+              <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");}}
+                style={{fontSize:10,color:"#5a7a9a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar filtros</button>
+            </div>
+          </div>
+          {!filtered.length
+            ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados con los filtros actuales</div>
+            :<div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead>
+                  <tr style={{background:"#f8fafc"}}>
+                    {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
+                      <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap",letterSpacing:".04em"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.slice(0,200).map((l,i)=>{
+                    const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
+                    const ptsc=sc(l.pts/10*100);
+                    return(
+                      <tr key={i} style={{borderBottom:"1px solid #f5f7fa",background:l.anulado?"#fff8ec":"transparent",opacity:l.anulado?.75:1}}>
+                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#5a7a9a",whiteSpace:"nowrap"}}>{l.fecha}</td>
+                        <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
+                        <td style={{padding:"7px 10px"}}><span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
+                        <td style={{padding:"7px 10px",whiteSpace:"nowrap",fontSize:10,color:"#5a7a9a"}}>{l.actividad}</td>
+                        <td style={{padding:"7px 10px",fontWeight:700,color:"#0984e3"}}>{l.auditor}</td>
+                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#8aaabb"}}>{l.dni}</td>
+                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:11,fontWeight:700,color:ptsc}}>{l.hora}</td>
+                        <td style={{padding:"7px 10px"}}><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800,color:ptsc,background:sb(l.pts/10*100)}}>{l.pts}pts</span></td>
+                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:9,color:"#b2bec3"}}>{l.horaReg}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length} — usa filtros para acotar</div>}
+            </div>
+          }
+        </div>
+        );
+      })()}
+          {!allLogs.length
+            ?<div style={{textAlign:"center",padding:"30px",color:"#8aaabb"}}>Sin registros este período</div>
+            :(()=>{
+              // Re-apply filters for table render
+              const getId=id=>document.getElementById?.(id)?.value||"";
+              const fFmt=getId("log-fmt");const fAct=getId("log-act");const fAud=getId("log-aud");const fPts=getId("log-pts");const fTxt=getId("log-txt")?.toLowerCase()||"";
+              const filtered=allLogs.filter(l=>{
+                if(fFmt&&fFmt!=="Todos"&&l.formato!==fFmt) return false;
+                if(fAct&&fAct!=="Todas"&&l.actividad!==fAct) return false;
+                if(fAud&&fAud!=="Todos"&&l.auditor!==fAud) return false;
+                if(fPts&&fPts!=="Todos"&&String(l.pts)!==fPts.split("pts")[0]) return false;
+                if(fTxt&&!(l.tienda.toLowerCase().includes(fTxt)||l.auditor.toLowerCase().includes(fTxt)||l.fecha.includes(fTxt))) return false;
+                return true;
               });
-            });
-            logs.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
-            if(!logs.length) return <div style={{textAlign:"center",padding:"30px",color:"#8aaabb"}}>Sin registros este período</div>;
-            return(
+              if(!filtered.length) return <div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados con los filtros actuales</div>;
+              return(
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
                       {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
-                        <th key={h} style={{padding:"7px 8px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap",letterSpacing:".04em"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.slice(0,100).map((l,i)=>{
+                    {filtered.slice(0,200).map((l,i)=>{
                       const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
+                      const ptsc=sc(l.pts/10*100);
                       return(
-                        <tr key={i} style={{borderBottom:"1px solid #f5f7fa"}}>
-                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}}>{l.fecha}</td>
-                          <td style={{padding:"6px 8px",fontWeight:600,whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
-                          <td style={{padding:"6px 8px"}}><span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
-                          <td style={{padding:"6px 8px",whiteSpace:"nowrap",fontSize:10}}>{l.actividad}</td>
-                          <td style={{padding:"6px 8px",fontWeight:600,color:"#0984e3"}}>{l.auditor}</td>
-                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{l.dni}</td>
-                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{l.hora}</td>
-                          <td style={{padding:"6px 8px",fontWeight:700,color:sc(l.pts/10*100)}}>{l.pts}pts</td>
-                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:9,color:"#8aaabb"}}>{l.horaReg}</td>
+                        <tr key={i} style={{borderBottom:"1px solid #f5f7fa",background:l.anulado?"#fff8ec":"transparent",opacity:l.anulado?.7:1}}>
+                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#5a7a9a",whiteSpace:"nowrap"}}>{l.fecha}</td>
+                          <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
+                          <td style={{padding:"7px 10px"}}><span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
+                          <td style={{padding:"7px 10px",whiteSpace:"nowrap",fontSize:10,color:"#5a7a9a"}}>{l.actividad}</td>
+                          <td style={{padding:"7px 10px",fontWeight:700,color:"#0984e3"}}>{l.auditor}</td>
+                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#8aaabb"}}>{l.dni}</td>
+                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:11,fontWeight:700,color:ptsc}}>{l.hora}</td>
+                          <td style={{padding:"7px 10px"}}><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800,color:ptsc,background:sb(l.pts/10*100)}}>{l.pts}pts</span></td>
+                          <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:9,color:"#b2bec3"}}>{l.horaReg}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-                {logs.length>100&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:8}}>Mostrando 100 de {logs.length} registros</div>}
+                {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length} — usa filtros para acotar</div>}
               </div>
-            );
-          })()}
+              );
+            })()
+          }
         </div>
-      )}
+        );
+      })()}
 
 {cfgTab===4&&(
         <div>
