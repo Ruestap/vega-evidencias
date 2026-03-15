@@ -165,8 +165,10 @@ export default function ChecklistApp() {
   /* ── auth ── */
   const [role,    setRole]    = useState(null);
   const [uName,   setUName]   = useState("");
+  const [uDni,    setUDni]    = useState("");
   const [pins,    setPins]    = useState({admin:"vega2026",auditor:"auditor88",viewer:"gerencia1"});
   const [pinMod,  setPinMod]  = useState(false);
+  const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}]
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [fecha,   setFecha]   = useState(todayStr());
@@ -191,6 +193,8 @@ export default function ChecklistApp() {
   const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
   const [cfgTab,  setCfgTab]  = useState(0);
+  const [showNAud, setShowNAud] = useState(false);
+  const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
@@ -255,6 +259,7 @@ export default function ChecklistApp() {
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
+        if(d.auditores)   setAuditores(d.auditores);
         if(d.excepciones!==undefined){
           const exc=d.excepciones||{};
           // Limpiar SIEMPRE: solo conservar arrays con fechas válidas, descartar todo lo demás
@@ -283,11 +288,12 @@ export default function ChecklistApp() {
       actividades: overrides.actividades ?? acts,
       tiendas:     overrides.tiendas     ?? tiendas,
       pins:        overrides.pins        ?? pins,
+      auditores:   overrides.auditores   ?? auditores,
       excepciones: excClean,
       rangosDia:   overrides.rangosDia   ?? rangosDia,
       updatedAt:   new Date().toISOString(),
     });
-  },[acts,tiendas,pins,exceps,rangosDia]);
+  },[acts,tiendas,pins,exceps,rangosDia,auditores]);
 
   const dow = getDow(fecha);
   const esFS = dow===0||dow===6;
@@ -424,7 +430,7 @@ export default function ChecklistApp() {
       const k=rKey(fecha,tId,actSel);
       const now=new Date();
       const hreg=now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
-      const ev={id:Date.now()+n,hora:horaEx,puntaje:pct,observacion:obsEx||`Registro en bloque · ${tier.label}`,horaRegistro:hreg,auditor:uName,timestamp:now.toISOString()};
+      const ev={id:Date.now()+n,hora:horaEx,puntaje:pct,observacion:obsEx||`Registro en bloque · ${tier.label}`,horaRegistro:hreg,auditor:uName,dni:uDni,timestamp:now.toISOString()};
       const prevEvs=(regs[k]?.evidencias)||[];
       const newEvs=[...prevEvs,ev].sort((a,b)=>a.hora.localeCompare(b.hora));
       // Save to Firestore — key as doc id (replace | with -)
@@ -521,7 +527,7 @@ export default function ChecklistApp() {
   };
 
   /* ══ LOGIN ══ */
-  if(!role) return <LoginScreen pins={pins} onLogin={(r,n)=>{setRole(r);setUName(n);setVerRegistradas(false);setTab(r==="viewer"?1:0);}}/>;
+  if(!role) return <LoginScreen pins={pins} auditores={auditores} onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?1:0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -926,8 +932,7 @@ export default function ChecklistApp() {
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap"}}>TIENDA</th>
-                      <th style={{padding:"8px 8px",textAlign:"center",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:70,whiteSpace:"nowrap"}}>H. REG.</th>
-                      <th style={{padding:"8px 8px",textAlign:"center",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:70,whiteSpace:"nowrap"}}>ÚLT.<br/>REGISTRO</th>
+
                       {semsVis.map(s=>actsActivas.map(a=>(
                         <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap"}}>{s.label}<br/>{a.e}</th>
                       )))}
@@ -947,19 +952,7 @@ export default function ChecklistApp() {
                       return(
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {tr.n}</td>
-                          {(()=>{
-                            const allEvs=semsVis.flatMap(s=>s.days.flatMap(d=>{const ds=dStr(vYear,vMonth,d);return(getReg(ds,tr.id,actsActivas[0]?.id||"")?.evidencias||[]);}));
-                            const last=allEvs.length>0?allEvs[allEvs.length-1]:null;
-                            return <td style={{padding:"8px 8px",textAlign:"center",fontSize:10,color:"#8aaabb",fontFamily:"monospace"}}>{last?.horaRegistro||"—"}</td>;
-                          })()}
-                          <td style={{padding:"8px 8px",textAlign:"center"}}>
-                            {(()=>{
-                              const allTs=Object.keys(regs).filter(k=>k.includes("|"+tr.id+"|")).flatMap(k=>regs[k]?.evidencias||[]).map(e=>e.timestamp).filter(Boolean).sort().reverse();
-                              if(!allTs.length)return<span style={{color:"#d1d5db",fontSize:9}}>—</span>;
-                              const d=new Date(allTs[0]);
-                              return<span style={{fontSize:9,color:"#5a7a9a",fontFamily:"monospace",whiteSpace:"nowrap"}}>{d.toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit"})}<br/>{d.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>;
-                            })()}
-                          </td>
+
                           {semsVis.map(sem=>actsActivas.map(a=>{
                             const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -969,6 +962,7 @@ export default function ChecklistApp() {
                             const maxPosible=diasConAct.length*10;
                             const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
                             const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
+                            const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
                             const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
                             const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
                             return(
@@ -987,6 +981,7 @@ export default function ChecklistApp() {
                                     style={{cursor:"pointer"}}>
                                     <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
                                     <div style={{fontSize:8,color:sc(v),opacity:.7}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</div>
+                                    {auditorCell&&<div style={{fontSize:7,color:"#8aaabb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
                                     <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
                                       <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
@@ -1489,7 +1484,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   const renderConfig = ()=>(
     <div style={{padding:"16px"}}>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Actividades","Tiendas","Rangos Día"].map((l,i)=>(
+        {["Actividades","Tiendas","Auditores","Auditoría","Rangos Día"].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
@@ -1665,6 +1660,117 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 
       {cfgTab===2&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Auditores</div>
+              <div style={{fontSize:11,color:"#8aaabb"}}>{auditores.filter(a=>a.activo!==false).length} activos · {auditores.filter(a=>a.activo===false).length} inactivos</div>
+            </div>
+            <button onClick={()=>setShowNAud(v=>!v)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nuevo</button>
+          </div>
+          {showNAud&&(
+            <div style={{...S.card,padding:"14px",marginBottom:14}}>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                <div style={{flex:1}}>
+                  <label style={S.lbl}>DNI</label>
+                  <input type="tel" value={newAud.dni} onChange={e=>setNewAud(p=>({...p,dni:e.target.value.replace(/[^0-9]/g,"").slice(0,8)}))}
+                    placeholder="12345678" maxLength={8} style={{...S.inp,letterSpacing:3,fontFamily:"monospace"}}/>
+                </div>
+                <div style={{flex:2}}>
+                  <label style={S.lbl}>NOMBRE COMPLETO</label>
+                  <input value={newAud.nombre} onChange={e=>setNewAud(p=>({...p,nombre:e.target.value}))}
+                    placeholder="Ej: Cindy Cuzco" style={S.inp}/>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>{
+                  if(!newAud.dni||newAud.dni.length<8||!newAud.nombre.trim())return;
+                  if(auditores.find(a=>a.dni===newAud.dni)){showToast("⚠️ DNI ya registrado");return;}
+                  const na={dni:newAud.dni,nombre:newAud.nombre.trim(),activo:true,creadoEn:new Date().toISOString()};
+                  setAuditores(p=>{const np=[...p,na];saveConfig({auditores:np});return np;});
+                  setNewAud({dni:"",nombre:""});setShowNAud(false);
+                  showToast("✅ Auditor registrado");
+                }} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Registrar</button>
+                <button onClick={()=>setShowNAud(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {auditores.length===0&&<div style={{textAlign:"center",padding:"30px",color:"#8aaabb",fontSize:13}}>Sin auditores registrados</div>}
+          {auditores.map(a=>(
+            <div key={a.dni} style={{...S.card,padding:"12px 14px",marginBottom:8,opacity:a.activo===false?.5:1,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:38,height:38,borderRadius:10,background:a.activo===false?"#f0f4f8":"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🪪</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:a.activo===false?"#94a3b8":"#1a2f4a"}}>{a.nombre}</div>
+                <div style={{fontSize:10,color:"#8aaabb",fontFamily:"monospace"}}>DNI: {a.dni}</div>
+              </div>
+              <button onClick={()=>setAuditores(p=>{const np=p.map(x=>x.dni===a.dni?{...x,activo:!x.activo}:x);saveConfig({auditores:np});return np;})}
+                style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${a.activo===false?"#bbf7d0":"#fecaca"}`,background:a.activo===false?"#f0fdf4":"#fff1f2",color:a.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                {a.activo===false?"Activar":"Desactivar"}
+              </button>
+              <button onClick={()=>{if(window.confirm("¿Eliminar este auditor?"))setAuditores(p=>{const np=p.filter(x=>x.dni!==a.dni);saveConfig({auditores:np});return np;});}}
+                style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11}}>🗑️</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+{cfgTab===3&&(
+        <div>
+          <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>📋 Log de Auditoría</div>
+          <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>Registros del mes — quién registró qué y cuándo</div>
+          {(()=>{
+            const logs=[];
+            Object.entries(regs).forEach(([key,reg])=>{
+              if(!reg?.evidencias?.length) return;
+              const parts=key.replace(/--/g,"|").split("|");
+              if(parts.length<3) return;
+              const [f,tId,aId]=parts;
+              const tienda=tiendas.find(t=>t.id===tId);
+              const act=acts.find(a=>a.id===aId);
+              if(!tienda||!act) return;
+              reg.evidencias.forEach(ev=>{
+                if(ev.auditor) logs.push({fecha:f,tienda:tienda.n,formato:tienda.f,actividad:act.n,auditor:ev.auditor,dni:ev.dni||"—",hora:ev.hora,pts:ev.puntaje,horaReg:ev.horaRegistro,ts:ev.timestamp});
+              });
+            });
+            logs.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
+            if(!logs.length) return <div style={{textAlign:"center",padding:"30px",color:"#8aaabb"}}>Sin registros este período</div>;
+            return(
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc"}}>
+                      {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
+                        <th key={h} style={{padding:"7px 8px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.slice(0,100).map((l,i)=>{
+                      const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
+                      return(
+                        <tr key={i} style={{borderBottom:"1px solid #f5f7fa"}}>
+                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}}>{l.fecha}</td>
+                          <td style={{padding:"6px 8px",fontWeight:600,whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
+                          <td style={{padding:"6px 8px"}}><span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
+                          <td style={{padding:"6px 8px",whiteSpace:"nowrap",fontSize:10}}>{l.actividad}</td>
+                          <td style={{padding:"6px 8px",fontWeight:600,color:"#0984e3"}}>{l.auditor}</td>
+                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{l.dni}</td>
+                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{l.hora}</td>
+                          <td style={{padding:"6px 8px",fontWeight:700,color:sc(l.pts/10*100)}}>{l.pts}pts</td>
+                          <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:9,color:"#8aaabb"}}>{l.horaReg}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {logs.length>100&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:8}}>Mostrando 100 de {logs.length} registros</div>}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+{cfgTab===4&&(
         <div>
           <div style={{marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
@@ -1872,18 +1978,27 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,onLogin}){
+function LoginScreen({pins,auditores,onLogin}){
   const[pin,setPin]=useState("");
-  const[name,setName]=useState("");
+  const[dni,setDni]=useState("");
   const[step,setStep]=useState("pin");
-  const[err,setErr]=useState(false);
+  const[err,setErr]=useState("");
+  const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
+
   const tryPin=()=>{
-    if(pin===pins.admin){onLogin("admin","Administrador");return;}
-    if(pin===pins.auditor){setStep("name");return;}
-    if(pin===pins.viewer){onLogin("viewer","Gerencia");return;}
-    setErr(true);setTimeout(()=>{setErr(false);setPin("");},1200);
+    if(pin===pins.admin){onLogin("admin","Administrador","");return;}
+    if(pin===pins.auditor){setStep("dni");return;}
+    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
-  const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",fontSize:20,outline:"none",textAlign:"center",letterSpacing:8,boxSizing:"border-box",marginBottom:12};
+  const tryDni=()=>{
+    const clean=dni.trim();
+    if(clean.length<8){setErr("DNI debe tener 8 dígitos");return;}
+    const found=(auditores||[]).find(a=>a.dni===clean&&a.activo!==false);
+    if(found){onLogin("auditor",found.nombre,clean);}
+    else if(!(auditores||[]).length){setErr("Sin auditores registrados. El Admin debe agregarlos en Config → Auditores.");setTimeout(()=>setErr(""),4000);}
+    else{setErr("DNI no encontrado o inactivo. Contacta al Admin.");setTimeout(()=>{setErr("");setDni("");},2500);}
+  };
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
@@ -1891,34 +2006,37 @@ function LoginScreen({pins,onLogin}){
         <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 20px"}}>🏪</div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
         <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
-        {step==="pin"?(
-          <>
-            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Ingresa tu código de acceso</p>
-            <input autoFocus type="password" value={pin} onChange={e=>setPin(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryPin()} placeholder="••••••••"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`}}/>
-            <button onClick={tryPin} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:20}}>
-              {err?"❌ Código incorrecto":"Ingresar →"}
-            </button>
-
-          </>
-        ):(
-          <>
-            <div style={{fontSize:28,marginBottom:12}}>📋</div>
-            <p style={{margin:"0 0 6px",fontSize:13,color:"#00b5b4",fontWeight:700}}>✅ Acceso verificado</p>
-            <p style={{margin:"0 0 20px",fontSize:12,color:"#5a7a9a"}}>¿Cómo aparecerás como auditor?</p>
-            <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&onLogin("auditor",name.trim())}
-              placeholder="Tu nombre completo"
-              style={{...inpS,border:"2px solid #00b5b4",letterSpacing:0,fontSize:14}}/>
-            <button onClick={()=>name.trim()&&onLogin("auditor",name.trim())} disabled={!name.trim()}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:name.trim()?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:name.trim()?"white":"#94a3b8",cursor:name.trim()?"pointer":"not-allowed",fontSize:14,fontWeight:700}}>
-              Entrar como Auditor →
-            </button>
-          </>
-        )}
+        {step==="pin"&&(<>
+          <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Ingresa tu código de acceso</p>
+          <input autoFocus type="password" value={pin} onChange={e=>setPin(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryPin()} placeholder="••••••••"
+            style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
+          {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
+          <button onClick={tryPin} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700}}>
+            Ingresar →
+          </button>
+        </>)}
+        {step==="dni"&&(<>
+          <div style={{fontSize:32,marginBottom:8}}>🪪</div>
+          <p style={{margin:"0 0 4px",fontSize:13,color:"#00b5b4",fontWeight:700}}>✅ Código verificado</p>
+          <p style={{margin:"0 0 20px",fontSize:12,color:"#5a7a9a"}}>Ingresa tu DNI para identificarte</p>
+          <input autoFocus type="tel" value={dni} onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
+            onKeyDown={e=>e.key==="Enter"&&tryDni()} placeholder="12345678" maxLength={8}
+            style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:4,fontSize:22,fontWeight:700}}/>
+          {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>{err}</div>}
+          <button onClick={tryDni} disabled={dni.length<8}
+            style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            Entrar como Auditor →
+          </button>
+          <button onClick={()=>{setStep("pin");setDni("");setErr("");}}
+            style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
+            ← Volver
+          </button>
+        </>)}
       </div>
     </div>
   );
 }
+
 
 function PinModal({pins,onSave,onClose}){
   const[p,setP]=useState({...pins});
