@@ -224,7 +224,21 @@ export default function ChecklistApp() {
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
-        if(d.excepciones) setExceps(d.excepciones);
+        if(d.excepciones){
+          // migrar legacy: eliminar entradas con valor true (sin fecha asignada)
+          const exc = d.excepciones;
+          const cleaned = Object.fromEntries(
+            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+          );
+          const needsMigration = Object.values(exc).some(v=>v===true||!Array.isArray(v));
+          if(needsMigration){
+            setExceps(cleaned);
+            // guardar limpieza en Firebase
+            setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
+          } else {
+            setExceps(exc);
+          }
+        }
         if(d.rangosDia)  setRangosDia(d.rangosDia);
       }
     };
@@ -287,34 +301,57 @@ export default function ChecklistApp() {
     const IC=total>0?Math.round((withEnv.length/total)*100):0;
     const valid=pts.filter(p=>p!==null);
     const IP=valid.length>0?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
-    const al100=pts.filter(p=>p===100).length;
+    const al100=pts.filter(p=>p===10).length;
     const SE=total>0?Math.round((al100/total)*100):0;
     const TR=total>0?Math.round((ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null).length/total)*100):0;
     const SG=Math.round((IC*IP)/100);
-    const r100=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===100);
-    const r80=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===80);
-    const r60=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===60);
+    const r100=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===10);
+    const r80=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===8);
+    const r60=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===6);
     const r0=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null);
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
   },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
 
-  const calcSemana = useCallback((tId,sem)=>{
-    const scores=[];
-    sem.days.forEach(day=>{
-      const ds=dStr(vYear,vMonth,day);
+  // calcEficiencia: retorna {pct, obtenidos, maximos, registros}
+  // pct = (pts obtenidos / pts máximos posibles) * 100
+  const calcEficiencia = useCallback((tId, days)=>{
+    let obtenidos=0, maximos=0, registros=[];
+    days.forEach(ds=>{
       const dw=getDow(ds);
       acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
-        if(p!==null)scores.push(p);
+        maximos+=10; // máximo posible por actividad/día
+        if(p!==null){
+          obtenidos+=p;
+          registros.push({fecha:ds,act:a.n,pts:p,max:10});
+        }
       });
     });
-    return scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
-  },[acts,regs,vYear,vMonth,isExc,getReg]);
+    if(maximos===0) return null;
+    return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
+  },[acts,regs,vYear,vMonth,isExc,getReg,getRangoActivo]);
+
+  const calcSemana = useCallback((tId,sem)=>{
+    const days=sem.days.map(d=>dStr(vYear,vMonth,d));
+    const ef=calcEficiencia(tId,days);
+    return ef?ef.pct:null;
+  },[calcEficiencia,vYear,vMonth]);
+
+  const calcSemanaDetalle = useCallback((tId,sem)=>{
+    const days=sem.days.map(d=>dStr(vYear,vMonth,d));
+    return calcEficiencia(tId,days);
+  },[calcEficiencia,vYear,vMonth]);
 
   const calcMes = useCallback((tId)=>{
-    const ws=semanasDelMes.map(s=>calcSemana(tId,s)).filter(v=>v!==null);
-    return ws.length>0?Math.round(ws.reduce((a,b)=>a+b,0)/ws.length):null;
-  },[semanasDelMes,calcSemana]);
+    const allDays=semanasDelMes.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+    const ef=calcEficiencia(tId,allDays);
+    return ef?ef.pct:null;
+  },[semanasDelMes,calcEficiencia,vYear,vMonth]);
+
+  const calcMesDetalle = useCallback((tId)=>{
+    const allDays=semanasDelMes.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+    return calcEficiencia(tId,allDays);
+  },[semanasDelMes,calcEficiencia,vYear,vMonth]);
 
   /* ── tiendas filtradas para lista ── */
   const tRegistradas = useMemo(()=>new Set(
@@ -870,7 +907,7 @@ export default function ChecklistApp() {
                                     onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
                                     onTouchEnd={()=>clearTimeout(longPressRef.current)}
                                     style={{cursor:"pointer"}}>
-                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v} pts</span>
+                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
                                     <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:2}}>
                                       <div style={{height:"100%",width:`${v/10*100}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
@@ -881,9 +918,9 @@ export default function ChecklistApp() {
                           }))}
                           {semsVis.map(sem=>{
                             const ps=calcSemana(tr.id,sem);
-                            return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps} pts</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
+                            return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
                           })}
-                          {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes} pts</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
+                          {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
                           <td style={{padding:"6px 8px",textAlign:"center"}}><span style={{fontSize:13}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                         </tr>
                       );
@@ -1172,8 +1209,8 @@ export default function ChecklistApp() {
                   {" · "}<span style={{color:"#1a2f4a",fontWeight:800}}>{ftsEval.length} disponibles</span>
                   {excCount>0&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{excCount} N/A</span>}
                 </div>
-                <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+" pts":"—"}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:1}}>promedio de puntaje (máx. 10 pts)</div>
+                <div style={{fontWeight:800,fontSize:24,color:sc(prom),marginTop:8}}>{prom!==null?prom+"%":"—"}</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:1}}>eficiencia de implementación</div>
                 <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:4}}>{tier.icon} {tier.label}</div>
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
                   <div style={{width:((prom||0)/10*100)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
@@ -1181,7 +1218,7 @@ export default function ChecklistApp() {
                 <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   <div style={{fontWeight:800,marginBottom:3}}>{fmt}</div>
                   {prom!==null
-                    ?`${ftsEval.length} tiendas disponibles evaluadas. Promedio: ${prom} pts de 10. ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A), no se contabilizan.":""}`
+                    ?`${ftsEval.length} tiendas evaluadas. Eficiencia promedio: ${prom}% (puntos obtenidos/puntos máximos posibles). ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A) no se contabilizan.":""}`
                     :"Sin registros suficientes para calcular eficiencia este período."}
                   <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
@@ -1192,44 +1229,53 @@ export default function ChecklistApp() {
 
         {/* ranking top/bottom */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-          <div style={{...S.card,padding:"14px"}}>
-            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>🏅 Top 5</div>
-            <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>Mayor eficiencia de implementación</div>
-            {top5.map((s,i)=>(
-              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
-                <span style={{fontSize:12,width:16}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i===3?"🏅":"⭐"}</span>
-                <div style={{flex:1,overflow:"hidden"}}>
-                  <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
-                  <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
-                    <div style={{width:(s.score/10*100)+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
+          {[
+            {title:"🏅 Top 5",sub:"Mayor eficiencia de implementación",list:top5,icon:(i)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":i===3?"🏅":"⭐"},
+            {title:"⚠️ Bottom 5",sub:"Menor eficiencia — requieren atención",list:bot5,icon:()=>"🔴"},
+          ].map(panel=>(
+          <div key={panel.title} style={{...S.card,padding:"14px"}}>
+            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>{panel.title}</div>
+            <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>{panel.sub}</div>
+            {panel.list.map((s,i)=>{
+              const det=calcMesDetalle(s.t.id);
+              return(
+              <div key={s.t.id} style={{position:"relative",marginBottom:8}}
+                onMouseEnter={e=>e.currentTarget.querySelector(".rank-tip").style.display="block"}
+                onMouseLeave={e=>e.currentTarget.querySelector(".rank-tip").style.display="none"}
+                onTouchStart={e=>{const t=e.currentTarget.querySelector(".rank-tip");t.style.display=t.style.display==="block"?"none":"block";}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,cursor:"default"}}>
+                  <span style={{fontSize:12,width:16}}>{panel.icon(i)}</span>
+                  <div style={{flex:1,overflow:"hidden"}}>
+                    <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
+                    <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
+                      <div style={{width:s.score+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right",minWidth:44}}>
+                    <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score}%</div>
+                    <div style={{fontSize:8,color:"#8aaabb"}}>{det?`${det.obtenidos}/${det.maximos}pts`:""}</div>
                   </div>
                 </div>
-                <div style={{textAlign:"right",minWidth:40}}>
-                  <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score} pts</div>
-                  <div style={{fontSize:8,color:"#8aaabb"}}>de 10</div>
+                <div className="rank-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"8px 10px",borderRadius:10,zIndex:30,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.3)"}}>
+                  <div style={{fontWeight:800,marginBottom:4}}>Vega {s.t.n} · {s.score}% eficiencia</div>
+                  {det&&<div style={{marginBottom:3}}>Obtuvo {det.obtenidos} de {det.maximos} pts posibles</div>}
+                  {det&&det.registros.length>0&&(
+                    <div style={{borderTop:"1px solid rgba(255,255,255,.15)",marginTop:4,paddingTop:4}}>
+                      {Object.entries(det.registros.reduce((acc,r)=>{acc[r.act]=(acc[r.act]||0)+r.pts;return acc;},{})).map(([a,p])=>(
+                        <div key={a} style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                          <span style={{opacity:.8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a}</span>
+                          <span style={{fontWeight:700,color:sc(p/10*100),flexShrink:0}}>{p} pts</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{position:"absolute",bottom:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
-          <div style={{...S.card,padding:"14px"}}>
-            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>⚠️ Bottom 5</div>
-            <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>Menor eficiencia — requieren atención</div>
-            {bot5.map((s,i)=>(
-              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
-                <span style={{fontSize:12,width:16}}>🔴</span>
-                <div style={{flex:1,overflow:"hidden"}}>
-                  <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
-                  <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
-                    <div style={{width:(s.score/10*100)+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
-                  </div>
-                </div>
-                <div style={{textAlign:"right",minWidth:40}}>
-                  <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score} pts</div>
-                  <div style={{fontSize:8,color:"#8aaabb"}}>de 10</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
 
         {/* ranking completo */}
@@ -1252,8 +1298,8 @@ export default function ChecklistApp() {
                       <td style={{padding:"8px 10px",fontWeight:800,color:i<3?"#f6a623":"#b2bec3",fontSize:i<3?13:11}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</td>
                       <td style={{padding:"8px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {ti.n}</td>
                       <td style={{padding:"8px 10px"}}><span style={S.pill(fc.c,fc.bg)}>{ti.f.slice(0,3)}</span></td>
-                      {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v} pts</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
-                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score} pts</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
+                      {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
+                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
                       <td style={{padding:"8px 10px",textAlign:"center"}}><span style={{fontSize:12}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                     </tr>
                   );
@@ -1339,7 +1385,7 @@ export default function ChecklistApp() {
                     ))}
                   </div>
                   <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
-                    {[["10pts","#f6a623",`≤${RR.c100}`],["8pts","#74b9ff",`${RR.c100}–${RR.c80}`],["6pts","#a29bfe",`${RR.c80}–${RR.c60}`],["0pts","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
+                    {[["10 pts","#f6a623",`≤${RR.c100}`],["8 pts","#74b9ff",`${RR.c100}–${RR.c80}`],["6 pts","#a29bfe",`${RR.c80}–${RR.c60}`],["0 pts","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
                       <span key={p} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{t}→{p}</span>
                     ))}
                   </div>
