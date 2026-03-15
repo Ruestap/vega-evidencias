@@ -132,8 +132,9 @@ function getTier(s) {
   if(s>=95)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
   if(s>=80)  return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
   if(s>=60)  return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
-  if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
-  return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+  if(s>=40)  return {label:"REGULAR",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  if(s>=1)   return {label:"CRÍTICO",icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+  return            {label:"FUERA",  icon:"⬛",c:"#636e72",bg:"#f4f6f8"};
 }
 // Para paso3: puntaje en pts (10/8/6/0)
 function getTierPts(p) {
@@ -940,13 +941,15 @@ export default function ChecklistApp() {
                         </th>
                       ))}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55}}>MES</th>}
-                      <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55}}>TIER</th>
+                      <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55}}>EF</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tsFmt.map(tr=>{
                       const pMes=calcMes(tr.id);
-                      const tier=getTier(pMes);
+                      // Tier reflects the visible period: selected week or full month
+                      const pTier=selWeek!==null?calcSemana(tr.id,semanasDelMes[selWeek]):pMes;
+                      const tier=getTier(pTier);
                       return(
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {tr.n}</td>
@@ -1126,15 +1129,16 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           if(p!==null) ob+=p;
         });
       });
-      return mx>0?Math.round((ob/mx)*100):null;
+      if(mx===0) return null;
+      return {pct:Math.round((ob/mx)*100),obtenidos:ob,maximos:mx};
     };
 
     const scoresMes=tsEval.map(ti=>{ const ef=calcEficienciaFiltrada(ti.id); return {t:ti,score:ef?.pct??null,obtenidos:ef?.obtenidos??0,maximos:ef?.maximos??0}; });
     const validos=scoresMes.filter(s=>s.score!==null);
 
-    // SG: total obtenidos / total maximos de todas las tiendas evaluables
-    const totalOb=validos.reduce((a,s)=>a+s.obtenidos,0);
-    const totalMx=tsEval.reduce((a,ti)=>{ const ef=calcEficienciaFiltrada(ti.id); return a+(ef?.maximos??0); },0);
+    // SG: total obtenidos / total maximos — cached from scoresMes, no double-compute
+    const totalOb=scoresMes.reduce((a,s)=>a+s.obtenidos,0);
+    const totalMx=scoresMes.reduce((a,s)=>a+s.maximos,0);
     const SG=totalMx>0?Math.round((totalOb/totalMx)*100):0;
 
     const IC=tsEval.length>0?Math.round((validos.length/tsEval.length)*100):0;
