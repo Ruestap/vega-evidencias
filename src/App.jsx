@@ -233,18 +233,17 @@ export default function ChecklistApp() {
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
-        if(d.excepciones){
-          // Siempre limpiar: solo conservar arrays con fechas válidas
-          const exc=d.excepciones;
+        if(d.excepciones!==undefined){
+          const exc=d.excepciones||{};
+          // Limpiar SIEMPRE: solo conservar arrays con fechas válidas, descartar todo lo demás
           const cleaned=Object.fromEntries(
             Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
           );
           setExceps(cleaned);
-          // Si había entradas legacy (true u otros), guardar versión limpia
-          const hasLegacy=Object.values(exc).some(v=>!Array.isArray(v)||v.length===0);
-          if(hasLegacy){
-            setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
-          }
+          // Guardar SIEMPRE la versión limpia en Firebase para forzar migración
+          setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
+        } else {
+          setExceps({});
         }
         if(d.rangosDia)  setRangosDia(d.rangosDia);
       }
