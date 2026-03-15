@@ -657,7 +657,7 @@ export default function ChecklistApp() {
       })()}
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
-        {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: mantén presionado una tienda para marcarla como excepción (N/A)</div>}
+        {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: usa el botón <strong>N/A</strong> para excluir una tienda de esta actividad hoy</div>}
         {tFilt.length===0&&!verRegistradas&&(
           <div style={{textAlign:"center",padding:"40px 20px"}}>
             <div style={{fontSize:40,marginBottom:12}}>✅</div>
@@ -683,27 +683,27 @@ export default function ChecklistApp() {
           return(
             <div key={tienda.id}
               onClick={()=>{ if(exc)return; setTSel(p=>{const ns=new Set(p);ns.has(tienda.id)?ns.delete(tienda.id):ns.add(tienda.id);return ns;}); }}
-              onMouseDown={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(tienda.id,actSel); },700); }}
-              onMouseUp={()=>clearTimeout(longExcRef.current)}
-              onMouseLeave={()=>clearTimeout(longExcRef.current)}
-              onTouchStart={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(tienda.id,actSel); },700); }}
-              onTouchEnd={()=>clearTimeout(longExcRef.current)}
-              style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,border:`1.5px solid ${exc?"#e2e8f0":sel?actInfo?.c:"#e2e8f0"}`,background:exc?"#f8fafc":sel?actInfo?.c+"10":"#fff",cursor:exc?"default":"pointer",marginBottom:7,transition:"all .1s",opacity:exc?0.6:1}}>
-              <div style={{width:24,height:24,borderRadius:7,border:`2px solid ${exc?"#c8d8e8":sel?actInfo?.c:"#c8d8e8"}`,background:exc?"#f0f4f8":sel?actInfo?.c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,border:`1.5px solid ${exc?"#FAC775":sel?actInfo?.c:"#e2e8f0"}`,background:exc?"#fff8ec":sel?actInfo?.c+"10":"#fff",cursor:exc?"default":"pointer",marginBottom:7,transition:"all .1s"}}>
+              <div style={{width:24,height:24,borderRadius:7,border:`2px solid ${exc?"#FAC775":sel?actInfo?.c:"#c8d8e8"}`,background:exc?"#FAEEDA":sel?actInfo?.c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 {sel&&!exc&&<span style={{fontSize:14,color:"#fff",fontWeight:700}}>✓</span>}
+                {exc&&<span style={{fontSize:12}}>⚠️</span>}
               </div>
               <div style={{flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {tienda.n}</div>
-                </div>
+                <div style={{fontSize:14,fontWeight:700,color:exc?"#854F0B":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {tienda.n}</div>
                 <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>
                   <span style={S.pill(fc.c,fc.bg)}>{tienda.f}</span>
-                  {exc&&<span style={S.pill("#854F0B","#FAEEDA")}>⚠️ N/A · No aplica</span>}
+                  {exc&&<span style={S.pill("#854F0B","#FAEEDA")}>N/A este día</span>}
                   {!exc&&reg&&<span style={S.pill("#00b894","#e8faf5")}>✅ Registrada</span>}
                 </div>
               </div>
               {sel&&!exc&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
-              {exc&&isAdmin&&<button onClick={e=>{e.stopPropagation();toggleExcepcion(tienda.id,actSel);}} style={{padding:"3px 9px",borderRadius:20,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>✕</button>}
+              {isAdmin&&(
+                <button
+                  onClick={e=>{e.stopPropagation();toggleExcepcion(tienda.id,actSel);}}
+                  style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${exc?"#00b894":"#FAC775"}`,background:exc?"#f0fdf4":"#fff8ec",color:exc?"#16a34a":"#854F0B",cursor:"pointer",fontSize:11,fontWeight:800,flexShrink:0,minWidth:44,textAlign:"center"}}>
+                  {exc?"✓ OK":"N/A"}
+                </button>
+              )}
             </div>
           );
         })}
@@ -1425,7 +1425,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
-              {k:"SG",label:"Eficiencia Global",    sub:`${totalOb}/${totalMx} pts · ${tsEval.length} tiendas evaluadas`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
+              {k:"SG",label:"Eficiencia Global",    sub:`${totalOb} pts obtenidos de ${totalMx} posibles · ${tsEval.length} tiendas`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
               {k:"IC",label:"Cobertura Registros",  sub:`${nCump}/${nEval} tiendas`,  v:IC+"%", num:IC, c:"#0984e3",icon:"📬", insight:icI},
               {k:"SE",label:"Tiendas Excelencia",   sub:`${nExc}/${nEval} con ≥95%`,  v:SE+"%", num:SE, c:"#f6a623",icon:"🏆", insight:seI},
               {k:"TR",label:"Tiendas Bajo Mínimo",  sub:`${nRie}/${nEval} con <60%`,  v:TR+"%", num:TR, c:TR>20?"#d63031":"#00b894",icon:TR>20?"🚨":"✅", insight:trI},
@@ -1496,9 +1496,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {(()=>{
           // Para cada actividad, calcular distribución ORO/PLATA/BRONCE/FUERA
           const actEfectDetalle=actEfect.map(({a,v,ob,mx})=>{
-            let nOro=0,nPlata=0,nBronce=0,nFuera=0,nTotal=0;
+            // Contar tiendas únicas que tuvieron al menos 1 registro por franja
+            // y cuántas tiendas evaluables hay para esa actividad
             const hoy=todayStr();
-            tsBase.forEach(ti=>{
+            const tiendasEval=tsBase.filter(ti=>
+              semanasDelMes.some(s=>s.days.some(d=>{
+                const ds=dStr(vYear,vMonth,d);
+                return ds<=hoy&&a.dias.includes(getDow(ds))&&!isExc(ti.id,a.id,ds);
+              }))
+            );
+            const nEvalAct=tiendasEval.length;
+            // Para cada tienda, tomar su MEJOR franja del mes (el mejor día que registró)
+            let nOro=0,nPlata=0,nBronce=0,nFuera=0,nConReg=0;
+            tiendasEval.forEach(ti=>{
+              let bestP=null;
               semanasDelMes.forEach(s=>{
                 s.days.forEach(day=>{
                   const ds=dStr(vYear,vMonth,day);
@@ -1508,21 +1519,38 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   const reg=getReg(ds,ti.id,a.id);
                   const p=puntajeReg(reg,getRangoActivo(a.id,ds));
                   if(p===null) return;
-                  nTotal++;
-                  if(p===10) nOro++;
-                  else if(p===8) nPlata++;
-                  else if(p===6) nBronce++;
-                  else nFuera++;
+                  if(bestP===null||p>bestP) bestP=p;
                 });
               });
+              if(bestP===null) return;
+              nConReg++;
+              if(bestP===10) nOro++;
+              else if(bestP===8) nPlata++;
+              else if(bestP===6) nBronce++;
+              else nFuera++;
             });
-            return {a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal};
+            return {a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal:nConReg,nEvalAct};
           });
           return(
           <div style={{...S.card,padding:"16px",marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:4}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
-            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:14,lineHeight:1.4}}>
-              Barras apiladas: proporcion de registros ORO / PLATA / BRONCE / FUERA por actividad. El % final es eficiencia de pts obtenidos.
+            <div style={{fontSize:10,color:"#5a7a9a",marginBottom:8,lineHeight:1.4}}>
+              Las píldoras muestran cuántas tiendas alcanzaron cada franja (mejor día del mes). El % = pts obtenidos ÷ pts posibles del período.
+            </div>
+            {/* leyenda */}
+            <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+              {[
+                {icon:"🥇",label:"ORO",    c:"#f6a623",desc:"Registros antes 08:00 · 10pts"},
+                {icon:"🥈",label:"PLATA",  c:"#74b9ff",desc:"08:01-09:00 · 8pts"},
+                {icon:"🥉",label:"BRONCE", c:"#a29bfe",desc:"09:01-10:00 · 6pts"},
+                {icon:"🔴",label:"FUERA",  c:"#d63031",desc:"Después 10:00 · 0pts"},
+              ].map(f=>(
+                <div key={f.label} style={{display:"flex",alignItems:"center",gap:4}}>
+                  <div style={{width:10,height:10,borderRadius:2,background:f.c,flexShrink:0}}/>
+                  <span style={{fontSize:9,color:"#5a7a9a",fontWeight:600}}>{f.icon} {f.label}</span>
+                  <span style={{fontSize:8,color:"#b2bec3"}}>{f.desc}</span>
+                </div>
+              ))}
             </div>
             {actEfectDetalle.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin registros este período</div>}
             {actEfectDetalle.map(({a,v,ob,mx,nOro,nPlata,nBronce,nFuera,nTotal})=>(
@@ -1533,11 +1561,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <span style={{fontSize:11,color:"#1a2f4a",fontWeight:700}}>{a.n}</span>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    {nTotal>0&&<div style={{display:"flex",gap:4}}>
-                      {nOro>0&&<span style={{fontSize:9,fontWeight:700,color:"#f6a623",background:"#fff8ec",padding:"1px 6px",borderRadius:10}}>🥇{nOro}</span>}
-                      {nPlata>0&&<span style={{fontSize:9,fontWeight:700,color:"#74b9ff",background:"#e8f4fd",padding:"1px 6px",borderRadius:10}}>🥈{nPlata}</span>}
-                      {nBronce>0&&<span style={{fontSize:9,fontWeight:700,color:"#a29bfe",background:"#f0edff",padding:"1px 6px",borderRadius:10}}>🥉{nBronce}</span>}
-                      {nFuera>0&&<span style={{fontSize:9,fontWeight:700,color:"#d63031",background:"#ffeae6",padding:"1px 6px",borderRadius:10}}>🔴{nFuera}</span>}
+                    {nTotal>0&&<div style={{display:"flex",gap:3,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <span style={{fontSize:8,color:"#8aaabb",marginRight:2,whiteSpace:"nowrap"}}>{nTotal}/{nEvalAct} tiendas:</span>
+                      {nOro>0&&<span title={`${nOro} tiendas llegaron en ORO · mejor registro antes 08:00 · 10pts`} style={{fontSize:9,fontWeight:700,color:"#f6a623",background:"#fff8ec",padding:"1px 6px",borderRadius:10,cursor:"default"}}>🥇 {nOro}</span>}
+                      {nPlata>0&&<span title={`${nPlata} tiendas en PLATA · mejor registro 08:01-09:00 · 8pts`} style={{fontSize:9,fontWeight:700,color:"#74b9ff",background:"#e8f4fd",padding:"1px 6px",borderRadius:10,cursor:"default"}}>🥈 {nPlata}</span>}
+                      {nBronce>0&&<span title={`${nBronce} tiendas en BRONCE · mejor registro 09:01-10:00 · 6pts`} style={{fontSize:9,fontWeight:700,color:"#a29bfe",background:"#f0edff",padding:"1px 6px",borderRadius:10,cursor:"default"}}>🥉 {nBronce}</span>}
+                      {nFuera>0&&<span title={`${nFuera} tiendas FUERA · después 10:00 · 0pts`} style={{fontSize:9,fontWeight:700,color:"#d63031",background:"#ffeae6",padding:"1px 6px",borderRadius:10,cursor:"default"}}>🔴 {nFuera}</span>}
                     </div>}
                     <span style={{fontSize:12,fontWeight:800,color:v!==null?sc(v):"#b2bec3",minWidth:36,textAlign:"right"}}>{v!==null?v+"%":"—"}</span>
                   </div>
@@ -1552,7 +1581,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 ):(
                   <div style={{height:10,borderRadius:5,background:"#f0f4f8"}}/>
                 )}
-                {mx>0&&<div style={{fontSize:8,color:"#b2bec3",marginTop:2}}>{ob}/{mx} pts · {nTotal} registros evaluados</div>}
+                {mx>0&&<div style={{fontSize:8,color:"#b2bec3",marginTop:2}}>{ob}/{mx} pts obtenidos · {nEvalAct} tiendas evaluables · {nTotal} con registro</div>}
               </div>
             ))}
           </div>
@@ -1745,7 +1774,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       <td style={{padding:"8px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {ti.n}</td>
                       <td style={{padding:"8px 10px"}}><span style={S.pill(fc.c,fc.bg)}>{ti.f.slice(0,3)}</span></td>
                       {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
-                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
+                      <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>
+                        {(()=>{
+                          const det2=scoresMes.find(s=>s.t.id===ti.id);
+                          return score!==null
+                            ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                                <span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score}%</span>
+                                {det2&&<span style={{fontSize:8,color:"#8aaabb"}}>{det2.obtenidos}/{det2.maximos}pts</span>}
+                              </div>
+                            :<span style={{color:"#b2bec3"}}>—</span>;
+                        })()}
+                      </td>
                       <td style={{padding:"8px 10px",textAlign:"center"}}><span style={{fontSize:12}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                     </tr>
                   );
