@@ -229,53 +229,31 @@ export default function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
-  // Limpieza forzada de excepciones legacy al montar
-  useEffect(()=>{
-    const cleanLegacyExceps = async ()=>{
-      try {
-        const snap = await getDoc(doc(db,"config","app"));
-        if(!snap.exists()) return;
-        const d = snap.data();
-        const exc = d.excepciones || {};
-        const hasLegacy = Object.values(exc).some(v=>v===true||(!Array.isArray(v)));
-        if(hasLegacy){
-          const cleaned = Object.fromEntries(
-            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
-          );
-          await setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
-          setExceps(cleaned);
-          console.log("Excepciones legacy limpiadas:", Object.keys(exc).length - Object.keys(cleaned).length, "entradas removidas");
-        }
-      } catch(e){ console.error("cleanLegacy error:",e); }
-    };
-    cleanLegacyExceps();
-  },[]);
+
 
   useEffect(()=>{
-    const loadCfg = async ()=>{
-      const snap = await getDoc(doc(db,"config","app"));
-      if(snap.exists()){
-        const d=snap.data();
-        if(d.actividades) setActs(d.actividades);
-        if(d.tiendas)     setTiendas(d.tiendas);
-        if(d.pins)        setPins(d.pins);
-        if(d.auditores)   setAuditores(d.auditores);
-        if(d.excepciones!==undefined){
-          const exc=d.excepciones||{};
-          // Limpiar SIEMPRE: solo conservar arrays con fechas válidas, descartar todo lo demás
-          const cleaned=Object.fromEntries(
-            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
-          );
-          setExceps(cleaned);
-          // Guardar SIEMPRE la versión limpia en Firebase para forzar migración
-          setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
-        } else {
-          setExceps({});
-        }
-        if(d.rangosDia)  setRangosDia(d.rangosDia);
+    // Usar onSnapshot para config — reactivo y siempre actualizado
+    const unsub = onSnapshot(doc(db,"config","app"), snap=>{
+      if(!snap.exists()) return;
+      const d=snap.data();
+      if(d.actividades) setActs(d.actividades);
+      if(d.tiendas)     setTiendas(d.tiendas);
+      if(d.pins)        setPins(d.pins);
+      if(d.auditores)   setAuditores(d.auditores);
+      if(d.rangosDia)   setRangosDia(d.rangosDia);
+      // Limpiar exceps: descartar true legacy y arrays vacíos
+      const exc = d.excepciones || {};
+      const cleaned = Object.fromEntries(
+        Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+      );
+      setExceps(cleaned);
+      // Si había legacy, guardar versión limpia en Firebase (una sola vez)
+      const hasLegacy = Object.values(exc).some(v=>!Array.isArray(v)||v.length===0);
+      if(hasLegacy){
+        setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
       }
-    };
-    loadCfg();
+    });
+    return ()=>unsub();
   },[]);
 
   const saveConfig = useCallback(async (overrides={})=>{
@@ -356,28 +334,18 @@ export default function ChecklistApp() {
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
   },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
 
-  // actividadesDelPeriodo: Set de actividadIds que tienen al menos 1 registro
-  // en el período actual (mes en vista). Evita penalizar por actividades
-  // nunca solicitadas (ej: "Lunes Menestras" no existía en febrero).
-  const actividadesConRegistro = useMemo(()=>{
-    const conReg = new Set();
-    const allDays = semanasDelMes.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
-    allDays.forEach(ds=>{
-      acts.forEach(a=>{
-        // Si alguna tienda tiene registro para esta actividad en este día → la actividad aplica
-        const tieneReg = tiAct.some(ti=>{
-          const reg = getReg(ds,ti.id,a.id);
-          return reg?.evidencias?.length>0 && !reg?.anulado;
-        });
-        if(tieneReg) conReg.add(a.id);
-      });
-    });
-    return conReg;
-  },[acts,tiAct,semanasDelMes,vYear,vMonth,regs,getReg]);
-
   // calcEficiencia: retorna {pct, obtenidos, maximos, registros}
-  // Solo cuenta en maximos actividades que tienen al menos 1 registro
-  // en el mes (evita penalizar por actividades nunca solicitadas).
+  // pct = (pts obtenidos / pts máximos posibles) * 100
+  // actsConRegistro: actividades que tienen al menos 1 registro en Firebase
+  // Evita inflar el denominador con actividades nunca implementadas en el período
+  const actsConRegistroIds = useMemo(()=>{
+    const ids = new Set();
+    Object.values(regs).forEach(r=>{
+      if(r?.actividadId&&r?.evidencias?.length>0&&!r.anulado) ids.add(r.actividadId);
+    });
+    return ids;
+  },[regs]);
+
   const calcEficiencia = useCallback((tId, days)=>{
     let obtenidos=0, maximos=0, registros=[];
     days.forEach(ds=>{
@@ -386,7 +354,7 @@ export default function ChecklistApp() {
         a.activa &&
         a.dias.includes(dw) &&
         !isExc(tId,a.id,ds) &&
-        actividadesConRegistro.has(a.id) // solo actividades desplegadas en el período
+        actsConRegistroIds.has(a.id) // solo actividades con historial real
       ).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
         maximos+=10;
@@ -398,7 +366,7 @@ export default function ChecklistApp() {
     });
     if(maximos===0) return null;
     return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,isExc,getReg,getRangoActivo,actividadesConRegistro]);
+  },[acts,regs,actsConRegistroIds,isExc,getReg,getRangoActivo]);
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -494,7 +462,7 @@ export default function ChecklistApp() {
     const {docId, docData, actividadId} = updModal;
     const AR = acts.find(a=>a.id===actividadId)?.r || RANGOS_DEFAULT;
     const pct = calcP(horaUpd, AR);
-    const tier = getTier(pct);
+    const tier = getTierPts(pct);
     const now2 = new Date();
     const ev = {
       id: Date.now(),
@@ -512,32 +480,6 @@ export default function ChecklistApp() {
     showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct} pts ${tier.icon}`);
     setUpdModal(null); setHoraUpd(""); setMotivoUpd("");
   };
-
-  // Limpiar todas las excepciones de un mes específico (YYYY-MM)
-  const clearExcepcionesMes = async (yearMonth) => {
-    const newExceps = {};
-    Object.entries(exceps).forEach(([key, fechas]) => {
-      if(!Array.isArray(fechas)) return;
-      const filtered = fechas.filter(f => !f.startsWith(yearMonth));
-      if(filtered.length > 0) newExceps[key] = filtered;
-    });
-    setExceps(newExceps);
-    await saveConfig({excepciones: newExceps});
-    showToast(`🗑️ Excepciones de ${yearMonth} eliminadas`);
-  };
-
-  // Contar excepciones activas por mes
-  const excepcionesPorMes = useMemo(()=>{
-    const meses = {};
-    Object.values(exceps).forEach(fechas=>{
-      if(!Array.isArray(fechas)) return;
-      fechas.forEach(f=>{
-        const ym = f.slice(0,7);
-        meses[ym] = (meses[ym]||0) + 1;
-      });
-    });
-    return meses;
-  },[exceps]);
 
   const toggleExcepcion = async (tId, aId) => {
     const key = tId+"|"+aId;
@@ -883,7 +825,7 @@ export default function ChecklistApp() {
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <span style={{fontSize:12,color:"#5a7a9a"}}>Hora de evidencia</span>
-              <span style={{fontSize:12,fontWeight:700,color:tier.c}}>{horaEx} → {tier.icon} {pv} pts</span>
+              <span style={{fontSize:12,fontWeight:700,color:tier.c}}>{horaEx} → {tier.icon} {tier.label} · {pv} pts</span>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <span style={{fontSize:12,color:"#5a7a9a"}}>Tiendas</span>
@@ -1010,7 +952,8 @@ export default function ChecklistApp() {
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
                             // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
                             const diasConAct=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
-                            const maxPosible=diasConAct.length*10;
+                            // Solo contar si la actividad tiene historial real
+                            const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
                             const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
                             const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
                             const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
@@ -1030,9 +973,9 @@ export default function ChecklistApp() {
                                     onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
                                     onTouchEnd={()=>clearTimeout(longPressRef.current)}
                                     style={{cursor:"pointer"}}>
-                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
-                                    <div style={{fontSize:8,color:sc(v),opacity:.7}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</div>
-                                    {auditorCell&&<div style={{fontSize:7,color:"#8aaabb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
+                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</span>
+                                    <div style={{fontSize:8,color:"#8aaabb",marginTop:1}}>{v}%</div>
+                                    {auditorCell&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
                                     <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
                                       <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
@@ -1091,8 +1034,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                         return <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
                           {mx>0?(
                             ob>0
-                              ?<span style={{fontSize:9,fontWeight:700,color:sc(ef)}}>{ob}/{mx}pts<br/>{ef}%</span>
-                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pendiente</span>
+                              ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400}}>{ef}%</span></span>
+                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pend.</span>
                           ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                         </td>;
                       }))}
@@ -1141,7 +1084,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
           const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -1168,7 +1111,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       sem.days.forEach(day=>{
         const ds=dStr(vYear,vMonth,day);
         const dw=getDow(ds);
-        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
+        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -1191,8 +1134,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsEval.length)*100):0;
     const tendencia=semanasDelMes.map(s=>{
       let ob=0,mx=0;
-      tsEval.forEach(ti=>{ const v=calcEficienciaSem(ti.id,s); if(v!==null){ob+=v;mx+=100;} });
-      return mx>0?Math.round(ob/tsEval.filter(ti=>calcEficienciaSem(ti.id,s)!==null).length):null;
+      tsEval.forEach(ti=>{
+        let tob=0,tmx=0;
+        s.days.forEach(day=>{
+          const ds=dStr(vYear,vMonth,day);
+          const dw=getDow(ds);
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+            tmx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) tob+=p;
+          });
+        });
+        ob+=tob; mx+=tmx;
+      });
+      return mx>0?Math.round((ob/mx)*100):null;
     });
 
     // distribución horaria
@@ -1316,7 +1271,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* KPIs */}
         {(()=>{
           const nEval=tsEval.length;
-          const nCump=tsEval.filter(ti=>calcEficienciaFiltrada(ti.id)!==null).length;
+          const nCump=tsEval.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>{const ds=dStr(vYear,vMonth,d);const dw=getDow(ds);return actsBase.some(a=>a.dias.includes(dw)&&getReg(ds,ti.id,a.id)?.evidencias?.length>0);}))).length;
           const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
           const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
           const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=80?"✅ Buen desempeño general del equipo":SG>=60?"📈 Dentro del rango esperado, hay margen de mejora":SG>=40?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
@@ -1712,30 +1667,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
       {cfgTab===2&&(
         <div>
-          {/* Panel excepciones activas — permite limpiar N/A fantasmas */}
-          {Object.keys(excepcionesPorMes).length>0&&(
-            <div style={{...S.card,padding:"14px 16px",marginBottom:14,border:"1.5px solid #FAC775"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <span style={{fontSize:18}}>⚠️</span>
-                <div>
-                  <div style={{fontWeight:800,fontSize:13,color:"#854F0B"}}>Excepciones activas por período</div>
-                  <div style={{fontSize:10,color:"#854F0B",opacity:.8}}>Si ves N/A inesperados en el reporte, limpia el mes correspondiente</div>
-                </div>
-              </div>
-              {Object.entries(excepcionesPorMes).sort().map(([ym,cnt])=>(
-                <div key={ym} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderRadius:9,background:"#FAEEDA",marginBottom:5}}>
-                  <div>
-                    <span style={{fontWeight:700,color:"#854F0B"}}>{ym}</span>
-                    <span style={{fontSize:11,color:"#854F0B",marginLeft:8}}>{cnt} excepción{cnt!==1?"es":""} activa{cnt!==1?"s":""}</span>
-                  </div>
-                  <button onClick={()=>clearExcepcionesMes(ym)}
-                    style={{padding:"5px 12px",borderRadius:8,border:"1px solid #d63031",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                    🗑️ Limpiar {ym}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
               <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Auditores</div>
@@ -2054,16 +1985,22 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,onLogin}){
+  const tieneAuditores = (auditores||[]).filter(a=>a.activo!==false).length > 0;
+  // Si hay auditores registrados → pantalla DNI directa para auditores
+  // Si no hay → flujo clásico con código (marcha blanca / setup inicial)
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
-  const[step,setStep]=useState("pin");
+  // step: "inicio" | "pin_admin" | "dni_auditor"
+  // En inicio se muestran 2 opciones: Soy Auditor (DNI) | Soy Admin/Gerencia (código)
+  const[step,setStep]=useState(tieneAuditores?"inicio":"pin");
   const[err,setErr]=useState("");
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
 
   const tryPin=()=>{
     if(pin===pins.admin){onLogin("admin","Administrador","");return;}
-    if(pin===pins.auditor){setStep("dni");return;}
     if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    // fallback: si no hay auditores aún, código auditor88 permite acceder
+    if(!tieneAuditores&&pin===pins.auditor){setStep("dni");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
   const tryDni=()=>{
@@ -2074,6 +2011,7 @@ function LoginScreen({pins,auditores,onLogin}){
     else if(!(auditores||[]).length){setErr("Sin auditores registrados. El Admin debe agregarlos en Config → Auditores.");setTimeout(()=>setErr(""),4000);}
     else{setErr("DNI no encontrado o inactivo. Contacta al Admin.");setTimeout(()=>{setErr("");setDni("");},2500);}
   };
+
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
@@ -2081,32 +2019,75 @@ function LoginScreen({pins,auditores,onLogin}){
         <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 20px"}}>🏪</div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
         <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
-        {step==="pin"&&(<>
-          <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Ingresa tu código de acceso</p>
-          <input autoFocus type="password" value={pin} onChange={e=>setPin(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryPin()} placeholder="••••••••"
-            style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
-          {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
-          <button onClick={tryPin} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700}}>
-            Ingresar →
-          </button>
-        </>)}
-        {step==="dni"&&(<>
-          <div style={{fontSize:32,marginBottom:8}}>🪪</div>
-          <p style={{margin:"0 0 4px",fontSize:13,color:"#00b5b4",fontWeight:700}}>✅ Código verificado</p>
-          <p style={{margin:"0 0 20px",fontSize:12,color:"#5a7a9a"}}>Ingresa tu DNI para identificarte</p>
-          <input autoFocus type="tel" value={dni} onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
-            onKeyDown={e=>e.key==="Enter"&&tryDni()} placeholder="12345678" maxLength={8}
-            style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:4,fontSize:22,fontWeight:700}}/>
-          {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>{err}</div>}
-          <button onClick={tryDni} disabled={dni.length<8}
-            style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
-            Entrar como Auditor →
-          </button>
-          <button onClick={()=>{setStep("pin");setDni("");setErr("");}}
-            style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
-            ← Volver
-          </button>
-        </>)}
+
+        {/* ── PANTALLA INICIO: 2 accesos claros ── */}
+        {step==="inicio"&&(
+          <>
+            <p style={{margin:"0 0 20px",fontSize:13,color:"#5a7a9a"}}>¿Cómo deseas ingresar?</p>
+            <button onClick={()=>{setStep("dni_auditor");setErr("");}}
+              style={{width:"100%",padding:"16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",fontSize:15,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <span style={{fontSize:22}}>🪪</span>
+              <div style={{textAlign:"left"}}>
+                <div style={{fontSize:14,fontWeight:800}}>Soy Auditor</div>
+                <div style={{fontSize:11,fontWeight:400,opacity:.8}}>Ingreso con mi DNI</div>
+              </div>
+            </button>
+            <button onClick={()=>{setStep("pin_admin");setErr("");}}
+              style={{width:"100%",padding:"14px",borderRadius:14,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:14,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <span style={{fontSize:18}}>🔑</span>
+              <div style={{textAlign:"left"}}>
+                <div style={{fontSize:13,fontWeight:700}}>Admin / Gerencia</div>
+                <div style={{fontSize:11,fontWeight:400}}>Código de acceso</div>
+              </div>
+            </button>
+          </>
+        )}
+
+        {/* ── AUDITOR: DNI directo ── */}
+        {(step==="dni_auditor"||step==="dni")&&(
+          <>
+            <div style={{fontSize:32,marginBottom:10}}>🪪</div>
+            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI</p>
+            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>Tu identificador de auditor</p>
+            <input autoFocus type="tel" value={dni}
+              onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
+              onKeyDown={e=>e.key==="Enter"&&tryDni()}
+              placeholder="12345678" maxLength={8}
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:6,fontSize:24,fontWeight:700}}/>
+            {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>❌ {err}</div>}
+            <button onClick={tryDni} disabled={dni.length<8}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+              Entrar →
+            </button>
+            {tieneAuditores&&<button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
+              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
+              ← Volver
+            </button>}
+          </>
+        )}
+
+        {/* ── ADMIN / GERENCIA: código ── */}
+        {step==="pin"||step==="pin_admin"?(
+          <>
+            <div style={{fontSize:32,marginBottom:10}}>🔑</div>
+            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Código de acceso</p>
+            <input autoFocus type="password" value={pin}
+              onChange={e=>setPin(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&tryPin()}
+              placeholder="••••••••"
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
+            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
+            <button onClick={tryPin}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+              Ingresar →
+            </button>
+            {tieneAuditores&&<button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
+              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
+              ← Volver
+            </button>}
+          </>
+        ):null}
+
       </div>
     </div>
   );
