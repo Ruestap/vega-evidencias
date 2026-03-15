@@ -129,14 +129,14 @@ function puntajeReg(reg, r) {
 }
 function getTier(s) {
   if(s===null||s===undefined) return {label:"S/D",icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
-  if(s>=10)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
-  if(s>=8)   return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
-  if(s>=6)   return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
+  if(s>=95)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
+  if(s>=80)  return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
+  if(s>=60)  return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
   if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
   return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
-function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=9.5)return"#f6a623";if(v>=8.5)return"#00b894";if(v>=7.5)return"#74b9ff";if(v>=6)return"#e17055";return"#d63031";}
-function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=9.5)return"#fff8ec";if(v>=8.5)return"#e8faf5";if(v>=7.5)return"#e8f4fd";if(v>=6)return"#fff1ee";return"#ffeae6";}
+function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
+function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
   const weeks=[], last=new Date(year,month+1,0).getDate();
@@ -390,7 +390,7 @@ export default function ChecklistApp() {
     });
     await Promise.all(promises);
     showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
-    setTSel(new Set());setRango(null);setHoraEx("07:00");setObsEx("");setPaso(1);setActSel(null);
+    setTSel(new Set());setRango(null);setHoraEx("07:00");setObsEx("");setPaso(2);setVerRegistradas(false);
   };
 
   const eliminarRegistro = async (docId) => {
@@ -434,7 +434,7 @@ export default function ChecklistApp() {
     const prevEvs = docData.evidencias || [];
     const newEvs = [...prevEvs, ev].sort((a,b)=>a.hora.localeCompare(b.hora));
     await setDoc(doc(db,"registros",docId), {...docData, evidencias: newEvs, updatedAt: now2.toISOString()});
-    showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct}% ${tier.icon}`);
+    showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct} pts ${tier.icon}`);
     setUpdModal(null); setHoraUpd(""); setMotivoUpd("");
   };
 
@@ -583,10 +583,16 @@ export default function ChecklistApp() {
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           {isAdmin&&(
-            <button onClick={()=>setVerRegistradas(v=>!v)}
-              style={{padding:"6px 14px",borderRadius:9,border:`2px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",gap:5}}>
-              {verRegistradas?<>📋 Solo pendientes</>:<>👁 Ver registradas</>}
-            </button>
+            <div style={{display:"flex",borderRadius:9,overflow:"hidden",border:"1.5px solid #e2e8f0",background:"#f8fafc"}}>
+              <button onClick={()=>setVerRegistradas(false)}
+                style={{padding:"6px 12px",border:"none",background:!verRegistradas?"#1a2f4a":"transparent",color:!verRegistradas?"#fff":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s"}}>
+                ⏳ Pendientes
+              </button>
+              <button onClick={()=>setVerRegistradas(true)}
+                style={{padding:"6px 12px",border:"none",background:verRegistradas?"#0984e3":"transparent",color:verRegistradas?"#fff":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s"}}>
+                👁 Todas
+              </button>
+            </div>
           )}
           <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).map(ti=>ti.id)))}
             style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
@@ -654,10 +660,10 @@ export default function ChecklistApp() {
     const tier = getTier(pv);
     const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
     const franjas=[
-      {icon:"🥇",label:"ORO — 100%",   desde:"00:00",hasta:AR.c100,c:"#f6a623",bg:"#fff8ec"},
-      {icon:"🥈",label:"PLATA — 80%",  desde:AR.c100,hasta:AR.c80, c:"#74b9ff",bg:"#e8f4fd"},
-      {icon:"🥉",label:"BRONCE — 60%", desde:AR.c80, hasta:AR.c60, c:"#a29bfe",bg:"#f0edff"},
-      {icon:"🔴",label:"FUERA — 0%",   desde:AR.c60, hasta:"23:59",c:"#d63031",bg:"#ffeae6"},
+      {icon:"🥇",label:"ORO — 10 pts",   desde:"00:00",hasta:AR.c100,c:"#f6a623",bg:"#fff8ec"},
+      {icon:"🥈",label:"PLATA — 8 pts",  desde:AR.c100,hasta:AR.c80, c:"#74b9ff",bg:"#e8f4fd"},
+      {icon:"🥉",label:"BRONCE — 6 pts", desde:AR.c80, hasta:AR.c60, c:"#a29bfe",bg:"#f0edff"},
+      {icon:"🔴",label:"FUERA — 0 pts",  desde:AR.c60, hasta:"23:59",c:"#d63031",bg:"#ffeae6"},
     ];
     const franjaActiva = pv===100?0:pv===80?1:pv===60?2:pv===0?3:-1;
 
@@ -712,7 +718,7 @@ export default function ChecklistApp() {
           {pv!==null?(
             <div style={{marginTop:14,padding:"14px",borderRadius:12,background:tier.bg,border:`1.5px solid ${tier.c}44`}}>
               <div style={{fontSize:36,marginBottom:4}}>{tier.icon}</div>
-              <div style={{fontWeight:800,fontSize:32,color:tier.c,lineHeight:1}}>{pv}%</div>
+              <div style={{fontWeight:800,fontSize:32,color:tier.c,lineHeight:1}}>{pv} pts</div>
               <div style={{fontSize:14,fontWeight:700,color:tier.c,marginTop:4}}>{tier.label}</div>
               <div style={{fontSize:11,color:tier.c,opacity:.7,marginTop:2}}>
                 Puntaje calculado automáticamente
@@ -858,7 +864,7 @@ export default function ChecklistApp() {
                       )))}
                       {semsVis.map(s=>(
                         <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55}}>
-                          {s.label}<br/>PROM
+                          {s.label}<br/>EF.%
                         </th>
                       ))}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55}}>MES</th>}
@@ -911,7 +917,8 @@ export default function ChecklistApp() {
                                     onTouchEnd={()=>clearTimeout(longPressRef.current)}
                                     style={{cursor:"pointer"}}>
                                     <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
-                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:2}}>
+                                    <div style={{fontSize:8,color:sc(v),opacity:.7}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</div>
+                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
                                       <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
                                   </div>
@@ -929,6 +936,48 @@ export default function ChecklistApp() {
                       );
                     })}
                   </tbody>
+                  {/* FILA TOTAL DEL FORMATO */}
+                  <tfoot>
+                    <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
+                      <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a"}}>TOTAL {fmt.toUpperCase()}</td>
+                      <td colSpan={2}></td>
+                      {semsVis.map(sem=>actsActivas.map(a=>{
+                        let ob=0,mx=0;
+                        tsFmt.forEach(tr=>{
+                          const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
+                          const diasA=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                          diasA.forEach(d=>{
+                            if(isExc(tr.id,a.id,d)) return;
+                            mx+=10;
+                            const rv=getReg(d,tr.id,a.id);
+                            const p=puntajeReg(rv,getRangoActivo(a.id,d));
+                            if(p!==null) ob+=p;
+                          });
+                        });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        return <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
+                          {ef!==null?<span style={{fontSize:9,fontWeight:700,color:sc(ef)}}>{ob}/{mx}pts<br/>{ef}%</span>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                        </td>;
+                      }))}
+                      {semsVis.map(sem=>{
+                        let ob=0,mx=0;
+                        tsFmt.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        return <td key={"tot"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#e8edf2"}}>
+                          {ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}
+                        </td>;
+                      })}
+                      {selWeek===null&&(()=>{
+                        let ob=0,mx=0;
+                        tsFmt.forEach(tr=>{ const ef=calcMesDetalle(tr.id); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:ef?sb(ef):"#f0f4f8"}}>
+                          {ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}</span></span>:<span style={{color:"#b2bec3"}}>—</span>}
+                        </td>;
+                      })()}
+                      <td></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -947,39 +996,67 @@ export default function ChecklistApp() {
     // tiendas evaluables: excluir las que tienen N/A en TODAS las actividades del filtro
     const tsEval = tsBase.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
     // calcular score con filtros aplicados
-    const calcScoreFiltrado = (tId)=>{
-      const ws=semanasDelMes.map(s=>{
-        const scores=[];
+    // calcEficienciaFiltrada: acumula pts obtenidos / pts maximos del período completo
+    // respeta filtros de actividad, formato y franja horaria
+    const calcEficienciaFiltrada = (tId)=>{
+      let obtenidos=0, maximos=0;
+      semanasDelMes.forEach(s=>{
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
+            maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
-            // filtro horario
             if(p!==null){
-              const h=primerEnvio(reg?.evidencias);
-              const m=toMin(h);
-              if(dashHora==="Todas") scores.push(p);
-              else if(dashHora==="oro"&&m<=toMin("08:00")) scores.push(p);
-              else if(dashHora==="plata"&&m>toMin("08:00")&&m<=toMin("09:00")) scores.push(p);
-              else if(dashHora==="bronce"&&m>toMin("09:00")&&m<=toMin("10:00")) scores.push(p);
-              else if(dashHora==="fuera"&&m>toMin("10:00")) scores.push(p);
+              if(dashHora==="Todas"){obtenidos+=p;}
+              else{
+                const h=primerEnvio(reg?.evidencias); const m=toMin(h);
+                if(dashHora==="oro"&&m<=toMin("08:00")) obtenidos+=p;
+                else if(dashHora==="plata"&&m>toMin("08:00")&&m<=toMin("09:00")) obtenidos+=p;
+                else if(dashHora==="bronce"&&m>toMin("09:00")&&m<=toMin("10:00")) obtenidos+=p;
+                else if(dashHora==="fuera"&&m>toMin("10:00")) obtenidos+=p;
+              }
             }
           });
         });
-        return scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
-      }).filter(v=>v!==null);
-      return ws.length>0?Math.round(ws.reduce((a,b)=>a+b,0)/ws.length):null;
+      });
+      if(maximos===0) return null;
+      return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos};
     };
 
-    const scoresMes=tsEval.map(ti=>({t:ti,score:calcScoreFiltrado(ti.id)}));
+    // tendencia semanal: mismo cálculo pero por semana
+    const calcEficienciaSem = (tId,sem)=>{
+      let ob=0, mx=0;
+      sem.days.forEach(day=>{
+        const ds=dStr(vYear,vMonth,day);
+        const dw=getDow(ds);
+        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)).forEach(a=>{
+          mx+=10;
+          const reg=getReg(ds,tId,a.id);
+          const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+          if(p!==null) ob+=p;
+        });
+      });
+      return mx>0?Math.round((ob/mx)*100):null;
+    };
+
+    const scoresMes=tsEval.map(ti=>{ const ef=calcEficienciaFiltrada(ti.id); return {t:ti,score:ef?.pct??null,obtenidos:ef?.obtenidos??0,maximos:ef?.maximos??0}; });
     const validos=scoresMes.filter(s=>s.score!==null);
-    const SG=validos.length>0?Math.round(validos.reduce((a,b)=>a+b.score,0)/validos.length):0;
-    const IC=tsEval.length>0?Math.round((tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length/tsEval.length)*100):0;
-    const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=9.5).length/tsEval.length)*100):0;
-    const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<6).length/tsEval.length)*100):0;
-    const tendencia=semanasDelMes.map(s=>{const ss=tsEval.map(ti=>calcSemana(ti.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
+
+    // SG: total obtenidos / total maximos de todas las tiendas evaluables
+    const totalOb=validos.reduce((a,s)=>a+s.obtenidos,0);
+    const totalMx=tsEval.reduce((a,ti)=>{ const ef=calcEficienciaFiltrada(ti.id); return a+(ef?.maximos??0); },0);
+    const SG=totalMx>0?Math.round((totalOb/totalMx)*100):0;
+
+    const IC=tsEval.length>0?Math.round((validos.length/tsEval.length)*100):0;
+    const SE=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsEval.length)*100):0; // >=95% eficiencia
+    const TR=tsEval.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsEval.length)*100):0;
+    const tendencia=semanasDelMes.map(s=>{
+      let ob=0,mx=0;
+      tsEval.forEach(ti=>{ const v=calcEficienciaSem(ti.id,s); if(v!==null){ob+=v;mx+=100;} });
+      return mx>0?Math.round(ob/tsEval.filter(ti=>calcEficienciaSem(ti.id,s)!==null).length):null;
+    });
 
     // distribución horaria
     const allEvs=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]);
@@ -1103,12 +1180,12 @@ export default function ChecklistApp() {
         {(()=>{
           const nEval=tsEval.length;
           const nCump=tsEval.filter(ti=>calcScoreFiltrado(ti.id)!==null).length;
-          const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=9.5).length;
-          const nRie=scoresMes.filter(s=>s.score!==null&&s.score<6).length;
-          const sgI=SG>=9.5?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=8.5?"✅ Buen desempeño general del equipo":SG>=7.5?"📈 Dentro del rango esperado, hay margen de mejora":SG>=6?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
-          const icI=IC>=95?`✅ ${nCump} de ${nEval} tiendas con registro — excelente cobertura`:IC>=80?`📬 ${nCump} de ${nEval} tiendas registradas — ${nEval-nCump} aún sin evidencia`:`⚠️ Solo ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} pendientes`;
-          const seI=nExc===0?"Sin tiendas en nivel ORO aún — oportunidad de acelerar registros":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con puntaje ≥9.5 — empujar al resto`:`${nExc} tiendas en excelencia (puntaje ≥9.5) — buen desempeño top`;
-          const trI=nRie===0?"✅ Ninguna tienda con score crítico (<60%) — control en verde":nRie<=3?`⚠️ ${nRie} tienda${nRie>1?"s":""} con score <60% — requieren atención`:` 🔴 ${nRie} tiendas en zona de riesgo — intervención urgente`;
+          const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
+          const nRie=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
+          const sgI=SG>=95?"🏆 Resultado sobresaliente, mantener el ritmo":SG>=80?"✅ Buen desempeño general del equipo":SG>=60?"📈 Dentro del rango esperado, hay margen de mejora":SG>=40?"⚠️ Por debajo del objetivo — revisar tiendas rezagadas":"🔴 Alerta: rendimiento crítico — acción inmediata";
+          const icI=IC>=95?`✅ ${nCump} de ${nEval} tiendas con algún registro — excelente cobertura`:IC>=80?`📬 ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} aún sin evidencia`:`⚠️ Solo ${nCump} de ${nEval} tiendas registraron — ${nEval-nCump} sin evidencia`;
+          const seI=nExc===0?"Sin tiendas en excelencia (≥95%) aún — oportunidad de mejorar":nExc<=3?`${nExc} tienda${nExc>1?"s":""} con eficiencia ≥95% — impulsar al resto`:`${nExc} tiendas en excelencia (≥95% eficiencia) — excelente desempeño`;
+          const trI=nRie===0?"✅ Ninguna tienda con eficiencia crítica (<60%) — control en verde":nRie<=3?`⚠️ ${nRie} tienda${nRie>1?"s":""} con eficiencia <60% — requieren atención`:`🔴 ${nRie} tiendas en zona de riesgo — intervención urgente`;
           return(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
             {[
@@ -1197,8 +1274,10 @@ export default function ChecklistApp() {
             const fts=tiAct.filter(ti=>ti.f===fmt);
             // solo las evaluables (sin excepción en todas las actividades)
             const ftsEval=fts.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
-            const scores=ftsEval.map(ti=>calcMes(ti.id)).filter(v=>v!==null);
-            const prom=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+            // eficiencia acumulada del formato: sum(obtenidos) / sum(maximos)
+            let fmtOb=0, fmtMx=0;
+            ftsEval.forEach(ti=>{ const ef=calcEficienciaFiltrada(ti.id); if(ef){fmtOb+=ef.obtenidos;fmtMx+=ef.maximos;} });
+            const prom=fmtMx>0?Math.round((fmtOb/fmtMx)*100):null;
             const tier=getTier(prom);
             const excCount=fts.length-ftsEval.length;
             return(
@@ -1221,8 +1300,8 @@ export default function ChecklistApp() {
                 <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   <div style={{fontWeight:800,marginBottom:3}}>{fmt}</div>
                   {prom!==null
-                    ?`${ftsEval.length} tiendas evaluadas. Eficiencia promedio: ${prom}% (puntos obtenidos/puntos máximos posibles). ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A) no se contabilizan.":""}`
-                    :"Sin registros suficientes para calcular eficiencia este período."}
+                    ?`${ftsEval.length} tiendas evaluadas. Obtenidos: ${fmtOb} de ${fmtMx} pts posibles = ${prom}% eficiencia. ${excCount>0?excCount+" excluida"+(excCount>1?"s":"")+" (N/A) sin contabilizar.":""}`
+                    :"Sin registros este período."}
                   <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
               </div>
@@ -1240,7 +1319,7 @@ export default function ChecklistApp() {
             <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>{panel.title}</div>
             <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>{panel.sub}</div>
             {panel.list.map((s,i)=>{
-              const det=calcMesDetalle(s.t.id);
+              const det={obtenidos:s.obtenidos,maximos:s.maximos,registros:[]};
               return(
               <div key={s.t.id} style={{position:"relative",marginBottom:8}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".rank-tip").style.display="block"}
