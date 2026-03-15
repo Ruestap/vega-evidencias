@@ -132,20 +132,20 @@ function getTier(s) {
   if(s>=95)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
   if(s>=80)  return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
   if(s>=60)  return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
-  if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
-  return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+  if(s>0)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  return           {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
 // Para paso3: puntaje en pts (10/8/6/0)
 function getTierPts(p) {
-  if(p===null||p===undefined) return {label:"S/D",icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
-  if(p>=10)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
-  if(p>=8)   return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
-  if(p>=6)   return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
-  if(p>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
-  return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+  if(p===null||p===undefined) return {label:"S/D", icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
+  if(p>=10) return {label:"ORO 🥇",  icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
+  if(p>=8)  return {label:"PLATA 🥈",icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
+  if(p>=6)  return {label:"BRONCE 🥉",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
+  if(p>0)   return {label:"RIESGO",  icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  return           {label:"SIN ENVÍO",icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
-function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
-function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
+function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
+function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
   const weeks=[], last=new Date(year,month+1,0).getDate();
@@ -229,51 +229,29 @@ export default function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
-  // Limpieza forzada de excepciones legacy al montar
+  // Carga config 1 sola vez al montar — limpia legacy solo si detecta cambios
   useEffect(()=>{
-    const cleanLegacyExceps = async ()=>{
+    const loadCfg = async ()=>{
       try {
         const snap = await getDoc(doc(db,"config","app"));
         if(!snap.exists()) return;
         const d = snap.data();
-        const exc = d.excepciones || {};
-        const hasLegacy = Object.values(exc).some(v=>v===true||(!Array.isArray(v)));
-        if(hasLegacy){
-          const cleaned = Object.fromEntries(
-            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
-          );
-          await setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
-          setExceps(cleaned);
-          console.log("Excepciones legacy limpiadas:", Object.keys(exc).length - Object.keys(cleaned).length, "entradas removidas");
-        }
-      } catch(e){ console.error("cleanLegacy error:",e); }
-    };
-    cleanLegacyExceps();
-  },[]);
-
-  useEffect(()=>{
-    const loadCfg = async ()=>{
-      const snap = await getDoc(doc(db,"config","app"));
-      if(snap.exists()){
-        const d=snap.data();
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
         if(d.auditores)   setAuditores(d.auditores);
-        if(d.excepciones!==undefined){
-          const exc=d.excepciones||{};
-          // Limpiar SIEMPRE: solo conservar arrays con fechas válidas, descartar todo lo demás
-          const cleaned=Object.fromEntries(
-            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
-          );
-          setExceps(cleaned);
-          // Guardar SIEMPRE la versión limpia en Firebase para forzar migración
-          setDoc(doc(db,"config","app"),{...d,excepciones:cleaned,updatedAt:new Date().toISOString()});
-        } else {
-          setExceps({});
+        if(d.rangosDia)   setRangosDia(d.rangosDia);
+        // Limpiar excepciones legacy (boolean true) — solo conservar arrays con fechas
+        const exc = d.excepciones || {};
+        const cleaned = Object.fromEntries(
+          Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+        );
+        setExceps(cleaned);
+        // Solo escribe a Firebase si había legacy que limpiar
+        if(Object.keys(exc).length !== Object.keys(cleaned).length){
+          await setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
         }
-        if(d.rangosDia)  setRangosDia(d.rangosDia);
-      }
+      } catch(err){ console.error("loadCfg error:",err); }
     };
     loadCfg();
   },[]);
@@ -299,7 +277,7 @@ export default function ChecklistApp() {
   const esFS = dow===0||dow===6;
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
-  const actInfo = acts.find(a=>a.id===actSel);
+  const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
     const override = rangosDia?.[actId]?.[fechaStr];
     if(override) return override;
@@ -344,7 +322,8 @@ export default function ChecklistApp() {
     const pts=ts.map(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR));
     const IC=total>0?Math.round((withEnv.length/total)*100):0;
     const valid=pts.filter(p=>p!==null);
-    const IP=valid.length>0?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    const IP_pts=valid.length>0?Math.round((valid.reduce((a,b)=>a+b,0)/valid.length)*10)/10:0; // promedio puntos 0-10
+    const IP=Math.round((IP_pts/10)*100); // convertir a % para SG
     const al100=pts.filter(p=>p===10).length;
     const SE=total>0?Math.round((al100/total)*100):0;
     const TR=total>0?Math.round((ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null).length/total)*100):0;
@@ -373,7 +352,7 @@ export default function ChecklistApp() {
     });
     if(maximos===0) return null;
     return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,regs,vYear,vMonth,isExc,getReg,getRangoActivo]);
+  },[acts,vYear,vMonth,isExc,getReg,getRangoActivo]);
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
