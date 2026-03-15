@@ -513,8 +513,7 @@ export default function ChecklistApp() {
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
           <span style={{fontSize:20}}>{actInfo?.e}</span>
           <span style={{fontSize:14,fontWeight:700,color:actInfo?.c}}>{actInfo?.n}</span>
-          <span style={{...S.pill("#8aaabb","#f0f4f8"),marginLeft:"auto"}}>{tSel.size} sel.</span>
-          <span style={{...S.pill("#00b894","#e8faf5")}}>{tRegistradas.size} reg.</span>
+
         </div>
 
         {/* rango extendido — solo para Ad-hoc y Promocional */}
@@ -952,9 +951,27 @@ export default function ChecklistApp() {
                           }))}
                           {semsVis.map(sem=>{
                             const ps=calcSemana(tr.id,sem);
-                            return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
+                            const detSem=calcSemanaDetalle(tr.id,sem);
+return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>
+  {ps!==null
+    ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+        <span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>
+        <span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span>
+      </div>
+    :<span style={{color:"#d1d5db"}}>—</span>}
+</td>;
                           })}
-                          {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
+                          {selWeek===null&&(()=>{
+  const detMes=calcMesDetalle(tr.id);
+  return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>
+    {pMes!==null
+      ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+          <span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>
+          <span style={{fontSize:8,color:sc(pMes),opacity:.8}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>
+        </div>
+      :<span style={{color:"#b2bec3"}}>—</span>}
+  </td>;
+})()}
                           <td style={{padding:"6px 8px",textAlign:"center"}}><span style={{fontSize:13}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                         </tr>
                       );
