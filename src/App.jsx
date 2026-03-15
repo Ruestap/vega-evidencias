@@ -697,7 +697,7 @@ export default function ChecklistApp() {
                 </div>
               </div>
               {sel&&!exc&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
-              {isAdmin&&(
+              {isAuditor&&(
                 <button
                   onClick={e=>{e.stopPropagation();toggleExcepcion(tienda.id,actSel);}}
                   style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${exc?"#00b894":"#FAC775"}`,background:exc?"#f0fdf4":"#fff8ec",color:exc?"#16a34a":"#854F0B",cursor:"pointer",fontSize:11,fontWeight:800,flexShrink:0,minWidth:44,textAlign:"center"}}>
@@ -1625,37 +1625,117 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           ];
           const totalH=franjas.reduce((a,f)=>a+f.n,0)||1;
           const ptsPonderado=Math.round(franjas.reduce((a,f)=>a+f.n*f.pts,0)/totalH);
+          // Desglose por semana
+          const semData=semanasDelMes.map(s=>{
+            const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
+            let sOro=new Set(),sPlata=new Set(),sBronce=new Set(),sFuera=new Set(),sEval=new Set();
+            s.days.forEach(day=>{
+              const ds=dStr(vYear,vMonth,day);
+              if(ds>hoy) return;
+              const dw=getDow(ds);
+              tsBase.forEach(ti=>{
+                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                  const key=ti.id+"_"+a.id;
+                  sEval.add(key);
+                  const reg=getReg(ds,ti.id,a.id);
+                  const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                  if(p===null) return;
+                  if(p===10) sOro.add(key);
+                  else if(p===8) sPlata.add(key);
+                  else if(p===6) sBronce.add(key);
+                  else sFuera.add(key);
+                });
+              });
+            });
+            const tot=sOro.size+sPlata.size+sBronce.size+sFuera.size||1;
+            return {s,isFut,nOro:sOro.size,nPlata:sPlata.size,nBronce:sBronce.size,nFuera:sFuera.size,nEval:sEval.size,tot};
+          });
+          // Desglose por formato (ORO solamente para simplificar)
+          const fmtData=["Mayorista","Supermayorista","Market"].map(fmt=>{
+            let fOro=new Set(),fEval=new Set();
+            semanasDelMes.forEach(s=>{
+              s.days.forEach(day=>{
+                const ds=dStr(vYear,vMonth,day);
+                if(ds>hoy) return;
+                const dw=getDow(ds);
+                tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
+                  actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                    const key=ti.id+"_"+a.id;
+                    fEval.add(key);
+                    const reg=getReg(ds,ti.id,a.id);
+                    const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                    if(p===10) fOro.add(key);
+                  });
+                });
+              });
+            });
+            return {fmt,nOro:fOro.size,nEval:fEval.size,fc:FMT[fmt]};
+          }).filter(f=>f.nEval>0);
           return(
           <div style={{...S.card,padding:"16px",marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
               <div>
                 <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ CALIDAD DE HORARIO</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>Por tienda × actividad — mejor franja alcanzada en el mes</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>Tiendas por franja horaria · mejor resultado del mes · {totalH} evaluaciones</div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:20,fontWeight:800,color:sc(ptsPonderado/10*100)}}>{ptsPonderado}<span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span></div>
-                <div style={{fontSize:9,color:"#8aaabb"}}>{totalH} evaluaciones</div>
               </div>
             </div>
-            {/* stacked bar total */}
-            <div style={{height:20,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:12}}>
+            {/* stacked bar total mes */}
+            <div style={{height:20,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:8}}>
               {franjas.map(f=>f.n>0&&(
                 <div key={f.l} style={{width:(f.n/totalH*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",transition:"width .4s"}}>
                   {f.n/totalH>0.08&&<span style={{fontSize:9,color:"#fff",fontWeight:800}}>{Math.round(f.n/totalH*100)}%</span>}
                 </div>
               ))}
             </div>
-            {/* detalle por franja */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+            {/* tarjetas franja */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {franjas.map(f=>(
-                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"12px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
-                  <div style={{fontSize:20,marginBottom:2}}>{f.icon}</div>
-                  <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1}}>{f.n}</div>
-                  <div style={{fontSize:9,color:f.c,fontWeight:700,margin:"3px 0"}}>tiendas · {f.l}</div>
-                  <div style={{fontSize:8,color:"#8aaabb",lineHeight:1.4}}>{Math.round(f.n/totalH*100)}%<br/>{f.desc}</div>
+                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
+                  <div style={{fontSize:18}}>{f.icon}</div>
+                  <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1.1}}>{f.n}</div>
+                  <div style={{fontSize:8,color:f.c,fontWeight:700}}>tiendas · {f.l}</div>
+                  <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>{Math.round(f.n/totalH*100)}% · {f.desc}</div>
                 </div>
               ))}
             </div>
+            {/* desglose por semana — ORO */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR SEMANA</div>
+              <div style={{display:"flex",gap:6}}>
+                {semData.map(({s,isFut,nOro,tot,nEval})=>(
+                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${isFut?"#e2e8f0":"#f6a623"}33`}}>
+                    <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>{s.label}</div>
+                    {isFut
+                      ?<div style={{fontSize:10,color:"#b2bec3"}}>—</div>
+                      :<><div style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</div>
+                        <div style={{fontSize:7,color:"#8aaabb"}}>{nEval>0?Math.round(nOro/nEval*100):0}% de {nEval}</div></>
+                    }
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* desglose ORO por formato */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR FORMATO</div>
+              <div style={{display:"flex",gap:8}}>
+                {fmtData.map(({fmt,nOro,nEval,fc})=>(
+                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:`1px solid ${fc.c}44`}}>
+                    <div style={{fontSize:9,fontWeight:800,color:fc.c}}>{fmt}</div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
+                      <span style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</span>
+                      <span style={{fontSize:9,color:"#8aaabb"}}>🥇 de {nEval}</span>
+                    </div>
+                    <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:4}}>
+                      <div style={{width:nEval>0?(nOro/nEval*100)+"%":"0%",height:"100%",background:"#f6a623",borderRadius:2}}/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           </div>
           );
         })()}
