@@ -1985,31 +1985,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,onLogin}){
-  const tieneAuditores = (auditores||[]).filter(a=>a.activo!==false).length > 0;
-  // Si hay auditores registrados → pantalla DNI directa para auditores
-  // Si no hay → flujo clásico con código (marcha blanca / setup inicial)
+  const auds = (auditores||[]).filter(a=>a.activo!==false);
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
-  // step: "inicio" | "pin_admin" | "dni_auditor"
-  // En inicio se muestran 2 opciones: Soy Auditor (DNI) | Soy Admin/Gerencia (código)
-  const[step,setStep]=useState(tieneAuditores?"inicio":"pin");
+  // Siempre arranca en "inicio" — los 3 botones siempre visibles
+  const[step,setStep]=useState("inicio");
   const[err,setErr]=useState("");
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
 
   const tryPin=()=>{
     if(pin===pins.admin){onLogin("admin","Administrador","");return;}
-    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
-    // fallback: si no hay auditores aún, código auditor88 permite acceder
-    if(!tieneAuditores&&pin===pins.auditor){setStep("dni");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
   const tryDni=()=>{
     const clean=dni.trim();
     if(clean.length<8){setErr("DNI debe tener 8 dígitos");return;}
-    const found=(auditores||[]).find(a=>a.dni===clean&&a.activo!==false);
-    if(found){onLogin("auditor",found.nombre,clean);}
-    else if(!(auditores||[]).length){setErr("Sin auditores registrados. El Admin debe agregarlos en Config → Auditores.");setTimeout(()=>setErr(""),4000);}
-    else{setErr("DNI no encontrado o inactivo. Contacta al Admin.");setTimeout(()=>{setErr("");setDni("");},2500);}
+    // Si está registrado → entra con su nombre
+    const found=auds.find(a=>a.dni===clean);
+    if(found){onLogin("auditor",found.nombre,clean);return;}
+    // Fallback: si no hay auditores aún (marcha blanca) → código auditor88 como DNI
+    if(auds.length===0&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
+    setErr(auds.length===0
+      ?"Sin auditores registrados. Contacta al Admin."
+      :"DNI no encontrado. Contacta al Admin.");
+    setTimeout(()=>{setErr("");setDni("");},2500);
   };
 
   return(
@@ -2073,10 +2072,10 @@ function LoginScreen({pins,auditores,onLogin}){
               style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Entrar →
             </button>
-            {tieneAuditores&&<button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
+            <button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
               style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
               ← Volver
-            </button>}
+            </button>
           </>
         )}
 
@@ -2095,10 +2094,10 @@ function LoginScreen({pins,auditores,onLogin}){
               style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Ingresar →
             </button>
-            {tieneAuditores&&<button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
+            <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
               style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
               ← Volver
-            </button>}
+            </button>
           </>
         ):null}
 
