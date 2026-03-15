@@ -351,7 +351,9 @@ export default function ChecklistApp() {
 
   const calcEficiencia = useCallback((tId, days)=>{
     let obtenidos=0, maximos=0, registros=[];
+    const hoy=todayStr(); // no contar días futuros en el denominador
     days.forEach(ds=>{
+      if(ds>hoy) return; // día futuro: no suma al máximo
       const dw=getDow(ds);
       acts.filter(a=>
         a.activa &&
@@ -360,7 +362,7 @@ export default function ChecklistApp() {
         actsConRegistroIds.has(a.id) // solo actividades con historial real
       ).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
-        maximos+=10;
+        maximos+=10; // día pasado/hoy sin registro = 0pts de 10 posibles
         if(p!==null){
           obtenidos+=p;
           registros.push({fecha:ds,act:a.n,pts:p,max:10});
@@ -954,7 +956,8 @@ export default function ChecklistApp() {
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
                             // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
-                            const diasConAct=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                            const hoyC=todayStr();
+                            const diasConAct=ds.filter(d=>d<=hoyC&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
                             // Solo contar si la actividad tiene historial real
                             const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
                             const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
@@ -1019,13 +1022,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a"}}>TOTAL {fmt.toUpperCase()}</td>
-                      <td colSpan={2}></td>
+                      <td></td>
                       {semsVis.map(sem=>actsActivas.map(a=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{
                           const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                           const diasA=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                          const hoyT=todayStr();
                           diasA.forEach(d=>{
+                            if(d>hoyT) return; // día futuro
                             if(isExc(tr.id,a.id,d)) return;
                             mx+=10;
                             const rv=getReg(d,tr.id,a.id);
@@ -1086,6 +1091,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       semanasDelMes.forEach(s=>{
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
+          if(ds>todayStr()) return; // día futuro
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
             maximos+=10;
@@ -1141,6 +1147,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         let tob=0,tmx=0;
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
+          if(ds>todayStr()) return;
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             tmx+=10;
