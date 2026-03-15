@@ -508,14 +508,21 @@ export default function ChecklistApp() {
       </div>
 
       {/* barra de estado — pendientes vs registradas */}
+      {(()=>{
+        const tEvalAct = tiAct.filter(ti=>!isExc(ti.id,actSel));
+        const nTotal   = tEvalAct.length;
+        const nReg     = tEvalAct.filter(ti=>tRegistradas.has(ti.id)).length;
+        const nPend    = nTotal - nReg;
+        return(
       <div style={{padding:"8px 16px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <span style={{fontSize:12,color:"#8aaabb"}}>{tFilt.length} pendientes</span>
-          {isAdmin&&tRegistradas.size>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {tRegistradas.size} registradas</span>}
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"#8aaabb",fontWeight:700}}>{nPend} pendiente{nPend!==1?"s":""}</span>
+          {nReg>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {nReg} registrada{nReg!==1?"s":""}</span>}
+          <span style={{fontSize:10,color:"#c8d8e8"}}>de {nTotal} evaluables</span>
           {!isAdmin&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          {isAdmin&&(
+          {isAdmin&&nReg>0&&(
             <button onClick={()=>setVerRegistradas(v=>!v)}
               style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${verRegistradas?"#0984e3":"#e2e8f0"}`,background:verRegistradas?"#e8f4fd":"#fff",color:verRegistradas?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
               {verRegistradas?"📋 Ver solo pendientes":"👁 Ver registradas también"}
@@ -527,6 +534,8 @@ export default function ChecklistApp() {
           </button>
         </div>
       </div>
+        );
+      })()}
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
         {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: mantén presionado una tienda para marcarla como excepción (N/A)</div>}
@@ -939,7 +948,7 @@ export default function ChecklistApp() {
       return{a,v:ps.length>0?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null};
     });
 
-    const exportPDF=()=>{
+    const exportPDF=window._vegaPDF=()=>{
       const w=window.open("","_blank");
       w.document.write(`<html><head><title>VEGA Evidencias - ${MESES[vMonth]} ${vYear}</title>
       <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
@@ -998,7 +1007,7 @@ export default function ChecklistApp() {
         {/* filtros */}
         <div style={{...S.card,padding:"12px 14px",marginBottom:14}}>
           <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:8,letterSpacing:".05em"}}>FILTROS</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
             <div>
               <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>TIPO DE TIENDA</div>
               <select value={dashFmt} onChange={e=>setDashFmt(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
@@ -1023,9 +1032,7 @@ export default function ChecklistApp() {
                 <option value="fuera">🔴 FUERA &gt;10:00</option>
               </select>
             </div>
-            <div style={{display:"flex",alignItems:"flex-end"}}>
-              <button onClick={exportPDF} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"none",background:"#1a2f4a",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>⬇️ PDF Comité</button>
-            </div>
+
           </div>
         </div>
 
@@ -1457,6 +1464,7 @@ export default function ChecklistApp() {
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
+          {isAdmin&&<button onClick={()=>window._vegaPDF?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
           {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
