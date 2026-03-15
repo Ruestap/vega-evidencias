@@ -225,6 +225,28 @@ export default function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
+  // Limpieza forzada de excepciones legacy al montar
+  useEffect(()=>{
+    const cleanLegacyExceps = async ()=>{
+      try {
+        const snap = await getDoc(doc(db,"config","app"));
+        if(!snap.exists()) return;
+        const d = snap.data();
+        const exc = d.excepciones || {};
+        const hasLegacy = Object.values(exc).some(v=>v===true||(!Array.isArray(v)));
+        if(hasLegacy){
+          const cleaned = Object.fromEntries(
+            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+          );
+          await setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
+          setExceps(cleaned);
+          console.log("Excepciones legacy limpiadas:", Object.keys(exc).length - Object.keys(cleaned).length, "entradas removidas");
+        }
+      } catch(e){ console.error("cleanLegacy error:",e); }
+    };
+    cleanLegacyExceps();
+  },[]);
+
   useEffect(()=>{
     const loadCfg = async ()=>{
       const snap = await getDoc(doc(db,"config","app"));
