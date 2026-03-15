@@ -109,6 +109,7 @@ const todayStr = () => new Date().toISOString().slice(0,10);
 const getDow   = s  => new Date(s+"T12:00:00").getDay();
 const dStr     = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const rKey     = (f,tid,a) => `${f}|${tid}|${a}`;
+<<<<<<< HEAD
 const toMin    = h  => { if(!h)return 9999; const[hh,mm]=h.split(":").map(Number); return hh*60+mm; };
 
 function calcP(hora, r) {
@@ -3161,6 +3162,8 @@ const todayStr = () => new Date().toISOString().slice(0,10);
 const getDow   = s  => new Date(s+"T12:00:00").getDay();
 const dStr     = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const rKey     = (f,t,a) => `${f}|${t}|${a}`;
+=======
+>>>>>>> c8ecc51 (fix: corregir orden tRegistradas antes de tFilt)
 const toMin    = h  => { if(!h)return 9999; const[hh,mm]=h.split(":").map(Number); return hh*60+mm; };
 
 function calcP(hora, r) {
@@ -3294,15 +3297,15 @@ export default function ChecklistApp() {
 
   const dow = getDow(fecha);
   const esFS = dow===0||dow===6;
-  const tiAct = useMemo(()=>tiendas.filter(t=>t.activa),[tiendas]);
+  const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
   const actInfo = acts.find(a=>a.id===actSel);
   const semanasDelMes = useMemo(()=>getWeeksOfMonth(vYear,vMonth),[vYear,vMonth]);
   const isAdmin   = role==="admin";
   const isAuditor = role==="admin"||role==="auditor";
 
-  const getReg = useCallback((f,t,a)=>{
-    const k=rKey(f,t,a);
+  const getReg = useCallback((f,tid,a)=>{
+    const k=rKey(f,tid,a);
     const docId=k.replace(/\|/g,"--");
     return regs[docId]||regs[k]||null;
   },[regs]);
@@ -3318,21 +3321,21 @@ export default function ChecklistApp() {
   const kpisDia = useMemo(()=>{
     if(!actSel)return{total:0,IC:0,IP:0,SE:0,TR:0,SG:0,al100:0,conEnvio:0};
     const AR=actInfo?.r||RANGOS_DEFAULT;
-    const ts=tiAct.filter(t=>!isExc(t.id,actSel));
+    const ts=tiAct.filter(ti=>!isExc(ti.id,actSel));
     const total=ts.length;
-    const withEnv=ts.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)!==null);
-    const pts=ts.map(t=>puntajeReg(getReg(fecha,t.id,actSel),AR));
+    const withEnv=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)!==null);
+    const pts=ts.map(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR));
     const IC=total>0?Math.round((withEnv.length/total)*100):0;
     const valid=pts.filter(p=>p!==null);
     const IP=valid.length>0?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
     const al100=pts.filter(p=>p===100).length;
     const SE=total>0?Math.round((al100/total)*100):0;
-    const TR=total>0?Math.round((ts.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)===null).length/total)*100):0;
+    const TR=total>0?Math.round((ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null).length/total)*100):0;
     const SG=Math.round((IC*IP)/100);
-    const r100=withEnv.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)===100);
-    const r80=withEnv.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)===80);
-    const r60=withEnv.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)===60);
-    const r0=ts.filter(t=>puntajeReg(getReg(fecha,t.id,actSel),AR)===null);
+    const r100=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===100);
+    const r80=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===80);
+    const r60=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===60);
+    const r0=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null);
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
   },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
 
@@ -3355,17 +3358,17 @@ export default function ChecklistApp() {
   },[semanasDelMes,calcSemana]);
 
   /* ── tiendas filtradas para lista ── */
-  const tFilt = useMemo(()=>tiAct.filter(t=>{
-    if(fmtFilt!=="Todas"&&t.f!==fmtFilt)return false;
-    if(busq&&!t.n.toLowerCase().includes(busq.toLowerCase()))return false;
+  const tRegistradas = useMemo(()=>new Set(
+    tiAct.filter(ti=>regs[rKey(fecha,ti.id,actSel||"")]?.evidencias?.length>0).map(ti=>ti.id)
+  ),[tiAct,regs,fecha,actSel]);
+
+  const tFilt = useMemo(()=>tiAct.filter(ti=>{
+    if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
+    if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
     // ocultar ya registradas salvo admin con toggle activo
-    if(!verRegistradas && tRegistradas.has(t.id)) return false;
+    if(!verRegistradas && tRegistradas.has(ti.id)) return false;
     return true;
   }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas]);
-
-  const tRegistradas = useMemo(()=>new Set(
-    tiAct.filter(t=>regs[rKey(fecha,t.id,actSel||"")]?.evidencias?.length>0).map(t=>t.id)
-  ),[tiAct,regs,fecha,actSel]);
 
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
@@ -3808,7 +3811,7 @@ export default function ChecklistApp() {
         </div>
         {/* tablas por formato */}
         {["Mayorista","Supermayorista","Market"].map(fmt=>{
-          const tsFmt=tiAct.filter(t=>t.f===fmt);
+          const tsFmt=tiAct.filter(ti=>ti.f===fmt);
           if(!tsFmt.length)return null;
           const fc=FMT[fmt];
           return(
@@ -3907,7 +3910,7 @@ export default function ChecklistApp() {
   /* ══ TAB DASHBOARD ══ */
   const renderDashboard = ()=>{
     // filtrar tiendas según dashFmt
-    const tsBase = dashFmt==="Todas" ? tiAct : tiAct.filter(t=>t.f===dashFmt);
+    const tsBase = dashFmt==="Todas" ? tiAct : tiAct.filter(ti=>ti.f===dashFmt);
     // filtrar por actividad
     const actsBase = dashAct==="Todas" ? acts.filter(a=>a.activa) : acts.filter(a=>a.activa&&a.id===dashAct);
     // calcular score con filtros aplicados
@@ -3937,13 +3940,13 @@ export default function ChecklistApp() {
       return ws.length>0?Math.round(ws.reduce((a,b)=>a+b,0)/ws.length):null;
     };
 
-    const scoresMes=tsBase.map(t=>({t,score:calcScoreFiltrado(t.id)}));
+    const scoresMes=tsBase.map(ti=>({t:ti,score:calcScoreFiltrado(ti.id)}));
     const validos=scoresMes.filter(s=>s.score!==null);
     const SG=validos.length>0?Math.round(validos.reduce((a,b)=>a+b.score,0)/validos.length):0;
-    const IC=tsBase.length>0?Math.round((tsBase.filter(t=>calcScoreFiltrado(t.id)!==null).length/tsBase.length)*100):0;
+    const IC=tsBase.length>0?Math.round((tsBase.filter(ti=>calcScoreFiltrado(ti.id)!==null).length/tsBase.length)*100):0;
     const SE=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsBase.length)*100):0;
     const TR=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsBase.length)*100):0;
-    const tendencia=semanasDelMes.map(s=>{const ss=tsBase.map(t=>calcSemana(t.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
+    const tendencia=semanasDelMes.map(s=>{const ss=tsBase.map(ti=>calcSemana(ti.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
 
     // distribución horaria
     const allEvs=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]);
@@ -3962,11 +3965,11 @@ export default function ChecklistApp() {
 
     // efectividad por actividad
     const actEfect=acts.filter(a=>a.activa).map(a=>{
-      const ps=tsBase.map(t=>{
+      const ps=tsBase.map(ti=>{
         const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(!a.dias.includes(getDow(ds)))return null;
-          return puntajeReg(getReg(ds,t.id,a.id),a.r||RANGOS_DEFAULT);
+          return puntajeReg(getReg(ds,ti.id,a.id),a.r||RANGOS_DEFAULT);
         })).filter(p=>p!==null);
         return scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
       }).filter(v=>v!==null);
@@ -4135,8 +4138,8 @@ export default function ChecklistApp() {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
             const fc=FMT[fmt];
-            const fts=tiAct.filter(t=>t.f===fmt);
-            const scores=fts.map(t=>calcMes(t.id)).filter(v=>v!==null);
+            const fts=tiAct.filter(ti=>ti.f===fmt);
+            const scores=fts.map(ti=>calcMes(ti.id)).filter(v=>v!==null);
             const prom=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
             const tier=getTier(prom);
             return(
@@ -4190,14 +4193,14 @@ export default function ChecklistApp() {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(({t,score},i)=>{
-                  const fc=FMT[t.f];const tier=getTier(score);
+                {sorted.map(({t:ti,score},i)=>{
+                  const fc=FMT[ti.f];const tier=getTier(score);
                   return(
-                    <tr key={t.id} style={{borderBottom:"1px solid #f5f7fa"}}>
+                    <tr key={ti.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                       <td style={{padding:"8px 10px",fontWeight:800,color:i<3?"#f6a623":"#b2bec3",fontSize:i<3?13:11}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</td>
-                      <td style={{padding:"8px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {t.n}</td>
-                      <td style={{padding:"8px 10px"}}><span style={S.pill(fc.c,fc.bg)}>{t.f.slice(0,3)}</span></td>
-                      {semanasDelMes.map(s=>{const v=calcSemana(t.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
+                      <td style={{padding:"8px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {ti.n}</td>
+                      <td style={{padding:"8px 10px"}}><span style={S.pill(fc.c,fc.bg)}>{ti.f.slice(0,3)}</span></td>
+                      {semanasDelMes.map(s=>{const v=calcSemana(ti.id,s);return<td key={s.label} style={{padding:"8px 10px",textAlign:"center"}}>{v!==null?<span style={{fontSize:11,fontWeight:700,color:sc(v)}}>{v}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})}
                       <td style={{padding:"8px 10px",textAlign:"center",background:sb(score)}}>{score!==null?<span style={{fontWeight:800,fontSize:12,color:sc(score)}}>{score}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>
                       <td style={{padding:"8px 10px",textAlign:"center"}}><span style={{fontSize:12}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                     </tr>
@@ -4305,7 +4308,7 @@ export default function ChecklistApp() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
               <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Tiendas</div>
-              <div style={{fontSize:11,color:"#8aaabb"}}>{tiendas.filter(t=>t.activa).length} activas · {tiendas.filter(t=>!t.activa).length} inactivas</div>
+              <div style={{fontSize:11,color:"#8aaabb"}}>{tiendas.filter(ti=>ti.activa).length} activas · {tiendas.filter(ti=>!ti.activa).length} inactivas</div>
             </div>
             <button onClick={()=>setShowNT(!showNT)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#00b5b4",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nueva</button>
           </div>
@@ -4329,20 +4332,20 @@ export default function ChecklistApp() {
           )}
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
             const fc=FMT[fmt];
-            const ts=tiendas.filter(t=>t.f===fmt);
+            const ts=tiendas.filter(ti=>ti.f===fmt);
             return(
               <div key={fmt} style={{marginBottom:16}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                   <div style={{width:4,height:16,borderRadius:2,background:fc.c}}/>
                   <span style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</span>
-                  <span style={{fontSize:11,color:"#8aaabb"}}>{ts.filter(t=>t.activa).length} activas</span>
+                  <span style={{fontSize:11,color:"#8aaabb"}}>{ts.filter(ti=>ti.activa).length} activas</span>
                 </div>
-                {ts.map(t=>(
-                  <div key={t.id} style={{...S.card,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",opacity:t.activa?1:.5}}>
-                    <span style={{fontWeight:600,fontSize:12,color:t.activa?"#1a2f4a":"#94a3b8"}}>Vega {t.n}</span>
-                    <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===t.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
-                      style={{padding:"4px 12px",borderRadius:8,border:`1px solid ${t.activa?"#fecaca":"#bbf7d0"}`,background:t.activa?"#fff1f2":"#f0fdf4",color:t.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                      {t.activa?"Cerrar":"Activar"}
+                {ts.map(ti=>(
+                  <div key={ti.id} style={{...S.card,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",opacity:ti.activa?1:.5}}>
+                    <span style={{fontWeight:600,fontSize:12,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</span>
+                    <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
+                      style={{padding:"4px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                      {ti.activa?"Cerrar":"Activar"}
                     </button>
                   </div>
                 ))}
@@ -4393,7 +4396,7 @@ export default function ChecklistApp() {
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
         <div style={{display:"flex",gap:0,overflowX:"auto"}}>
-          {tabs.map(t=><button key={t.i} onClick={()=>setTab(t.i)} style={S.tabB(tab===t.i)}>{t.label}</button>)}
+          {tabs.map(tb=><button key={tb.i} onClick={()=>setTab(tb.i)} style={S.tabB(tab===tb.i)}>{tb.label}</button>)}
         </div>
       </div>
       {/* CONTENIDO */}
