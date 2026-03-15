@@ -1022,7 +1022,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a"}}>TOTAL {fmt.toUpperCase()}</td>
-                      <td></td>
                       {semsVis.map(sem=>actsActivas.map(a=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{
