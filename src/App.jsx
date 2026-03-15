@@ -125,15 +125,16 @@ function primerEnvio(evs) {
 }
 function puntajeReg(reg, r) {
   if(!reg||!reg.evidencias||!reg.evidencias.length) return null;
+  if(reg.anulado) return null;
   return calcP(primerEnvio(reg.evidencias), r);
 }
 function getTier(s) {
   if(s===null||s===undefined) return {label:"S/D",icon:"⬜",c:"#b2bec3",bg:"#f4f6f8"};
-  if(s>=95) return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
-  if(s>=85) return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
-  if(s>=75) return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
-  if(s>=60) return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
-  return           {label:"CRÍTICO",icon:"🔴",c:"#d63031",bg:"#ffeae6"};
+  if(s>=100) return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
+  if(s>=80)  return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
+  if(s>=60)  return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
+  if(s>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
 function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=85)return"#00b894";if(v>=75)return"#74b9ff";if(v>=60)return"#e17055";return"#d63031";}
 function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=85)return"#e8faf5";if(v>=75)return"#e8f4fd";if(v>=60)return"#fff1ee";return"#ffeae6";}
@@ -186,8 +187,22 @@ export default function ChecklistApp() {
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
-  /* ── eliminar registro (solo admin) ── */
-  const [delModal, setDelModal] = useState(null); // {docId, label}
+  /* ── modales de registro ── */
+  const [delModal,    setDelModal]    = useState(null);
+  const [anularModal, setAnularModal] = useState(null);
+  const [updModal,    setUpdModal]    = useState(null);
+  const [ctxMenu,     setCtxMenu]     = useState(null);
+  const [motivoAnu,   setMotivoAnu]   = useState("");
+  const [detalleAnu,  setDetalleAnu]  = useState("");
+  const [horaUpd,     setHoraUpd]     = useState("");
+  const [motivoUpd,   setMotivoUpd]   = useState("");
+  const longPressRef = useRef(null);
+  /* ── dashboard filtros ── */
+  const [dashFmt,   setDashFmt]   = useState("Todas");
+  const [dashAct,   setDashAct]   = useState("Todas");
+  const [dashHora,  setDashHora]  = useState("Todas");
+  /* ── long press excepciones en paso 2 ── */
+  const longExcRef = useRef(null);
 
   /* ══ FIREBASE SYNC ══ */
   useEffect(()=>{
@@ -327,6 +342,55 @@ export default function ChecklistApp() {
     setDelModal(null);
   };
 
+  const anularRegistro = async () => {
+    if(!anularModal||!motivoAnu) return;
+    const {docId, docData} = anularModal;
+    await setDoc(doc(db,"registros",docId), {
+      ...docData,
+      anulado: true,
+      motivoAnulacion: motivoAnu,
+      detalleAnulacion: detalleAnu,
+      anuladoPor: uName,
+      anuladoEn: new Date().toISOString(),
+    });
+    showToast("⚠️ Registro anulado correctamente");
+    setAnularModal(null); setMotivoAnu(""); setDetalleAnu("");
+  };
+
+  const actualizarRegistro = async () => {
+    if(!updModal||!horaUpd||!motivoUpd) return;
+    const {docId, docData, actividadId} = updModal;
+    const AR = acts.find(a=>a.id===actividadId)?.r || RANGOS_DEFAULT;
+    const pct = calcP(horaUpd, AR);
+    const tier = getTier(pct);
+    const now2 = new Date();
+    const ev = {
+      id: Date.now(),
+      hora: horaUpd,
+      puntaje: pct,
+      observacion: `Corrección: ${motivoUpd}`,
+      horaRegistro: now2.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}),
+      auditor: uName,
+      timestamp: now2.toISOString(),
+      esCorreccion: true,
+    };
+    const prevEvs = docData.evidencias || [];
+    const newEvs = [...prevEvs, ev].sort((a,b)=>a.hora.localeCompare(b.hora));
+    await setDoc(doc(db,"registros",docId), {...docData, evidencias: newEvs, updatedAt: now2.toISOString()});
+    showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct}% ${tier.icon}`);
+    setUpdModal(null); setHoraUpd(""); setMotivoUpd("");
+  };
+
+  const toggleExcepcion = async (tId, aId) => {
+    const key = tId+"|"+aId;
+    const newExceps = {...exceps};
+    if(newExceps[key]) delete newExceps[key];
+    else newExceps[key] = true;
+    setExceps(newExceps);
+    await saveConfig({excepciones: newExceps});
+    showToast(newExceps[key] ? "⚠️ Tienda excluida de esta actividad" : "✅ Excepción removida");
+  };
+
   const navMes=(dir)=>{
     if(dir<0){if(vMonth===0){setVMonth(11);setVYear(y=>y-1);}else setVMonth(m=>m-1);}
     else{if(vMonth===11){setVMonth(0);setVYear(y=>y+1);}else setVMonth(m=>m+1);}
@@ -415,25 +479,34 @@ export default function ChecklistApp() {
       </div>
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
+        {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: mantén presionado una tienda para marcarla como excepción (N/A)</div>}
         {tFilt.map(t=>{
           const sel=tSel.has(t.id);
           const reg=tRegistradas.has(t.id);
+          const exc=isExc(t.id,actSel);
           const fc=FMT[t.f];
           return(
-            <div key={t.id} onClick={()=>setTSel(p=>{const n=new Set(p);n.has(t.id)?n.delete(t.id):n.add(t.id);return n;})}
-              style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,border:`1.5px solid ${sel?actInfo?.c:"#e2e8f0"}`,background:sel?actInfo?.c+"10":"#fff",cursor:"pointer",marginBottom:7,transition:"all .1s"}}>
-              {/* checkbox */}
-              <div style={{width:24,height:24,borderRadius:7,border:`2px solid ${sel?actInfo?.c:"#c8d8e8"}`,background:sel?actInfo?.c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                {sel&&<span style={{fontSize:14,color:"#fff",fontWeight:700}}>✓</span>}
+            <div key={t.id}
+              onClick={()=>{ if(exc)return; setTSel(p=>{const n=new Set(p);n.has(t.id)?n.delete(t.id):n.add(t.id);return n;}); }}
+              onMouseDown={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(t.id,actSel); },700); }}
+              onMouseUp={()=>clearTimeout(longExcRef.current)}
+              onMouseLeave={()=>clearTimeout(longExcRef.current)}
+              onTouchStart={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(t.id,actSel); },700); }}
+              onTouchEnd={()=>clearTimeout(longExcRef.current)}
+              style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,border:`1.5px solid ${exc?"#e2e8f0":sel?actInfo?.c:"#e2e8f0"}`,background:exc?"#f8fafc":sel?actInfo?.c+"10":"#fff",cursor:exc?"default":"pointer",marginBottom:7,transition:"all .1s",opacity:exc?0.6:1}}>
+              <div style={{width:24,height:24,borderRadius:7,border:`2px solid ${exc?"#c8d8e8":sel?actInfo?.c:"#c8d8e8"}`,background:exc?"#f0f4f8":sel?actInfo?.c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {sel&&!exc&&<span style={{fontSize:14,color:"#fff",fontWeight:700}}>✓</span>}
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:700,color:sel?actInfo?.c:"#1a2f4a"}}>Vega {t.n}</div>
-                <div style={{display:"flex",gap:5,marginTop:3}}>
+                <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {t.n}</div>
+                <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>
                   <span style={S.pill(fc.c,fc.bg)}>{t.f}</span>
-                  {reg&&<span style={S.pill("#00b894","#e8faf5")}>✅ Registrada</span>}
+                  {exc&&<span style={S.pill("#854F0B","#FAEEDA")}>⚠️ N/A · No aplica</span>}
+                  {!exc&&reg&&<span style={S.pill("#00b894","#e8faf5")}>✅ Registrada</span>}
                 </div>
               </div>
-              {sel&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
+              {sel&&!exc&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
+              {exc&&isAdmin&&<button onClick={e=>{e.stopPropagation();toggleExcepcion(t.id,actSel);}} style={{padding:"3px 9px",borderRadius:20,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>✕</button>}
             </div>
           );
         })}
@@ -686,19 +759,25 @@ export default function ChecklistApp() {
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const r=getReg(d,t.id,a.id);const p=puntajeReg(r,a.r||RANGOS_DEFAULT);return p!==null?[p]:[];});
                             const v=scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
-                            // recopilar docIds de esta celda para poder eliminar
-                            const docIds=ds.flatMap(d=>{const k=rKey(d,t.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[docId]:[];});
+                            const docIds=ds.flatMap(d=>{const k=rKey(d,t.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
+                            const anulado=ds.some(d=>{const k=rKey(d,t.id,a.id);const docId=k.replace(/\|/g,"--");const r=regs[docId]||regs[k];return r?.anulado;});
+                            const menuId=`ctx-${t.id}-${sem.label}-${a.id}`;
                             return(
                               <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative"}}>
-                                {v!==null?(
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                                {anulado?(
+                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anulado</span>
+                                ):v!==null?(
+                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
+                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t,sem,a,docIds}),700); }}
+                                    onMouseUp={()=>clearTimeout(longPressRef.current)}
+                                    onMouseLeave={()=>clearTimeout(longPressRef.current)}
+                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t,sem,a,docIds}),700); }}
+                                    onTouchEnd={()=>clearTimeout(longPressRef.current)}
+                                    style={{cursor:"pointer"}}>
                                     <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
-                                    {isAdmin&&docIds.length>0&&(
-                                      <button onClick={()=>setDelModal({docIds,label:`Vega ${t.n} · ${a.e} · ${sem.label}`})}
-                                        style={{padding:"1px 5px",borderRadius:5,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:8,fontWeight:700,lineHeight:1.4}}>
-                                        🗑️
-                                      </button>
-                                    )}
+                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:2}}>
+                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
+                                    </div>
                                   </div>
                                 ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                               </td>
@@ -725,25 +804,165 @@ export default function ChecklistApp() {
 
   /* ══ TAB DASHBOARD ══ */
   const renderDashboard = ()=>{
-    const ts=tiAct;
-    const scoresMes=ts.map(t=>({t,score:calcMes(t.id)}));
+    // filtrar tiendas según dashFmt
+    const tsBase = dashFmt==="Todas" ? tiAct : tiAct.filter(t=>t.f===dashFmt);
+    // filtrar por actividad
+    const actsBase = dashAct==="Todas" ? acts.filter(a=>a.activa) : acts.filter(a=>a.activa&&a.id===dashAct);
+    // calcular score con filtros aplicados
+    const calcScoreFiltrado = (tId)=>{
+      const ws=semanasDelMes.map(s=>{
+        const scores=[];
+        s.days.forEach(day=>{
+          const ds=dStr(vYear,vMonth,day);
+          const dw=getDow(ds);
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id)).forEach(a=>{
+            const reg=getReg(ds,tId,a.id);
+            const p=puntajeReg(reg,a.r||RANGOS_DEFAULT);
+            // filtro horario
+            if(p!==null){
+              const h=primerEnvio(reg?.evidencias);
+              const m=toMin(h);
+              if(dashHora==="Todas") scores.push(p);
+              else if(dashHora==="oro"&&m<=toMin("08:00")) scores.push(p);
+              else if(dashHora==="plata"&&m>toMin("08:00")&&m<=toMin("09:00")) scores.push(p);
+              else if(dashHora==="bronce"&&m>toMin("09:00")&&m<=toMin("10:00")) scores.push(p);
+              else if(dashHora==="fuera"&&m>toMin("10:00")) scores.push(p);
+            }
+          });
+        });
+        return scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+      }).filter(v=>v!==null);
+      return ws.length>0?Math.round(ws.reduce((a,b)=>a+b,0)/ws.length):null;
+    };
+
+    const scoresMes=tsBase.map(t=>({t,score:calcScoreFiltrado(t.id)}));
     const validos=scoresMes.filter(s=>s.score!==null);
     const SG=validos.length>0?Math.round(validos.reduce((a,b)=>a+b.score,0)/validos.length):0;
-    const IC=ts.length>0?Math.round((ts.filter(t=>{let ok=false;semanasDelMes.forEach(s=>{if(calcSemana(t.id,s)!==null)ok=true;});return ok;}).length/ts.length)*100):0;
-    const IP=SG;
-    const SE=ts.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/ts.length)*100):0;
-    const TR=ts.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/ts.length)*100):0;
-    const tendencia=semanasDelMes.map(s=>{const ss=ts.map(t=>calcSemana(t.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
+    const IC=tsBase.length>0?Math.round((tsBase.filter(t=>calcScoreFiltrado(t.id)!==null).length/tsBase.length)*100):0;
+    const SE=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score>=95).length/tsBase.length)*100):0;
+    const TR=tsBase.length>0?Math.round((scoresMes.filter(s=>s.score!==null&&s.score<60).length/tsBase.length)*100):0;
+    const tendencia=semanasDelMes.map(s=>{const ss=tsBase.map(t=>calcSemana(t.id,s)).filter(v=>v!==null);return ss.length>0?Math.round(ss.reduce((a,b)=>a+b,0)/ss.length):null;});
+
+    // distribución horaria
+    const allEvs=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]);
+    const horasDist=[
+      {l:"🥇 ORO ≤08:00",   c:"#f6a623", n:allEvs.filter(e=>toMin(e.hora)<=toMin("08:00")).length},
+      {l:"🥈 PLATA ≤09:00", c:"#74b9ff", n:allEvs.filter(e=>toMin(e.hora)>toMin("08:00")&&toMin(e.hora)<=toMin("09:00")).length},
+      {l:"🥉 BRONCE ≤10:00",c:"#a29bfe", n:allEvs.filter(e=>toMin(e.hora)>toMin("09:00")&&toMin(e.hora)<=toMin("10:00")).length},
+      {l:"🔴 FUERA >10:00",  c:"#d63031", n:allEvs.filter(e=>toMin(e.hora)>toMin("10:00")).length},
+    ];
+    const totalEvs=allEvs.length||1;
+
+    // ranking
+    const sorted=[...scoresMes].sort((a,b)=>(b.score??-1)-(a.score??-1));
+    const top5=sorted.filter(s=>s.score!==null).slice(0,5);
+    const bot5=[...sorted].reverse().filter(s=>s.score!==null).slice(0,5);
+
+    // efectividad por actividad
+    const actEfect=acts.filter(a=>a.activa).map(a=>{
+      const ps=tsBase.map(t=>{
+        const scores=semanasDelMes.flatMap(s=>s.days.map(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(!a.dias.includes(getDow(ds)))return null;
+          return puntajeReg(getReg(ds,t.id,a.id),a.r||RANGOS_DEFAULT);
+        })).filter(p=>p!==null);
+        return scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
+      }).filter(v=>v!==null);
+      return{a,v:ps.length>0?Math.round(ps.reduce((x,y)=>x+y,0)/ps.length):null};
+    });
+
+    const exportPDF=()=>{
+      const w=window.open("","_blank");
+      w.document.write(`<html><head><title>VEGA Evidencias - ${MESES[vMonth]} ${vYear}</title>
+      <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
+      h1{font-size:18px;border-bottom:2px solid #1a2f4a;padding-bottom:8px;margin-bottom:16px;}
+      .grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
+      .kpi{background:#f8fafc;border-radius:8px;padding:12px;text-align:center;border:1px solid #e2e8f0;}
+      .kpi-v{font-size:24px;font-weight:700;}
+      .kpi-l{font-size:9px;color:#5a7a9a;margin-top:4px;}
+      .section{margin-bottom:20px;}
+      .section-title{font-size:10px;font-weight:700;color:#5a7a9a;letter-spacing:.06em;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:10px;}
+      table{width:100%;border-collapse:collapse;font-size:11px;}
+      th{background:#f0f4f8;padding:6px 8px;text-align:left;font-size:9px;color:#5a7a9a;}
+      td{padding:6px 8px;border-bottom:1px solid #f5f7fa;}
+      .bar{height:8px;border-radius:4px;display:inline-block;}
+      .footer{margin-top:24px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:9px;color:#8aaabb;display:flex;justify-content:space-between;}
+      </style></head><body>
+      <h1>VEGA · EVIDENCIAS — ${MESES[vMonth].toUpperCase()} ${vYear}</h1>
+      <div style="font-size:10px;color:#5a7a9a;margin-bottom:16px;">Generado: ${new Date().toLocaleDateString("es-PE")} · Por: ${uName} · Filtro: ${dashFmt==="Todas"?"Todas las tiendas":dashFmt}</div>
+      <div class="grid">
+        <div class="kpi"><div class="kpi-v" style="color:${sc(SG)}">${SG}%</div><div class="kpi-l">Score Global</div></div>
+        <div class="kpi"><div class="kpi-v" style="color:#0984e3">${IC}%</div><div class="kpi-l">Cumplimiento</div></div>
+        <div class="kpi"><div class="kpi-v" style="color:#f6a623">${SE}%</div><div class="kpi-l">Excelencia</div></div>
+        <div class="kpi"><div class="kpi-v" style="color:${TR>20?"#d63031":"#b2bec3"}">${TR}%</div><div class="kpi-l">Tasa Riesgo</div></div>
+      </div>
+      <div class="section"><div class="section-title">EFECTIVIDAD POR ACTIVIDAD</div>
+        <table><thead><tr><th>Actividad</th><th>Score</th><th>Barra</th></tr></thead><tbody>
+        ${actEfect.filter(x=>x.v!==null).map(x=>`<tr><td>${x.a.e} ${x.a.n}</td><td style="color:${sc(x.v)};font-weight:700">${x.v}%</td><td><div class="bar" style="width:${x.v}px;background:${x.a.c}"></div></td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="section"><div class="section-title">TOP 5 TIENDAS</div>
+        <table><thead><tr><th>#</th><th>Tienda</th><th>Formato</th><th>Score Mes</th></tr></thead><tbody>
+        ${top5.map((s,i)=>`<tr><td>${i+1}</td><td>Vega ${s.t.n}</td><td>${s.t.f}</td><td style="color:${sc(s.score)};font-weight:700">${s.score}%</td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="section"><div class="section-title">BOTTOM 5 TIENDAS</div>
+        <table><thead><tr><th>#</th><th>Tienda</th><th>Formato</th><th>Score Mes</th></tr></thead><tbody>
+        ${bot5.map((s,i)=>`<tr><td>${i+1}</td><td>Vega ${s.t.n}</td><td>${s.t.f}</td><td style="color:${sc(s.score)};font-weight:700">${s.score}%</td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="section"><div class="section-title">DISTRIBUCIÓN HORARIA</div>
+        <table><thead><tr><th>Franja</th><th>Registros</th><th>%</th></tr></thead><tbody>
+        ${horasDist.map(h=>`<tr><td>${h.l}</td><td>${h.n}</td><td style="color:${h.c};font-weight:700">${Math.round(h.n/totalEvs*100)}%</td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="footer"><span>VEGA · EVIDENCIAS · Control de Implementación</span><span>Confidencial · ${new Date().toLocaleDateString("es-PE")}</span></div>
+      </body></html>`);
+      w.document.close();
+      w.print();
+    };
+
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
-        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12}}>
           <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>←</button>
           <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
           <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>→</button>
         </div>
+
+        {/* filtros */}
+        <div style={{...S.card,padding:"12px 14px",marginBottom:14}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:8,letterSpacing:".05em"}}>FILTROS</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div>
+              <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>TIPO DE TIENDA</div>
+              <select value={dashFmt} onChange={e=>setDashFmt(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
+                <option value="Todas">Todas</option>
+                {["Mayorista","Supermayorista","Market"].map(f=><option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
+              <select value={dashAct} onChange={e=>setDashAct(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
+                <option value="Todas">Todas</option>
+                {acts.filter(a=>a.activa).map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FRANJA HORARIA</div>
+              <select value={dashHora} onChange={e=>setDashHora(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
+                <option value="Todas">Todas</option>
+                <option value="oro">🥇 ORO ≤08:00</option>
+                <option value="plata">🥈 PLATA ≤09:00</option>
+                <option value="bronce">🥉 BRONCE ≤10:00</option>
+                <option value="fuera">🔴 FUERA &gt;10:00</option>
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"flex-end"}}>
+              <button onClick={exportPDF} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"none",background:"#1a2f4a",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>⬇️ PDF Comité</button>
+            </div>
+          </div>
+        </div>
+
         {/* KPIs */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           {[
             {k:"SG",label:"Score Global",v:SG+"%",c:sc(SG),icon:"🎯",tier:getTier(SG)},
             {k:"IC",label:"Cumplimiento",v:IC+"%",c:"#0984e3",icon:"📬"},
@@ -761,8 +980,9 @@ export default function ChecklistApp() {
             </div>
           ))}
         </div>
+
         {/* tendencia */}
-        <div style={{...S.card,padding:"16px",marginBottom:16}}>
+        <div style={{...S.card,padding:"16px",marginBottom:14}}>
           <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:14}}>📈 TENDENCIA SEMANAL</div>
           <div style={{display:"flex",gap:8,alignItems:"flex-end",height:80}}>
             {semanasDelMes.map((s,i)=>{
@@ -771,7 +991,7 @@ export default function ChecklistApp() {
                 <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                   <div style={{fontSize:11,fontWeight:800,color:sc(v)}}>{v!==null?v+"%":"—"}</div>
                   <div style={{width:"100%",height:60,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
-                    {v!==null&&<div style={{width:"100%",height:v+"%",background:`linear-gradient(180deg,${sc(v)},${sc(v)}88)`,borderRadius:"4px 4px 0 0"}}/>}
+                    {v!==null&&<div style={{width:"100%",height:v+"%",background:sc(v),borderRadius:"4px 4px 0 0"}}/>}
                   </div>
                   <div style={{fontSize:9,color:"#8aaabb",fontWeight:700}}>{s.label}</div>
                 </div>
@@ -779,8 +999,38 @@ export default function ChecklistApp() {
             })}
           </div>
         </div>
+
+        {/* efectividad por actividad */}
+        <div style={{...S.card,padding:"14px",marginBottom:14}}>
+          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>📊 EFECTIVIDAD POR ACTIVIDAD</div>
+          {actEfect.map(({a,v})=>(
+            <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontSize:16,width:20}}>{a.e}</span>
+              <span style={{fontSize:11,color:"#5a7a9a",width:130,flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.n}</span>
+              <div style={{flex:1,height:8,background:"#f0f4f8",borderRadius:4,overflow:"hidden"}}>
+                {v!==null&&<div style={{width:v+"%",height:"100%",background:a.c,borderRadius:4}}/>}
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:v!==null?sc(v):"#b2bec3",width:32,textAlign:"right"}}>{v!==null?v+"%":"—"}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* distribución horaria */}
+        <div style={{...S.card,padding:"14px",marginBottom:14}}>
+          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>⏱️ DISTRIBUCIÓN HORARIA</div>
+          {horasDist.map(h=>(
+            <div key={h.l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontSize:11,color:"#5a7a9a",width:120,flexShrink:0}}>{h.l}</span>
+              <div style={{flex:1,height:8,background:"#f0f4f8",borderRadius:4,overflow:"hidden"}}>
+                <div style={{width:Math.round(h.n/totalEvs*100)+"%",height:"100%",background:h.c,borderRadius:4}}/>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:h.c,width:32,textAlign:"right"}}>{Math.round(h.n/totalEvs*100)}%</span>
+            </div>
+          ))}
+        </div>
+
         {/* por formato */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
             const fc=FMT[fmt];
             const fts=tiAct.filter(t=>t.f===fmt);
@@ -800,9 +1050,34 @@ export default function ChecklistApp() {
             );
           })}
         </div>
-        {/* ranking */}
+
+        {/* ranking top/bottom */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          <div style={{...S.card,padding:"14px"}}>
+            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a",marginBottom:10}}>🏅 Top 5</div>
+            {top5.map((s,i)=>(
+              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                <span style={{fontSize:12,width:16}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":"·"}</span>
+                <span style={{fontSize:11,flex:1,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.t.n}</span>
+                <span style={{fontSize:11,fontWeight:700,color:sc(s.score)}}>{s.score}%</span>
+              </div>
+            ))}
+          </div>
+          <div style={{...S.card,padding:"14px"}}>
+            <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a",marginBottom:10}}>⚠️ Bottom 5</div>
+            {bot5.map((s,i)=>(
+              <div key={s.t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                <span style={{fontSize:12,width:16}}>🔴</span>
+                <span style={{fontSize:11,flex:1,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.t.n}</span>
+                <span style={{fontSize:11,fontWeight:700,color:sc(s.score)}}>{s.score}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ranking completo */}
         <div style={{...S.card,overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:"1px solid #f0f4f8",fontWeight:800,fontSize:13,color:"#1a2f4a"}}>🏅 RANKING MENSUAL</div>
+          <div style={{padding:"12px 16px",borderBottom:"1px solid #f0f4f8",fontWeight:800,fontSize:13,color:"#1a2f4a"}}>🏅 RANKING MENSUAL COMPLETO</div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
@@ -813,7 +1088,7 @@ export default function ChecklistApp() {
                 </tr>
               </thead>
               <tbody>
-                {scoresMes.sort((a,b)=>(b.score??-1)-(a.score??-1)).map(({t,score},i)=>{
+                {sorted.map(({t,score},i)=>{
                   const fc=FMT[t.f];const tier=getTier(score);
                   return(
                     <tr key={t.id} style={{borderBottom:"1px solid #f5f7fa"}}>
@@ -1031,28 +1306,91 @@ export default function ChecklistApp() {
         </div>
       )}
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
+
+      {/* MENU CONTEXTUAL */}
+      {ctxMenu&&(
+        <div style={{position:"fixed",inset:0,zIndex:60,background:"rgba(26,47,74,.5)"}} onClick={()=>setCtxMenu(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:16,overflow:"hidden",minWidth:220,boxShadow:"0 8px 32px rgba(0,0,0,.15)"}}>
+            <div style={{padding:"10px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",fontSize:11,color:"#5a7a9a",fontWeight:700}}>
+              Vega {ctxMenu.t.n} · {ctxMenu.sem.label} · {ctxMenu.a.e}
+            </div>
+            <div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setUpdModal({docId:d.docId,docData:d.docData,actividadId:d.actividadId});setHoraUpd(primerEnvio(d.docData?.evidencias)||"");} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
+              <div style={{width:28,height:28,borderRadius:8,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✏️</div>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Actualizar registro</div><div style={{fontSize:10,color:"#8aaabb"}}>Corregir hora · queda en historial</div></div>
+            </div>
+            <div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setAnularModal({docId:d.docId,docData:d.docData});} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
+              <div style={{width:28,height:28,borderRadius:8,background:"#FAEEDA",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚠️</div>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Anular con motivo</div><div style={{fontSize:10,color:"#8aaabb"}}>Se mantiene en historial · no cuenta</div></div>
+            </div>
+            {isAdmin&&<div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setDelModal({docIds:[d.docId],label:`Vega ${ctxMenu.t.n} · ${ctxMenu.a.e} · ${ctxMenu.sem.label}`});} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
+              <div style={{width:28,height:28,borderRadius:8,background:"#fff1f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🗑️</div>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#dc2626"}}>Eliminar registro</div><div style={{fontSize:10,color:"#8aaabb"}}>Solo marcha blanca · irreversible</div></div>
+            </div>}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ANULAR */}
+      {anularModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
+          <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:380}}>
+            <div style={{fontSize:28,marginBottom:8}}>⚠️</div>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Anular registro</div>
+            <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>El registro quedará visible con badge ⚠️ Anulado y no contará en el puntaje.</div>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO *</label>
+            <select value={motivoAnu} onChange={e=>setMotivoAnu(e.target.value)} style={{width:"100%",padding:"10px 12px",borderRadius:9,border:`1.5px solid ${motivoAnu?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:12}}>
+              <option value="">Seleccionar motivo...</option>
+              <option>Actividad no aplica este período</option>
+              <option>Error de registro del auditor</option>
+              <option>Tienda sin categoría para esta actividad</option>
+              <option>Fecha de registro incorrecta</option>
+              <option>Otro (ver detalle)</option>
+            </select>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>DETALLE (opcional)</label>
+            <input value={detalleAnu} onChange={e=>setDetalleAnu(e.target.value)} placeholder="Descripción adicional..." style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setAnularModal(null);setMotivoAnu("");setDetalleAnu("");}} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>Cancelar</button>
+              <button onClick={anularRegistro} disabled={!motivoAnu} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:motivoAnu?"linear-gradient(135deg,#f6a623,#e17055)":"#e2e8f0",color:motivoAnu?"#fff":"#b2bec3",cursor:motivoAnu?"pointer":"not-allowed",fontWeight:700,fontSize:13}}>Confirmar anulación</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACTUALIZAR */}
+      {updModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
+          <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:380}}>
+            <div style={{fontSize:28,marginBottom:8}}>✏️</div>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Actualizar registro</div>
+            <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>Se agrega una corrección al historial con tu nombre y motivo.</div>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>NUEVA HORA DE ENVÍO *</label>
+            <input type="time" value={horaUpd} onChange={e=>setHoraUpd(e.target.value)} style={{width:"100%",padding:"12px",borderRadius:9,border:`1.5px solid ${horaUpd?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:20,outline:"none",textAlign:"center",fontWeight:700,marginBottom:12,boxSizing:"border-box"}}/>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO DE CORRECCIÓN *</label>
+            <input value={motivoUpd} onChange={e=>setMotivoUpd(e.target.value)} placeholder="Ej: hora registrada incorrectamente..." style={{width:"100%",padding:"10px 12px",borderRadius:9,border:`1.5px solid ${motivoUpd?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setUpdModal(null);setHoraUpd("");setMotivoUpd("");}} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>Cancelar</button>
+              <button onClick={actualizarRegistro} disabled={!horaUpd||!motivoUpd} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:(horaUpd&&motivoUpd)?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:(horaUpd&&motivoUpd)?"#fff":"#b2bec3",cursor:(horaUpd&&motivoUpd)?"pointer":"not-allowed",fontWeight:700,fontSize:13}}>Guardar corrección</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ELIMINAR */}
       {delModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
           <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:360,textAlign:"center"}}>
             <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
             <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:8}}>¿Eliminar registro?</div>
             <div style={{fontSize:12,color:"#5a7a9a",marginBottom:6}}>{delModal.label}</div>
-            <div style={{fontSize:11,color:"#dc2626",background:"#fff1f2",borderRadius:8,padding:"8px 12px",marginBottom:20}}>
-              Esta acción no se puede deshacer. El registro será borrado permanentemente.
-            </div>
+            <div style={{fontSize:11,color:"#dc2626",background:"#fff1f2",borderRadius:8,padding:"8px 12px",marginBottom:20}}>Esta acción no se puede deshacer. Solo usar en marcha blanca.</div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setDelModal(null)}
-                style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
-                Cancelar
-              </button>
-              <button onClick={()=>Promise.all(delModal.docIds.map(id=>eliminarRegistro(id))).then(()=>setDelModal(null))}
-                style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#dc2626,#991b1b)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
-                Sí, eliminar
-              </button>
+              <button onClick={()=>setDelModal(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>Cancelar</button>
+              <button onClick={()=>Promise.all(delModal.docIds.map(id=>eliminarRegistro(id))).then(()=>setDelModal(null))} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#dc2626,#991b1b)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>Sí, eliminar</button>
             </div>
           </div>
         </div>
       )}
+
 
     </div>
   );
