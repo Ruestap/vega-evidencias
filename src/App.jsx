@@ -1706,7 +1706,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR SEMANA</div>
               <div style={{display:"flex",gap:6}}>
                 {semData.map(({s,isFut,nOro,tot,nEval})=>(
-                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${isFut?"#e2e8f0":"#f6a623"}33`}}>
+                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${isFut?"#e2e8f033":"#f6a62333"}`}}>
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>{s.label}</div>
                     {isFut
                       ?<div style={{fontSize:10,color:"#b2bec3"}}>—</div>
@@ -1722,7 +1722,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR FORMATO</div>
               <div style={{display:"flex",gap:8}}>
                 {fmtData.map(({fmt,nOro,nEval,fc})=>(
-                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:`1px solid ${fc.c}44`}}>
+                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:"1px solid "+fc.c+"44"}}>
                     <div style={{fontSize:9,fontWeight:800,color:fc.c}}>{fmt}</div>
                     <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
                       <span style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</span>
