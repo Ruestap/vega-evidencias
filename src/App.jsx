@@ -224,21 +224,7 @@ export default function ChecklistApp() {
         if(d.actividades) setActs(d.actividades);
         if(d.tiendas)     setTiendas(d.tiendas);
         if(d.pins)        setPins(d.pins);
-        if(d.excepciones){
-          // migrar legacy: eliminar entradas con valor true (sin fecha asignada)
-          const exc = d.excepciones;
-          const cleaned = Object.fromEntries(
-            Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
-          );
-          const needsMigration = Object.values(exc).some(v=>v===true||!Array.isArray(v));
-          if(needsMigration){
-            setExceps(cleaned);
-            // guardar limpieza en Firebase
-            setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
-          } else {
-            setExceps(exc);
-          }
-        }
+        if(d.excepciones) setExceps(d.excepciones);
         if(d.rangosDia)  setRangosDia(d.rangosDia);
       }
     };
@@ -956,7 +942,11 @@ export default function ChecklistApp() {
                         });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
                         return <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
-                          {ef!==null?<span style={{fontSize:9,fontWeight:700,color:sc(ef)}}>{ob}/{mx}pts<br/>{ef}%</span>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                          {mx>0?(
+                            ob>0
+                              ?<span style={{fontSize:9,fontWeight:700,color:sc(ef)}}>{ob}/{mx}pts<br/>{ef}%</span>
+                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pendiente</span>
+                          ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                         </td>;
                       }))}
                       {semsVis.map(sem=>{
@@ -1295,7 +1285,7 @@ export default function ChecklistApp() {
                 <div style={{fontSize:9,color:"#8aaabb",marginTop:1}}>eficiencia de implementación</div>
                 <div style={{fontSize:10,color:tier.c,fontWeight:700,marginTop:4}}>{tier.icon} {tier.label}</div>
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
-                  <div style={{width:((prom||0)/10*100)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
+                  <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
                 </div>
                 <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"8px 10px",borderRadius:10,zIndex:20,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   <div style={{fontWeight:800,marginBottom:3}}>{fmt}</div>
@@ -1398,7 +1388,7 @@ export default function ChecklistApp() {
   const renderConfig = ()=>(
     <div style={{padding:"16px"}}>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Actividades","Tiendas","Accesos","Rangos Día"].map((l,i)=>(
+        {["Actividades","Tiendas","Rangos Día"].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
@@ -1447,12 +1437,48 @@ export default function ChecklistApp() {
                   </div>
                 </div>
                 <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_er:!x._er}:x))}
-                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._er?"#f0f4f8":"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,marginRight:4}}>⏱️</button>
+                  title="Rangos horarios"
+                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._er?"#f0f4f8":"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>⏱️</button>
+                <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_edit:!x._edit}:x))}
+                  title="Editar actividad"
+                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._edit?"#e8f4fd":"#fff",color:"#0984e3",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️</button>
                 <button onClick={()=>setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,activa:!x.activa}:x);saveConfig({actividades:np});return np;})}
-                  style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
-                  {a.activa?"⏸ Pausar":"▶ Activar"}
+                  style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
+                  {a.activa?"⏸":"▶"}
                 </button>
+                <button onClick={()=>{ if(window.confirm(`¿Eliminar "${a.n}"? Se perderá del listado (los registros históricos se conservan en Firebase).`)){setActs(p=>{const np=p.filter(x=>x.id!==a.id);saveConfig({actividades:np});return np;});}}}
+                  title="Eliminar actividad"
+                  style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑️</button>
               </div>
+              {a._edit&&(
+                <div style={{marginTop:10,padding:"12px",borderRadius:10,background:"#e8f4fd",border:"1px solid #74b9ff55"}}>
+                  <div style={{fontSize:10,fontWeight:800,color:"#0984e3",marginBottom:8}}>✏️ EDITAR · {a.n.toUpperCase()}</div>
+                  <div style={{display:"flex",gap:8,marginBottom:8}}>
+                    <input value={a.e} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,e:e.target.value}:x))} style={{width:44,padding:"8px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:16,textAlign:"center",outline:"none"}}/>
+                    <input value={a.n} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,n:e.target.value}:x))} style={{...S.inp,flex:1,fontSize:13}}/>
+                  </div>
+                  <div style={{display:"flex",gap:5,marginBottom:8}}>
+                    {[1,2,3,4,5].map(d=>(
+                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
+                        style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?"#e8f4fd":"#fff",color:a.dias.includes(d)?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                        {["L","M","X","J","V"][d-1]}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:5,marginBottom:8}}>
+                    {["Always On","Promocional","Ad-hoc"].map(cat=>(
+                      <button key={cat} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,cat}:x))}
+                        style={{flex:1,padding:"6px",borderRadius:8,border:`1.5px solid ${a.cat===cat?"#0984e3":"#e2e8f0"}`,background:a.cat===cat?"#e8f4fd":"#fff",color:a.cat===cat?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={()=>{setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
+                    style={{width:"100%",padding:"9px",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                    💾 Guardar cambios
+                  </button>
+                </div>
+              )}
               {a._er&&(
                 <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:`1px solid ${a.c}33`}}>
                   <div style={{fontSize:10,fontWeight:800,color:a.c,marginBottom:10,letterSpacing:".05em"}}>⏱️ RANGOS HORARIOS · {a.n.toUpperCase()}</div>
@@ -1535,20 +1561,9 @@ export default function ChecklistApp() {
         </div>
       )}
 
-      {cfgTab===2&&(
-        <div style={{...S.card,padding:"20px"}}>
-          <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:16}}>🔑 Códigos de Acceso</div>
-          {[{k:"admin",label:"👑 Administrador",c:"#f6a623"},{k:"auditor",label:"📋 Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Viewer",c:"#74b9ff"}].map(f=>(
-            <div key={f.k} style={{marginBottom:14}}>
-              <label style={{...S.lbl,color:f.c}}>{f.label}</label>
-              <input type="text" value={pins[f.k]} onChange={e=>setPins(p=>({...p,[f.k]:e.target.value}))} style={{...S.inp,letterSpacing:3,fontFamily:"monospace"}}/>
-            </div>
-          ))}
-          <button onClick={()=>showToast("✅ Códigos guardados")} style={S.btn("#00b5b4")}>Guardar cambios</button>
-        </div>
-      )}
 
-      {cfgTab===3&&(
+
+      {cfgTab===2&&(
         <div>
           <div style={{marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
