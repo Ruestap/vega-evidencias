@@ -445,8 +445,6 @@ export default function ChecklistApp() {
 
   /* ══ PASO 2 — seleccionar tiendas ══ */
   const renderPaso2 = ()=>{
-    const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
-    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     return(
     <div>
       {/* info actividad */}
@@ -459,14 +457,14 @@ export default function ChecklistApp() {
         </div>
 
         {/* rango extendido — solo para Ad-hoc y Promocional */}
-        {esAdHoc&&(
+        {(actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional")&&(
           <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
             <div style={{fontSize:10,fontWeight:700,color:"#854F0B",marginBottom:8}}>⏱️ VENTANA DE REGISTRO — {actInfo?.cat?.toUpperCase()}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6}}>
               {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
                 <div key={f.k}>
                   <div style={{fontSize:9,color:"#854F0B",fontWeight:700,marginBottom:3}}>{f.icon} {f.label}</div>
-                  <input type="time" value={AR[f.k]}
+                  <input type="time" value={(rangoExt||actInfo?.r||RANGOS_DEFAULT)[f.k]}
                     onChange={e=>setRangoExt(r=>({...(r||actInfo?.r||RANGOS_DEFAULT),[f.k]:e.target.value}))}
                     style={{width:"100%",padding:"7px",borderRadius:7,border:"1.5px solid #FAC775",background:"#fff",color:"#1a2f4a",fontSize:12,outline:"none",textAlign:"center"}}/>
                 </div>
@@ -512,42 +510,42 @@ export default function ChecklistApp() {
               {verRegistradas?"Ocultar registradas":"Ver todas"}
             </button>
           )}
-          <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(t=>!isExc(t.id,actSel)).map(t=>t.id)))}
+          <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel)).map(ti=>ti.id)))}
             style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
-            {tSel.size===tFilt.filter(t=>!isExc(t.id,actSel)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
+            {tSel.size===tFilt.filter(ti=>!isExc(ti.id,actSel)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
           </button>
         </div>
       </div>
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
         {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: mantén presionado una tienda para marcarla como excepción (N/A)</div>}
-        {tFilt.map(t=>{
-          const sel=tSel.has(t.id);
-          const reg=tRegistradas.has(t.id);
-          const exc=isExc(t.id,actSel);
-          const fc=FMT[t.f];
+        {tFilt.map(tienda=>{
+          const sel=tSel.has(tienda.id);
+          const reg=tRegistradas.has(tienda.id);
+          const exc=isExc(tienda.id,actSel);
+          const fc=FMT[tienda.f];
           return(
-            <div key={t.id}
-              onClick={()=>{ if(exc)return; setTSel(p=>{const n=new Set(p);n.has(t.id)?n.delete(t.id):n.add(t.id);return n;}); }}
-              onMouseDown={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(t.id,actSel); },700); }}
+            <div key={tienda.id}
+              onClick={()=>{ if(exc)return; setTSel(p=>{const ns=new Set(p);ns.has(tienda.id)?ns.delete(tienda.id):ns.add(tienda.id);return ns;}); }}
+              onMouseDown={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(tienda.id,actSel); },700); }}
               onMouseUp={()=>clearTimeout(longExcRef.current)}
               onMouseLeave={()=>clearTimeout(longExcRef.current)}
-              onTouchStart={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(t.id,actSel); },700); }}
+              onTouchStart={()=>{ if(!isAdmin)return; clearTimeout(longExcRef.current); longExcRef.current=setTimeout(()=>{ toggleExcepcion(tienda.id,actSel); },700); }}
               onTouchEnd={()=>clearTimeout(longExcRef.current)}
               style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,border:`1.5px solid ${exc?"#e2e8f0":sel?actInfo?.c:"#e2e8f0"}`,background:exc?"#f8fafc":sel?actInfo?.c+"10":"#fff",cursor:exc?"default":"pointer",marginBottom:7,transition:"all .1s",opacity:exc?0.6:1}}>
               <div style={{width:24,height:24,borderRadius:7,border:`2px solid ${exc?"#c8d8e8":sel?actInfo?.c:"#c8d8e8"}`,background:exc?"#f0f4f8":sel?actInfo?.c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 {sel&&!exc&&<span style={{fontSize:14,color:"#fff",fontWeight:700}}>✓</span>}
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {t.n}</div>
+                <div style={{fontSize:14,fontWeight:700,color:exc?"#94a3b8":sel?actInfo?.c:"#1a2f4a",textDecoration:exc?"line-through":"none"}}>Vega {tienda.n}</div>
                 <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>
-                  <span style={S.pill(fc.c,fc.bg)}>{t.f}</span>
+                  <span style={S.pill(fc.c,fc.bg)}>{tienda.f}</span>
                   {exc&&<span style={S.pill("#854F0B","#FAEEDA")}>⚠️ N/A · No aplica</span>}
                   {!exc&&reg&&<span style={S.pill("#00b894","#e8faf5")}>✅ Registrada</span>}
                 </div>
               </div>
               {sel&&!exc&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
-              {exc&&isAdmin&&<button onClick={e=>{e.stopPropagation();toggleExcepcion(t.id,actSel);}} style={{padding:"3px 9px",borderRadius:20,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>✕</button>}
+              {exc&&isAdmin&&<button onClick={e=>{e.stopPropagation();toggleExcepcion(tienda.id,actSel);}} style={{padding:"3px 9px",borderRadius:20,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>✕</button>}
             </div>
           );
         })}
@@ -566,7 +564,8 @@ export default function ChecklistApp() {
         </div>
       )}
     </div>
-  );};
+  );
+  };
 
   /* ══ PASO 3 — hora de envío → puntaje automático ══ */
   const renderPaso3 = ()=>{
@@ -601,10 +600,10 @@ export default function ChecklistApp() {
           </div>
           <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
             {[...tSel].slice(0,10).map(id=>{
-              const t=tiendas.find(x=>x.id===id);
-              if(!t)return null;
-              const fc=FMT[t.f];
-              return <span key={id} style={S.pill(fc.c,fc.bg)}>Vega {t.n}</span>;
+              const tObj=tiendas.find(x=>x.id===id);
+              if(!tObj)return null;
+              const fc=FMT[tObj.f];
+              return <span key={id} style={S.pill(fc.c,fc.bg)}>Vega {tObj.n}</span>;
             })}
             {tSel.size>10&&<span style={S.pill("#8aaabb","#f0f4f8")}>+{tSel.size-10} más</span>}
           </div>
@@ -787,20 +786,20 @@ export default function ChecklistApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tsFmt.map(t=>{
-                      const pMes=calcMes(t.id);
+                    {tsFmt.map(tr=>{
+                      const pMes=calcMes(tr.id);
                       const tier=getTier(pMes);
                       return(
-                        <tr key={t.id} style={{borderBottom:"1px solid #f5f7fa"}}>
-                          <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {t.n}</td>
+                        <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
+                          <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>Vega {tr.n}</td>
                           {(()=>{
-                            const allEvs=semsVis.flatMap(s=>s.days.flatMap(d=>{const ds=dStr(vYear,vMonth,d);return(getReg(ds,t.id,actsActivas[0]?.id||"")?.evidencias||[]);}));
+                            const allEvs=semsVis.flatMap(s=>s.days.flatMap(d=>{const ds=dStr(vYear,vMonth,d);return(getReg(ds,tr.id,actsActivas[0]?.id||"")?.evidencias||[]);}));
                             const last=allEvs.length>0?allEvs[allEvs.length-1]:null;
                             return <td style={{padding:"8px 8px",textAlign:"center",fontSize:10,color:"#8aaabb",fontFamily:"monospace"}}>{last?.horaRegistro||"—"}</td>;
                           })()}
                           <td style={{padding:"8px 8px",textAlign:"center"}}>
                             {(()=>{
-                              const allTs=Object.keys(regs).filter(k=>k.includes("|"+t.id+"|")).flatMap(k=>regs[k]?.evidencias||[]).map(e=>e.timestamp).filter(Boolean).sort().reverse();
+                              const allTs=Object.keys(regs).filter(k=>k.includes("|"+tr.id+"|")).flatMap(k=>regs[k]?.evidencias||[]).map(e=>e.timestamp).filter(Boolean).sort().reverse();
                               if(!allTs.length)return<span style={{color:"#d1d5db",fontSize:9}}>—</span>;
                               const d=new Date(allTs[0]);
                               return<span style={{fontSize:9,color:"#5a7a9a",fontFamily:"monospace",whiteSpace:"nowrap"}}>{d.toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit"})}<br/>{d.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>;
@@ -808,21 +807,21 @@ export default function ChecklistApp() {
                           </td>
                           {semsVis.map(sem=>actsActivas.map(a=>{
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
-                            const scores=ds.flatMap(d=>{const r=getReg(d,t.id,a.id);const p=puntajeReg(r,a.r||RANGOS_DEFAULT);return p!==null?[p]:[];});
+                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,a.r||RANGOS_DEFAULT);return p!==null?[p]:[];});
                             const v=scores.length>0?Math.round(scores.reduce((x,y)=>x+y,0)/scores.length):null;
-                            const docIds=ds.flatMap(d=>{const k=rKey(d,t.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
-                            const anulado=ds.some(d=>{const k=rKey(d,t.id,a.id);const docId=k.replace(/\|/g,"--");const r=regs[docId]||regs[k];return r?.anulado;});
-                            const menuId=`ctx-${t.id}-${sem.label}-${a.id}`;
+                            const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
+                            const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
+                            const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
                             return(
                               <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative"}}>
                                 {anulado?(
                                   <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anulado</span>
                                 ):v!==null?(
                                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
-                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t,sem,a,docIds}),700); }}
+                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
                                     onMouseUp={()=>clearTimeout(longPressRef.current)}
                                     onMouseLeave={()=>clearTimeout(longPressRef.current)}
-                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t,sem,a,docIds}),700); }}
+                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
                                     onTouchEnd={()=>clearTimeout(longPressRef.current)}
                                     style={{cursor:"pointer"}}>
                                     <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{v}%</span>
@@ -835,7 +834,7 @@ export default function ChecklistApp() {
                             );
                           }))}
                           {semsVis.map(sem=>{
-                            const ps=calcSemana(t.id,sem);
+                            const ps=calcSemana(tr.id,sem);
                             return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>{ps!==null?<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;
                           })}
                           {selWeek===null&&<td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>}
