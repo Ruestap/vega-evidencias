@@ -186,7 +186,7 @@ export default function ChecklistApp() {
   const [actSel,  setActSel]  = useState(null);
   const [tSel,    setTSel]    = useState(new Set());
   const [rango,   setRango]   = useState(null);
-  const [horaEx,  setHoraEx]  = useState("");
+  const [horaEx,  setHoraEx]  = useState("07:00");
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
   const [fmtFilt,      setFmtFilt]      = useState("Todas");
@@ -778,7 +778,6 @@ export default function ChecklistApp() {
             type="time"
             value={horaEx}
             onChange={e=>setHoraEx(e.target.value)}
-            autoFocus
             style={{
               width:"100%",padding:"16px",borderRadius:14,
               border:`3px solid ${pv!==null?tier.c:"#c8d8e8"}`,
@@ -867,6 +866,7 @@ export default function ChecklistApp() {
         )}
         <button
           onClick={confirmarRegistro}
+          onTouchEnd={e=>{e.preventDefault();if(pv!==null)confirmarRegistro();}}
           disabled={pv===null}
           style={{
             ...S.btn(pv!==null?tier.c:"#e2e8f0"),
