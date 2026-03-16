@@ -1590,162 +1590,314 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           );
         })()}
 
-        {/* distribución horaria — por tiendas únicas */}
+        {/* ══ EFICIENCIA HORARIA — unidad: evidencia (tienda × actividad × día) ══
+            Denominador: cada combinación habilitada (no N/A) cuenta como 1 evidencia esperada.
+            Los registros sin evidencia enviada NO entran al numerador pero SÍ al denominador.
+            Escalable a cualquier mes/año: usa vYear, vMonth y actsConRegistroIds reactivos.
+        ══*/}
         {(()=>{
-          // Para cada tienda×actividad×día, tomar el PRIMER envío del día y clasificarlo
-          // Así contamos tiendas que llegaron a tiempo, no registros individuales
           const hoy=todayStr();
-          let tOro=new Set(), tPlata=new Set(), tBronce=new Set(), tFuera=new Set(), tEval=new Set();
+
+          // dayMap acumula por día los conteos y puntos obtenidos/máximos
+          // Clave: "YYYY-MM-DD" → { oro, plata, bronce, fuera, expected, ptsObt, ptsMax }
+          const dayMap={};
+          let nOro=0, nPlata=0, nBronce=0, nFuera=0, nExpected=0, totalPtsObt=0;
+
           semanasDelMes.forEach(s=>{
             s.days.forEach(day=>{
               const ds=dStr(vYear,vMonth,day);
               if(ds>hoy) return;
               const dw=getDow(ds);
+              if(!dayMap[ds]) dayMap[ds]={oro:0,plata:0,bronce:0,fuera:0,expected:0,ptsObt:0,ptsMax:0};
+
               tsBase.forEach(ti=>{
-                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                  const reg=getReg(ds,ti.id,a.id);
-                  const p=puntajeReg(reg,getRangoActivo(a.id,ds));
-                  const key=ti.id+"_"+a.id;
-                  tEval.add(key);
-                  if(p===null) return;
-                  if(p===10) tOro.add(key);
-                  else if(p===8) tPlata.add(key);
-                  else if(p===6) tBronce.add(key);
-                  else tFuera.add(key);
-                });
+                actsBase
+                  .filter(a=>
+                    a.activa &&
+                    a.dias.includes(dw) &&
+                    !isExc(ti.id,a.id,ds) &&
+                    actsConRegistroIds.has(a.id)
+                  )
+                  .forEach(a=>{
+                    // Toda evidencia esperada suma al denominador y a los pts máximos
+                    dayMap[ds].expected++;
+                    dayMap[ds].ptsMax+=10;
+                    nExpected++;
+
+                    const reg=getReg(ds,ti.id,a.id);
+                    const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                    if(p===null) return; // no enviada: no suma al numerador
+
+                    dayMap[ds].ptsObt+=p;
+                    totalPtsObt+=p;
+
+                    if(p===10){ dayMap[ds].oro++;    nOro++;    }
+                    else if(p===8){ dayMap[ds].plata++; nPlata++; }
+                    else if(p===6){ dayMap[ds].bronce++; nBronce++; }
+                    else{           dayMap[ds].fuera++;  nFuera++;  }
+                  });
               });
             });
           });
-          // Una tienda×actividad puede tener registros en múltiples franjas en distintos días
-          // Usar la MEJOR franja alcanzada por cada tienda×actividad
-          const nEvalH=tEval.size||1;
+
+          const totalEnv=nOro+nPlata+nBronce+nFuera;
+          const ptsMax=nExpected*10||1;
+          // Promedio en escala 0-10: pts obtenidos / pts máximos posibles × 10
+          const ptsPonderado=ptsMax>0?Math.round((totalPtsObt/ptsMax)*10):0;
+          const eficGlobal=ptsMax>0?Math.round((totalPtsObt/ptsMax)*100):0;
+
           const franjas=[
-            {l:"ORO",    icon:"🥇", c:"#f6a623", bg:"#fff8ec", pts:10, n:tOro.size,  desc:"Antes de 08:00 · 10pts"},
-            {l:"PLATA",  icon:"🥈", c:"#74b9ff", bg:"#e8f4fd", pts:8,  n:tPlata.size,desc:"08:01 - 09:00 · 8pts"},
-            {l:"BRONCE", icon:"🥉", c:"#a29bfe", bg:"#f0edff", pts:6,  n:tBronce.size,desc:"09:01 - 10:00 · 6pts"},
-            {l:"FUERA",  icon:"🔴", c:"#d63031", bg:"#ffeae6", pts:0,  n:tFuera.size, desc:"Después de 10:00 · 0pts"},
+            {l:"ORO",   icon:"🥇", c:"#f6a623", bg:"#fff8ec", n:nOro,    desc:"Antes de 08:00 · 10pts"},
+            {l:"PLATA", icon:"🥈", c:"#74b9ff", bg:"#e8f4fd", n:nPlata,  desc:"08:01 – 09:00 · 8pts"},
+            {l:"BRONCE",icon:"🥉", c:"#a29bfe", bg:"#f0edff", n:nBronce, desc:"09:01 – 10:00 · 6pts"},
+            {l:"FUERA", icon:"🔴", c:"#d63031", bg:"#ffeae6", n:nFuera,  desc:"Después 10:00 · 0pts"},
           ];
-          const totalH=franjas.reduce((a,f)=>a+f.n,0)||1;
-          const ptsPonderado=Math.round(franjas.reduce((a,f)=>a+f.n*f.pts,0)/totalH);
-          // Desglose por semana
+
+          // Datos por semana: todos los niveles + eficiencia ponderada
           const semData=semanasDelMes.map(s=>{
             const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
-            let sOro=new Set(),sPlata=new Set(),sBronce=new Set(),sFuera=new Set(),sEval=new Set();
+            let sOro=0,sPlata=0,sBronce=0,sFuera=0,sExp=0,sPtsObt=0;
             s.days.forEach(day=>{
-              const ds=dStr(vYear,vMonth,day);
-              if(ds>hoy) return;
-              const dw=getDow(ds);
-              tsBase.forEach(ti=>{
-                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                  const key=ti.id+"_"+a.id;
-                  sEval.add(key);
-                  const reg=getReg(ds,ti.id,a.id);
-                  const p=puntajeReg(reg,getRangoActivo(a.id,ds));
-                  if(p===null) return;
-                  if(p===10) sOro.add(key);
-                  else if(p===8) sPlata.add(key);
-                  else if(p===6) sBronce.add(key);
-                  else sFuera.add(key);
-                });
-              });
+              const dm=dayMap[dStr(vYear,vMonth,day)];
+              if(!dm) return;
+              sOro+=dm.oro; sPlata+=dm.plata; sBronce+=dm.bronce; sFuera+=dm.fuera;
+              sExp+=dm.expected; sPtsObt+=dm.ptsObt;
             });
-            const tot=sOro.size+sPlata.size+sBronce.size+sFuera.size||1;
-            return {s,isFut,nOro:sOro.size,nPlata:sPlata.size,nBronce:sBronce.size,nFuera:sFuera.size,nEval:sEval.size,tot};
+            const sPtsMax=sExp*10||1;
+            const efic=sExp>0?Math.round((sPtsObt/sPtsMax)*100):null;
+            const semEnv=sOro+sPlata+sBronce+sFuera;
+            return {s,isFut,nOro:sOro,nPlata:sPlata,nBronce:sBronce,nFuera:sFuera,nExp:sExp,semEnv,efic};
           });
-          // Desglose por formato (ORO solamente para simplificar)
+
+          // Datos por formato: todos los niveles
           const fmtData=["Mayorista","Supermayorista","Market"].map(fmt=>{
-            let fOro=new Set(),fEval=new Set();
+            let fOro=0,fPlata=0,fBronce=0,fFuera=0,fExp=0,fPtsObt=0;
             semanasDelMes.forEach(s=>{
               s.days.forEach(day=>{
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoy) return;
                 const dw=getDow(ds);
                 tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
-                  actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                    const key=ti.id+"_"+a.id;
-                    fEval.add(key);
-                    const reg=getReg(ds,ti.id,a.id);
-                    const p=puntajeReg(reg,getRangoActivo(a.id,ds));
-                    if(p===10) fOro.add(key);
-                  });
+                  actsBase
+                    .filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id))
+                    .forEach(a=>{
+                      fExp++;
+                      const reg=getReg(ds,ti.id,a.id);
+                      const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+                      if(p===null) return;
+                      fPtsObt+=p;
+                      if(p===10) fOro++;
+                      else if(p===8) fPlata++;
+                      else if(p===6) fBronce++;
+                      else fFuera++;
+                    });
                 });
               });
             });
-            return {fmt,nOro:fOro.size,nEval:fEval.size,fc:FMT[fmt]};
+            const fPtsMax=fExp*10||1;
+            const fEfic=fExp>0?Math.round((fPtsObt/fPtsMax)*100):null;
+            return {fmt,nOro:fOro,nPlata:fPlata,nBronce:fBronce,nFuera:fFuera,nEval:fExp,fEfic,fc:FMT[fmt]};
           }).filter(f=>f.nEval>0);
+
+          // Color de celda del heatmap basado en eficiencia ponderada del día
+          const hCell=(efic)=>{
+            if(efic===null) return {bg:"#f0f4f8",color:"#c8d8e8",text:"—"};
+            if(efic>=90)   return {bg:"#fff8ec",color:"#854F0B",text:efic+"%"};
+            if(efic>=75)   return {bg:"#e8f4fd",color:"#185FA5",text:efic+"%"};
+            if(efic>=60)   return {bg:"#f0edff",color:"#534AB7",text:efic+"%"};
+            return             {bg:"#ffeae6",color:"#A32D2D",text:efic+"%"};
+          };
+
           return(
           <div style={{...S.card,padding:"16px",marginBottom:14}}>
+
+            {/* Encabezado con eficiencia global */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
               <div>
-                <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ CALIDAD DE HORARIO</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>Tiendas por franja horaria · mejor resultado del mes · {totalH} evaluaciones</div>
+                <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ EFICIENCIA HORARIA</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>
+                  Evidencias por franja horaria · {nExpected} esperadas · {totalEnv} enviadas · N/A excluidas del denominador
+                </div>
               </div>
               <div style={{textAlign:"right"}}>
-                <div style={{fontSize:20,fontWeight:800,color:sc(ptsPonderado/10*100)}}>{ptsPonderado}<span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span></div>
+                <div style={{fontSize:20,fontWeight:800,color:sc(eficGlobal)}}>
+                  {ptsPonderado}
+                  <span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span>
+                </div>
+                <div style={{fontSize:9,color:"#8aaabb"}}>{eficGlobal}% eficiencia global</div>
               </div>
             </div>
-            {/* stacked bar total mes */}
+
+            {/* Barra apilada — 4 niveles + franja sin envío en gris */}
             <div style={{height:20,borderRadius:8,overflow:"hidden",display:"flex",marginBottom:8}}>
-              {franjas.map(f=>f.n>0&&(
-                <div key={f.l} style={{width:(f.n/totalH*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",transition:"width .4s"}}>
-                  {f.n/totalH>0.08&&<span style={{fontSize:9,color:"#fff",fontWeight:800}}>{Math.round(f.n/totalH*100)}%</span>}
+              {nExpected>0&&franjas.map(f=>f.n>0&&(
+                <div key={f.l} style={{width:(f.n/nExpected*100)+"%",background:f.c,display:"flex",alignItems:"center",justifyContent:"center",transition:"width .4s"}}>
+                  {f.n/nExpected>0.07&&<span style={{fontSize:9,color:"#fff",fontWeight:800}}>{Math.round(f.n/nExpected*100)}%</span>}
                 </div>
               ))}
+              {nExpected>0&&(nExpected-totalEnv)>0&&(
+                <div style={{flex:1,background:"#e2e8f0",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {(nExpected-totalEnv)/nExpected>0.07&&<span style={{fontSize:9,color:"#8aaabb",fontWeight:800}}>
+                    {Math.round((nExpected-totalEnv)/nExpected*100)}% s/e
+                  </span>}
+                </div>
+              )}
             </div>
-            {/* tarjetas franja */}
+
+            {/* 4 tarjetas de franja horaria */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {franjas.map(f=>(
                 <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1.5px solid "+f.c+"33"}}>
                   <div style={{fontSize:18}}>{f.icon}</div>
                   <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1.1}}>{f.n}</div>
-                  <div style={{fontSize:8,color:f.c,fontWeight:700}}>tiendas · {f.l}</div>
-                  <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>{(()=>{const pct=totalH>0?Math.round(f.n*100/totalH):0;return pct+"%";})()}  · {f.desc}</div>
+                  <div style={{fontSize:8,color:f.c,fontWeight:700}}>evidencias · {f.l}</div>
+                  <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>
+                    {nExpected>0?Math.round(f.n/nExpected*100):0}% de {nExpected} · {f.desc}
+                  </div>
                 </div>
               ))}
             </div>
-            {/* desglose por semana — ORO */}
+
+            {/* HEATMAP: eficiencia diaria ponderada (pts obtenidos / pts posibles) */}
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR SEMANA</div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>
+                EFICIENCIA DIARIA · pts obtenidos ÷ pts posibles · hover para detalle por nivel
+              </div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{borderCollapse:"separate",borderSpacing:4,width:"100%"}}>
+                  <thead>
+                    <tr>
+                      <th style={{width:28,fontSize:9,color:"#8aaabb",fontWeight:700,textAlign:"left",paddingBottom:4}}/>
+                      {["Lun","Mar","Mié","Jue","Vie"].map(d=>(
+                        <th key={d} style={{fontSize:9,color:"#8aaabb",fontWeight:700,textAlign:"center",paddingBottom:4}}>{d}</th>
+                      ))}
+                      <th style={{fontSize:9,color:"#8aaabb",fontWeight:700,textAlign:"center",paddingBottom:4,minWidth:44}}>Sem.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {semanasDelMes.map((sw,si)=>{
+                      const dowMap={};
+                      sw.days.forEach(day=>{ dowMap[getDow(dStr(vYear,vMonth,day))]=day; });
+                      const semRow=semData[si];
+                      return(
+                      <tr key={sw.label}>
+                        <td style={{fontSize:10,fontWeight:700,color:"#8aaabb",verticalAlign:"middle",paddingRight:2}}>{sw.label}</td>
+                        {[1,2,3,4,5].map(dow=>{
+                          const day=dowMap[dow];
+                          if(!day) return <td key={dow} style={{padding:0}}><div style={{background:"#f8fafc",borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,color:"#e0e0e0",minWidth:36}}>—</div></td>;
+                          const ds=dStr(vYear,vMonth,day);
+                          if(ds>hoy) return <td key={dow} style={{padding:0}}><div style={{background:"#f8fafc",borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,color:"#c8d8e8",minWidth:36}}>—</div></td>;
+                          const dm=dayMap[ds];
+                          const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
+                          const cs=hCell(eficDia);
+                          const tip=dm
+                            ?`${dm.expected} esp. · 🥇${dm.oro} ORO · 🥈${dm.plata} Plata · 🥉${dm.bronce} Bronce · 🔴${dm.fuera} Fuera · ${eficDia}% efic.`
+                            :"sin datos";
+                          return(
+                          <td key={dow} style={{padding:0}}>
+                            <div title={tip} style={{background:cs.bg,color:cs.color,borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,fontWeight:700,minWidth:36,cursor:"default"}}>
+                              {cs.text}
+                            </div>
+                          </td>
+                          );
+                        })}
+                        <td style={{padding:0,paddingLeft:4}}>
+                          {semRow&&!semRow.isFut&&semRow.nExp>0?(()=>{
+                            const cs=hCell(semRow.efic);
+                            return(
+                            <div style={{background:cs.bg,color:cs.color,borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,fontWeight:700,minWidth:44,border:`0.5px solid ${cs.color}44`}}>
+                              {semRow.efic!==null?semRow.efic+"%":"—"}
+                            </div>
+                            );
+                          })():(
+                            <div style={{background:"#f8fafc",borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,color:"#c8d8e8",minWidth:44}}>—</div>
+                          )}
+                        </td>
+                      </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap",alignItems:"center"}}>
+                {[{l:"≥90%",bg:"#fff8ec",c:"#854F0B"},{l:"75–89%",bg:"#e8f4fd",c:"#185FA5"},{l:"60–74%",bg:"#f0edff",c:"#534AB7"},{l:"<60%",bg:"#ffeae6",c:"#A32D2D"}].map(lg=>(
+                  <span key={lg.l} style={{display:"flex",alignItems:"center",gap:3,fontSize:8}}>
+                    <span style={{width:10,height:10,borderRadius:2,background:lg.bg,border:`0.5px solid ${lg.c}`,display:"inline-block"}}/>
+                    <span style={{color:"#8aaabb"}}>{lg.l}</span>
+                  </span>
+                ))}
+                <span style={{fontSize:8,color:"#b2bec3",marginLeft:"auto"}}>* % = pts obtenidos ÷ pts posibles ese día · denominador varía por N/A</span>
+              </div>
+            </div>
+
+            {/* Eficiencia por semana con mini stacked bar de todos los niveles */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR SEMANA</div>
               <div style={{display:"flex",gap:6}}>
-                {semData.map(({s,isFut,nOro,tot,nEval})=>{
-                  const semBorder=isFut?"1px solid #e2e8f0":"1px solid #f6a623";
-                  const semBg=isFut?"#f8fafc":"#fff8ec";
-                  const semPct=nEval>0?Math.round(nOro*100/nEval):0;
+                {semData.map(({s,isFut,nOro:sO,nPlata:sP,nBronce:sB,nFuera:sF,nExp:sExp,semEnv,efic})=>{
+                  const cs=hCell(efic);
+                  const total=semEnv||1;
                   return(
-                  <div key={s.label} style={{flex:1,background:semBg,borderRadius:8,padding:"8px 6px",textAlign:"center",border:semBorder}}>
+                  <div key={s.label} style={{flex:1,background:isFut||!sExp?"#f8fafc":cs.bg,borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${isFut||!sExp?"#e2e8f0":cs.color+"66"}`}}>
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>{s.label}</div>
-                    {isFut
-                      ?<div style={{fontSize:10,color:"#b2bec3"}}>—</div>
-                      :<div><div style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</div>
-                        <div style={{fontSize:7,color:"#8aaabb"}}>{semPct}% de {nEval}</div></div>
-                    }
+                    {!isFut&&sExp>0?(
+                      <>
+                        <div style={{fontSize:15,fontWeight:800,color:cs.color,lineHeight:1.1}}>{efic}%</div>
+                        <div style={{height:5,borderRadius:3,overflow:"hidden",display:"flex",marginTop:4,marginBottom:3}}>
+                          {sO>0&&<div style={{width:(sO/total*100)+"%",background:"#f6a623"}}/>}
+                          {sP>0&&<div style={{width:(sP/total*100)+"%",background:"#74b9ff"}}/>}
+                          {sB>0&&<div style={{width:(sB/total*100)+"%",background:"#a29bfe"}}/>}
+                          {sF>0&&<div style={{width:(sF/total*100)+"%",background:"#d63031"}}/>}
+                          {(sExp-semEnv)>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
+                        </div>
+                        <div style={{display:"flex",justifyContent:"center",gap:3,flexWrap:"wrap"}}>
+                          {sO>0&&<span style={{fontSize:7,color:"#f6a623",fontWeight:700}}>🥇{sO}</span>}
+                          {sP>0&&<span style={{fontSize:7,color:"#74b9ff",fontWeight:700}}>🥈{sP}</span>}
+                          {sB>0&&<span style={{fontSize:7,color:"#a29bfe",fontWeight:700}}>🥉{sB}</span>}
+                          {sF>0&&<span style={{fontSize:7,color:"#d63031",fontWeight:700}}>🔴{sF}</span>}
+                        </div>
+                      </>
+                    ):(
+                      <div style={{fontSize:10,color:"#b2bec3"}}>—</div>
+                    )}
                   </div>
                   );
                 })}
               </div>
             </div>
-            {/* desglose ORO por formato */}
+
+            {/* Eficiencia por formato con todos los niveles */}
+            {fmtData.length>0&&(
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR FORMATO</div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR FORMATO</div>
               <div style={{display:"flex",gap:8}}>
-                {fmtData.map(({fmt,nOro,nEval,fc})=>{
-                  const fmtPct=nEval>0?Math.round(nOro*100/nEval):0;
-                  const fmtW=fmtPct+"%";
+                {fmtData.map(({fmt,nOro:fO,nPlata:fP,nBronce:fB,nFuera:fF,nEval,fEfic,fc})=>{
+                  const fEnv=fO+fP+fB+fF||1;
                   return(
-                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:"1px solid "+fc.c}}>
-                    <div style={{fontSize:9,fontWeight:800,color:fc.c}}>{fmt}</div>
-                    <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
-                      <span style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</span>
-                      <span style={{fontSize:9,color:"#8aaabb"}}>de {nEval}</span>
+                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"10px 10px",border:"1px solid "+fc.c}}>
+                    <div style={{fontSize:9,fontWeight:800,color:fc.c,marginBottom:4}}>{fmt}</div>
+                    <div style={{fontSize:16,fontWeight:800,color:sc(fEfic),lineHeight:1}}>{fEfic!==null?fEfic+"%":"—"}</div>
+                    <div style={{fontSize:8,color:"#8aaabb",marginBottom:5}}>{nEval} evid. esperadas</div>
+                    <div style={{height:6,borderRadius:3,overflow:"hidden",display:"flex",marginBottom:5}}>
+                      {fO>0&&<div style={{width:(fO/fEnv*100)+"%",background:"#f6a623"}}/>}
+                      {fP>0&&<div style={{width:(fP/fEnv*100)+"%",background:"#74b9ff"}}/>}
+                      {fB>0&&<div style={{width:(fB/fEnv*100)+"%",background:"#a29bfe"}}/>}
+                      {fF>0&&<div style={{width:(fF/fEnv*100)+"%",background:"#d63031"}}/>}
+                      {(nEval-fEnv)>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
                     </div>
-                    <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:4}}>
-                      <div style={{width:fmtW,height:"100%",background:"#f6a623",borderRadius:2}}/>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                      {fO>0&&<span style={{fontSize:7,color:"#f6a623",fontWeight:700}}>🥇{fO}</span>}
+                      {fP>0&&<span style={{fontSize:7,color:"#74b9ff",fontWeight:700}}>🥈{fP}</span>}
+                      {fB>0&&<span style={{fontSize:7,color:"#a29bfe",fontWeight:700}}>🥉{fB}</span>}
+                      {fF>0&&<span style={{fontSize:7,color:"#d63031",fontWeight:700}}>🔴{fF}</span>}
                     </div>
                   </div>
                   );
                 })}
               </div>
             </div>
+            )}
+
           </div>
           );
         })()}
