@@ -66,6 +66,13 @@ body {
   box-sizing: border-box;
 }
 
+/* Zoom proporcional en desktop — no afecta móvil */
+@media (min-width: 1024px) {
+  #root {
+    zoom: 1.25;
+  }
+}
+
 h1,
 h2 {
   font-family: var(--heading);
