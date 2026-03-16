@@ -142,11 +142,11 @@ function getTierPts(p) {
   if(p>=10)  return {label:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec"};
   if(p>=8)   return {label:"PLATA", icon:"🥈",c:"#74b9ff",bg:"#e8f4fd"};
   if(p>=6)   return {label:"BRONCE",icon:"🥉",c:"#a29bfe",bg:"#f0edff"};
-  if(p>=1)   return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
+  if(p>0)    return {label:"RIESGO",icon:"⚠️",c:"#e17055",bg:"#fff1ee"};
   return            {label:"FUERA", icon:"🔴",c:"#d63031",bg:"#ffeae6"};
 }
-function sc(v){if(!v&&v!==0)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
-function sb(v){if(!v&&v!==0)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
+function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
+function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
   const weeks=[], last=new Date(year,month+1,0).getDate();
@@ -162,7 +162,8 @@ function getWeeksOfMonth(year, month) {
 
 /* ══ APP ══════════════════════════════════════════════ */
 export default function ChecklistApp() {
-  const now = new Date();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(()=>new Date(),[]); // evita new Date() en cada render
   /* ── auth ── */
   const [role,    setRole]    = useState(null);
   const [uName,   setUName]   = useState("");
@@ -283,7 +284,7 @@ export default function ChecklistApp() {
   const esFS = dow===0||dow===6;
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
-  const actInfo = acts.find(a=>a.id===actSel);
+  const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
     const override = rangosDia?.[actId]?.[fechaStr];
     if(override) return override;
@@ -328,11 +329,12 @@ export default function ChecklistApp() {
     const pts=ts.map(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR));
     const IC=total>0?Math.round((withEnv.length/total)*100):0;
     const valid=pts.filter(p=>p!==null);
-    const IP=valid.length>0?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    const IP_pts=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length):0; // promedio puntos 0-10
+    const IP=Math.round((IP_pts/10)*100); // normalizar a % para que SG sea coherente
     const al100=pts.filter(p=>p===10).length;
     const SE=total>0?Math.round((al100/total)*100):0;
     const TR=total>0?Math.round((ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null).length/total)*100):0;
-    const SG=Math.round((IC*IP)/100);
+    const SG=Math.round((IC*IP)/100); // IC% × IP% → Score Global %
     const r100=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===10);
     const r80=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===8);
     const r60=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===6);
@@ -435,7 +437,7 @@ export default function ChecklistApp() {
       const now=new Date();
       const hreg=now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
       const ev={id:Date.now()+n,hora:horaEx,puntaje:pct,observacion:obsEx||`Registro en bloque · ${tier.label}`,horaRegistro:hreg,auditor:uName,dni:uDni,timestamp:now.toISOString()};
-      const prevEvs=(regs[k]?.evidencias)||[];
+      const prevEvs=(regs[docId]?.evidencias)||(regs[k]?.evidencias)||[];
       const newEvs=[...prevEvs,ev].sort((a,b)=>a.hora.localeCompare(b.hora));
       // Save to Firestore — key as doc id (replace | with -)
       const docId=k.replace(/\|/g,"--");
@@ -540,7 +542,7 @@ export default function ChecklistApp() {
         {DIAS_N[dow].toUpperCase()} · {actsDia.length} ACTIVIDAD{actsDia.length!==1?"ES":""} PROGRAMADA{actsDia.length!==1?"S":""}
       </p>
       {actsDia.map(a=>(
-        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setVerRegistradas(false);setTSel(new Set());setRango(null);setVerRegistradas(false);setRangoExt(null);}}
+        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setVerRegistradas(false);setTSel(new Set());setRango(null);setRangoExt(null);}}
           style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,border:`2px solid ${actSel===a.id?a.c:"#e2e8f0"}`,background:actSel===a.id?a.c+"15":"#fff",cursor:"pointer",width:"100%",textAlign:"left",marginBottom:10}}>
           <span style={{fontSize:26}}>{a.e}</span>
           <div style={{flex:1}}>
