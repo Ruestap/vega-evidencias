@@ -648,7 +648,7 @@ export default function ChecklistApp() {
             </div>
           )}
           <button onClick={()=>setTSel(tSel.size===tFilt.length?new Set():new Set(tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).map(ti=>ti.id)))}
-            style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}55`,background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
+            style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${actInfo?.c}`+"55",background:actInfo?.c+"15",color:actInfo?.c,cursor:"pointer",fontSize:12,fontWeight:700}}>
             {tSel.size===tFilt.filter(ti=>!isExc(ti.id,actSel,fecha)).length&&tFilt.length>0?"✕ Quitar todas":"✓ Seleccionar todas"}
           </button>
         </div>
@@ -788,7 +788,7 @@ export default function ChecklistApp() {
           />
           {/* resultado del puntaje — aparece automáticamente */}
           {pv!==null?(
-            <div style={{marginTop:14,padding:"14px",borderRadius:12,background:tier.bg,border:`1.5px solid ${tier.c}44`}}>
+            <div style={{marginTop:14,padding:"14px",borderRadius:12,background:tier.bg,border:`1.5px solid ${tier.c}`+"44"}}>
               <div style={{fontSize:36,marginBottom:4}}>{tier.icon}</div>
               <div style={{fontWeight:800,fontSize:32,color:tier.c,lineHeight:1}}>{pv} pts</div>
               <div style={{fontSize:14,fontWeight:700,color:tier.c,marginTop:4}}>{tier.label}</div>
@@ -841,7 +841,7 @@ export default function ChecklistApp() {
 
         {/* botón registrar */}
         {pv!==null&&(
-          <div style={{...S.card,padding:"14px",marginBottom:12,background:tier.bg,border:`1.5px solid ${tier.c}44`}}>
+          <div style={{...S.card,padding:"14px",marginBottom:12,background:tier.bg,border:`1.5px solid ${tier.c}`+"44"}}>
             <div style={{fontSize:11,color:tier.c,fontWeight:700,marginBottom:8}}>📋 RESUMEN DEL REGISTRO</div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <span style={{fontSize:12,color:"#5a7a9a"}}>Actividad</span>
@@ -1693,7 +1693,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* tarjetas franja */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {franjas.map(f=>(
-                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1.5px solid ${f.c}33`}}>
+                <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1.5px solid ${f.c}`+"33"}}>
                   <div style={{fontSize:18}}>{f.icon}</div>
                   <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1.1}}>{f.n}</div>
                   <div style={{fontSize:8,color:f.c,fontWeight:700}}>tiendas · {f.l}</div>
@@ -1998,7 +1998,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </div>
               )}
               {a._er&&(
-                <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:`1px solid ${a.c}33`}}>
+                <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:`1px solid ${a.c}`+"33"}}>
                   <div style={{fontSize:10,fontWeight:800,color:a.c,marginBottom:10,letterSpacing:".05em"}}>⏱️ RANGOS HORARIOS · {a.n.toUpperCase()}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                     {[{k:"c100",icon:"🥇",label:"100% hasta"},{k:"c80",icon:"🥈",label:"80% hasta"},{k:"c60",icon:"🥉",label:"60% hasta"}].map(f=>(
@@ -2006,7 +2006,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                         <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
                         <input type="time" value={RR[f.k]}
                           onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,r:{...(x.r||RANGOS_DEFAULT),[f.k]:e.target.value}}:x))}
-                          style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${a.c}55`,background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center"}}/>
+                          style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${a.c}`+"55",background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center"}}/>
                       </div>
                     ))}
                   </div>
@@ -2296,7 +2296,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                             return next;
                           });
                         }}
-                        style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${a.c}55`,background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center",boxSizing:"border-box"}}/>
+                        style={{width:"100%",padding:"8px",borderRadius:8,border:`1.5px solid ${a.c}`+"55",background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center",boxSizing:"border-box"}}/>
                     </div>
                   ))}
                 </div>
@@ -2587,7 +2587,7 @@ function PinModal({pins,onSave,onClose}){
           <div key={f.k} style={{marginBottom:14}}>
             <label style={{fontSize:10,fontWeight:800,color:f.c,letterSpacing:".06em",display:"block",marginBottom:5}}>{f.label}</label>
             <input type={show?"text":"password"} value={p[f.k]} onChange={e=>setP(x=>({...x,[f.k]:e.target.value}))}
-              style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1.5px solid ${f.c}44`,background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",letterSpacing:show?3:6,fontFamily:"monospace",boxSizing:"border-box"}}/>
+              style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1.5px solid ${f.c}`+"44",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",letterSpacing:show?3:6,fontFamily:"monospace",boxSizing:"border-box"}}/>
           </div>
         ))}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
