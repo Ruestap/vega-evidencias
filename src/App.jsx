@@ -1716,7 +1716,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div>
                 <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>⏱️ EFICIENCIA HORARIA</div>
                 <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>
-                  Evidencias por franja horaria · {nExpected} esperadas · {totalEnv} enviadas · N/A excluidas del denominador
+                  {nExpected} actividades programadas en el mes · {totalEnv} enviaron evidencia · {nExpected-totalEnv} sin registro · tiendas N/A no cuentan
                 </div>
               </div>
               <div style={{textAlign:"right"}}>
@@ -1724,7 +1724,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   {ptsPonderado}
                   <span style={{fontSize:10,color:"#8aaabb",fontWeight:400}}>/10 pts prom.</span>
                 </div>
-                <div style={{fontSize:9,color:"#8aaabb"}}>{eficGlobal}% eficiencia global</div>
+                <div style={{fontSize:9,color:"#8aaabb"}}>{eficGlobal}% · {totalPtsObt} de {ptsMax} pts posibles</div>
               </div>
             </div>
 
@@ -1750,7 +1750,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1.5px solid "+f.c+"33"}}>
                   <div style={{fontSize:18}}>{f.icon}</div>
                   <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1.1}}>{f.n}</div>
-                  <div style={{fontSize:8,color:f.c,fontWeight:700}}>evidencias · {f.l}</div>
+                  <div style={{fontSize:8,color:f.c,fontWeight:700}}>registros en rango {f.l}</div>
                   <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>
                     {nExpected>0?Math.round(f.n/nExpected*100):0}% de {nExpected} · {f.desc}
                   </div>
@@ -1761,7 +1761,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* HEATMAP: eficiencia diaria ponderada (pts obtenidos / pts posibles) */}
             <div style={{marginBottom:12}}>
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>
-                EFICIENCIA DIARIA · pts obtenidos ÷ pts posibles · hover para detalle por nivel
+                RENDIMIENTO DIARIO · cada celda = % de pts obtenidos sobre el máximo posible ese día · pasa el cursor para ver el detalle
               </div>
               <div style={{overflowX:"auto"}}>
                 <table style={{borderCollapse:"separate",borderSpacing:4,width:"100%"}}>
@@ -1791,8 +1791,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                           const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
                           const cs=hCell(eficDia);
                           const tip=dm
-                            ?`${dm.expected} esp. · 🥇${dm.oro} ORO · 🥈${dm.plata} Plata · 🥉${dm.bronce} Bronce · 🔴${dm.fuera} Fuera · ${eficDia}% efic.`
-                            :"sin datos";
+                            ?`${dm.expected} actividades programadas · ${dm.oro+dm.plata+dm.bronce+dm.fuera} enviaron evidencia · ${dm.ptsObt}/${dm.ptsMax} pts → ${eficDia}%  |  🥇 ${dm.oro} antes de 08:00 (10pts)  🥈 ${dm.plata} entre 08-09h (8pts)  🥉 ${dm.bronce} entre 09-10h (6pts)  🔴 ${dm.fuera} después de 10:00 (0pts)`
+                            :"Sin datos — semana pendiente o sin actividades";
                           return(
                           <td key={dow} style={{padding:0}}>
                             <div title={tip} style={{background:cs.bg,color:cs.color,borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,fontWeight:700,minWidth:36,cursor:"default"}}>
@@ -1832,7 +1832,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
             {/* Eficiencia por semana con mini stacked bar de todos los niveles */}
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR SEMANA</div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR SEMANA · pts obtenidos ÷ pts posibles · barras muestran distribución de franjas</div>
               <div style={{display:"flex",gap:6}}>
                 {semData.map(({s,isFut,nOro:sO,nPlata:sP,nBronce:sB,nFuera:sF,nExp:sExp,semEnv,efic})=>{
                   const cs=hCell(efic);
@@ -1869,7 +1869,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* Eficiencia por formato con todos los niveles */}
             {fmtData.length>0&&(
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR FORMATO</div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>EFICIENCIA POR FORMATO DE TIENDA · sobre actividades habilitadas de ese formato</div>
               <div style={{display:"flex",gap:8}}>
                 {fmtData.map(({fmt,nOro:fO,nPlata:fP,nBronce:fB,nFuera:fF,nEval,fEfic,fc})=>{
                   const fEnv=fO+fP+fB+fF||1;
@@ -1877,7 +1877,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"10px 10px",border:"1px solid "+fc.c}}>
                     <div style={{fontSize:9,fontWeight:800,color:fc.c,marginBottom:4}}>{fmt}</div>
                     <div style={{fontSize:16,fontWeight:800,color:sc(fEfic),lineHeight:1}}>{fEfic!==null?fEfic+"%":"—"}</div>
-                    <div style={{fontSize:8,color:"#8aaabb",marginBottom:5}}>{nEval} evid. esperadas</div>
+                    <div style={{fontSize:8,color:"#8aaabb",marginBottom:5}}>{nEval} actividades programadas en el período</div>
                     <div style={{height:6,borderRadius:3,overflow:"hidden",display:"flex",marginBottom:5}}>
                       {fO>0&&<div style={{width:(fO/fEnv*100)+"%",background:"#f6a623"}}/>}
                       {fP>0&&<div style={{width:(fP/fEnv*100)+"%",background:"#74b9ff"}}/>}
