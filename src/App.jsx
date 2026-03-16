@@ -1747,7 +1747,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               </div>
             </div>
           </div>
-          </div>
           );
         })()}
 
