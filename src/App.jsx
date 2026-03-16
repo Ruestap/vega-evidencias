@@ -436,11 +436,11 @@ export default function ChecklistApp() {
       const k=rKey(fecha,tId,actSel);
       const now=new Date();
       const hreg=now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+      const docId=k.replace(/\|/g,"--");
       const ev={id:Date.now()+n,hora:horaEx,puntaje:pct,observacion:obsEx||`Registro en bloque · ${tier.label}`,horaRegistro:hreg,auditor:uName,dni:uDni,timestamp:now.toISOString()};
       const prevEvs=(regs[docId]?.evidencias)||(regs[k]?.evidencias)||[];
       const newEvs=[...prevEvs,ev].sort((a,b)=>a.hora.localeCompare(b.hora));
       // Save to Firestore — key as doc id (replace | with -)
-      const docId=k.replace(/\|/g,"--");
       promises.push(setDoc(doc(db,"registros",docId),{evidencias:newEvs,fecha,tiendaId:tId,actividadId:actSel,updatedAt:now.toISOString()}));
       n++;
     });
