@@ -1706,7 +1706,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR SEMANA</div>
               <div style={{display:"flex",gap:6}}>
                 {semData.map(({s,isFut,nOro,tot,nEval})=>(
-                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${isFut?"#e2e8f033":"#f6a62333"}`}}>
+                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:("1px solid "+(isFut?"#e2e8f033":"#f6a62333"))}}>
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>{s.label}</div>
                     {isFut
                       ?<div style={{fontSize:10,color:"#b2bec3"}}>—</div>
