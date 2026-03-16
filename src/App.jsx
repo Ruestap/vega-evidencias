@@ -1697,7 +1697,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <div style={{fontSize:18}}>{f.icon}</div>
                   <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1.1}}>{f.n}</div>
                   <div style={{fontSize:8,color:f.c,fontWeight:700}}>tiendas · {f.l}</div>
-                  <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>{Math.round(f.n/totalH*100)}% · {f.desc}</div>
+                  <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>{(()=>{const pct=totalH>0?Math.round(f.n*100/totalH):0;return pct+"%";})()}  · {f.desc}</div>
                 </div>
               ))}
             </div>
@@ -1705,34 +1705,43 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{marginBottom:12}}>
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR SEMANA</div>
               <div style={{display:"flex",gap:6}}>
-                {semData.map(({s,isFut,nOro,tot,nEval})=>(
-                  <div key={s.label} style={{flex:1,background:isFut?"#f8fafc":"#fff8ec",borderRadius:8,padding:"8px 6px",textAlign:"center",border:("1px solid "+(isFut?"#e2e8f033":"#f6a62333"))}}>
+                {semData.map(({s,isFut,nOro,tot,nEval})=>{
+                  const semBorder=isFut?"1px solid #e2e8f0":"1px solid #f6a623";
+                  const semBg=isFut?"#f8fafc":"#fff8ec";
+                  const semPct=nEval>0?Math.round(nOro*100/nEval):0;
+                  return(
+                  <div key={s.label} style={{flex:1,background:semBg,borderRadius:8,padding:"8px 6px",textAlign:"center",border:semBorder}}>
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>{s.label}</div>
                     {isFut
                       ?<div style={{fontSize:10,color:"#b2bec3"}}>—</div>
-                      :<><div style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</div>
-                        <div style={{fontSize:7,color:"#8aaabb"}}>{nEval>0?Math.round(nOro/nEval*100):0}% de {nEval}</div></>
+                      :<div><div style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</div>
+                        <div style={{fontSize:7,color:"#8aaabb"}}>{semPct}% de {nEval}</div></div>
                     }
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             {/* desglose ORO por formato */}
             <div>
               <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:6}}>TIENDAS ORO POR FORMATO</div>
               <div style={{display:"flex",gap:8}}>
-                {fmtData.map(({fmt,nOro,nEval,fc})=>(
-                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:"1px solid "+fc.c+"44"}}>
+                {fmtData.map(({fmt,nOro,nEval,fc})=>{
+                  const fmtPct=nEval>0?Math.round(nOro*100/nEval):0;
+                  const fmtW=fmtPct+"%";
+                  return(
+                  <div key={fmt} style={{flex:1,background:fc.bg,borderRadius:8,padding:"8px 10px",border:"1px solid "+fc.c}}>
                     <div style={{fontSize:9,fontWeight:800,color:fc.c}}>{fmt}</div>
                     <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
                       <span style={{fontSize:16,fontWeight:800,color:"#f6a623"}}>{nOro}</span>
-                      <span style={{fontSize:9,color:"#8aaabb"}}>🥇 de {nEval}</span>
+                      <span style={{fontSize:9,color:"#8aaabb"}}>de {nEval}</span>
                     </div>
                     <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:4}}>
-                      <div style={{width:nEval>0?(nOro/nEval*100)+"%":"0%",height:"100%",background:"#f6a623",borderRadius:2}}/>
+                      <div style={{width:fmtW,height:"100%",background:"#f6a623",borderRadius:2}}/>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
