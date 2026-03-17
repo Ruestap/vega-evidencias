@@ -305,7 +305,8 @@ export default function ChecklistApp() {
   const [logAud,  setLogAud]  = useState("Todos");
   const [logPts,  setLogPts]  = useState("Todos");
   const [logTxt,  setLogTxt]  = useState("");
-  const [logFecha,setLogFecha]= useState("");
+  const [logFecha,setLogFecha]= useState("Todos");
+  const [logSoloDups,setLogSoloDups]= useState(false);
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
@@ -2502,14 +2503,19 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         const fmtOpts=["Todos",...[...new Set(allLogs.map(l=>l.formato))]];
         const actOpts=["Todas",...[...new Set(allLogs.map(l=>l.actividad))]];
         const audOpts=["Todos",...[...new Set(allLogs.map(l=>l.auditor))]];
-        const fechaOpts=["Todas",...[...new Set(allLogs.map(l=>l.fecha))].sort().reverse()];
+        // Mes: extraer YYYY-MM de cada fecha y mostrar como etiqueta legible
+        const mesesUnicos=[...new Set(allLogs.map(l=>l.fecha.slice(0,7)))].sort().reverse();
+        const mesNombre=m=>{const [y,mo]=m.split("-");return new Date(y,mo-1).toLocaleDateString("es-PE",{month:"long",year:"numeric"});};
+        const mesOpts=["Todos",...mesesUnicos];
 
         const filtered=allLogs.filter(l=>{
+          if(logSoloDups&&!l.esDuplicado) return false;
           if(logFmt!=="Todos"&&l.formato!==logFmt) return false;
           if(logAct!=="Todas"&&l.actividad!==logAct) return false;
           if(logAud!=="Todos"&&l.auditor!==logAud) return false;
           if(logPts!=="Todos"&&String(l.pts)!==logPts) return false;
-          if(logFecha!=="Todas"&&l.fecha!==logFecha) return false;
+          // Filtro por mes: comparar los primeros 7 chars de la fecha (YYYY-MM)
+          if(logFecha!=="Todos"&&!l.fecha.startsWith(logFecha)) return false;
           if(logTxt&&!(l.tienda.toLowerCase().includes(logTxt.toLowerCase())||l.auditor.toLowerCase().includes(logTxt.toLowerCase())||l.fecha.includes(logTxt))) return false;
           return true;
         });
@@ -2530,10 +2536,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <div style={{fontSize:12,fontWeight:700,color:"#dc2626"}}>{totalDuplicados} registros duplicados detectados</div>
                   <div style={{fontSize:10,color:"#5a7a9a"}}>Misma tienda+actividad+día con múltiples evidencias</div>
                 </div>
-                <button onClick={()=>{
-                  // Filtrar solo duplicados automáticamente
-                  setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("duplicado");
-                }} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Ver duplicados</button>
+                <button onClick={()=>setLogSoloDups(true)}
+                  style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Ver duplicados</button>
               </div>
             )}
           </div>
@@ -2541,9 +2545,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           <div style={{...S.card,padding:"12px 14px",marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
               <div>
-                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FECHA</div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>MES</div>
                 <select value={logFecha} onChange={e=>setLogFecha(e.target.value)} style={selSty}>
-                  {fechaOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                  {mesOpts.map(o=><option key={o} value={o}>{o==="Todos"?"Todos":mesNombre(o)}</option>)}
                 </select>
               </div>
               <div>
@@ -2577,31 +2581,32 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               </div>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-              <span style={{fontSize:10,color:"#8aaabb"}}>{filtered.length} de {allLogs.length} registros</span>
+              <span style={{fontSize:10,color:"#8aaabb"}}>{filtered.length} de {allLogs.length} registros
+                {logSoloDups&&<span style={{marginLeft:8,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#dc2626",background:"#fff1f2",border:"1px solid #fecaca"}}>⚠️ Filtrando solo duplicados <button onClick={()=>setLogSoloDups(false)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:11,padding:"0 0 0 4px"}}>✕</button></span>}
+              </span>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 {totalDuplicados>0&&(
                   <button onClick={()=>{
-                    // Preseleccionar todos los duplicados excepto el primero de cada grupo
-                    // El primero (hora más temprana) es el válido; los demás son duplicados a eliminar
+                    // Activar filtro para ver duplicados
+                    setLogSoloDups(true);
+                    // Preseleccionar los sobrantes (mantener solo el de hora más temprana)
                     const porDoc={};
                     allLogs.filter(l=>l.esDuplicado&&!l.anulado).forEach(l=>{
                       if(!porDoc[l.docId]) porDoc[l.docId]=[];
                       porDoc[l.docId].push(l);
                     });
-                    // seleccionar todos excepto el de hora más temprana de cada doc
                     const aEliminar=new Set();
                     Object.values(porDoc).forEach(grupo=>{
                       const sorted=[...grupo].sort((a,b)=>a.hora.localeCompare(b.hora));
                       sorted.slice(1).forEach(l=>aEliminar.add(l.uid));
                     });
-                    // Disparar selección en LogTable mediante evento personalizado
                     window._logTableSelDups=aEliminar;
                     window.dispatchEvent(new Event("selectDups"));
                   }} style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
-                    ⚠️ Seleccionar duplicados a eliminar
+                    ⚠️ Ver y seleccionar duplicados a eliminar
                   </button>
                 )}
-                <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");setLogFecha("Todas");}}
+                <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");setLogFecha("Todos");setLogSoloDups(false);}}
                   style={{fontSize:10,color:"#5a7a9a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar filtros</button>
               </div>
             </div>
@@ -2814,14 +2819,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:"clamp(20px,3vw,28px)"}}>📁</span>
-                <div>
-                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
-                  <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
+                <span style={{fontSize:"clamp(18px,2.5vw,24px)",lineHeight:1}}>📁</span>
+                <div style={{display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em",lineHeight:1.1}}>ESTADO DE REGISTROS</div>
+                  <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
                 </div>
               </div>
               <button onClick={()=>setShowStatusCard(false)}
-                style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
+                style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0,alignSelf:"flex-start"}}>✕</button>
             </div>
 
             {/* Actividad — SOLO si hay registro real de hoy con fecha exacta */}
