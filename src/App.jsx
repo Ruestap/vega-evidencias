@@ -377,7 +377,9 @@ export default function ChecklistApp() {
     Object.entries(regs).forEach(([,r])=>{
       if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
       const f = r.fecha||"";
-      if(f.startsWith(ymPrefix)) ids.add(r.actividadId);
+      // Solo contar si la fecha del registro corresponde al mes en vista
+      // y el registro tiene campo fecha explícito (evita registros de prueba sin fecha)
+      if(f.startsWith(ymPrefix) && f.length===10) ids.add(r.actividadId);
     });
     return ids;
   },[regs,vYear,vMonth]);
@@ -2514,6 +2516,21 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           )}
         </div>
       )}
+
+      {/* ── LIMPIEZA MARCHA BLANCA — solo Admin ── */}
+      <div style={{...S.card,padding:"14px 16px",marginTop:16,border:"1.5px solid #fecaca",background:"#fff1f2"}}>
+        <div style={{fontWeight:700,fontSize:13,color:"#dc2626",marginBottom:4}}>🗑️ Limpieza de registros de prueba</div>
+        <div style={{fontSize:11,color:"#5a7a9a",marginBottom:12}}>Elimina todos los registros de Firestore. Úsalo solo en marcha blanca para limpiar datos de prueba que afectan el % de eficiencia.</div>
+        <button onClick={async()=>{
+          if(!window.confirm("¿Eliminar TODOS los registros de Firestore? Esta acción es irreversible.")) return;
+          const promises = Object.keys(regs).map(docId=>deleteDoc(doc(db,"registros",docId)));
+          await Promise.all(promises);
+          showToast("🗑️ Todos los registros eliminados");
+        }}
+          style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
+          Eliminar todos los registros
+        </button>
+      </div>
     </div>
   );
 
@@ -2634,16 +2651,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <button onClick={()=>setShowStatusCard(false)}
                 style={{background:"#f0f4f8",border:"none",width:28,height:28,borderRadius:"50%",fontSize:13,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✕</button>
             </div>
-            {/* Actividad — solo las que tienen al menos 1 registro hoy */}
+            {/* Actividad — muestra la seleccionada actualmente, o las que tienen registro HOY */}
             {(()=>{
-              const actsConReg=actsHoy.filter(a=>tiAct.some(ti=>{
-                const reg=getReg(hoy,ti.id,a.id);
-                return reg?.evidencias?.length>0&&!reg?.anulado;
-              }));
-              if(actsConReg.length===0) return null;
+              // Prioridad 1: actividad actualmente seleccionada en el flujo de registro
+              const actsAMostrar = actSel
+                ? actsHoy.filter(a=>a.id===actSel)
+                : actsHoy.filter(a=>tiAct.some(ti=>{
+                    const reg=getReg(hoy,ti.id,a.id);
+                    // Verificar que el registro tiene fecha exactamente de hoy
+                    return reg?.evidencias?.length>0 && !reg?.anulado && reg?.fecha===hoy;
+                  }));
+              if(actsAMostrar.length===0) return null;
               return(
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-                  {actsConReg.map(a=>(
+                  {actsAMostrar.map(a=>(
                     <span key={a.id} style={{fontSize:11,color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"4px 10px",display:"inline-flex",alignItems:"center",gap:4}}>
                       {a.e} {a.n}
                     </span>
