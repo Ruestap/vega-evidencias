@@ -160,6 +160,99 @@ function getWeeksOfMonth(year, month) {
   return weeks;
 }
 
+/* ══ LOG TABLE — componente separado para evitar conflictos de hooks en IIFE ══ */
+function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin}) {
+  const [selLogs, setSelLogs] = useState(new Set());
+
+  const toggleSel = (uid) => setSelLogs(prev => {
+    const ns = new Set(prev);
+    ns.has(uid) ? ns.delete(uid) : ns.add(uid);
+    return ns;
+  });
+
+  const toggleAll = () => {
+    if(selLogs.size === filtered.slice(0,200).length) setSelLogs(new Set());
+    else setSelLogs(new Set(filtered.slice(0,200).map(l=>l.uid)));
+  };
+
+  const eliminarSeleccionados = async () => {
+    if(!selLogs.size) return;
+    if(!window.confirm(`¿Eliminar ${selLogs.size} registro(s) seleccionado(s)? Esta acción es irreversible.`)) return;
+    // Agrupar por docId para actualizar evidencias en lote
+    const porDoc = {};
+    selLogs.forEach(uid => {
+      const [docId, evIdxStr] = uid.split("__");
+      if(!porDoc[docId]) porDoc[docId] = [];
+      porDoc[docId].push(parseInt(evIdxStr));
+    });
+    const promises = Object.entries(porDoc).map(async ([docId, evIdxs]) => {
+      const reg = regs[docId];
+      if(!reg) return;
+      // Filtrar las evidencias que NO están seleccionadas
+      const newEvs = reg.evidencias.filter((_, i) => !evIdxs.includes(i));
+      if(newEvs.length === 0) {
+        return deleteDoc(doc(db, "registros", docId));
+      } else {
+        return setDoc(doc(db, "registros", docId), {...reg, evidencias: newEvs, updatedAt: new Date().toISOString()});
+      }
+    });
+    await Promise.all(promises);
+    showToast(`🗑️ ${selLogs.size} registro(s) eliminado(s)`);
+    setSelLogs(new Set());
+  };
+
+  return (
+    <div>
+      {selLogs.size > 0 && (
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#fff1f2",borderRadius:10,border:"1.5px solid #fecaca",marginBottom:12}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#dc2626",flex:1}}>{selLogs.size} registro(s) seleccionado(s)</span>
+          <button onClick={()=>setSelLogs(new Set())} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Cancelar</button>
+          <button onClick={eliminarSeleccionados} style={{padding:"5px 14px",borderRadius:8,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑️ Eliminar seleccionados</button>
+        </div>
+      )}
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead>
+            <tr style={{background:"#f8fafc"}}>
+              <th style={{padding:"7px 10px",borderBottom:"2px solid #e9eef5"}}>
+                <input type="checkbox" checked={selLogs.size===filtered.slice(0,200).length&&filtered.length>0} onChange={toggleAll} style={{cursor:"pointer"}}/>
+              </th>
+              {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
+                <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.slice(0,200).map((l,i)=>{
+              const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
+              const ptsc=sc(l.pts/10*100);
+              const isSel=selLogs.has(l.uid);
+              return(
+                <tr key={i} style={{borderBottom:"1px solid #f5f7fa",background:isSel?"#fff1f2":l.anulado?"#fff8ec":"transparent",opacity:l.anulado?.75:1,cursor:"pointer"}}
+                  onClick={()=>isAdmin&&toggleSel(l.uid)}>
+                  <td style={{padding:"7px 10px"}}>
+                    {isAdmin&&<input type="checkbox" checked={isSel} onChange={()=>toggleSel(l.uid)} onClick={e=>e.stopPropagation()} style={{cursor:"pointer"}}/>}
+                  </td>
+                  <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#5a7a9a",whiteSpace:"nowrap"}}>{l.fecha}</td>
+                  <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
+                  <td style={{padding:"7px 10px"}}><span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
+                  <td style={{padding:"7px 10px",whiteSpace:"nowrap",fontSize:10,color:"#5a7a9a"}}>{l.actividad}</td>
+                  <td style={{padding:"7px 10px",fontWeight:700,color:"#0984e3"}}>{l.auditor}</td>
+                  <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#8aaabb"}}>{l.dni}</td>
+                  <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:11,fontWeight:700,color:ptsc}}>{l.hora}</td>
+                  <td style={{padding:"7px 10px"}}><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800,color:ptsc,background:sb(l.pts/10*100)}}>{l.pts}pts</span></td>
+                  <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:9,color:"#b2bec3"}}>{l.horaReg}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length}</div>}
+      </div>
+    </div>
+  );
+}
+
 /* ══ APP ══════════════════════════════════════════════ */
 export default function ChecklistApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2346,11 +2439,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           const parts=key.replace(/--/g,"|").split("|");
           if(parts.length<3) return;
           const [f,tId,aId]=parts;
-          const tienda=tiendas.find(t=>t.id===tId);
+          const tienda=tiendas.find(ti=>ti.id===tId);
           const act=acts.find(a=>a.id===aId);
           if(!tienda||!act) return;
-          reg.evidencias.forEach(ev=>{
-            if(ev.auditor) allLogs.push({fecha:f,tienda:tienda.n,formato:tienda.f,actividad:act.n,auditor:ev.auditor,dni:ev.dni||"—",hora:ev.hora,pts:ev.puntaje,horaReg:ev.horaRegistro,ts:ev.timestamp,anulado:reg.anulado});
+          reg.evidencias.forEach((ev,evIdx)=>{
+            if(ev.auditor) allLogs.push({
+              docId:key, evIdx,
+              fecha:f,tienda:tienda.n,formato:tienda.f,
+              actividad:act.n,auditor:ev.auditor,
+              dni:ev.dni||"—",hora:ev.hora,
+              pts:ev.puntaje,horaReg:ev.horaRegistro,
+              ts:ev.timestamp,anulado:reg.anulado,
+              // clave única para selección
+              uid:`${key}__${evIdx}`
+            });
           });
         });
         allLogs.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
@@ -2402,7 +2504,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <input value={logTxt} onChange={e=>setLogTxt(e.target.value)} placeholder="Buscar tienda, auditor o fecha..."
                 style={{...S.inp,paddingLeft:32,fontSize:12}}/>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,flexWrap:"wrap",gap:8}}>
               <span style={{fontSize:10,color:"#8aaabb"}}>{filtered.length} de {allLogs.length} registros</span>
               <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");}}
                 style={{fontSize:10,color:"#5a7a9a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar filtros</button>
@@ -2410,37 +2512,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
           {!filtered.length
             ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados</div>
-            :<div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                <thead>
-                  <tr style={{background:"#f8fafc"}}>
-                    {["FECHA","TIENDA","FMT","ACTIVIDAD","AUDITOR","DNI","HORA EV.","PTS","REG."].map(h=>(
-                      <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.slice(0,200).map((l,i)=>{
-                    const fc=FMT[l.formato]||{c:"#8aaabb",bg:"#f0f4f8"};
-                    const ptsc=sc(l.pts/10*100);
-                    return(
-                      <tr key={i} style={{borderBottom:"1px solid #f5f7fa",background:l.anulado?"#fff8ec":"transparent",opacity:l.anulado?.75:1}}>
-                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#5a7a9a",whiteSpace:"nowrap"}}>{l.fecha}</td>
-                        <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {l.tienda}</td>
-                        <td style={{padding:"7px 10px"}}><span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,color:fc.c,background:fc.bg}}>{l.formato.slice(0,3)}</span></td>
-                        <td style={{padding:"7px 10px",whiteSpace:"nowrap",fontSize:10,color:"#5a7a9a"}}>{l.actividad}</td>
-                        <td style={{padding:"7px 10px",fontWeight:700,color:"#0984e3"}}>{l.auditor}</td>
-                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:10,color:"#8aaabb"}}>{l.dni}</td>
-                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:11,fontWeight:700,color:ptsc}}>{l.hora}</td>
-                        <td style={{padding:"7px 10px"}}><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800,color:ptsc,background:sb(l.pts/10*100)}}>{l.pts}pts</span></td>
-                        <td style={{padding:"7px 10px",fontFamily:"monospace",fontSize:9,color:"#b2bec3"}}>{l.horaReg}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length}</div>}
-            </div>
+            :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin}/>
           }
         </div>
         );
