@@ -2563,7 +2563,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           {toast}
         </div>
       )}
-      {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>
+      {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Calcular datos para la tarjeta por formato y por bloque horario
         const hoy=todayStr();
