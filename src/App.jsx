@@ -535,29 +535,38 @@ export default function ChecklistApp() {
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
     const excHoy = isExc(ti.id,actSel,fecha);
-    // N/A: solo visible en modo "Todas" (verRegistradas=true) para que admin las vea
-    // En modo "Pendientes" se ocultan — no se pueden registrar de todos modos
     if(excHoy && !verRegistradas) return false;
-    if(excHoy) return true; // en modo "Todas" sí aparece
-    // registradas: ocultar en modo Pendientes
+    if(excHoy) return true;
     if(tRegistradas.has(ti.id) && !verRegistradas) return false;
     return true;
-  }),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel,fecha]);
+  }).sort((a,b)=>a.n.localeCompare(b.n,"es")),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel,fecha]);
 
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    // Anti-duplicidad: solo bloquear si el auditor (no admin) intenta registrar
-    // una tienda que YA tiene evidencia con la MISMA hora exacta hoy
-    const duplicadas = !isAdmin ? [...tSel].filter(tId=>{
+    // Anti-duplicidad para todos los roles:
+    // Si la tienda ya tiene registro válido hoy con la misma hora exacta → bloquear
+    // Si el admin seleccionó una tienda ya registrada por cualquier usuario → avisar pero permitir
+    const duplicadas = [...tSel].filter(tId=>{
       const reg = getReg(fecha,tId,actSel);
       if(!reg?.evidencias?.length||reg?.anulado) return false;
       return reg.evidencias.some(ev=>ev.hora===horaEx);
-    }) : [];
+    });
     if(duplicadas.length>0){
       const nombres = duplicadas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-      showToast(`⚠️ Hora ${horaEx} ya registrada en: ${nombres}`);
+      showToast(`⚠️ Hora ${horaEx} ya existe en: ${nombres}`);
       return;
+    }
+    // Aviso informativo al Admin si hay tiendas ya registradas por otro auditor
+    if(isAdmin){
+      const yaReg = [...tSel].filter(tId=>{
+        const reg = getReg(fecha,tId,actSel);
+        return reg?.evidencias?.length>0 && !reg?.anulado;
+      });
+      if(yaReg.length>0){
+        const nombres = yaReg.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+        showToast(`ℹ️ ${nombres} ya tienen registro hoy — se agrega evidencia adicional`);
+      }
     }
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pct=calcP(horaEx,AR);
@@ -2710,53 +2719,55 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         const nowTime=new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
         const esBloque2=toMin(nowTime)>b1Max;
         return(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)"}}
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"16px"}}
           onClick={()=>setShowStatusCard(false)}>
           <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
-            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:20,width:"90%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
+            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(14px,4vw,24px)",width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
+
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(12px,3.5vw,16px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
+                <div style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
               </div>
               <button onClick={()=>setShowStatusCard(false)}
-                style={{background:"#f0f4f8",border:"none",width:28,height:28,borderRadius:"50%",fontSize:13,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✕</button>
+                style={{background:"#f0f4f8",border:"none",width:28,height:28,borderRadius:"50%",fontSize:13,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
             </div>
-            {/* Actividad — muestra la seleccionada actualmente, o las que tienen registro HOY */}
+
+            {/* Actividad */}
             {(()=>{
-              // Prioridad 1: actividad actualmente seleccionada en el flujo de registro
               const actsAMostrar = actSel
                 ? actsHoy.filter(a=>a.id===actSel)
                 : actsHoy.filter(a=>tiAct.some(ti=>{
                     const reg=getReg(hoy,ti.id,a.id);
-                    // Verificar que el registro tiene fecha exactamente de hoy
                     return reg?.evidencias?.length>0 && !reg?.anulado && reg?.fecha===hoy;
                   }));
               if(actsAMostrar.length===0) return null;
               return(
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
                   {actsAMostrar.map(a=>(
-                    <span key={a.id} style={{fontSize:11,color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"4px 10px",display:"inline-flex",alignItems:"center",gap:4}}>
+                    <span key={a.id} style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"4px 10px",display:"inline-flex",alignItems:"center",gap:4}}>
                       {a.e} {a.n}
                     </span>
                   ))}
                 </div>
               );
             })()}
+
             {/* Totales */}
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-              <span style={{fontSize:11,color:"#5a7a9a",fontWeight:600}}>Total {totalTiendas}</span>
+            <div style={{display:"flex",gap:"clamp(4px,1.5vw,6px)",flexWrap:"wrap",marginBottom:14,padding:"clamp(8px,2vw,12px)",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",alignItems:"center"}}>
+              <span style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#5a7a9a",fontWeight:600}}>Total {totalTiendas}</span>
               <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
-              <span style={{fontSize:11,color:"#1a2f4a",fontWeight:700}}>{totalDisp} disponibles</span>
-              <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5"}}>✅ {totalReg} registradas</span>
-              {totalPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏳ {totalPend} pendientes</span>}
-              {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>N/A {totalNA}</span>}
+              <span style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#1a2f4a",fontWeight:700}}>{totalDisp} disponibles</span>
+              <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap"}}>✅ {totalReg} registradas</span>
+              {totalPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#0984e3",background:"#e8f4fd",whiteSpace:"nowrap"}}>⏳ {totalPend} pendientes</span>}
+              {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>N/A {totalNA}</span>}
             </div>
+
             {/* Corte 1 */}
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#f6a623",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:"#f6a623",display:"inline-block",flexShrink:0}}/>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#BA7517",letterSpacing:".06em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#BA7517",display:"inline-block",flexShrink:0}}/>
                 CORTE 1 · hasta las 08:30
               </div>
               {fmts.map(({fmt,icon})=>{
@@ -2764,26 +2775,27 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 if(b.disponibles===0) return null;
                 return(
                 <div key={fmt+"b1"} style={{marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:14}}>{icon}</span>
-                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12,whiteSpace:"nowrap"}}>{fmt}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,22vw,110px)"}}>
+                      <span style={{fontSize:"clamp(13px,3.5vw,16px)"}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,3vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
                     </div>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                    {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                    {b.horaMin&&<span style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
                   </div>
                   {b.pendientes>0&&<div style={{marginTop:4}}>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
                   </div>}
                 </div>
                 );
               })}
             </div>
+
             {/* Corte 2 — aparece automáticamente después de las 08:31 */}
             {esBloque2&&(
             <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#74b9ff",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:"#74b9ff",display:"inline-block",flexShrink:0}}/>
+              <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#185FA5",letterSpacing:".06em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block",flexShrink:0}}/>
                 CORTE 2 · 08:31 a 09:30
               </div>
               {fmts.map(({fmt,icon})=>{
@@ -2791,24 +2803,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 if(b.disponibles===0) return null;
                 return(
                 <div key={fmt+"b2"} style={{marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:14}}>{icon}</span>
-                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12,whiteSpace:"nowrap"}}>{fmt}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,22vw,110px)"}}>
+                      <span style={{fontSize:"clamp(13px,3.5vw,16px)"}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,3vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
                     </div>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                    {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                    {b.horaMin&&<span style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
                   </div>
                   {b.pendientes>0&&<div style={{marginTop:4}}>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
                   </div>}
                 </div>
                 );
               })}
             </div>
             )}
+
             {/* Footer */}
-            <div style={{marginTop:14,fontSize:9,color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
+            <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
               VEGA · EVIDENCIAS · {hoy}
             </div>
           </div>
