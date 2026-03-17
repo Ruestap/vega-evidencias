@@ -74,7 +74,7 @@ const TIENDAS_INIT = [
   {id:"t65",n:"Villaran",f:"Market",activa:true},
 ];
 
-const RANGOS_DEFAULT = { c100:"08:00", c80:"09:00", c60:"10:00" };
+const RANGOS_DEFAULT = { c100:"09:00", c80:"10:15", c60:"10:30" };
 
 const ACTIVIDADES_INIT = [
   {id:"a01",n:"Grid Promocional",    dias:[1,2,3,4,5],e:"📋",c:"#6c5ce7",cat:"Promocional",r:null,activa:true},
@@ -225,6 +225,9 @@ export default function ChecklistApp() {
   const [dashHora,  setDashHora]  = useState("Todas");
   /* ── long press excepciones en paso 2 ── */
   const longExcRef = useRef(null);
+  /* ── tarjeta de estado ── */
+  const [showStatusCard, setShowStatusCard] = useState(false);
+  const statusCardRef = useRef(null);
 
   /* ══ FIREBASE SYNC ══ */
   useEffect(()=>{
@@ -312,6 +315,28 @@ export default function ChecklistApp() {
     }
     return false;
   },[exceps]);
+
+  // Auto-mostrar tarjeta de estado a las 08:30 y 09:30
+  useEffect(()=>{
+    const check=()=>{
+      const now=new Date();
+      const hhmm=now.getHours()*60+now.getMinutes();
+      const t1=8*60+30; // 08:30
+      const t2=9*60+30; // 09:30
+      const key1=`statusShown_${todayStr()}_0830`;
+      const key2=`statusShown_${todayStr()}_0930`;
+      if(hhmm===t1&&!sessionStorage.getItem(key1)){
+        sessionStorage.setItem(key1,"1");
+        setShowStatusCard(true);
+      }
+      if(hhmm===t2&&!sessionStorage.getItem(key2)){
+        sessionStorage.setItem(key2,"1");
+        setShowStatusCard(true);
+      }
+    };
+    const interval=setInterval(check,30000); // revisa cada 30 seg
+    return()=>clearInterval(interval);
+  },[]);
 
   const showToast = msg=>{
     setToast(msg);
@@ -427,6 +452,18 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
+    // Anti-duplicidad: verificar si alguna tienda ya tiene registro válido hoy
+    const yaRegistradas = [...tSel].filter(tId=>{
+      const reg = getReg(fecha,tId,actSel);
+      return reg?.evidencias?.length>0 && !reg?.anulado;
+    });
+    if(yaRegistradas.length>0 && !isAdmin){
+      const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+      showToast(`⚠️ Ya registradas hoy: ${nombres}. Solo Admin puede sobrescribir.`);
+      // Quitar las ya registradas de la selección automáticamente
+      setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
+      return;
+    }
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pct=calcP(horaEx,AR);
     const tier=getTierPts(pct);
@@ -660,6 +697,12 @@ export default function ChecklistApp() {
       {/* lista */}
       <div style={{padding:"8px 16px 120px"}}>
         {isAdmin&&<div style={{fontSize:10,color:"#8aaabb",marginBottom:8,padding:"6px 10px",background:"#f8fafc",borderRadius:8}}>💡 Admin: usa el botón <strong>N/A</strong> para excluir una tienda de esta actividad hoy</div>}
+      {isAuditor&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+        <button onClick={()=>setShowStatusCard(true)}
+          style={{padding:"7px 14px",borderRadius:9,border:"1.5px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          📊 Tarjeta de estado
+        </button>
+      </div>}
         {tFilt.length===0&&!verRegistradas&&(
           <div style={{textAlign:"center",padding:"40px 20px"}}>
             <div style={{fontSize:40,marginBottom:12}}>✅</div>
@@ -1106,9 +1149,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{ const ef=calcEficiencia(tr.id,allDays); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
-                        const t=getTier(ef);
-                        return <td style={{padding:"6px 8px",textAlign:"center",background:t.bg}}>
-                          {ef!==null?<><span style={{fontSize:14}}>{t.icon}</span><div style={{fontSize:8,fontWeight:800,color:t.c}}>{t.label}</div></>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                        const tierFmt=getTier(ef);
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:tierFmt.bg}}>
+                          {ef!==null?<><span style={{fontSize:14}}>{tierFmt.icon}</span><div style={{fontSize:8,fontWeight:800,color:tierFmt.c}}>{tierFmt.label}</div></>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                         </td>;
                       })()}
                     </tr>
@@ -1435,7 +1478,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div key={k.k} style={{...S.card,padding:"14px",cursor:"default",position:"relative"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".kpi-tip").style.display="block"}
                 onMouseLeave={e=>e.currentTarget.querySelector(".kpi-tip").style.display="none"}
-                onTouchStart={e=>{const t=e.currentTarget.querySelector(".kpi-tip");t.style.display=t.style.display==="block"?"none":"block";}}
+                onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".kpi-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}
               >
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <span style={{fontSize:20}}>{k.icon}</span>
@@ -1919,7 +1962,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
                 onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
-                onTouchStart={e=>{const t=e.currentTarget.querySelector(".fmt-tip");t.style.display=t.style.display==="block"?"none":"block";}}>
+                onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".fmt-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}>
                 <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
                 <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.7}}>
                   <span style={{color:"#5a7a9a",fontWeight:700}}>{fts.length} tiendas</span>
@@ -1967,7 +2010,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div key={s.t.id} style={{position:"relative",marginBottom:8}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".rank-tip").style.display="block"}
                 onMouseLeave={e=>e.currentTarget.querySelector(".rank-tip").style.display="none"}
-                onTouchStart={e=>{const t=e.currentTarget.querySelector(".rank-tip");t.style.display=t.style.display==="block"?"none":"block";}}>
+                onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".rank-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,cursor:"default"}}>
                   <span style={{fontSize:12,width:16}}>{panel.icon(i)}</span>
                   <div style={{flex:1,overflow:"hidden"}}>
@@ -2520,7 +2563,139 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           {toast}
         </div>
       )}
-      {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
+      {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>
+      {showStatusCard&&(()=>{
+        // Calcular datos para la tarjeta por formato y por bloque horario
+        const hoy=todayStr();
+        const bloque1Hasta="08:30"; // primer corte
+        const bloque2Desde="08:31";
+        const bloque2Hasta="09:30"; // segundo corte
+        const fmts=[
+          {fmt:"Mayorista",   icon:"🏬"},
+          {fmt:"Supermayorista",icon:"🏪"},
+          {fmt:"Market",      icon:"🛒"},
+        ];
+        // Para la actividad activa del día (o todas si no hay selección)
+        const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
+        const getBloque=(fmtNombre, desdeMin, hastaMin)=>{
+          const ts=tiAct.filter(ti=>ti.f===fmtNombre);
+          const excluidas=ts.filter(ti=>actsHoy.some(a=>isExc(ti.id,a.id,hoy)));
+          const disponibles=ts.filter(ti=>!actsHoy.every(a=>isExc(ti.id,a.id,hoy)));
+          // registradas en ese bloque horario
+          const registradas=disponibles.filter(ti=>{
+            return actsHoy.some(a=>{
+              const reg=getReg(hoy,ti.id,a.id);
+              if(!reg||!reg.evidencias||reg.anulado) return false;
+              const hora=primerEnvio(reg.evidencias);
+              if(!hora) return false;
+              const m=toMin(hora);
+              return m>=desdeMin&&m<=hastaMin;
+            });
+          });
+          // hora min y max de registradas en este bloque
+          let horaMin=null, horaMax=null;
+          disponibles.forEach(ti=>{
+            actsHoy.forEach(a=>{
+              const reg=getReg(hoy,ti.id,a.id);
+              if(!reg||!reg.evidencias||reg.anulado) return;
+              const hora=primerEnvio(reg.evidencias);
+              if(!hora) return;
+              const m=toMin(hora);
+              if(m>=desdeMin&&m<=hastaMin){
+                if(!horaMin||m<toMin(horaMin)) horaMin=hora;
+                if(!horaMax||m>toMin(horaMax)) horaMax=hora;
+              }
+            });
+          });
+          const pendientes=disponibles.length-registradas.length;
+          return {total:ts.length,disponibles:disponibles.length,registradas:registradas.length,pendientes,horaMin,horaMax,excluidas:excluidas.length};
+        };
+        const b1Min=toMin("00:00"), b1Max=toMin(bloque1Hasta);
+        const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
+        // Totales generales
+        const totalTiendas=tiAct.length;
+        const totalNA=tiAct.filter(ti=>actsHoy.every(a=>isExc(ti.id,a.id,hoy))).length;
+        const totalDisp=totalTiendas-totalNA;
+        const totalReg=tiAct.filter(ti=>actsHoy.some(a=>{
+          const reg=getReg(hoy,ti.id,a.id);
+          return reg&&reg.evidencias?.length&&!reg.anulado;
+        })).length;
+        const totalPend=totalDisp-totalReg;
+        const nowTime=new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+        const esBloque2=toMin(nowTime)>b1Max;
+        return(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)"}}
+          onClick={()=>setShowStatusCard(false)}>
+          <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
+            style={{background:"#fff",borderRadius:20,padding:20,width:"90%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
+            {/* Header tarjeta */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📊 ESTADO DE REGISTROS</div>
+                <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{hoy} · {nowTime} hrs</div>
+              </div>
+              <button onClick={()=>setShowStatusCard(false)}
+                style={{background:"none",border:"none",fontSize:18,color:"#8aaabb",cursor:"pointer"}}>✕</button>
+            </div>
+            {/* Totales */}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10}}>
+              <span style={{fontSize:11,color:"#5a7a9a",fontWeight:700}}>Total {totalTiendas}</span>
+              <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
+              <span style={{fontSize:11,color:"#1a2f4a",fontWeight:800}}>{totalDisp} disponibles</span>
+              <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5"}}>✅ {totalReg} registradas</span>
+              {totalPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏳ {totalPend} pendientes</span>}
+              {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>N/A {totalNA}</span>}
+            </div>
+            {/* Bloque 1 */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".05em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#f6a623",display:"inline-block"}}/>
+                CORTE 1 · hasta las 08:30
+              </div>
+              {fmts.map(({fmt,icon})=>{
+                const b=getBloque(fmt,b1Min,b1Max);
+                if(b.disponibles===0) return null;
+                return(
+                <div key={fmt+"b1"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                  <span style={{fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
+                  <span style={{color:"#00b894",fontWeight:700}}>✓{String(b.registradas).padStart(2,"0")} registradas</span>
+                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb"}}>({b.horaMin} a {b.horaMax||b.horaMin})</span>}
+                  <span style={{marginLeft:"auto",color:b.pendientes>0?"#0984e3":"#b2bec3",fontWeight:700,fontSize:11}}>{String(b.pendientes).padStart(2,"0")} Pendiente</span>
+                </div>
+                );
+              })}
+            </div>
+            {/* Bloque 2 — solo si ya pasó las 08:31 */}
+            {esBloque2&&(
+            <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
+              <div style={{fontSize:10,fontWeight:800,color:"#74b9ff",letterSpacing:".05em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#74b9ff",display:"inline-block"}}/>
+                CORTE 2 · 08:31 a 09:30
+              </div>
+              {fmts.map(({fmt,icon})=>{
+                const b=getBloque(fmt,b2Min,b2Max);
+                if(b.disponibles===0) return null;
+                return(
+                <div key={fmt+"b2"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                  <span style={{fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
+                  <span style={{color:"#74b9ff",fontWeight:700}}>✓{String(b.registradas).padStart(2,"0")} registradas</span>
+                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb"}}>({b.horaMin} a {b.horaMax||b.horaMin})</span>}
+                  <span style={{marginLeft:"auto",color:b.pendientes>0?"#0984e3":"#b2bec3",fontWeight:700,fontSize:11}}>{String(b.pendientes).padStart(2,"0")} Pendiente</span>
+                </div>
+                );
+              })}
+            </div>
+            )}
+            {/* Footer */}
+            <div style={{marginTop:14,fontSize:9,color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10}}>
+              VEGA · EVIDENCIAS · {hoy}
+            </div>
+          </div>
+        </div>
+        );
+      })()}}
 
       {/* MENU CONTEXTUAL */}
       {ctxMenu&&(
