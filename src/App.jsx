@@ -164,6 +164,18 @@ function getWeeksOfMonth(year, month) {
 function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin}) {
   const [selLogs, setSelLogs] = useState(new Set());
 
+  // Escuchar evento de selección automática de duplicados
+  useEffect(()=>{
+    const handler = ()=>{
+      if(window._logTableSelDups) {
+        setSelLogs(new Set(window._logTableSelDups));
+        window._logTableSelDups = null;
+      }
+    };
+    window.addEventListener("selectDups", handler);
+    return ()=>window.removeEventListener("selectDups", handler);
+  },[]);
+
   const toggleSel = (uid) => setSelLogs(prev => {
     const ns = new Set(prev);
     ns.has(uid) ? ns.delete(uid) : ns.add(uid);
@@ -293,6 +305,7 @@ export default function ChecklistApp() {
   const [logAud,  setLogAud]  = useState("Todos");
   const [logPts,  setLogPts]  = useState("Todos");
   const [logTxt,  setLogTxt]  = useState("");
+  const [logFecha,setLogFecha]= useState("");
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
@@ -544,28 +557,39 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    // Anti-duplicidad para todos los roles:
-    // Si la tienda ya tiene registro válido hoy con la misma hora exacta → bloquear
-    // Si el admin seleccionó una tienda ya registrada por cualquier usuario → avisar pero permitir
-    const duplicadas = [...tSel].filter(tId=>{
-      const reg = getReg(fecha,tId,actSel);
-      if(!reg?.evidencias?.length||reg?.anulado) return false;
-      return reg.evidencias.some(ev=>ev.hora===horaEx);
-    });
-    if(duplicadas.length>0){
-      const nombres = duplicadas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-      showToast(`⚠️ Hora ${horaEx} ya existe en: ${nombres}`);
-      return;
-    }
-    // Aviso informativo al Admin si hay tiendas ya registradas por otro auditor
-    if(isAdmin){
-      const yaReg = [...tSel].filter(tId=>{
+    // Auditor: bloquear si la tienda ya tiene CUALQUIER registro válido hoy para esta actividad
+    if(!isAdmin){
+      const yaRegistradas = [...tSel].filter(tId=>{
         const reg = getReg(fecha,tId,actSel);
         return reg?.evidencias?.length>0 && !reg?.anulado;
       });
-      if(yaReg.length>0){
-        const nombres = yaReg.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-        showToast(`ℹ️ ${nombres} ya tienen registro hoy — se agrega evidencia adicional`);
+      if(yaRegistradas.length>0){
+        const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+        showToast(`⚠️ Ya registradas hoy: ${nombres}`);
+        setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
+        return;
+      }
+    }
+    // Admin: solo bloquear si la hora exacta ya existe (evitar duplicado exacto)
+    if(isAdmin){
+      const duplicadas = [...tSel].filter(tId=>{
+        const reg = getReg(fecha,tId,actSel);
+        if(!reg?.evidencias?.length||reg?.anulado) return false;
+        return reg.evidencias.some(ev=>ev.hora===horaEx);
+      });
+      if(duplicadas.length>0){
+        const nombres = duplicadas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+        showToast(`⚠️ Hora ${horaEx} ya existe en: ${nombres}`);
+        return;
+      }
+      // Aviso informativo si Admin agrega evidencia adicional con hora diferente
+      const conReg = [...tSel].filter(tId=>{
+        const reg = getReg(fecha,tId,actSel);
+        return reg?.evidencias?.length>0 && !reg?.anulado;
+      });
+      if(conReg.length>0){
+        const nombres = conReg.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+        showToast(`ℹ️ ${nombres}: se agrega evidencia adicional`);
       }
     }
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
@@ -2443,6 +2467,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 {cfgTab===3&&(()=>{
         const allLogs=[];
+        // Detectar duplicados: misma tienda+actividad+fecha con más de 1 evidencia en el array
+        const duplicadosDocIds=new Set();
+        Object.entries(regs).forEach(([key,reg])=>{
+          if(!reg?.evidencias?.length||reg.anulado) return;
+          if(reg.evidencias.length>1) duplicadosDocIds.add(key);
+        });
+
         Object.entries(regs).forEach(([key,reg])=>{
           if(!reg?.evidencias?.length) return;
           const parts=key.replace(/--/g,"|").split("|");
@@ -2451,6 +2482,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           const tienda=tiendas.find(ti=>ti.id===tId);
           const act=acts.find(a=>a.id===aId);
           if(!tienda||!act) return;
+          const esDuplicado=duplicadosDocIds.has(key);
           reg.evidencias.forEach((ev,evIdx)=>{
             if(ev.auditor) allLogs.push({
               docId:key, evIdx,
@@ -2459,40 +2491,71 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               dni:ev.dni||"—",hora:ev.hora,
               pts:ev.puntaje,horaReg:ev.horaRegistro,
               ts:ev.timestamp,anulado:reg.anulado,
-              // clave única para selección
+              esDuplicado,
               uid:`${key}__${evIdx}`
             });
           });
         });
         allLogs.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
+
+        const totalDuplicados=allLogs.filter(l=>l.esDuplicado&&!l.anulado).length;
         const fmtOpts=["Todos",...[...new Set(allLogs.map(l=>l.formato))]];
         const actOpts=["Todas",...[...new Set(allLogs.map(l=>l.actividad))]];
         const audOpts=["Todos",...[...new Set(allLogs.map(l=>l.auditor))]];
+        const fechaOpts=["Todas",...[...new Set(allLogs.map(l=>l.fecha))].sort().reverse()];
+
         const filtered=allLogs.filter(l=>{
           if(logFmt!=="Todos"&&l.formato!==logFmt) return false;
           if(logAct!=="Todas"&&l.actividad!==logAct) return false;
           if(logAud!=="Todos"&&l.auditor!==logAud) return false;
           if(logPts!=="Todos"&&String(l.pts)!==logPts) return false;
+          if(logFecha!=="Todas"&&l.fecha!==logFecha) return false;
           if(logTxt&&!(l.tienda.toLowerCase().includes(logTxt.toLowerCase())||l.auditor.toLowerCase().includes(logTxt.toLowerCase())||l.fecha.includes(logTxt))) return false;
           return true;
         });
+
         const selSty={width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:11,outline:"none"};
         return(
         <div>
-          <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}>📋 Log de Auditoría</div>
-          <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>{allLogs.length} registros totales</div>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}>📋 Log de Auditoría</div>
+              <div style={{fontSize:11,color:"#8aaabb"}}>{allLogs.length} registros totales</div>
+            </div>
+            {/* Alerta de duplicados */}
+            {totalDuplicados>0&&(
+              <div style={{background:"#fff1f2",border:"1.5px solid #fecaca",borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                <span style={{fontSize:14}}>⚠️</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#dc2626"}}>{totalDuplicados} registros duplicados detectados</div>
+                  <div style={{fontSize:10,color:"#5a7a9a"}}>Misma tienda+actividad+día con múltiples evidencias</div>
+                </div>
+                <button onClick={()=>{
+                  // Filtrar solo duplicados automáticamente
+                  setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("duplicado");
+                }} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Ver duplicados</button>
+              </div>
+            )}
+          </div>
+
           <div style={{...S.card,padding:"12px 14px",marginBottom:12}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
               <div>
-                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FORMATO</div>
-                <select value={logFmt} onChange={e=>setLogFmt(e.target.value)} style={selSty}>
-                  {fmtOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FECHA</div>
+                <select value={logFecha} onChange={e=>setLogFecha(e.target.value)} style={selSty}>
+                  {fechaOpts.map(o=><option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
                 <select value={logAct} onChange={e=>setLogAct(e.target.value)} style={selSty}>
                   {actOpts.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FORMATO</div>
+                <select value={logFmt} onChange={e=>setLogFmt(e.target.value)} style={selSty}>
+                  {fmtOpts.map(o=><option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
@@ -2504,19 +2567,43 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div>
                 <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>PUNTAJE</div>
                 <select value={logPts} onChange={e=>setLogPts(e.target.value)} style={selSty}>
-                  {["Todos","10","8","6","0"].map(o=><option key={o} value={o}>{o==="Todos"?"Todos":o==="10"?"10pts ORO":o==="8"?"8pts PLATA":o==="6"?"6pts BRONCE":"0pts FUERA"}</option>)}
+                  {["Todos","10","8","6","0"].map(o=><option key={o}>{o==="Todos"?"Todos":o==="10"?"10pts ORO":o==="8"?"8pts PLATA":o==="6"?"6pts BRONCE":"0pts FUERA"}</option>)}
                 </select>
               </div>
+              <div>
+                <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>BUSCAR</div>
+                <input value={logTxt} onChange={e=>setLogTxt(e.target.value)} placeholder="Tienda o auditor..."
+                  style={selSty}/>
+              </div>
             </div>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>🔍</span>
-              <input value={logTxt} onChange={e=>setLogTxt(e.target.value)} placeholder="Buscar tienda, auditor o fecha..."
-                style={{...S.inp,paddingLeft:32,fontSize:12}}/>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,flexWrap:"wrap",gap:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
               <span style={{fontSize:10,color:"#8aaabb"}}>{filtered.length} de {allLogs.length} registros</span>
-              <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");}}
-                style={{fontSize:10,color:"#5a7a9a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar filtros</button>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                {totalDuplicados>0&&(
+                  <button onClick={()=>{
+                    // Preseleccionar todos los duplicados excepto el primero de cada grupo
+                    // El primero (hora más temprana) es el válido; los demás son duplicados a eliminar
+                    const porDoc={};
+                    allLogs.filter(l=>l.esDuplicado&&!l.anulado).forEach(l=>{
+                      if(!porDoc[l.docId]) porDoc[l.docId]=[];
+                      porDoc[l.docId].push(l);
+                    });
+                    // seleccionar todos excepto el de hora más temprana de cada doc
+                    const aEliminar=new Set();
+                    Object.values(porDoc).forEach(grupo=>{
+                      const sorted=[...grupo].sort((a,b)=>a.hora.localeCompare(b.hora));
+                      sorted.slice(1).forEach(l=>aEliminar.add(l.uid));
+                    });
+                    // Disparar selección en LogTable mediante evento personalizado
+                    window._logTableSelDups=aEliminar;
+                    window.dispatchEvent(new Event("selectDups"));
+                  }} style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                    ⚠️ Seleccionar duplicados a eliminar
+                  </button>
+                )}
+                <button onClick={()=>{setLogFmt("Todos");setLogAct("Todas");setLogAud("Todos");setLogPts("Todos");setLogTxt("");setLogFecha("Todas");}}
+                  style={{fontSize:10,color:"#5a7a9a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar filtros</button>
+              </div>
             </div>
           </div>
           {!filtered.length
@@ -2726,9 +2813,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
-                <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:"clamp(20px,3vw,28px)"}}>📁</span>
+                <div>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
+                  <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
+                </div>
               </div>
               <button onClick={()=>setShowStatusCard(false)}
                 style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
@@ -2772,18 +2862,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 const b=getBloque(fmt,b1Min,b1Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b1"} style={{marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,22vw,110px)"}}>
-                      <span style={{fontSize:"clamp(13px,3.5vw,16px)"}}>{icon}</span>
-                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,3vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                    </div>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                    {b.horaMin&&<span style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                <div key={fmt+"b1"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"nowrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,18vw,130px)"}}>
+                    <span style={{fontSize:"clamp(13px,2vw,18px)"}}>{icon}</span>
+                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,14px)",whiteSpace:"nowrap"}}>{fmt}</span>
                   </div>
-                  {b.pendientes>0&&<div style={{marginTop:4}}>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
-                  </div>}
+                  <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(10px,1.8vw,13px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                  {b.horaMin&&<span style={{fontSize:"clamp(9px,1.6vw,12px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                  {b.pendientes>0&&<span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(10px,1.8vw,13px)",fontWeight:700,color:"#0984e3",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>}
                 </div>
                 );
               })}
@@ -2800,18 +2886,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 const b=getBloque(fmt,b2Min,b2Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b2"} style={{marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,22vw,110px)"}}>
-                      <span style={{fontSize:"clamp(13px,3.5vw,16px)"}}>{icon}</span>
-                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,3vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                    </div>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                    {b.horaMin&&<span style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                <div key={fmt+"b2"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"nowrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:"clamp(80px,18vw,130px)"}}>
+                    <span style={{fontSize:"clamp(13px,2vw,18px)"}}>{icon}</span>
+                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,14px)",whiteSpace:"nowrap"}}>{fmt}</span>
                   </div>
-                  {b.pendientes>0&&<div style={{marginTop:4}}>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
-                  </div>}
+                  <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(10px,1.8vw,13px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                  {b.horaMin&&<span style={{fontSize:"clamp(9px,1.6vw,12px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                  {b.pendientes>0&&<span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(10px,1.8vw,13px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>}
                 </div>
                 );
               })}
