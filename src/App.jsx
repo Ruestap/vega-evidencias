@@ -558,40 +558,18 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    // Auditor: bloquear si la tienda ya tiene CUALQUIER registro válido hoy para esta actividad
-    if(!isAdmin){
-      const yaRegistradas = [...tSel].filter(tId=>{
-        const reg = getReg(fecha,tId,actSel);
-        return reg?.evidencias?.length>0 && !reg?.anulado;
-      });
-      if(yaRegistradas.length>0){
-        const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-        showToast(`⚠️ Ya registradas hoy: ${nombres}`);
-        setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
-        return;
-      }
-    }
-    // Admin: solo bloquear si la hora exacta ya existe (evitar duplicado exacto)
-    if(isAdmin){
-      const duplicadas = [...tSel].filter(tId=>{
-        const reg = getReg(fecha,tId,actSel);
-        if(!reg?.evidencias?.length||reg?.anulado) return false;
-        return reg.evidencias.some(ev=>ev.hora===horaEx);
-      });
-      if(duplicadas.length>0){
-        const nombres = duplicadas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-        showToast(`⚠️ Hora ${horaEx} ya existe en: ${nombres}`);
-        return;
-      }
-      // Aviso informativo si Admin agrega evidencia adicional con hora diferente
-      const conReg = [...tSel].filter(tId=>{
-        const reg = getReg(fecha,tId,actSel);
-        return reg?.evidencias?.length>0 && !reg?.anulado;
-      });
-      if(conReg.length>0){
-        const nombres = conReg.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-        showToast(`ℹ️ ${nombres}: se agrega evidencia adicional`);
-      }
+    // REGLA UNIVERSAL: nadie puede insertar si la tienda ya tiene registro válido hoy
+    // para esta actividad. Admin debe usar "Actualizar registro" desde el Reporte.
+    const yaRegistradas = [...tSel].filter(tId=>{
+      const reg = getReg(fecha,tId,actSel);
+      return reg?.evidencias?.length>0 && !reg?.anulado;
+    });
+    if(yaRegistradas.length>0){
+      const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+      showToast(`⚠️ Ya registradas: ${nombres}. Usa "Actualizar" desde el Reporte.`);
+      // Quitar automáticamente las ya registradas de la selección
+      setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
+      return;
     }
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
     const pct=calcP(horaEx,AR);
