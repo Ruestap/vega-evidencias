@@ -1016,7 +1016,9 @@ export default function ChecklistApp() {
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
                           {semsVis.map(sem=>actsActivas.map(a=>{
-                            const excepcion=sem.days.some(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
+                            // N/A solo si TODOS los días donde aplica la actividad tienen excepción
+                            const diasActSem=sem.days.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(dStr(vYear,vMonth,d))));
+                            const excepcion=diasActSem.length>0&&diasActSem.every(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
                             const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
                             const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
                             // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
@@ -2668,14 +2670,18 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 const b=getBloque(fmt,b1Min,b1Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b1"} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7,fontSize:12,flexWrap:"wrap"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:4,minWidth:110,flexShrink:0}}>
-                    <span style={{fontSize:14}}>{icon}</span>
-                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12}}>{fmt}</span>
+                <div key={fmt+"b1"} style={{marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                      <span style={{fontSize:14}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12,whiteSpace:"nowrap"}}>{fmt}</span>
+                    </div>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                    {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
                   </div>
-                  <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5"}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                  {b.pendientes>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>}
+                  {b.pendientes>0&&<div style={{marginTop:4}}>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
+                  </div>}
                 </div>
                 );
               })}
@@ -2691,14 +2697,18 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 const b=getBloque(fmt,b2Min,b2Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b2"} style={{display:"flex",alignItems:"center",gap:6,marginBottom:7,fontSize:12,flexWrap:"wrap"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:4,minWidth:110,flexShrink:0}}>
-                    <span style={{fontSize:14}}>{icon}</span>
-                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12}}>{fmt}</span>
+                <div key={fmt+"b2"} style={{marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                      <span style={{fontSize:14}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:12,whiteSpace:"nowrap"}}>{fmt}</span>
+                    </div>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
+                    {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
                   </div>
-                  <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#74b9ff",background:"#e8f4fd"}}>✅ {String(b.registradas).padStart(2,"0")} registradas</span>
-                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb",fontWeight:500}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                  {b.pendientes>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>}
+                  {b.pendientes>0&&<div style={{marginTop:4}}>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>⏰ {String(b.pendientes).padStart(2,"0")} pendientes por registrar</span>
+                  </div>}
                 </div>
                 );
               })}
