@@ -2777,14 +2777,26 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         };
         const b1Min=toMin("00:00"), b1Max=toMin(bloque1Hasta);
         const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
-        // Totales generales
+        // Totales generales — basados en la actividad que tiene registros reales hoy
+        // Si hay múltiples actividades con registros, usar la primera (la más relevante del día)
         const totalTiendas=tiAct.length;
-        const totalNA=tiAct.filter(ti=>actsHoy.every(a=>isExc(ti.id,a.id,hoy))).length;
-        const totalDisp=totalTiendas-totalNA;
-        const totalReg=tiAct.filter(ti=>actsHoy.some(a=>{
+        const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
           const reg=getReg(hoy,ti.id,a.id);
-          return reg&&reg.evidencias?.length&&!reg.anulado;
-        })).length;
+          return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+        }));
+        // La actividad de referencia para los totales: la que tiene registros, o todas si no hay ninguna
+        const actsRef=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
+        // N/A: tiendas excluidas para TODAS las actividades de referencia
+        const totalNA=tiAct.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
+        const totalDisp=totalTiendas-totalNA;
+        // Registradas: tienen evidencia válida hoy en alguna actividad de referencia
+        const totalReg=tiAct.filter(ti=>
+          !actsRef.every(a=>isExc(ti.id,a.id,hoy)) &&
+          actsRef.some(a=>{
+            const reg=getReg(hoy,ti.id,a.id);
+            return reg?.evidencias?.length>0&&!reg?.anulado;
+          })
+        ).length;
         const totalPend=totalDisp-totalReg;
         const nowTime=new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
         const esBloque2=toMin(nowTime)>b1Max;
@@ -2831,8 +2843,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
               <span style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#1a2f4a",fontWeight:700}}>{totalDisp} disponibles</span>
               <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap"}}>✅ {totalReg} registradas</span>
-              {totalPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#0984e3",background:"#e8f4fd",whiteSpace:"nowrap"}}>⏳ {totalPend} pendientes</span>}
-              {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>N/A {totalNA}</span>}
+              <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:totalPend>0?"#0984e3":"#b2bec3",background:totalPend>0?"#e8f4fd":"#f4f6f8",whiteSpace:"nowrap"}}>⏳ {totalPend} pendientes</span>
+              {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {totalNA} excluidas</span>}
             </div>
 
             {/* Corte 1 */}
