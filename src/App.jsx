@@ -452,16 +452,16 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    // Anti-duplicidad: verificar si alguna tienda ya tiene registro válido hoy
-    const yaRegistradas = [...tSel].filter(tId=>{
+    // Anti-duplicidad: solo bloquear si el auditor (no admin) intenta registrar
+    // una tienda que YA tiene evidencia con la MISMA hora exacta hoy
+    const duplicadas = !isAdmin ? [...tSel].filter(tId=>{
       const reg = getReg(fecha,tId,actSel);
-      return reg?.evidencias?.length>0 && !reg?.anulado;
-    });
-    if(yaRegistradas.length>0 && !isAdmin){
-      const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
-      showToast(`⚠️ Ya registradas hoy: ${nombres}. Solo Admin puede sobrescribir.`);
-      // Quitar las ya registradas de la selección automáticamente
-      setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
+      if(!reg?.evidencias?.length||reg?.anulado) return false;
+      return reg.evidencias.some(ev=>ev.hora===horaEx);
+    }) : [];
+    if(duplicadas.length>0){
+      const nombres = duplicadas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
+      showToast(`⚠️ Hora ${horaEx} ya registrada en: ${nombres}`);
       return;
     }
     const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
@@ -2571,9 +2571,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         const bloque2Desde="08:31";
         const bloque2Hasta="09:30"; // segundo corte
         const fmts=[
-          {fmt:"Mayorista",   icon:"🏬"},
-          {fmt:"Supermayorista",icon:"🏪"},
-          {fmt:"Market",      icon:"🛒"},
+          {fmt:"Mayorista",    icon:"🏭", desc:"Distribución"},
+          {fmt:"Supermayorista",icon:"🏬", desc:"Gran superficie"},
+          {fmt:"Market",       icon:"🛒", desc:"Punto de venta"},
         ];
         // Para la actividad activa del día (o todas si no hay selección)
         const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
@@ -2627,41 +2627,48 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)"}}
           onClick={()=>setShowStatusCard(false)}>
           <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
-            style={{background:"#fff",borderRadius:20,padding:20,width:"90%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
+            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:20,width:"90%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
             {/* Header tarjeta */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
               <div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📊 ESTADO DE REGISTROS</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{hoy} · {nowTime} hrs</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
+                <div style={{fontSize:10,color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
               </div>
               <button onClick={()=>setShowStatusCard(false)}
-                style={{background:"none",border:"none",fontSize:18,color:"#8aaabb",cursor:"pointer"}}>✕</button>
+                style={{background:"#f0f4f8",border:"none",width:28,height:28,borderRadius:"50%",fontSize:13,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✕</button>
             </div>
             {/* Totales */}
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10}}>
-              <span style={{fontSize:11,color:"#5a7a9a",fontWeight:700}}>Total {totalTiendas}</span>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+              <span style={{fontSize:11,color:"#5a7a9a",fontWeight:600}}>Total {totalTiendas}</span>
               <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
-              <span style={{fontSize:11,color:"#1a2f4a",fontWeight:800}}>{totalDisp} disponibles</span>
+              <span style={{fontSize:11,color:"#1a2f4a",fontWeight:700}}>{totalDisp} disponibles</span>
               <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#00b894",background:"#e8faf5"}}>✅ {totalReg} registradas</span>
               {totalPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd"}}>⏳ {totalPend} pendientes</span>}
               {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA"}}>N/A {totalNA}</span>}
             </div>
             {/* Bloque 1 */}
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".05em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:"#f6a623",display:"inline-block"}}/>
+              <div style={{fontSize:10,fontWeight:700,color:"#f6a623",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#f6a623",display:"inline-block",flexShrink:0}}/>
                 CORTE 1 · hasta las 08:30
               </div>
-              {fmts.map(({fmt,icon})=>{
+              {fmts.map(({fmt,icon,desc})=>{
                 const b=getBloque(fmt,b1Min,b1Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b1"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}>
-                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-                  <span style={{fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
-                  <span style={{color:"#00b894",fontWeight:700}}>✓{String(b.registradas).padStart(2,"0")} registradas</span>
-                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb"}}>({b.horaMin} a {b.horaMax||b.horaMin})</span>}
-                  <span style={{marginLeft:"auto",color:b.pendientes>0?"#0984e3":"#b2bec3",fontWeight:700,fontSize:11}}>{String(b.pendientes).padStart(2,"0")} Pendiente</span>
+                <div key={fmt+"b1"} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",borderRadius:9,background:"#f8fafc",border:"1px solid #e9eef5"}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:FMT[fmt]?.bg||"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{icon}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{fmt}</div>
+                    <div style={{fontSize:9,color:"#8aaabb",fontWeight:500}}>{desc}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#00b894"}}>✓ {String(b.registradas).padStart(2,"0")}</div>
+                    {b.horaMin&&<div style={{fontSize:9,color:"#8aaabb"}}>{b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` → ${b.horaMax}`:""}</div>}
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0,minWidth:60}}>
+                    <div style={{fontSize:12,fontWeight:700,color:b.pendientes>0?"#0984e3":"#b2bec3"}}>{String(b.pendientes).padStart(2,"0")} pend.</div>
+                  </div>
                 </div>
                 );
               })}
@@ -2669,27 +2676,34 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* Bloque 2 — solo si ya pasó las 08:31 */}
             {esBloque2&&(
             <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
-              <div style={{fontSize:10,fontWeight:800,color:"#74b9ff",letterSpacing:".05em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:"#74b9ff",display:"inline-block"}}/>
+              <div style={{fontSize:10,fontWeight:700,color:"#74b9ff",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:"#74b9ff",display:"inline-block",flexShrink:0}}/>
                 CORTE 2 · 08:31 a 09:30
               </div>
-              {fmts.map(({fmt,icon})=>{
+              {fmts.map(({fmt,icon,desc})=>{
                 const b=getBloque(fmt,b2Min,b2Max);
                 if(b.disponibles===0) return null;
                 return(
-                <div key={fmt+"b2"} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}>
-                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-                  <span style={{fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
-                  <span style={{color:"#74b9ff",fontWeight:700}}>✓{String(b.registradas).padStart(2,"0")} registradas</span>
-                  {b.horaMin&&<span style={{fontSize:10,color:"#8aaabb"}}>({b.horaMin} a {b.horaMax||b.horaMin})</span>}
-                  <span style={{marginLeft:"auto",color:b.pendientes>0?"#0984e3":"#b2bec3",fontWeight:700,fontSize:11}}>{String(b.pendientes).padStart(2,"0")} Pendiente</span>
+                <div key={fmt+"b2"} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",borderRadius:9,background:"#f8fafc",border:"1px solid #e9eef5"}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:FMT[fmt]?.bg||"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{icon}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{fmt}</div>
+                    <div style={{fontSize:9,color:"#8aaabb",fontWeight:500}}>{desc}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#74b9ff"}}>✓ {String(b.registradas).padStart(2,"0")}</div>
+                    {b.horaMin&&<div style={{fontSize:9,color:"#8aaabb"}}>{b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` → ${b.horaMax}`:""}</div>}
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0,minWidth:60}}>
+                    <div style={{fontSize:12,fontWeight:700,color:b.pendientes>0?"#0984e3":"#b2bec3"}}>{String(b.pendientes).padStart(2,"0")} pend.</div>
+                  </div>
                 </div>
                 );
               })}
             </div>
             )}
             {/* Footer */}
-            <div style={{marginTop:14,fontSize:9,color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10}}>
+            <div style={{marginTop:14,fontSize:9,color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
               VEGA · EVIDENCIAS · {hoy}
             </div>
           </div>
