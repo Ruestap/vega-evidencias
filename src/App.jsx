@@ -2722,31 +2722,29 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"16px"}}
           onClick={()=>setShowStatusCard(false)}>
           <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
-            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(14px,4vw,24px)",width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
+            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(16px,3vw,28px)",width:"100%",maxWidth:600,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
 
             {/* Header */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(12px,3.5vw,16px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
-                <div style={{fontSize:"clamp(9px,2.5vw,11px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em"}}>ESTADO DE REGISTROS</div>
+                <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:2,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
               </div>
               <button onClick={()=>setShowStatusCard(false)}
-                style={{background:"#f0f4f8",border:"none",width:28,height:28,borderRadius:"50%",fontSize:13,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
+                style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
             </div>
 
-            {/* Actividad */}
+            {/* Actividad — SOLO si hay registro real de hoy con fecha exacta */}
             {(()=>{
-              const actsAMostrar = actSel
-                ? actsHoy.filter(a=>a.id===actSel)
-                : actsHoy.filter(a=>tiAct.some(ti=>{
-                    const reg=getReg(hoy,ti.id,a.id);
-                    return reg?.evidencias?.length>0 && !reg?.anulado && reg?.fecha===hoy;
-                  }));
-              if(actsAMostrar.length===0) return null;
+              const actsConRegHoy = actsHoy.filter(a=>tiAct.some(ti=>{
+                const reg=getReg(hoy,ti.id,a.id);
+                return reg?.evidencias?.length>0 && !reg?.anulado && reg?.fecha===hoy;
+              }));
+              if(actsConRegHoy.length===0) return null;
               return(
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-                  {actsAMostrar.map(a=>(
-                    <span key={a.id} style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"4px 10px",display:"inline-flex",alignItems:"center",gap:4}}>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                  {actsConRegHoy.map(a=>(
+                    <span key={a.id} style={{fontSize:"clamp(11px,1.8vw,13px)",color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"5px 12px",display:"inline-flex",alignItems:"center",gap:4}}>
                       {a.e} {a.n}
                     </span>
                   ))}
