@@ -291,7 +291,7 @@ export default function ChecklistApp() {
   const [actSel,  setActSel]  = useState(null);
   const [tSel,    setTSel]    = useState(new Set());
   const [rango,   setRango]   = useState(null);
-  const [horaEx,  setHoraEx]  = useState("07:00");
+  const [horaEx,  setHoraEx]  = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
   const [fmtFilt,      setFmtFilt]      = useState("Todas");
@@ -334,6 +334,16 @@ export default function ChecklistApp() {
   const longExcRef = useRef(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
+  const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}));
+
+  // Actualizar la hora de la tarjeta cada 30 segundos mientras esté abierta
+  useEffect(()=>{
+    if(!showStatusCard) return;
+    const tick=()=>setStatusNowTime(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}));
+    tick(); // actualizar inmediatamente al abrir
+    const iv=setInterval(tick,30000);
+    return()=>clearInterval(iv);
+  },[showStatusCard]);
   const statusCardRef = useRef(null);
 
   /* ══ FIREBASE SYNC ══ */
@@ -590,7 +600,7 @@ export default function ChecklistApp() {
     });
     await Promise.all(promises);
     showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
-    setTSel(new Set());setRango(null);setHoraEx("07:00");setObsEx("");setPaso(2);setVerRegistradas(false);
+    setTSel(new Set());setRango(null);setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));setObsEx("");setPaso(2);setVerRegistradas(false);
   };
 
   const eliminarRegistro = async (docId) => {
@@ -2806,7 +2816,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           })
         ).length;
         const totalPend=totalDisp-totalReg;
-        const nowTime=new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+        const nowTime=statusNowTime;
         const esBloque2=toMin(nowTime)>b1Max;
         return(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"16px"}}
