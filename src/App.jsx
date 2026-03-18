@@ -2740,24 +2740,33 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       )}
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
-        // Calcular datos para la tarjeta por formato y por bloque horario
         const hoy=todayStr();
-        const bloque1Hasta="08:30"; // primer corte
-        const bloque2Desde="08:31";
-        const bloque2Hasta="09:30"; // segundo corte
+        // Rangos de corte: usar el rango configurado de la actividad de referencia
+        // c100 = hora ORO = cierre del Corte 1. Corte 2 empieza 1 min después.
+        const actRefRango = actsRef.length>0 ? getRangoActivo(actsRef[0].id, hoy) : RANGOS_DEFAULT;
+        const bloque1Hasta = actRefRango.c100 || "08:30";
+        const bloque2Desde = (() => {
+          const [h,m] = bloque1Hasta.split(":").map(Number);
+          const next = h*60+m+1;
+          return String(Math.floor(next/60)).padStart(2,"0")+":"+String(next%60).padStart(2,"0");
+        })();
+        const bloque2Hasta = "09:30";
         const fmts=[
-          {fmt:"Mayorista",    icon:"🏭", desc:"Distribución"},
-          {fmt:"Supermayorista",icon:"🏬", desc:"Gran superficie"},
-          {fmt:"Market",       icon:"🛒", desc:"Punto de venta"},
+          {fmt:"Mayorista",    icon:"🏭"},
+          {fmt:"Supermayorista",icon:"🏬"},
+          {fmt:"Market",       icon:"🛒"},
         ];
-        // Para la actividad activa del día (o todas si no hay selección)
         const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
-        const getBloque=(fmtNombre, desdeMin, hastaMin)=>{
+        // getBloque: lógica correcta para ambos cortes
+        // Para Corte 1: registradas = evidencias con hora en [desdeMin, hastaMin]
+        // Para Corte 2: registradas = evidencias con hora en [desdeMin, ∞) — incluye registros tardíos
+        //               pendientes  = tiendas sin NINGÚN registro válido del día
+        const getBloque=(fmtNombre, desdeMin, hastaMin, esCorteFinal=false)=>{
           const ts=tiAct.filter(ti=>ti.f===fmtNombre);
-          // Usar actsRef (actividad con registros reales hoy, o todas las del día)
           const excluidasList=ts.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy)));
           const disponiblesList=ts.filter(ti=>!(actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))));
-          // registradas en ese bloque horario
+          // Para Corte 2 (esCorteFinal): registradas = cualquier evidencia válida hoy con hora >= desdeMin
+          // Para Corte 1: registradas = evidencias dentro de la ventana exacta
           const registradas=disponiblesList.filter(ti=>{
             return actsRef.some(a=>{
               const reg=getReg(hoy,ti.id,a.id);
@@ -2765,7 +2774,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const hora=primerEnvio(reg.evidencias);
               if(!hora) return false;
               const m=toMin(hora);
-              return m>=desdeMin&&m<=hastaMin;
+              return esCorteFinal ? m>=desdeMin : (m>=desdeMin&&m<=hastaMin);
             });
           });
           // hora min y max de registradas en este bloque
@@ -2777,21 +2786,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const hora=primerEnvio(reg.evidencias);
               if(!hora) return;
               const m=toMin(hora);
-              if(m>=desdeMin&&m<=hastaMin){
+              const enBloque = esCorteFinal ? m>=desdeMin : (m>=desdeMin&&m<=hastaMin);
+              if(enBloque){
                 if(!horaMin||m<toMin(horaMin)) horaMin=hora;
                 if(!horaMax||m>toMin(horaMax)) horaMax=hora;
               }
             });
           });
-          const pendientes=disponiblesList.length-registradas.length;
-          return {
-            total:ts.length,
-            disponibles:disponiblesList.length,
-            registradas:registradas.length,
-            pendientes,
-            excluidas:excluidasList.length,
-            horaMin,horaMax
-          };
+          // Pendientes: tiendas sin ningún registro válido hoy (para Corte 2)
+          // o tiendas sin registro en la ventana (para Corte 1)
+          const sinRegistroHoy = esCorteFinal
+            ? disponiblesList.filter(ti=>!actsRef.some(a=>{
+                const reg=getReg(hoy,ti.id,a.id);
+                return reg?.evidencias?.length>0&&!reg?.anulado;
+              }))
+            : [];
+          const pendientes = esCorteFinal
+            ? sinRegistroHoy.length
+            : disponiblesList.length-registradas.length;
+          return {total:ts.length,disponibles:disponiblesList.length,registradas:registradas.length,pendientes,excluidas:excluidasList.length,horaMin,horaMax};
         };
         const b1Min=toMin("00:00"), b1Max=toMin(bloque1Hasta);
         const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
@@ -2822,7 +2835,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"16px"}}
           onClick={()=>setShowStatusCard(false)}>
           <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
-            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(16px,3vw,28px)",width:"100%",maxWidth:600,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
+            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(16px,3vw,24px)",width:"100%",maxWidth:700,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
 
             {/* Header */}
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
@@ -2904,7 +2917,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",whiteSpace:"nowrap"}}>⚠️ Fuera de corte · puntaje reducido</span>
               </div>
               {fmts.map(({fmt,icon})=>{
-                const b=getBloque(fmt,b2Min,b2Max);
+                const b=getBloque(fmt,b2Min,b2Max,true);
                 // Solo mostrar si hay tiendas disponibles con actividad en este formato
                 if(b.disponibles===0) return null;
                 return(
