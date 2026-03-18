@@ -2741,32 +2741,31 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         const hoy=todayStr();
-        // Rangos de corte: usar el rango configurado de la actividad de referencia
-        // c100 = hora ORO = cierre del Corte 1. Corte 2 empieza 1 min después.
-        const actRefRango = actsRef.length>0 ? getRangoActivo(actsRef[0].id, hoy) : RANGOS_DEFAULT;
-        const bloque1Hasta = actRefRango.c100 || "08:30";
-        const bloque2Desde = (() => {
-          const [h,m] = bloque1Hasta.split(":").map(Number);
-          const next = h*60+m+1;
-          return String(Math.floor(next/60)).padStart(2,"0")+":"+String(next%60).padStart(2,"0");
-        })();
-        const bloque2Hasta = "09:30";
         const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
           {fmt:"Market",       icon:"🛒"},
         ];
         const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
-        // getBloque: lógica correcta para ambos cortes
-        // Para Corte 1: registradas = evidencias con hora en [desdeMin, hastaMin]
-        // Para Corte 2: registradas = evidencias con hora en [desdeMin, ∞) — incluye registros tardíos
-        //               pendientes  = tiendas sin NINGÚN registro válido del día
+        // actsRef debe declararse ANTES de cualquier uso
+        const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
+          const reg=getReg(hoy,ti.id,a.id);
+          return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+        }));
+        const actsRef=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
+        // Rangos de corte desde la actividad de referencia (respeta config del Admin)
+        const actRefRango = actsRef.length>0 ? getRangoActivo(actsRef[0].id, hoy) : RANGOS_DEFAULT;
+        const bloque1Hasta = actRefRango.c100 || "08:30";
+        const bloque2Desde = (()=>{
+          const [h,m] = bloque1Hasta.split(":").map(Number);
+          const next = h*60+m+1;
+          return String(Math.floor(next/60)).padStart(2,"0")+":"+String(next%60).padStart(2,"0");
+        })();
+        const bloque2Hasta = "09:30";
         const getBloque=(fmtNombre, desdeMin, hastaMin, esCorteFinal=false)=>{
           const ts=tiAct.filter(ti=>ti.f===fmtNombre);
           const excluidasList=ts.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy)));
           const disponiblesList=ts.filter(ti=>!(actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))));
-          // Para Corte 2 (esCorteFinal): registradas = cualquier evidencia válida hoy con hora >= desdeMin
-          // Para Corte 1: registradas = evidencias dentro de la ventana exacta
           const registradas=disponiblesList.filter(ti=>{
             return actsRef.some(a=>{
               const reg=getReg(hoy,ti.id,a.id);
@@ -2777,7 +2776,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               return esCorteFinal ? m>=desdeMin : (m>=desdeMin&&m<=hastaMin);
             });
           });
-          // hora min y max de registradas en este bloque
           let horaMin=null, horaMax=null;
           disponiblesList.forEach(ti=>{
             actsRef.forEach(a=>{
@@ -2793,30 +2791,18 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               }
             });
           });
-          // Pendientes: tiendas sin ningún registro válido hoy (para Corte 2)
-          // o tiendas sin registro en la ventana (para Corte 1)
           const sinRegistroHoy = esCorteFinal
             ? disponiblesList.filter(ti=>!actsRef.some(a=>{
                 const reg=getReg(hoy,ti.id,a.id);
                 return reg?.evidencias?.length>0&&!reg?.anulado;
               }))
             : [];
-          const pendientes = esCorteFinal
-            ? sinRegistroHoy.length
-            : disponiblesList.length-registradas.length;
+          const pendientes = esCorteFinal ? sinRegistroHoy.length : disponiblesList.length-registradas.length;
           return {total:ts.length,disponibles:disponiblesList.length,registradas:registradas.length,pendientes,excluidas:excluidasList.length,horaMin,horaMax};
         };
         const b1Min=toMin("00:00"), b1Max=toMin(bloque1Hasta);
         const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
-        // Totales generales — basados en la actividad que tiene registros reales hoy
-        // Si hay múltiples actividades con registros, usar la primera (la más relevante del día)
         const totalTiendas=tiAct.length;
-        const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-          const reg=getReg(hoy,ti.id,a.id);
-          return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-        }));
-        // La actividad de referencia para los totales: la que tiene registros, o todas si no hay ninguna
-        const actsRef=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
         // N/A: tiendas excluidas para TODAS las actividades de referencia
         const totalNA=tiAct.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
         const totalDisp=totalTiendas-totalNA;
