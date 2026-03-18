@@ -334,13 +334,13 @@ export default function ChecklistApp() {
   const longExcRef = useRef(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
-  const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}));
+  const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
 
   // Actualizar la hora de la tarjeta cada 30 segundos mientras esté abierta
   useEffect(()=>{
     if(!showStatusCard) return;
-    const tick=()=>setStatusNowTime(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}));
-    tick(); // actualizar inmediatamente al abrir
+    const tick=()=>setStatusNowTime(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+    tick();
     const iv=setInterval(tick,30000);
     return()=>clearInterval(iv);
   },[showStatusCard]);
