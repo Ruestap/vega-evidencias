@@ -2896,30 +2896,45 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* Corte 2 — aparece automáticamente después de las 08:31 */}
             {esBloque2&&(
             <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
-              <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#185FA5",letterSpacing:".06em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block",flexShrink:0}}/>
-                CORTE 2 · 08:31 a 09:30
+              {/* Header Corte 2 con badge de advertencia */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:6}}>
+                <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#185FA5",letterSpacing:".06em",display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block",flexShrink:0}}/>
+                  CORTE 2 · 08:31 a 09:30
+                </div>
+                <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",whiteSpace:"nowrap"}}>⚠️ Fuera de corte · puntaje reducido</span>
               </div>
-              {fmts.map(({fmt,icon})=>{
-                const b=getBloque(fmt,b2Min,b2Max);
-                if(b.total===0) return null;
-                return(
-                <div key={fmt+"b2"} style={{marginBottom:10,padding:"8px 12px",background:"#f0f6ff",borderRadius:10,border:"1px solid #d6e8f5"}}>
+              {(()=>{
+                // Solo mostrar formatos que tenían pendientes al cierre del Corte 1
+                const filasC2 = fmts.map(({fmt,icon})=>({
+                  fmt, icon,
+                  b1: getBloque(fmt,b1Min,b1Max),
+                  b2: getBloque(fmt,b2Min,b2Max)
+                })).filter(({b1,b2})=>b1.pendientes>0||b2.registradas>0);
+                if(filasC2.length===0) return(
+                  <div style={{textAlign:"center",padding:"14px",fontSize:12,color:"#0F6E56",fontWeight:700,background:"#E1F5EE",borderRadius:10}}>
+                    ✅ Todas las tiendas registradas en Corte 1
+                  </div>
+                );
+                return filasC2.map(({fmt,icon,b1,b2})=>(
+                <div key={fmt+"b2"} style={{marginBottom:10,padding:"8px 12px",background:"#fff8f8",borderRadius:10,border:"1px solid #F7C1C1"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
                       <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                      <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{b.total}</span>
                     </div>
-                    <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a",fontWeight:600,whiteSpace:"nowrap"}}>{b.disponibles} disp.</span>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
-                    {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#854F0B":"#b2bec3",background:b.pendientes>0?"#FAEEDA":"#f4f6f8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
-                    {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas} excl.</span>}
+                    {/* Registradas en Corte 2 — se actualiza en tiempo real */}
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b2.registradas).padStart(2,"0")} reg.</span>
+                    {b2.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b2.horaMin}{b2.horaMax&&b2.horaMax!==b2.horaMin?` a ${b2.horaMax}`:""})</span>}
+                    {/* Pendientes restantes del Corte 1 */}
+                    {b1.pendientes>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b1.pendientes).padStart(2,"0")} pend. de corte 1</span>}
+                    {/* Badge de puntaje máximo alcanzable */}
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#633806",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>6 pts máx.</span>
+                    {b2.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b2.excluidas} excl.</span>}
                   </div>
                 </div>
-                );
-              })}
+                ));
+              })()}
             </div>
             )}
 
