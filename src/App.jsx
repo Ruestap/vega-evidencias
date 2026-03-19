@@ -2853,17 +2853,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   /* ══ VIEWER DASHBOARD — narrativa estratégica para gerencia ══ */
   const renderViewerDash = ()=>{
     const hoy=todayStr();
-    // Calcular eficiencia del mes completo
-    const totalOb=Object.values(regs).filter(r=>!r.anulado&&r.evidencias?.length).reduce((sum,r)=>{
-      return sum+r.evidencias.reduce((s,ev)=>s+(ev.puntaje||0),0);
-    },0);
-    // Tendencia semanal usando cálculos existentes
+    const esMesActual=vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
+
+    // ── Tendencia semanal — solo días del mes visualizado hasta hoy ──
     const tendenciaViewer=semanasDelMes.map(s=>{
       let ob=0,mx=0;
       tiAct.forEach(ti=>{
         s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy) return;
+          if(ds>hoy) return; // no contar días futuros
           const dw=getDow(ds);
           acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             mx+=10;
@@ -2874,37 +2872,74 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       });
       return mx>0?{pct:Math.round((ob/mx)*100),ob,mx}:null;
     });
-    // Semana actual
-    const iSemActual=semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===hoy));
-    const vSemActual=tendenciaViewer[iSemActual>=0?iSemActual:0];
-    const vSemAnt=iSemActual>0?tendenciaViewer[iSemActual-1]:null;
+
+    // Bug 1 fix: semana "actual" = hoy si es mes actual, última semana con datos si es mes histórico
+    const iSemActual=esMesActual
+      ? semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===hoy))
+      : tendenciaViewer.reduce((last,v,i)=>v!==null?i:last,-1); // última semana con datos
+    const iSemRef=iSemActual>=0?iSemActual:tendenciaViewer.length-1;
+    const vSemActual=tendenciaViewer[iSemRef];
+    const vSemAnt=iSemRef>0?tendenciaViewer[iSemRef-1]:null;
     const deltaSem=vSemActual&&vSemAnt?vSemActual.pct-vSemAnt.pct:null;
-    // Eficiencia global del mes
+
+    // Eficiencia global del mes visualizado
     const efMes=(()=>{
       let ob=0,mx=0;
       tendenciaViewer.forEach(v=>{if(v){ob+=v.ob;mx+=v.mx;}});
       return mx>0?Math.round((ob/mx)*100):null;
     })();
-    // Distribución de cortes — usando datos de eficiencia horaria
-    const allEvsViewer=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]).filter(ev=>ev.hora);
-    const totalEvsV=allEvsViewer.length||1;
-    const nOroV=allEvsViewer.filter(ev=>toMin(ev.hora)<=toMin("08:30")).length;
-    const nC2V=allEvsViewer.filter(ev=>toMin(ev.hora)>toMin("08:30")&&toMin(ev.hora)<=toMin("09:30")).length;
-    const nFueraV=allEvsViewer.filter(ev=>toMin(ev.hora)>toMin("09:30")).length;
-    // Actividades por eficiencia
+
+    // Bug 5 fix: distribución de cortes SOLO del mes visualizado, con rangos reales por actividad
+    // En lugar de contar evidencias brutas, calculamos por combinación tienda+actividad+día
+    let nOroV=0,nC2V=0,nFueraV=0,nSinRegV=0,nTotalEsperadoV=0;
+    // Determinar el rango de corte dominante para mostrar en el KPI
+    const rangosUsados=new Set();
+    tiAct.forEach(ti=>{
+      semanasDelMes.forEach(s=>s.days.forEach(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        if(ds>hoy) return;
+        const dw=getDow(ds);
+        acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          nTotalEsperadoV++;
+          const rango=getRangoActivo(a.id,ds);
+          const c1=toMin(rango.c100||"08:30");
+          const c2=toMin(rango.c80||"09:00");
+          rangosUsados.add(rango.c100||"08:30"); // para mostrar en KPI
+          const reg=getReg(ds,ti.id,a.id);
+          if(!reg?.evidencias||reg.anulado){nSinRegV++;return;}
+          const m=toMin(primerEnvio(reg.evidencias));
+          if(m<=c1) nOroV++;
+          else if(m<=c2) nC2V++;
+          else nFueraV++;
+        });
+      }));
+    });
+    const totalContadoV=nOroV+nC2V+nFueraV+nSinRegV||1;
+    // Rango dominante para mostrar en KPI (el más frecuente)
+    const rangoMostrar=[...rangosUsados].sort()[0]||"08:30";
+
+    // Actividades por eficiencia — mes visualizado
     const actEfectV=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
-      let ob=0,mx=0;
+      let ob=0,mx=0,nC1=0,nC2act=0;
+      const rango=getRangoActivo(a.id,hoy);
+      const c1=toMin(rango.c100||"08:30");
       tiAct.forEach(ti=>{
         semanasDelMes.forEach(s=>s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
           mx+=10;
           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-          if(p!==null) ob+=p;
+          if(p!==null){
+            ob+=p;
+            const reg=getReg(ds,ti.id,a.id);
+            const m=toMin(primerEnvio(reg?.evidencias));
+            if(m<=c1) nC1++; else nC2act++;
+          }
         }));
       });
-      return {a,pct:mx>0?Math.round((ob/mx)*100):null,ob,mx};
+      return {a,pct:mx>0?Math.round((ob/mx)*100):null,ob,mx,nC1,nC2act,total:mx/10||1};
     }).filter(x=>x.pct!==null).sort((a,b)=>b.pct-a.pct);
+
     // Formato eficiencia
     const fmtEfV=["Mayorista","Supermayorista","Market"].map(fmt=>{
       let ob=0,mx=0;
@@ -2920,21 +2955,41 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           });
         }));
       });
-      return {fmt,icon:FMT[fmt]?.c,bg:FMT[fmt]?.bg,pct:mx>0?Math.round((ob/mx)*100):null};
+      return {fmt,pct:mx>0?Math.round((ob/mx)*100):null};
     });
-    // Tiendas en riesgo
+
+    // Bug 2 fix: tiendas en riesgo — excluir tiendas sin ningún día evaluable en el mes
+    // Una tienda está en riesgo SOLO si tuvo al menos un día evaluable (no N/A global)
     const scoresMesV=tiAct.map(ti=>{
       const ef=calcMesDetalle(ti.id);
+      // Verificar que la tienda tuvo al menos 1 actividad evaluable en el mes
+      const tuvoDiasEvaluables=semanasDelMes.some(s=>s.days.some(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        if(ds>hoy) return false;
+        const dw=getDow(ds);
+        return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
+      }));
+      if(!tuvoDiasEvaluables) return {ti,pct:null}; // completamente excluida, no mostrar
       return {ti,pct:ef?.pct??null};
     });
     const enRiesgo=scoresMesV.filter(s=>s.pct!==null&&s.pct<60).sort((a,b)=>(a.pct??99)-(b.pct??99));
     const enAtención=scoresMesV.filter(s=>s.pct!==null&&s.pct>=60&&s.pct<80).sort((a,b)=>(a.pct??99)-(b.pct??99)).slice(0,3);
-    // Sentencia narrativa
-    const semLabel=semanasDelMes[iSemActual>=0?iSemActual:0]?.label||"Semana actual";
-    const esAlerta=deltaSem!==null&&deltaSem<-5||enRiesgo.length>0;
+
+    // Bug 4 fix: nombre del día de la semana dinámico para comparativa
+    const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    const semAntDate=new Date(hoy); semAntDate.setDate(semAntDate.getDate()-7);
+    const diaSemAnt=DIAS_ES[semAntDate.getDay()]; // nombre real del día
+
+    // Sentencia narrativa — usa semana de referencia correcta
+    const semLabel=semanasDelMes[iSemRef]?.label||"Período";
+    const esAlerta=(deltaSem!==null&&deltaSem<-5)||enRiesgo.length>0;
     let narrativa="";
-    if(vSemActual) narrativa=`${semLabel} registra ${vSemActual.pct}% de eficiencia`;
-    if(deltaSem!==null) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
+    if(vSemActual){
+      narrativa=esMesActual
+        ?`${semLabel} registra ${vSemActual.pct}% de eficiencia`
+        :`${MESES[vMonth]} cerró con ${efMes!==null?efMes+"%":"—"} de eficiencia global`;
+    }
+    if(deltaSem!==null&&esMesActual) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
     const actMejor=actEfectV[0];
     const actPeor=actEfectV[actEfectV.length-1];
     if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
@@ -2956,21 +3011,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <span style={{fontSize:18,flexShrink:0}}>{esAlerta?"⚠️":"📊"}</span>
         <div>
           <div style={{fontSize:13,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.6}}>{narrativa}</div>
-          {deltaSem!==null&&Math.abs(deltaSem)>=10&&(
-            <div style={{fontSize:11,color:esAlerta?"#dc2626":"#2563eb",marginTop:3}}>
-              {deltaSem<0?"Caída significativa detectada — revisar actividades con mayor pendiente":"Mejora significativa respecto a la semana anterior"}
-            </div>
-          )}
+          {!esMesActual&&<div style={{fontSize:11,color:"#6b7280",marginTop:3}}>Datos del mes completo · {MESES[vMonth]} {vYear}</div>}
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — Bug 3 fix: mostrar rango real en cortes */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8,marginBottom:14}}>
         {[
-          {label:"Eficiencia global",value:efMes!==null?efMes+"%":"—",color:efMes!==null?sc(efMes):"#888",sub:deltaSem!==null?`${deltaSem>=0?"▲":"▼"} ${Math.abs(deltaSem)}pts vs sem. ant.`:`${MESES[vMonth]}`},
-          {label:"Corte 1 · ORO",value:Math.round(nOroV/totalEvsV*100)+"%",color:"#BA7517",sub:"en tiempo óptimo"},
-          {label:"Corte 2 · rescatados",value:Math.round(nC2V/totalEvsV*100)+"%",color:"#185FA5",sub:"tardíos que cumplieron"},
-          {label:"Sin registrar",value:Math.round((totalEvsV-nOroV-nC2V-nFueraV)/Math.max(1,totalEvsV+tiAct.length)*100)+"%",color:enRiesgo.length>0?"#A32D2D":"#888780",sub:`${enRiesgo.length} tiendas críticas`},
+          {label:"Eficiencia global",value:efMes!==null?efMes+"%":"—",color:efMes!==null?sc(efMes):"#888",sub:MESES[vMonth]},
+          {label:"Corte 1 · ORO",value:nTotalEsperadoV>0?Math.round(nOroV/totalContadoV*100)+"%":"—",color:"#BA7517",sub:`hasta las ${rangoMostrar}`},
+          {label:"Corte 2 · tardíos",value:nTotalEsperadoV>0?Math.round(nC2V/totalContadoV*100)+"%":"—",color:"#185FA5",sub:"llegaron pero cumplieron"},
+          {label:"Sin registrar",value:nTotalEsperadoV>0?Math.round(nSinRegV/totalContadoV*100)+"%":"—",color:enRiesgo.length>0?"#A32D2D":"#888780",sub:`${enRiesgo.length} tiendas críticas`},
           {label:"Cobertura",value:Math.round((scoresMesV.filter(s=>s.pct!==null).length/Math.max(1,tiAct.length))*100)+"%",color:"#0984e3",sub:`${scoresMesV.filter(s=>s.pct!==null).length}/${tiAct.length} tiendas`},
         ].map((k,i)=>(
           <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"12px 14px",border:"0.5px solid #e2e8f0"}}>
@@ -2991,14 +3042,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
               const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
               const h=v?Math.max(8,Math.round((v.pct/maxV)*70)):0;
-              const isActual=i===iSemActual;
+              const isRef=i===iSemRef;
               return(
                 <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
                   <div style={{fontSize:10,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
-                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isActual?"1.5px solid #0984e3":"none"}}>
-                    {v&&!isFut&&<div style={{width:"100%",height:h,background:isActual?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
+                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none"}}>
+                    {v&&!isFut&&<div style={{width:"100%",height:h,background:isRef?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
                   </div>
-                  <div style={{fontSize:9,color:isActual?"#0984e3":"#8aaabb",fontWeight:isActual?700:400}}>{s.label}</div>
+                  <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
                 </div>
               );
             })}
@@ -3021,7 +3072,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       </div>
 
-      {/* Efectividad por actividad con distribución de cortes */}
+      {/* Efectividad por actividad con distribución real de cortes */}
       <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px",marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>EFECTIVIDAD POR ACTIVIDAD · distribución ORO / Corte 2 / sin registrar</div>
         <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
@@ -3029,33 +3080,18 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#378ADD",display:"inline-block"}}/>Corte 2</span>
           <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#F09595",display:"inline-block"}}/>Sin registrar</span>
         </div>
-        {actEfectV.map(({a,pct,ob,mx})=>{
-          // Distribución C1/C2/sin para esta actividad
-          let nC1=0,nC2=0;
+        {actEfectV.map(({a,pct,nC1,nC2act,total})=>{
+          const nSin=Math.max(0,total-nC1-nC2act);
           const rango=getRangoActivo(a.id,hoy);
-          const c1Max=toMin(rango.c100||"08:30");
-          const c2Max=toMin("09:30");
-          tiAct.forEach(ti=>{
-            semanasDelMes.forEach(s=>s.days.forEach(d=>{
-              const ds=dStr(vYear,vMonth,d);
-              if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
-              const reg=getReg(ds,ti.id,a.id);
-              if(!reg?.evidencias||reg.anulado) return;
-              const m=toMin(primerEnvio(reg.evidencias));
-              if(m<=c1Max) nC1++;
-              else if(m<=c2Max) nC2++;
-            }));
-          });
-          const total=mx/10||1;
-          const nSin=total-nC1-nC2;
           return(
-          <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <span style={{fontSize:13,flexShrink:0}}>{a.e}</span>
-            <span style={{fontSize:12,color:"#1a2f4a",minWidth:120,flexShrink:0}}>{a.n}</span>
-            <div style={{flex:1,height:8,borderRadius:4,overflow:"hidden",display:"flex",minWidth:60}}>
+            <span style={{fontSize:12,color:"#1a2f4a",minWidth:110,flexShrink:0}}>{a.n}</span>
+            <span style={{fontSize:9,color:"#8aaabb",flexShrink:0}}>ORO≤{rango.c100||"08:30"}</span>
+            <div style={{flex:1,height:8,borderRadius:4,overflow:"hidden",display:"flex",minWidth:80}}>
               {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
-              {nC2>0&&<div style={{width:(nC2/total*100)+"%",background:"#378ADD"}}/>}
-              {nSin>0&&<div style={{width:Math.max(0,(nSin/total*100))+"%",background:"#F09595"}}/>}
+              {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
+              {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
             </div>
             <span style={{fontSize:12,fontWeight:700,color:sc(pct),minWidth:32,textAlign:"right"}}>{pct}%</span>
           </div>
@@ -3063,7 +3099,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         })}
       </div>
 
-      {/* Tiendas que requieren atención */}
+      {/* Tiendas que requieren atención — Bug 2: solo tiendas con días evaluables reales */}
       {(enRiesgo.length>0||enAtención.length>0)&&(
       <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
         <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>TIENDAS QUE REQUIEREN ATENCIÓN</div>
@@ -3295,6 +3331,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               });
               // Formato con mayor riesgo
               const fmtRiesgo=[...fmtStats].sort((a,b)=>b.pendFmt-a.pendFmt)[0];
+              // Bug 4 fix: nombre del día real de la semana anterior
+              const DIAS_GER=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+              const semAntDateG=new Date(hoy); semAntDateG.setDate(semAntDateG.getDate()-7);
+              const diaSemAntG=DIAS_GER[semAntDateG.getDay()];
               return(
               <>
                 {/* Actividad */}
@@ -3307,7 +3347,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {/* 4 KPIs */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
                   {[
-                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl!==null?`${deltaCumpl>0?"▲":"▼"} ${Math.abs(deltaCumpl)}pts vs miérc. pasado`:"sin comparativa"},
+                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl!==null?`${deltaCumpl>0?"▲":"▼"} ${Math.abs(deltaCumpl)}pts vs ${diaSemAntG} pasado`:"sin comparativa"},
                     {label:"Registros en ORO",value:pctC1+"%",color:"#BA7517",sub:`antes de ${bloque1Hasta}`},
                     {label:"Tardíos rescatados",value:pctC2+"%",color:"#185FA5",sub:`${bloque2Desde} – ${bloque2Hasta}`},
                     {label:"Sin registrar",value:pctSin+"%",color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ dentro del rango"},
