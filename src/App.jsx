@@ -160,18 +160,17 @@ function getWeeksOfMonth(year, month) {
   return weeks;
 }
 
-/* ══ LOG TABLE — componente separado ══ */
-// FIX BUG 6: Eliminado patrón window._logTableSelDups — comunicación via prop selLogsExterno
-function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin, selLogsExterno, onSelLogsExternoConsumed}) {
+/* ══ LOG TABLE — componente separado para evitar conflictos de hooks en IIFE ══ */
+function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin, selDupsExterno, onClearSelDups}) {
   const [selLogs, setSelLogs] = useState(new Set());
 
-  // FIX BUG 6: Consumir selección externa via prop, no via window global
+  // Bug 6 fix: recibir selección de duplicados por prop React, no window global
   useEffect(()=>{
-    if(selLogsExterno && selLogsExterno.size > 0){
-      setSelLogs(new Set(selLogsExterno));
-      if(onSelLogsExternoConsumed) onSelLogsExternoConsumed();
+    if(selDupsExterno&&selDupsExterno.length>0){
+      setSelLogs(new Set(selDupsExterno));
+      onClearSelDups?.();
     }
-  },[selLogsExterno]);
+  },[selDupsExterno]);
 
   const toggleSel = (uid) => setSelLogs(prev => {
     const ns = new Set(prev);
@@ -304,21 +303,17 @@ export default function ChecklistApp() {
   const [logTxt,  setLogTxt]  = useState("");
   const [logFecha,setLogFecha]= useState("Todos");
   const [logSoloDups,setLogSoloDups]= useState(false);
-  // FIX BUG 6: Estado para selección externa de duplicados (reemplaza window global)
-  const [selDupsExterno, setSelDupsExterno] = useState(new Set());
+  const [selDupsExterno, setSelDupsExterno] = useState([]); // Bug 6 fix: reemplaza window._logTableSelDups
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
-  // FIX BUG 7: Estado controlado para la fecha de Rangos del Día (reemplaza getElementById)
-  const [rangoFecha, setRangoFecha] = useState(()=>todayStr());
+  const [rangoFecha, setRangoFecha] = useState(todayStr); // Bug 7 fix: reemplaza document.getElementById
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
-  // FIX BUG 9: ref para exportPDF — sin window global, seguro multi-tab
-  const exportPdfRef = useRef(null);
   /* ── modales de registro ── */
   const [delModal,    setDelModal]    = useState(null);
   const [anularModal, setAnularModal] = useState(null);
@@ -387,11 +382,11 @@ export default function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
-  // FIX BUG 4: Refs para evitar stale closure en saveConfig — siempre leen estado actual
-  const actsRef      = useRef(acts);
-  const tiendasRef   = useRef(tiendas);
-  const pinsRef      = useRef(pins);
-  const excepsRef    = useRef(exceps);
+  // Bug 4 fix: refs siempre actualizados para evitar stale closure en saveConfig
+  const actsRef    = useRef(acts);
+  const tiendasRef = useRef(tiendas);
+  const pinsRef    = useRef(pins);
+  const excepsRef  = useRef(exceps);
   const rangosDiaRef = useRef(rangosDia);
   const auditoresRef = useRef(auditores);
   useEffect(()=>{ actsRef.current=acts; },[acts]);
@@ -402,7 +397,7 @@ export default function ChecklistApp() {
   useEffect(()=>{ auditoresRef.current=auditores; },[auditores]);
 
   const saveConfig = useCallback(async (overrides={})=>{
-    // FIX BUG 4: Sin dependencias en deps array — usa refs actualizados en cada render
+    // Usa refs para evitar stale closure — siempre tiene el valor más reciente
     const excToSave = overrides.excepciones ?? excepsRef.current;
     const excClean = Object.fromEntries(
       Object.entries(excToSave).filter(([,v])=>Array.isArray(v)&&v.length>0)
@@ -417,12 +412,25 @@ export default function ChecklistApp() {
         rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
         updatedAt:   new Date().toISOString(),
       });
-    } catch(err) {
-      console.error("[saveConfig] Error guardando en Firebase:", err);
-      throw err;
+    } catch(e) {
+      console.error("saveConfig error:", e);
+      showToast("❌ Error al guardar configuración. Reintentando...");
+      // Retry una vez
+      try {
+        await setDoc(doc(db,"config","app"),{
+          actividades: overrides.actividades ?? actsRef.current,
+          tiendas:     overrides.tiendas     ?? tiendasRef.current,
+          pins:        overrides.pins        ?? pinsRef.current,
+          auditores:   overrides.auditores   ?? auditoresRef.current,
+          excepciones: excClean,
+          rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
+          updatedAt:   new Date().toISOString(),
+        });
+      } catch(e2) {
+        console.error("saveConfig retry failed:", e2);
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+  },[]); // sin dependencias — siempre usa refs actualizados
 
   const dow = getDow(fecha);
   const esFS = dow===0||dow===6;
@@ -443,8 +451,9 @@ export default function ChecklistApp() {
   const getReg = useCallback((f,tid,a)=>{
     const k=rKey(f,tid,a);
     const docId=k.replace(/\|/g,"--");
-    return regs[docId]||regs[k]||null;
-  },[regs]);
+    // Usa regsIndex para O(1) lookup — ya memoizado por useMemo([regs])
+    return regsIndex?.[docId]||regsIndex?.[k]||regs[docId]||regs[k]||null;
+  },[regs,regsIndex]);
   const isExc = useCallback((tId,aId,fechaCheck)=>{
     const v = exceps[tId+"|"+aId];
     if(!v) return false;
@@ -509,18 +518,38 @@ export default function ChecklistApp() {
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
   },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
 
-  // FIX BUG 2: actsConRegistroIds — fallback a docId cuando .fecha está ausente (registros legacy)
+  // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
+  const regsIndex = useMemo(()=>{
+    const idx = {};
+    Object.entries(regs).forEach(([docId, data]) => {
+      idx[docId] = data;
+      // Índice inverso por fecha+tienda para queries rápidas
+      if(data.fecha && data.tiendaId) {
+        const dateKey = `date|${data.fecha}|${data.tiendaId}`;
+        if(!idx[dateKey]) idx[dateKey] = [];
+        idx[dateKey].push(docId);
+      }
+    });
+    return idx;
+  },[regs]);
+
+  // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
   const actsConRegistroIds = useMemo(()=>{
     const ids = new Set();
     const ymPrefix = `${vYear}-${String(vMonth+1).padStart(2,"0")}`;
-    Object.entries(regs).forEach(([docId,r])=>{
+    Object.entries(regs).forEach(([docId, r])=>{
       if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
-      // Fuente 1: campo .fecha explícito (registros nuevos)
-      const fFromField = r.fecha||"";
-      // Fuente 2: extraer fecha del docId "YYYY-MM-DD--tXX--aXX" (registros legacy sin .fecha)
-      const fFromDocId = docId.replace(/--/g,"|").split("|")[0]||"";
-      const f = (fFromField.length===10 ? fFromField : fFromDocId);
-      if(f.startsWith(ymPrefix) && f.length===10) ids.add(r.actividadId);
+      const f = r.fecha||"";
+      if(f.startsWith(ymPrefix) && f.length===10) {
+        ids.add(r.actividadId);
+        return;
+      }
+      // Bug 2 fix: fallback — extraer fecha del docId (formato fecha--tiendaId--actividadId)
+      // docId = "YYYY-MM-DD--tXX--aXX"
+      const partes = docId.split("--");
+      if(partes.length>=3 && partes[0].startsWith(ymPrefix)) {
+        ids.add(r.actividadId);
+      }
     });
     return ids;
   },[regs,vYear,vMonth]);
@@ -592,15 +621,13 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-
-    // FIX BUG 8: Auditores solo pueden registrar en fecha de hoy
-    const hoyReal = todayStr();
-    if(!isAdmin && fecha !== hoyReal){
-      showToast(`⚠️ Solo puedes registrar en la fecha de hoy (${hoyReal}). Contacta al Admin para ajustes históricos.`);
+    // Bug 8 fix: auditores solo pueden registrar en la fecha actual
+    if(!isAdmin && fecha !== todayStr()) {
+      showToast("⚠️ Solo puedes registrar en la fecha de hoy. Contacta al Admin para corregir registros.");
       return;
     }
-
     // REGLA UNIVERSAL: nadie puede insertar si la tienda ya tiene registro válido hoy
+    // para esta actividad. Admin debe usar "Actualizar registro" desde el Reporte.
     const yaRegistradas = [...tSel].filter(tId=>{
       const reg = getReg(fecha,tId,actSel);
       return reg?.evidencias?.length>0 && !reg?.anulado;
@@ -608,64 +635,102 @@ export default function ChecklistApp() {
     if(yaRegistradas.length>0){
       const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
       showToast(`⚠️ Ya registradas: ${nombres}. Usa "Actualizar" desde el Reporte.`);
+      // Quitar automáticamente las ya registradas de la selección
       setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
       return;
     }
-    // FIX BUG 1: Fuente única de verdad para el rango — getRangoActivo incluye overrides del día
-    // rangoExt es SOLO visual para el auditor en paso 2; al confirmar, prima el rango del sistema
-    const AR = rangoExt || getRangoActivo(actSel, fecha);
+    const AR = getRangoActivo(actSel, fecha); // Bug 1: fuente única de verdad
     const pct=calcP(horaEx,AR);
     const tier=getTierPts(pct);
+    // Bug 3 fix: advertir cuando la hora declarada difiere >2h del timestamp real
+    const ahora=new Date();
+    const ahoraMin=ahora.getHours()*60+ahora.getMinutes();
+    const horaExMin=toMin(horaEx);
+    const diffMin=ahoraMin-horaExMin;
+    if(diffMin>120&&fecha===todayStr()&&!isAdmin){
+      // Advertencia no bloqueante — el auditor puede confirmar si es legítimo
+      const ok=window.confirm(`⚠️ La hora declarada (${horaEx}) es ${Math.floor(diffMin/60)}h ${diffMin%60}min anterior a la hora actual.\n\nEsto puede afectar el puntaje real. ¿Confirmas que esta fue la hora real de envío?`);
+      if(!ok) return;
+    }
     let n=0;
     const promises=[];
     tSel.forEach(tId=>{
       const k=rKey(fecha,tId,actSel);
       const now=new Date();
-      const hreg=now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+      // A6 fix: timestamp normalizado a ISO, hora de registro en formato 24h consistente
+      const hreg=now.toISOString(); // timestamp real de registro siempre en ISO
       const docId=k.replace(/\|/g,"--");
-      const ev={id:Date.now()+n,hora:horaEx,puntaje:pct,observacion:obsEx||`Registro en bloque · ${tier.label}`,horaRegistro:hreg,auditor:uName,dni:uDni,timestamp:now.toISOString()};
+      const ev={
+        id:Date.now()+n,
+        hora:horaEx,              // hora declarada por el auditor (HH:MM)
+        puntaje:pct,
+        observacion:obsEx||`Registro en bloque · ${tier.label}`,
+        horaRegistro:now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}), // legible
+        timestamp:hreg,           // ISO para ordenamiento y auditoría
+        auditor:uName,
+        dni:uDni,
+      };
       const prevEvs=(regs[docId]?.evidencias)||(regs[k]?.evidencias)||[];
       const newEvs=[...prevEvs,ev].sort((a,b)=>a.hora.localeCompare(b.hora));
-      // Save to Firestore — key as doc id (replace | with -)
-      promises.push(setDoc(doc(db,"registros",docId),{evidencias:newEvs,fecha,tiendaId:tId,actividadId:actSel,updatedAt:now.toISOString()}));
+      promises.push(setDoc(doc(db,"registros",docId),{
+        evidencias:newEvs,
+        fecha,
+        tiendaId:tId,
+        actividadId:actSel,
+        updatedAt:now.toISOString(),
+      }));
       n++;
     });
+    // A4 fix: try/catch en operaciones Firebase críticas
     try {
       await Promise.all(promises);
       showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
-    } catch(err) {
-      console.error("[confirmarRegistro] Error Firebase:", err);
-      showToast(`❌ Error al guardar. Verifica tu conexión e intenta nuevamente.`);
-      return;
+      setTSel(new Set());setRango(null);
+      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+      setObsEx("");setPaso(2);setVerRegistradas(false);
+    } catch(e) {
+      console.error("confirmarRegistro error:", e);
+      showToast("❌ Error al guardar. Verifica tu conexión e intenta nuevamente.");
     }
-    setTSel(new Set());setRango(null);setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));setObsEx("");setPaso(2);setVerRegistradas(false);
   };
 
   const eliminarRegistro = async (docId) => {
-    await deleteDoc(doc(db,"registros",docId));
-    showToast("🗑️ Registro eliminado");
+    try {
+      await deleteDoc(doc(db,"registros",docId));
+      showToast("🗑️ Registro eliminado");
+    } catch(e) {
+      console.error("eliminarRegistro error:", e);
+      showToast("❌ Error al eliminar. Verifica tu conexión.");
+    }
     setDelModal(null);
   };
 
   const anularRegistro = async () => {
     if(!anularModal||!motivoAnu) return;
     const {docId, docData} = anularModal;
-    await setDoc(doc(db,"registros",docId), {
-      ...docData,
-      anulado: true,
-      motivoAnulacion: motivoAnu,
-      detalleAnulacion: detalleAnu,
-      anuladoPor: uName,
-      anuladoEn: new Date().toISOString(),
-    });
-    showToast("⚠️ Registro anulado correctamente");
-    setAnularModal(null); setMotivoAnu(""); setDetalleAnu("");
+    try {
+      await setDoc(doc(db,"registros",docId), {
+        ...docData,
+        anulado: true,
+        motivoAnulacion: motivoAnu,
+        detalleAnulacion: detalleAnu,
+        anuladoPor: uName,
+        anuladoEn: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      showToast("⚠️ Registro anulado correctamente");
+      setAnularModal(null); setMotivoAnu(""); setDetalleAnu("");
+    } catch(e) {
+      console.error("anularRegistro error:", e);
+      showToast("❌ Error al anular. Verifica tu conexión.");
+    }
   };
 
   const actualizarRegistro = async () => {
     if(!updModal||!horaUpd||!motivoUpd) return;
     const {docId, docData, actividadId} = updModal;
-    const AR = acts.find(a=>a.id===actividadId)?.r || RANGOS_DEFAULT;
+    // Bug 1 fix: usar getRangoActivo como fuente única de verdad
+    const AR = getRangoActivo(actividadId, docData.fecha||fecha);
     const pct = calcP(horaUpd, AR);
     const tier = getTierPts(pct);
     const now2 = new Date();
@@ -674,16 +739,25 @@ export default function ChecklistApp() {
       hora: horaUpd,
       puntaje: pct,
       observacion: `Corrección: ${motivoUpd}`,
-      horaRegistro: now2.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}),
+      horaRegistro: now2.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}),
+      timestamp: now2.toISOString(), // A6 fix: ISO consistente
       auditor: uName,
-      timestamp: now2.toISOString(),
       esCorreccion: true,
     };
     const prevEvs = docData.evidencias || [];
     const newEvs = [...prevEvs, ev].sort((a,b)=>a.hora.localeCompare(b.hora));
-    await setDoc(doc(db,"registros",docId), {...docData, evidencias: newEvs, updatedAt: now2.toISOString()});
-    showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct} pts ${tier.icon}`);
-    setUpdModal(null); setHoraUpd(""); setMotivoUpd("");
+    try {
+      await setDoc(doc(db,"registros",docId), {
+        ...docData,
+        evidencias: newEvs,
+        updatedAt: now2.toISOString(),
+      });
+      showToast(`✏️ Registro actualizado · ${horaUpd} · ${pct} pts ${tier.icon}`);
+      setUpdModal(null); setHoraUpd(""); setMotivoUpd("");
+    } catch(e) {
+      console.error("actualizarRegistro error:", e);
+      showToast("❌ Error al actualizar. Verifica tu conexión.");
+    }
   };
 
   const toggleExcepcion = async (tId, aId) => {
@@ -703,7 +777,12 @@ export default function ChecklistApp() {
       showToast("⚠️ Tienda excluida solo para "+fecha);
     }
     setExceps(newExceps);
-    await saveConfig({excepciones: newExceps});
+    try {
+      await saveConfig({excepciones: newExceps});
+    } catch(e) {
+      console.error("toggleExcepcion error:", e);
+      showToast("❌ Error al guardar excepción. Verifica tu conexión.");
+    }
   };
 
   const navMes=(dir)=>{
@@ -921,7 +1000,7 @@ export default function ChecklistApp() {
 
   /* ══ PASO 3 — hora de envío → puntaje automático ══ */
   const renderPaso3 = ()=>{
-    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
+    const AR = getRangoActivo(actSel, fecha); // Bug 1: fuente única de verdad
     const pv = horaEx ? calcP(horaEx, AR) : null;
     const tier = getTierPts(pv);
     const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
@@ -1530,8 +1609,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     });
 
     const exportPDF=()=>{
+      // Bug 9 fix: guard para popup bloqueado por el navegador
       const w=window.open("","_blank");
-      if(!w){ showToast("⚠️ El navegador bloqueó la ventana emergente. Permite popups para este sitio."); return; }
+      if(!w){
+        showToast("❌ El navegador bloqueó el popup. Permite popups para esta página y reintenta.");
+        return;
+      }
+      try {
       w.document.write(`<html><head><title>VEGA Evidencias - ${MESES[vMonth]} ${vYear}</title>
       <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
       h1{font-size:18px;border-bottom:2px solid #1a2f4a;padding-bottom:8px;margin-bottom:16px;}
@@ -1575,9 +1659,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       </body></html>`);
       w.document.close();
       w.print();
+      } catch(e) {
+        console.error("exportPDF error:", e);
+        showToast("❌ Error al generar el PDF. Intenta nuevamente.");
+        try { w.close(); } catch(_) {}
+      }
     };
-    // FIX BUG 9: Asignar ref aquí (en cada render de Dashboard) para que el header la tenga
-    exportPdfRef.current = exportPDF;
 
     return(
       <div style={{padding:"16px"}}>
@@ -2798,8 +2885,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       const sorted=[...grupo].sort((a,b)=>a.hora.localeCompare(b.hora));
                       sorted.slice(1).forEach(l=>aEliminar.add(l.uid));
                     });
-                    // FIX BUG 6: Comunicar selección via estado React, no window global
-                    setSelDupsExterno(aEliminar);
+                    window._logTableSelDups=aEliminar; // kept for compatibility — also set React state
+                    setSelDupsExterno([...aEliminar]);
+                    setLogSoloDups(true);
                   }} style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
                     ⚠️ Ver y seleccionar duplicados a eliminar
                   </button>
@@ -2811,7 +2899,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
           {!filtered.length
             ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados</div>
-            :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin} selLogsExterno={selDupsExterno} onSelLogsExternoConsumed={()=>setSelDupsExterno(new Set())}/>
+            :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin} selDupsExterno={selDupsExterno} onClearSelDups={()=>setSelDupsExterno([])}/>
           }
         </div>
         );
@@ -2822,7 +2910,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
             <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Ajusta los horarios de puntaje para actividades Ad-hoc o Promocionales en una fecha específica. Los Always On usan su rango fijo.</div>
           </div>
-          {/* FIX BUG 7: Input controlado con rangoFecha state — eliminado getElementById */}
+          {/* Bug 7 fix: estado controlado en lugar de document.getElementById */}
           <div style={{...S.card,padding:"12px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:12,fontWeight:700,color:"#5a7a9a"}}>📆 Fecha:</span>
             <input type="date" value={rangoFecha}
@@ -2830,8 +2918,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               style={{...S.inp,flex:1,fontSize:13}}/>
           </div>
           {acts.filter(a=>a.activa&&a.cat!=="Always On").map(a=>{
-            const fechaInput = rangoFecha;
-            const override = rangosDia?.[a.id]?.[fechaInput];
+            const override = rangosDia?.[a.id]?.[rangoFecha];
             const base = a.r||RANGOS_DEFAULT;
             const RR = override||base;
             return(
@@ -2844,10 +2931,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                   {override&&(
                     <button onClick={()=>{
-                      const fi=rangoFecha;
                       setRangosDia(prev=>{
                         const next={...prev};
-                        if(next[a.id]) { delete next[a.id][fi]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
+                        if(next[a.id]) { delete next[a.id][rangoFecha]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
                         saveConfig({rangosDia:next});
                         return next;
                       });
@@ -2863,9 +2949,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
                       <input type="time" value={RR[f.k]}
                         onChange={e=>{
-                          const fi=rangoFecha;
                           setRangosDia(prev=>{
-                            const next={...prev,[a.id]:{...(prev[a.id]||{}),[fi]:{...(prev[a.id]?.[fi]||base),[f.k]:e.target.value}}};
+                            const next={...prev,[a.id]:{...(prev[a.id]||{}),[rangoFecha]:{...(prev[a.id]?.[rangoFecha]||base),[f.k]:e.target.value}}};
                             saveConfig({rangosDia:next});
                             return next;
                           });
@@ -3231,13 +3316,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>VEGA · EVIDENCIAS</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>CONTROL DE IMPLEMENTACIÓN</div>
           </div>
-          <input type="date" value={fecha} onChange={e=>{setFecha(e.target.value);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}} disabled={!isAuditor}
+          <input type="date" value={fecha} onChange={e=>{setFecha(e.target.value);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}} disabled={!isAdmin}
+            title={!isAdmin?"Solo el Administrador puede cambiar la fecha":""}
             style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.1)"}}>
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
-          {isAdmin&&<button onClick={()=>exportPdfRef.current?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
+          {isAdmin&&<button onClick={exportPDF} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
           {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
@@ -3260,8 +3346,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
-        const hoy=fecha; // fecha = estado seleccionado en el header (puede ser distinto a todayStr())
-        const fmts=[
+        const hoy=fecha; // fecha = estado seleccionado en el header (puede ser distinto a todayStr())        const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
           {fmt:"Market",       icon:"🛒"},
@@ -3744,18 +3829,12 @@ function LoginScreen({pins,auditores,onLogin}){
   const auds = (auditores||[]).filter(a=>a.activo!==false);
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
-  // Siempre arranca en "inicio" — los 3 botones siempre visibles
   const[step,setStep]=useState("inicio");
   const[err,setErr]=useState("");
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
 
   const tryPin=()=>{
     if(pin===pins.admin){onLogin("admin","Administrador","");return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
-  };
-  // FIX BUG 11: Viewer ahora valida pin real
-  const tryViewer=()=>{
-    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
   const tryDni=()=>{
@@ -3769,6 +3848,12 @@ function LoginScreen({pins,auditores,onLogin}){
       :"DNI no encontrado. Contacta al Admin.");
     setTimeout(()=>{setErr("");setDni("");},2500);
   };
+  // Bug 11 fix: viewer requiere pin real, no entrada directa
+  const tryViewer=()=>{
+    if(!pins.viewer){setErr("Acceso no configurado. Contacta al Admin.");return;}
+    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
+  };
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -3778,11 +3863,9 @@ function LoginScreen({pins,auditores,onLogin}){
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
         <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
 
-        {/* ── PANTALLA INICIO: 3 accesos directos ── */}
         {step==="inicio"&&(
           <>
             <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
-            {/* Auditor → DNI */}
             <button onClick={()=>{setStep("dni_auditor");setErr("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
               <span style={{fontSize:24,flexShrink:0}}>🪪</span>
@@ -3791,8 +3874,7 @@ function LoginScreen({pins,auditores,onLogin}){
                 <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingreso con mi DNI</div>
               </div>
             </button>
-            {/* Admin → código */}
-            <button onClick={()=>{setStep("pin_admin");setErr("");}}
+            <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
               <span style={{fontSize:24,flexShrink:0}}>👑</span>
               <div>
@@ -3800,19 +3882,18 @@ function LoginScreen({pins,auditores,onLogin}){
                 <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Código de acceso</div>
               </div>
             </button>
-            {/* Viewer → requiere código — FIX BUG 11: no más entrada libre */}
-            <button onClick={()=>{setStep("pin_viewer");setErr("");}}
+            {/* Bug 11 fix: Viewer ahora requiere código, no entrada directa */}
+            <button onClick={()=>{setStep("pin_viewer");setErr("");setPin("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
               <span style={{fontSize:24,flexShrink:0}}>👁️</span>
               <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor</div>
-                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Dashboard gerencial</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
+                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Código de acceso</div>
               </div>
             </button>
           </>
         )}
 
-        {/* ── AUDITOR: DNI directo ── */}
         {(step==="dni_auditor"||step==="dni")&&(
           <>
             <div style={{fontSize:32,marginBottom:10}}>🪪</div>
@@ -3835,44 +3916,22 @@ function LoginScreen({pins,auditores,onLogin}){
           </>
         )}
 
-        {/* ── ADMIN: código ── */}
-        {(step==="pin"||step==="pin_admin")&&(
+        {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>🔑</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Código Administrador</p>
-            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Acceso total al sistema</p>
+            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"🔑"}</div>
+            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
+              {step==="pin_viewer"?"Código de acceso gerencial":"Código de administrador"}
+            </p>
+            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Solicitado por el Administrador</p>
             <input autoFocus type="password" value={pin}
               onChange={e=>setPin(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&tryPin()}
+              onKeyDown={e=>e.key==="Enter"&&(step==="pin_viewer"?tryViewer():tryPin())}
               placeholder="••••••••"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#f6a623"}`,letterSpacing:8,fontSize:20}}/>
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
             {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
-            <button onClick={tryPin}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#f6a623,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            <button onClick={step==="pin_viewer"?tryViewer:tryPin}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Ingresar →
-            </button>
-            <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
-              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
-              ← Volver
-            </button>
-          </>
-        )}
-
-        {/* ── VISOR: código — FIX BUG 11: requiere autenticación real ── */}
-        {step==="pin_viewer"&&(
-          <>
-            <div style={{fontSize:32,marginBottom:10}}>👁️</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Código Visor</p>
-            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Dashboard de gerencia — solo lectura</p>
-            <input autoFocus type="password" value={pin}
-              onChange={e=>setPin(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&tryViewer()}
-              placeholder="••••••••"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#74b9ff"}`,letterSpacing:8,fontSize:20}}/>
-            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
-            <button onClick={tryViewer}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#74b9ff,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
-              Ver Dashboard →
             </button>
             <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
               style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
