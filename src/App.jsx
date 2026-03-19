@@ -334,6 +334,7 @@ export default function ChecklistApp() {
   const longExcRef = useRef(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
+  const [statusCardView, setStatusCardView] = useState("operativo"); // "operativo" | "gerencial"
   const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
 
   // Actualizar la hora de la tarjeta cada 30 segundos mientras esté abierta
@@ -414,6 +415,7 @@ export default function ChecklistApp() {
   const semanasDelMes = useMemo(()=>getWeeksOfMonth(vYear,vMonth),[vYear,vMonth]);
   const isAdmin   = role==="admin";
   const isAuditor = role==="admin"||role==="auditor";
+  const isViewer  = role==="viewer";
 
   const getReg = useCallback((f,tid,a)=>{
     const k=rKey(f,tid,a);
@@ -732,7 +734,7 @@ export default function ChecklistApp() {
         {(actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional")&&(
           <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
             <div style={{fontSize:10,fontWeight:700,color:"#854F0B",marginBottom:8}}>⏱️ VENTANA DE REGISTRO — {actInfo?.cat?.toUpperCase()}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:6,marginBottom:6}}>
               {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
                 <div key={f.k}>
                   <div style={{fontSize:9,color:"#854F0B",fontWeight:700,marginBottom:3}}>{f.icon} {f.label}</div>
@@ -961,7 +963,7 @@ export default function ChecklistApp() {
         {/* franjas de referencia — visuales, no botones */}
         <div style={{marginBottom:16}}>
           <p style={{...S.lbl,marginBottom:8}}>ESCALA DE PUNTAJE{actInfo?.r?" · RANGOS PERSONALIZADOS":""}</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:6}}>
             {franjas.map((f,i)=>(
               <div key={i} style={{
                 padding:"10px 12px",borderRadius:10,
@@ -1082,9 +1084,9 @@ export default function ChecklistApp() {
       <div style={{padding:"16px"}}>
         {/* nav mes */}
         <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14,flexWrap:"wrap"}}>
-          <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>←</button>
+          <button onClick={()=>navMes(-1)} style={{padding:"10px 18px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>←</button>
           <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
-          <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>→</button>
+          <button onClick={()=>navMes(1)} style={{padding:"10px 18px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>→</button>
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
             {semanasDelMes.map((s,i)=>(
@@ -1120,6 +1122,7 @@ export default function ChecklistApp() {
                       ))}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
+                      <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:50,position:"sticky",top:0}}>C1/C2</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1208,9 +1211,36 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   </td>;
 })()}
                           <td style={{padding:"6px 8px",textAlign:"center"}}><span style={{fontSize:13}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
+                          {/* Columna C1/C2 — distribución de cortes para esta tienda */}
+                          {(()=>{
+                            const hoyC=todayStr();
+                            let nC1=0,nC2=0,nTotal=0;
+                            semanasDelMes.forEach(s=>s.days.forEach(d=>{
+                              const ds=dStr(vYear,vMonth,d);
+                              if(ds>hoyC) return;
+                              const dw=getDow(ds);
+                              actsActivas.filter(a=>a.dias.includes(dw)&&!isExc(tr.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                                nTotal++;
+                                const reg=getReg(ds,tr.id,a.id);
+                                if(!reg?.evidencias||reg.anulado) return;
+                                const rango=getRangoActivo(a.id,ds);
+                                const m=toMin(primerEnvio(reg.evidencias));
+                                if(m<=toMin(rango.c100||"08:30")) nC1++;
+                                else nC2++;
+                              });
+                            }));
+                            const pC1=nTotal>0?Math.round((nC1/nTotal)*100):null;
+                            const pC2=nTotal>0?Math.round((nC2/nTotal)*100):null;
+                            if(pC1===null) return <td style={{padding:"6px 8px",textAlign:"center",color:"#b2bec3",fontSize:9}}>—</td>;
+                            return(
+                              <td style={{padding:"6px 8px",textAlign:"center"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"#BA7517"}}>{pC1}% C1</div>
+                                {pC2!==null&&pC2>0&&<div style={{fontSize:9,color:"#185FA5"}}>{pC2}% C2</div>}
+                              </td>
+                            );
+                          })()}
                         </tr>
-                      );
-                    })}
+                      );                    })}
                   </tbody>
                   {/* FILA TOTAL DEL FORMATO */}
                   <tfoot>
@@ -1522,7 +1552,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* filtros */}
         <div style={{...S.card,padding:"12px 14px",marginBottom:14}}>
           <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:8,letterSpacing:".05em"}}>FILTROS</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
             <div>
               <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>TIPO DE TIENDA</div>
               <select value={dashFmt} onChange={e=>setDashFmt(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
@@ -1550,6 +1580,52 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
           </div>
         </div>
+
+        {/* ── SENTENCIA EJECUTIVA ── narrativa que conecta la historia antes de los números */}
+        {(()=>{
+          const semActual=semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===todayStr()));
+          const iSem=semActual>=0?semActual:semanasDelMes.length-1;
+          const vSem=tendencia[iSem];
+          const vSemAnt=iSem>0?tendencia[iSem-1]:null;
+          const delta=vSem!==null&&vSemAnt!==null?vSem-vSemAnt:null;
+          // Formato con mayor riesgo: el que tiene más tiendas <60%
+          const riesgoPorFmt=["Mayorista","Supermayorista","Market"].map(fmt=>({
+            fmt,
+            nRiesgo:scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score<60).length,
+            efic:Math.round((scoresMes.filter(s=>s.t.f===fmt).reduce((a,s)=>a+(s.obtenidos||0),0)/Math.max(1,scoresMes.filter(s=>s.t.f===fmt).reduce((a,s)=>a+(s.maximos||0),0)))*100)
+          })).sort((a,b)=>b.nRiesgo-a.nRiesgo);
+          const fmtRiesgo=riesgoPorFmt[0];
+          const nCriticas=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
+          const nSinReg=tsEval.filter(ti=>!semanasDelMes.some(s=>s.days.some(d=>{
+            const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
+            return actsBase.some(a=>a.dias.includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+          }))).length;
+          // Construir la sentencia narrativa
+          let sentencia="";
+          if(vSem!==null){
+            const semLabel=semanasDelMes[iSem]?.label||"Semana actual";
+            sentencia=`${semLabel} registra ${vSem}% de eficiencia`;
+            if(delta!==null) sentencia+=` — ${Math.abs(delta)} pts ${delta>0?"por encima":"por debajo"} de la semana anterior`;
+            if(fmtRiesgo.nRiesgo>0) sentencia+=`. ${fmtRiesgo.fmt} concentra ${fmtRiesgo.nRiesgo} tienda${fmtRiesgo.nRiesgo>1?"s":""} en zona crítica`;
+            if(nSinReg>0) sentencia+=`. ${nSinReg} tienda${nSinReg>1?"s":""} sin ningún registro en el período`;
+            sentencia+=".";
+          }
+          if(!sentencia) return null;
+          const esAlerta=delta!==null&&delta<-5||nCriticas>2;
+          return(
+          <div style={{marginBottom:12,padding:"10px 14px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:10,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`,display:"flex",alignItems:"flex-start",gap:10}}>
+            <span style={{fontSize:16,flexShrink:0,marginTop:1}}>{esAlerta?"⚠️":"📊"}</span>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.6}}>{sentencia}</div>
+              {delta!==null&&Math.abs(delta)>=10&&(
+                <div style={{fontSize:10,color:esAlerta?"#dc2626":"#2563eb",marginTop:2}}>
+                  {delta<0?"Caída significativa — revisar actividades con mayor pendiente":"Mejora significativa respecto a la semana anterior"}
+                </div>
+              )}
+            </div>
+          </div>
+          );
+        })()}
 
         {/* KPIs */}
         {(()=>{
@@ -1581,7 +1657,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           const trI=nRie===0?`✅ Todas las tiendas evaluadas superan 60%`:
             `${nRie} tiendas <60%: ${riePorFmt.map(x=>`${x.f} (${x.n})`).join(", ")} — requieren atención`;
           return(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:10,marginBottom:14}}>
             {[
               {k:"SG",label:"Eficiencia Global",    sub:`${totalOb} pts obtenidos de ${totalMx} posibles · ${tsEval.length} tiendas`,  v:SG+"%", num:SG, c:sc(SG),   icon:"🎯", insight:sgI, tier:getTier(SG)},
               {k:"IC",label:"Cobertura Registros",  sub:`${nCump}/${nEval} tiendas`,  v:IC+"%", num:IC, c:"#0984e3",icon:"📬", insight:icI},
@@ -1899,9 +1975,46 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </div>
               )}
             </div>
+            {/* Cierre narrativo horario — convierte conteos en historia operativa */}
+            {nExpected>0&&(()=>{
+              const pctOro=Math.round(nOro/nExpected*100);
+              const pctTardio=Math.round((nPlata+nBronce)/nExpected*100);
+              const pctFuera=Math.round(nFuera/nExpected*100);
+              const pctSinReg=Math.round((nExpected-totalEnv)/nExpected*100);
+              // Identificar formato con más registros FUERA
+              const fueraPorFmt=["Mayorista","Supermayorista","Market"].map(fmt=>{
+                let fFuera=0;
+                semanasDelMes.forEach(s=>s.days.forEach(day=>{
+                  const ds=dStr(vYear,vMonth,day);
+                  if(ds>hoy) return;
+                  const dw=getDow(ds);
+                  tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
+                    actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                      const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                      if(p===0) fFuera++;
+                    });
+                  });
+                }));
+                return {fmt,fFuera};
+              }).filter(f=>f.fFuera>0).sort((a,b)=>b.fFuera-a.fFuera);
+              let texto=`${pctOro}% de las evidencias llegaron en tiempo óptimo (ORO)`;
+              if(pctTardio>0) texto+=`, el ${pctTardio}% llegó tarde pero registró`;
+              if(pctFuera>0){
+                texto+=`, y ${nFuera} registro${nFuera>1?"s":""} quedaron fuera de rango (0 pts)`;
+                if(fueraPorFmt.length>0) texto+=` — concentrado en ${fueraPorFmt[0].fmt}`;
+              }
+              if(pctSinReg>0) texto+=`. El ${pctSinReg}% no registró evidencia`;
+              texto+=".";
+              const esAlerta=pctSinReg>15||pctFuera>5;
+              return(
+              <div style={{marginBottom:10,padding:"8px 12px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:8,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`}}>
+                <div style={{fontSize:10,color:esAlerta?"#991b1b":"#1e40af",fontWeight:600,lineHeight:1.6}}>{esAlerta?"⚠️ ":"📋 "}{texto}</div>
+              </div>
+              );
+            })()}
 
             {/* 4 tarjetas de franja horaria */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:14}}>
               {franjas.map(f=>(
                 <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1.5px solid "+f.c+"33"}}>
                   <div style={{fontSize:18}}>{f.icon}</div>
@@ -2095,6 +2208,48 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
                   <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
                 </div>
+                {/* Sparkline tendencia semanal S1→S2→S3 */}
+                {(()=>{
+                  const semPts=semanasDelMes.map(s=>{
+                    let ob=0,mx=0;
+                    ftsEval.forEach(ti=>{
+                      s.days.forEach(d=>{
+                        const ds=dStr(vYear,vMonth,d);
+                        if(ds>todayStr()) return;
+                        const dw=getDow(ds);
+                        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                          mx+=10;
+                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                          if(p!==null) ob+=p;
+                        });
+                      });
+                    });
+                    return mx>0?Math.round((ob/mx)*100):null;
+                  }).filter(v=>v!==null);
+                  if(semPts.length<2) return null;
+                  const maxV=Math.max(...semPts,1);
+                  const minV=Math.min(...semPts);
+                  const range=maxV-minV||1;
+                  const w=60,h=24,pts=semPts.length;
+                  const coords=semPts.map((v,i)=>`${Math.round((i/(pts-1))*w)},${Math.round(h-((v-minV)/range)*(h-4)-2)}`).join(" ");
+                  const lastDelta=semPts.length>=2?semPts[semPts.length-1]-semPts[semPts.length-2]:0;
+                  const trendColor=lastDelta>0?"#0F6E56":lastDelta<0?"#A32D2D":"#888780";
+                  return(
+                  <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
+                    <svg width={w} height={h} style={{flexShrink:0}}>
+                      <polyline points={coords} fill="none" stroke={trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      {semPts.map((v,i)=>{
+                        const cx=Math.round((i/(pts-1))*w);
+                        const cy=Math.round(h-((v-minV)/range)*(h-4)-2);
+                        return <circle key={i} cx={cx} cy={cy} r="2" fill={trendColor}/>;
+                      })}
+                    </svg>
+                    <div style={{fontSize:9,color:trendColor,fontWeight:700}}>
+                      {semPts.map((v,i)=>`S${i+1}: ${v}%`).join(" → ")}
+                    </div>
+                  </div>
+                  );
+                })()}
                 <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"10px 12px",borderRadius:10,zIndex:20,lineHeight:1.7,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
                   <div style={{fontWeight:800,marginBottom:4,fontSize:11}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
                   {prom!==null&&<div>{fmtOb} pts obtenidos de {fmtMx} pts posibles</div>}
@@ -2109,7 +2264,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
 
         {/* ranking top/bottom */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
           {[
             {title:"🏅 Top 5",sub:"Mayor eficiencia de implementación",list:top5,icon:(i)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":i===3?"🏅":"⭐"},
             {title:"⚠️ Bottom 5",sub:"Menor eficiencia — requieren atención",list:bot5,icon:()=>"🔴"},
@@ -2151,7 +2306,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <div style={{marginBottom:6,color:"#8aaabb"}}>{det.obtenidos}/{det.maximos} pts · {s.t.f}</div>
                     <div style={{borderTop:"1px solid rgba(255,255,255,.15)",paddingTop:6,marginTop:2}}>
                       <div style={{fontSize:9,color:"#8aaabb",marginBottom:4,fontWeight:700}}>DISTRIBUCIÓN DE HORARIO</div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:4}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥇</span><span>ORO: {fOro} ({Math.round(fOro/tTotal*100)}%)</span></div>
                         <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥈</span><span>PLATA: {fPlata} ({Math.round(fPlata/tTotal*100)}%)</span></div>
                         <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥉</span><span>BRONCE: {fBronce} ({Math.round(fBronce/tTotal*100)}%)</span></div>
@@ -2318,7 +2473,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               {a._er&&(
                 <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:"1px solid "+a.c+"33"}}>
                   <div style={{fontSize:10,fontWeight:800,color:a.c,marginBottom:10,letterSpacing:".05em"}}>⏱️ RANGOS HORARIOS · {a.n.toUpperCase()}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
                     {[{k:"c100",icon:"🥇",label:"100% hasta"},{k:"c80",icon:"🥈",label:"80% hasta"},{k:"c60",icon:"🥉",label:"60% hasta"}].map(f=>(
                       <div key={f.k}>
                         <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
@@ -2531,7 +2686,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
 
           <div style={{...S.card,padding:"12px 14px",marginBottom:12}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:8}}>
               <div>
                 <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>MES</div>
                 <select value={logFecha} onChange={e=>setLogFecha(e.target.value)} style={selSty}>
@@ -2647,7 +2802,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     </button>
                   )}
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:8}}>
                   {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
                     <div key={f.k}>
                       <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
@@ -2695,15 +2850,255 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     </div>
   );
 
+  /* ══ VIEWER DASHBOARD — narrativa estratégica para gerencia ══ */
+  const renderViewerDash = ()=>{
+    const hoy=todayStr();
+    // Calcular eficiencia del mes completo
+    const totalOb=Object.values(regs).filter(r=>!r.anulado&&r.evidencias?.length).reduce((sum,r)=>{
+      return sum+r.evidencias.reduce((s,ev)=>s+(ev.puntaje||0),0);
+    },0);
+    // Tendencia semanal usando cálculos existentes
+    const tendenciaViewer=semanasDelMes.map(s=>{
+      let ob=0,mx=0;
+      tiAct.forEach(ti=>{
+        s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy) return;
+          const dw=getDow(ds);
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+            mx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) ob+=p;
+          });
+        });
+      });
+      return mx>0?{pct:Math.round((ob/mx)*100),ob,mx}:null;
+    });
+    // Semana actual
+    const iSemActual=semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===hoy));
+    const vSemActual=tendenciaViewer[iSemActual>=0?iSemActual:0];
+    const vSemAnt=iSemActual>0?tendenciaViewer[iSemActual-1]:null;
+    const deltaSem=vSemActual&&vSemAnt?vSemActual.pct-vSemAnt.pct:null;
+    // Eficiencia global del mes
+    const efMes=(()=>{
+      let ob=0,mx=0;
+      tendenciaViewer.forEach(v=>{if(v){ob+=v.ob;mx+=v.mx;}});
+      return mx>0?Math.round((ob/mx)*100):null;
+    })();
+    // Distribución de cortes — usando datos de eficiencia horaria
+    const allEvsViewer=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]).filter(ev=>ev.hora);
+    const totalEvsV=allEvsViewer.length||1;
+    const nOroV=allEvsViewer.filter(ev=>toMin(ev.hora)<=toMin("08:30")).length;
+    const nC2V=allEvsViewer.filter(ev=>toMin(ev.hora)>toMin("08:30")&&toMin(ev.hora)<=toMin("09:30")).length;
+    const nFueraV=allEvsViewer.filter(ev=>toMin(ev.hora)>toMin("09:30")).length;
+    // Actividades por eficiencia
+    const actEfectV=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+      let ob=0,mx=0;
+      tiAct.forEach(ti=>{
+        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+          mx+=10;
+          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+          if(p!==null) ob+=p;
+        }));
+      });
+      return {a,pct:mx>0?Math.round((ob/mx)*100):null,ob,mx};
+    }).filter(x=>x.pct!==null).sort((a,b)=>b.pct-a.pct);
+    // Formato eficiencia
+    const fmtEfV=["Mayorista","Supermayorista","Market"].map(fmt=>{
+      let ob=0,mx=0;
+      tiAct.filter(ti=>ti.f===fmt).forEach(ti=>{
+        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy) return;
+          const dw=getDow(ds);
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+            mx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) ob+=p;
+          });
+        }));
+      });
+      return {fmt,icon:FMT[fmt]?.c,bg:FMT[fmt]?.bg,pct:mx>0?Math.round((ob/mx)*100):null};
+    });
+    // Tiendas en riesgo
+    const scoresMesV=tiAct.map(ti=>{
+      const ef=calcMesDetalle(ti.id);
+      return {ti,pct:ef?.pct??null};
+    });
+    const enRiesgo=scoresMesV.filter(s=>s.pct!==null&&s.pct<60).sort((a,b)=>(a.pct??99)-(b.pct??99));
+    const enAtención=scoresMesV.filter(s=>s.pct!==null&&s.pct>=60&&s.pct<80).sort((a,b)=>(a.pct??99)-(b.pct??99)).slice(0,3);
+    // Sentencia narrativa
+    const semLabel=semanasDelMes[iSemActual>=0?iSemActual:0]?.label||"Semana actual";
+    const esAlerta=deltaSem!==null&&deltaSem<-5||enRiesgo.length>0;
+    let narrativa="";
+    if(vSemActual) narrativa=`${semLabel} registra ${vSemActual.pct}% de eficiencia`;
+    if(deltaSem!==null) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
+    const actMejor=actEfectV[0];
+    const actPeor=actEfectV[actEfectV.length-1];
+    if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
+    if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} requiere atención (${actPeor.pct}%)`;
+    if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} en zona crítica`;
+    narrativa+=".";
+
+    return(
+    <div style={{padding:"clamp(10px,3vw,20px)",maxWidth:900,margin:"0 auto",width:"100%"}}>
+      {/* Nav mes */}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14}}>
+        <button onClick={()=>navMes(-1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>←</button>
+        <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+        <button onClick={()=>navMes(1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>→</button>
+      </div>
+
+      {/* Sentencia ejecutiva */}
+      <div style={{padding:"12px 16px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:12,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
+        <span style={{fontSize:18,flexShrink:0}}>{esAlerta?"⚠️":"📊"}</span>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.6}}>{narrativa}</div>
+          {deltaSem!==null&&Math.abs(deltaSem)>=10&&(
+            <div style={{fontSize:11,color:esAlerta?"#dc2626":"#2563eb",marginTop:3}}>
+              {deltaSem<0?"Caída significativa detectada — revisar actividades con mayor pendiente":"Mejora significativa respecto a la semana anterior"}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8,marginBottom:14}}>
+        {[
+          {label:"Eficiencia global",value:efMes!==null?efMes+"%":"—",color:efMes!==null?sc(efMes):"#888",sub:deltaSem!==null?`${deltaSem>=0?"▲":"▼"} ${Math.abs(deltaSem)}pts vs sem. ant.`:`${MESES[vMonth]}`},
+          {label:"Corte 1 · ORO",value:Math.round(nOroV/totalEvsV*100)+"%",color:"#BA7517",sub:"en tiempo óptimo"},
+          {label:"Corte 2 · rescatados",value:Math.round(nC2V/totalEvsV*100)+"%",color:"#185FA5",sub:"tardíos que cumplieron"},
+          {label:"Sin registrar",value:Math.round((totalEvsV-nOroV-nC2V-nFueraV)/Math.max(1,totalEvsV+tiAct.length)*100)+"%",color:enRiesgo.length>0?"#A32D2D":"#888780",sub:`${enRiesgo.length} tiendas críticas`},
+          {label:"Cobertura",value:Math.round((scoresMesV.filter(s=>s.pct!==null).length/Math.max(1,tiAct.length))*100)+"%",color:"#0984e3",sub:`${scoresMesV.filter(s=>s.pct!==null).length}/${tiAct.length} tiendas`},
+        ].map((k,i)=>(
+          <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"12px 14px",border:"0.5px solid #e2e8f0"}}>
+            <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
+            <div style={{fontSize:22,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
+            <div style={{fontSize:10,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))",gap:12,marginBottom:14}}>
+        {/* Tendencia semanal */}
+        <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>TENDENCIA SEMANAL</div>
+          <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
+            {tendenciaViewer.map((v,i)=>{
+              const s=semanasDelMes[i];
+              const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
+              const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
+              const h=v?Math.max(8,Math.round((v.pct/maxV)*70)):0;
+              const isActual=i===iSemActual;
+              return(
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <div style={{fontSize:10,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
+                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isActual?"1.5px solid #0984e3":"none"}}>
+                    {v&&!isFut&&<div style={{width:"100%",height:h,background:isActual?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
+                  </div>
+                  <div style={{fontSize:9,color:isActual?"#0984e3":"#8aaabb",fontWeight:isActual?700:400}}>{s.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Formato eficiencia */}
+        <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>CUMPLIMIENTO POR FORMATO</div>
+          {fmtEfV.map(({fmt,pct})=>(
+            <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{fontSize:15}}>{fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"}</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
+              <div style={{flex:1,background:"#f0f4f8",borderRadius:20,height:7,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(pct||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
+              </div>
+              <span style={{fontSize:12,fontWeight:700,color:pct?sc(pct):"#888",minWidth:32,textAlign:"right"}}>{pct!==null?pct+"%":"—"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Efectividad por actividad con distribución de cortes */}
+      <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>EFECTIVIDAD POR ACTIVIDAD · distribución ORO / Corte 2 / sin registrar</div>
+        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#BA7517",display:"inline-block"}}/>Corte 1 ORO</span>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#378ADD",display:"inline-block"}}/>Corte 2</span>
+          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#F09595",display:"inline-block"}}/>Sin registrar</span>
+        </div>
+        {actEfectV.map(({a,pct,ob,mx})=>{
+          // Distribución C1/C2/sin para esta actividad
+          let nC1=0,nC2=0;
+          const rango=getRangoActivo(a.id,hoy);
+          const c1Max=toMin(rango.c100||"08:30");
+          const c2Max=toMin("09:30");
+          tiAct.forEach(ti=>{
+            semanasDelMes.forEach(s=>s.days.forEach(d=>{
+              const ds=dStr(vYear,vMonth,d);
+              if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+              const reg=getReg(ds,ti.id,a.id);
+              if(!reg?.evidencias||reg.anulado) return;
+              const m=toMin(primerEnvio(reg.evidencias));
+              if(m<=c1Max) nC1++;
+              else if(m<=c2Max) nC2++;
+            }));
+          });
+          const total=mx/10||1;
+          const nSin=total-nC1-nC2;
+          return(
+          <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:13,flexShrink:0}}>{a.e}</span>
+            <span style={{fontSize:12,color:"#1a2f4a",minWidth:120,flexShrink:0}}>{a.n}</span>
+            <div style={{flex:1,height:8,borderRadius:4,overflow:"hidden",display:"flex",minWidth:60}}>
+              {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
+              {nC2>0&&<div style={{width:(nC2/total*100)+"%",background:"#378ADD"}}/>}
+              {nSin>0&&<div style={{width:Math.max(0,(nSin/total*100))+"%",background:"#F09595"}}/>}
+            </div>
+            <span style={{fontSize:12,fontWeight:700,color:sc(pct),minWidth:32,textAlign:"right"}}>{pct}%</span>
+          </div>
+          );
+        })}
+      </div>
+
+      {/* Tiendas que requieren atención */}
+      {(enRiesgo.length>0||enAtención.length>0)&&(
+      <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>TIENDAS QUE REQUIEREN ATENCIÓN</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {enRiesgo.map(({ti,pct})=>(
+            <div key={ti.id} style={{flex:"1 1 160px",padding:"10px 12px",background:"#FCEBEB",borderRadius:8,border:"0.5px solid #F7C1C1"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#791F1F"}}>Vega {ti.n}</div>
+              <div style={{fontSize:10,color:"#A32D2D",marginTop:2}}>{ti.f} · {pct}%</div>
+              <div style={{fontSize:10,color:"#A32D2D"}}>Zona crítica — acción inmediata</div>
+            </div>
+          ))}
+          {enAtención.map(({ti,pct})=>(
+            <div key={ti.id} style={{flex:"1 1 160px",padding:"10px 12px",background:"#FAEEDA",borderRadius:8,border:"0.5px solid #FAC775"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#633806"}}>Vega {ti.n}</div>
+              <div style={{fontSize:10,color:"#854F0B",marginTop:2}}>{ti.f} · {pct}%</div>
+              <div style={{fontSize:10,color:"#854F0B"}}>Tendencia a monitorear</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      )}
+    </div>
+    );
+  };
+
   const tabs = isAdmin
     ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:3,label:"⚙️ Config"}]
     : isAuditor
     ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"}]
-    : [{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"}];
+    : [{i:1,label:"📊 Reporte"},{i:2,label:"📈 Panel"}];
 
   return (
     <div style={S.wrap}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:480px){.vr-2col{grid-template-columns:1fr!important;}.vr-4kpi{grid-template-columns:repeat(2,1fr)!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;}`}</style>
       {/* HEADER */}
       <div style={S.hdr}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
@@ -2730,7 +3125,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {/* CONTENIDO */}
       {tab===0&&isAuditor&&renderRegistro()}
       {tab===1&&renderReporte()}
-      {tab===2&&renderDashboard()}
+      {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
       {tab===3&&isAdmin&&renderConfig()}
       {/* TOAST */}
       {toast&&(
@@ -2816,14 +3211,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         ).length;
         const totalPend=totalDisp-totalReg;
         const nowTime=statusNowTime;
-        const esBloque2=toMin(nowTime)>b1Max;
+        // Corte 2 solo aparece si: hora actual > cierre Corte 1 Y hay actividades hoy
+        const esBloque2=toMin(nowTime)>b1Max && actsHoy.length>0;
         return(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"16px"}}
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"clamp(6px,2vw,14px)",paddingTop:"clamp(56px,8vw,72px)",overflowY:"auto"}}
           onClick={()=>setShowStatusCard(false)}>
           <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
-            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(16px,3vw,24px)",width:"100%",maxWidth:700,boxShadow:"0 24px 60px rgba(0,0,0,.3)",maxHeight:"90vh",overflowY:"auto"}}>
+            style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(14px,2.5vw,22px)",width:"100%",maxWidth:680,boxShadow:"0 24px 60px rgba(0,0,0,.3)",marginBottom:16}}>
 
-            {/* Header */}
+            {/* Header con toggle de vista — solo Admin ve el toggle */}
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                 <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1,marginTop:0}}>📁</span>
@@ -2832,24 +3228,162 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
                 </div>
               </div>
-              <button onClick={()=>setShowStatusCard(false)}
-                style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0,marginTop:1}}>✕</button>
+              <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                {isAdmin&&(
+                  <>
+                    <button onClick={()=>setStatusCardView("gerencial")}
+                      style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusCardView==="gerencial"?"#1a2f4a":"#f0f4f8",color:statusCardView==="gerencial"?"#fff":"#5a7a9a",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                      👁 Gerencial
+                    </button>
+                    <button onClick={()=>setStatusCardView("operativo")}
+                      style={{padding:"4px 12px",borderRadius:20,border:"0.5px solid #e2e8f0",background:statusCardView==="operativo"?"#f0f4f8":"transparent",color:statusCardView==="operativo"?"#1a2f4a":"#8aaabb",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                      📋 Operativo
+                    </button>
+                  </>
+                )}
+                <button onClick={()=>setShowStatusCard(false)}
+                  style={{background:"#f0f4f8",border:"none",width:32,height:32,borderRadius:"50%",fontSize:14,color:"#5a7a9a",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,flexShrink:0}}>✕</button>
+              </div>
             </div>
 
-            {/* Actividad — SOLO si hay registro real de hoy con fecha exacta */}
-            {(()=>{
-              const actsConRegHoy = actsHoy.filter(a=>tiAct.some(ti=>{
+            {/* ── VISTA GERENCIAL ── */}
+            {statusCardView==="gerencial"&&isAdmin&&(()=>{
+              // Actividad con registros hoy
+              const actHoyLabel=actsRef.length>0?actsRef[0]:null;
+              // KPI 1: cumplimiento hoy = registradas / disponibles
+              const cumplHoy=totalDisp>0?Math.round((totalReg/totalDisp)*100):0;
+              // KPI 2: registradas en Corte 1 (ORO) = registradas con hora <= bloque1Hasta
+              const regC1=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{
                 const reg=getReg(hoy,ti.id,a.id);
-                return reg?.evidencias?.length>0 && !reg?.anulado && reg?.fecha===hoy;
+                if(!reg?.evidencias?.length||reg?.anulado) return false;
+                return toMin(primerEnvio(reg.evidencias))<=b1Max;
+              })).length;
+              const pctC1=totalDisp>0?Math.round((regC1/totalDisp)*100):0;
+              // KPI 3: tardíos rescatados = registradas en Corte 2
+              const regC2=totalReg-regC1;
+              const pctC2=totalDisp>0?Math.round((regC2/totalDisp)*100):0;
+              // KPI 4: sin registrar
+              const pctSin=totalDisp>0?Math.round(((totalDisp-totalReg)/totalDisp)*100):0;
+              // Comparativa vs semana anterior — mismo día de la semana pasada
+              const hoyDate=new Date(hoy);
+              const semAntDate=new Date(hoyDate); semAntDate.setDate(hoyDate.getDate()-7);
+              const semAntStr=semAntDate.toISOString().slice(0,10);
+              const totalDispSA=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+              const totalRegSA=tiAct.filter(ti=>
+                !actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&
+                actsRef.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
+              ).length;
+              const cumplSA=totalDispSA>0?Math.round((totalRegSA/totalDispSA)*100):null;
+              const deltaCumpl=cumplSA!==null?cumplHoy-cumplSA:null;
+              // Cumplimiento y delta por formato
+              const fmtStats=fmts.map(({fmt,icon})=>{
+                const tsFmt=tiAct.filter(ti=>ti.f===fmt);
+                const dispFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
+                const regFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{
+                  const r=getReg(hoy,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
+                })).length;
+                const pctFmt=dispFmt>0?Math.round((regFmt/dispFmt)*100):null;
+                // Delta vs semana anterior para este formato
+                const dispFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+                const regFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRef.some(a=>{
+                  const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
+                })).length;
+                const pctFmtSA=dispFmtSA>0?Math.round((regFmtSA/dispFmtSA)*100):null;
+                const delta=pctFmt!==null&&pctFmtSA!==null?pctFmt-pctFmtSA:null;
+                const pendFmt=dispFmt-regFmt;
+                return {fmt,icon,dispFmt,regFmt,pctFmt,delta,pendFmt};
+              });
+              // Formato con mayor riesgo
+              const fmtRiesgo=[...fmtStats].sort((a,b)=>b.pendFmt-a.pendFmt)[0];
+              return(
+              <>
+                {/* Actividad */}
+                {actHoyLabel&&(
+                  <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#e8f4fd",borderRadius:8,padding:"5px 12px",marginBottom:14}}>
+                    <span style={{fontSize:14}}>{actHoyLabel.e}</span>
+                    <span style={{fontSize:12,color:"#0C447C",fontWeight:700}}>{actHoyLabel.n}</span>
+                  </div>
+                )}
+                {/* 4 KPIs */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
+                  {[
+                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl!==null?`${deltaCumpl>0?"▲":"▼"} ${Math.abs(deltaCumpl)}pts vs miérc. pasado`:"sin comparativa"},
+                    {label:"Registros en ORO",value:pctC1+"%",color:"#BA7517",sub:`antes de ${bloque1Hasta}`},
+                    {label:"Tardíos rescatados",value:pctC2+"%",color:"#185FA5",sub:`${bloque2Desde} – ${bloque2Hasta}`},
+                    {label:"Sin registrar",value:pctSin+"%",color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ dentro del rango"},
+                  ].map((k,i)=>(
+                    <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
+                      <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
+                      <div style={{fontSize:20,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
+                      <div style={{fontSize:9,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Barras por formato */}
+                <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".05em",marginBottom:10}}>CUMPLIMIENTO POR FORMATO</div>
+                {fmtStats.map(({fmt,icon,pctFmt,delta,pendFmt})=>(
+                  <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#f8fafc",borderRadius:10,border:"0.5px solid #e2e8f0",marginBottom:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13,minWidth:100,flexShrink:0}}>{fmt}</span>
+                    <div style={{flex:1,background:"#e9eef5",borderRadius:20,height:8,overflow:"hidden",minWidth:60}}>
+                      <div style={{height:"100%",width:(pctFmt||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
+                    </div>
+                    <span style={{fontSize:13,fontWeight:700,color:pctFmt>=80?"#0F6E56":pctFmt>=60?"#BA7517":"#A32D2D",minWidth:36,textAlign:"right",flexShrink:0}}>{pctFmt!==null?pctFmt+"%":"—"}</span>
+                    {delta!==null&&(
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,
+                        color:delta>0?"#0F6E56":delta<0?"#A32D2D":"#888780",
+                        background:delta>0?"#E1F5EE":delta<0?"#FCEBEB":"#F1EFE8",
+                        whiteSpace:"nowrap",flexShrink:0}}>
+                        {delta>0?"▲":"▼"} {Math.abs(delta)}pts{delta<-3?" · riesgo":""}
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {/* Alerta de formato */}
+                {fmtRiesgo&&fmtRiesgo.pendFmt>0&&(
+                  <div style={{marginTop:10,padding:"10px 12px",background:"#FAEEDA",borderRadius:10,border:"0.5px solid #FAC775"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#633806",marginBottom:2}}>⚠️ Alerta de formato</div>
+                    <div style={{fontSize:11,color:"#854F0B",lineHeight:1.5}}>
+                      {fmtRiesgo.fmt} tiene {fmtRiesgo.pendFmt} tienda{fmtRiesgo.pendFmt>1?"s":""} sin registrar
+                      {fmtRiesgo.pendFmt>0&&fmtStats.find(f=>f.fmt===fmtRiesgo.fmt)?.delta<-3?" — tendencia negativa respecto al mismo día de la semana pasada":""}.
+                      {" "}Formato con mayor riesgo del día.
+                    </div>
+                  </div>
+                )}
+              </>
+              );
+            })()}
+
+            {/* ── VISTA OPERATIVA ── */}
+            {statusCardView==="operativo"&&<>
+            {/* ── Actividades con registros hoy — detecta A/B automáticamente ── */}
+            {(()=>{
+              const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
+                const reg=getReg(hoy,ti.id,a.id);
+                return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
               }));
+              const esParalelo=actsConRegHoy.length>1; // Escenario B
               if(actsConRegHoy.length===0) return null;
               return(
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-                  {actsConRegHoy.map(a=>(
-                    <span key={a.id} style={{fontSize:"clamp(11px,1.8vw,13px)",color:"#0984e3",fontWeight:700,background:"#e8f4fd",borderRadius:8,padding:"5px 12px",display:"inline-flex",alignItems:"center",gap:4}}>
-                      {a.e} {a.n}
-                    </span>
-                  ))}
+                  {actsConRegHoy.map(a=>{
+                    const rango=getRangoActivo(a.id,hoy);
+                    const esAdHoc=a.cat&&a.cat!=="Always On";
+                    return(
+                      <div key={a.id} style={{display:"inline-flex",alignItems:"center",gap:6,
+                        background:esAdHoc?"#EAF3DE":"#E6F1FB",
+                        borderRadius:8,padding:"4px 12px"}}>
+                        <span style={{fontSize:13}}>{a.e}</span>
+                        <span style={{fontSize:12,color:esAdHoc?"#27500A":"#0C447C",fontWeight:700}}>{a.n}</span>
+                        <span style={{fontSize:9,fontWeight:600,padding:"1px 6px",borderRadius:4,
+                          background:esAdHoc?"#C0DD97":"#B5D4F4",
+                          color:esAdHoc?"#27500A":"#0C447C"}}>
+                          {esAdHoc?"Ad-hoc":"Always On"} · hasta {rango.c100||"08:00"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {esParalelo&&<span style={{fontSize:9,color:"#854F0B",fontWeight:600,alignSelf:"center",padding:"2px 6px",background:"#FAEEDA",borderRadius:4}}>vista integrada</span>}
                 </div>
               );
             })()}
@@ -2864,61 +3398,112 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {totalNA} excluidas</span>}
             </div>
 
-            {/* Corte 1 */}
+            {/* Corte 1 — rango dinámico según actividad de referencia */}
             <div style={{marginBottom:14}}>
               <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#BA7517",letterSpacing:".06em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
                 <span style={{width:8,height:8,borderRadius:"50%",background:"#BA7517",display:"inline-block",flexShrink:0}}/>
-                CORTE 1 · hasta las 08:30
+                CORTE 1 · hasta las {bloque1Hasta} · ORO
               </div>
               {fmts.map(({fmt,icon})=>{
                 const b=getBloque(fmt,b1Min,b1Max);
                 if(b.total===0) return null;
+                // Para escenario B: calcular desglose por actividad
+                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
+                  const reg=getReg(hoy,ti.id,a.id);
+                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+                }));
+                const esParalelo=actsConRegHoy.length>1;
                 return(
-                <div key={fmt+"b1"} style={{marginBottom:10,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e9eef5"}}>
+                <div key={fmt+"b1"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
                       <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
                       <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{b.total}</span>
                     </div>
-                    <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a",fontWeight:600,whiteSpace:"nowrap"}}>{b.disponibles} disp.</span>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
-                    {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#0984e3":"#b2bec3",background:b.pendientes>0?"#e8f4fd":"#f4f6f8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
-                    {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas} excl.</span>}
+                    <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a",fontWeight:500,whiteSpace:"nowrap"}}>{b.disponibles} disp.</span>
+                    {!esParalelo&&<>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#0F6E56",background:"#E1F5EE",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
+                      {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#0984e3":"#888780",background:b.pendientes>0?"#e8f4fd":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
+                      {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
+                    </>}
+                    {/* Escenario B — pills separados por actividad */}
+                    {esParalelo&&actsConRegHoy.map(a=>{
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
+                      const regA=tsFmt.filter(ti=>{
+                        const reg=getReg(hoy,ti.id,a.id);
+                        if(!reg?.evidencias||reg.anulado) return false;
+                        return toMin(primerEnvio(reg.evidencias))<=b1Max;
+                      }).length;
+                      const pendA=tsFmt.length-regA;
+                      const esAdHoc=a.cat&&a.cat!=="Always On";
+                      return(
+                        <span key={a.id} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,
+                          color:esAdHoc?"#27500A":"#0F6E56",
+                          background:esAdHoc?"#EAF3DE":"#E1F5EE",
+                          whiteSpace:"nowrap",flexShrink:0}}>
+                          {a.e} {String(regA).padStart(2,"0")} reg.{pendA>0?` · ${String(pendA).padStart(2,"0")} pend.`:""}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
                 );
               })}
             </div>
 
-            {/* Corte 2 — aparece automáticamente después de las 08:31 */}
+            {/* Corte 2 — aparece automáticamente después del cierre del Corte 1 */}
             {esBloque2&&(
             <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:6}}>
                 <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#185FA5",letterSpacing:".06em",display:"flex",alignItems:"center",gap:6}}>
                   <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block",flexShrink:0}}/>
-                  CORTE 2 · 08:31 a 09:30
+                  CORTE 2 · {bloque2Desde} a {bloque2Hasta} · PLATA
                 </div>
-                <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",whiteSpace:"nowrap"}}>⚠️ Fuera de corte · puntaje reducido</span>
+                <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",whiteSpace:"nowrap"}}>⚠️ Puntaje reducido</span>
               </div>
               {fmts.map(({fmt,icon})=>{
                 const b=getBloque(fmt,b2Min,b2Max,true);
-                // Solo mostrar si hay tiendas disponibles con actividad en este formato
                 if(b.disponibles===0) return null;
+                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
+                  const reg=getReg(hoy,ti.id,a.id);
+                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+                }));
+                const esParalelo=actsConRegHoy.length>1;
                 return(
-                <div key={fmt+"b2"} style={{marginBottom:10,padding:"8px 12px",background:"#fff8f8",borderRadius:10,border:"1px solid #F7C1C1"}}>
+                <div key={fmt+"b2"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
                       <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                      <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{b.total}</span>
                     </div>
-                    <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a",fontWeight:600,whiteSpace:"nowrap"}}>{b.disponibles} disp.</span>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
-                    {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#A32D2D":"#888780",background:b.pendientes>0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
-                    {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas} excl.</span>}
+                    {!esParalelo&&<>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
+                      {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#A32D2D":"#888780",background:b.pendientes>0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
+                      {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
+                    </>}
+                    {esParalelo&&actsConRegHoy.map(a=>{
+                      const rango=getRangoActivo(a.id,hoy);
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
+                      const regA=tsFmt.filter(ti=>{
+                        const reg=getReg(hoy,ti.id,a.id);
+                        if(!reg?.evidencias||reg.anulado) return false;
+                        return toMin(primerEnvio(reg.evidencias))>b1Max;
+                      }).length;
+                      const pendA=tsFmt.filter(ti=>!actsRef.some(aa=>{const r=getReg(hoy,ti.id,aa.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
+                      const esAdHoc=a.cat&&a.cat!=="Always On";
+                      const ptsMax=toMin(nowTime)<=toMin(rango.c80||"09:00")?"8pts":"6pts";
+                      return(
+                        <span key={a.id} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,
+                          color:esAdHoc?"#3B6D11":"#185FA5",
+                          background:esAdHoc?"#EAF3DE":"#E6F1FB",
+                          whiteSpace:"nowrap",flexShrink:0}}>
+                          {a.e} {String(regA).padStart(2,"0")} reg. · {String(pendA).padStart(2,"0")} pend. · {ptsMax} máx.
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
                 );
@@ -2927,6 +3512,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             )}
 
             {/* Footer */}
+            </>}
             <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
               VEGA · EVIDENCIAS · {hoy}
             </div>
