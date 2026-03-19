@@ -160,21 +160,18 @@ function getWeeksOfMonth(year, month) {
   return weeks;
 }
 
-/* ══ LOG TABLE — componente separado para evitar conflictos de hooks en IIFE ══ */
-function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin}) {
+/* ══ LOG TABLE — componente separado ══ */
+// FIX BUG 6: Eliminado patrón window._logTableSelDups — comunicación via prop selLogsExterno
+function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb, FMT, S, isAdmin, selLogsExterno, onSelLogsExternoConsumed}) {
   const [selLogs, setSelLogs] = useState(new Set());
 
-  // Escuchar evento de selección automática de duplicados
+  // FIX BUG 6: Consumir selección externa via prop, no via window global
   useEffect(()=>{
-    const handler = ()=>{
-      if(window._logTableSelDups) {
-        setSelLogs(new Set(window._logTableSelDups));
-        window._logTableSelDups = null;
-      }
-    };
-    window.addEventListener("selectDups", handler);
-    return ()=>window.removeEventListener("selectDups", handler);
-  },[]);
+    if(selLogsExterno && selLogsExterno.size > 0){
+      setSelLogs(new Set(selLogsExterno));
+      if(onSelLogsExternoConsumed) onSelLogsExternoConsumed();
+    }
+  },[selLogsExterno]);
 
   const toggleSel = (uid) => setSelLogs(prev => {
     const ns = new Set(prev);
@@ -307,15 +304,21 @@ export default function ChecklistApp() {
   const [logTxt,  setLogTxt]  = useState("");
   const [logFecha,setLogFecha]= useState("Todos");
   const [logSoloDups,setLogSoloDups]= useState(false);
+  // FIX BUG 6: Estado para selección externa de duplicados (reemplaza window global)
+  const [selDupsExterno, setSelDupsExterno] = useState(new Set());
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
+  // FIX BUG 7: Estado controlado para la fecha de Rangos del Día (reemplaza getElementById)
+  const [rangoFecha, setRangoFecha] = useState(()=>todayStr());
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
+  // FIX BUG 9: ref para exportPDF — sin window global, seguro multi-tab
+  const exportPdfRef = useRef(null);
   /* ── modales de registro ── */
   const [delModal,    setDelModal]    = useState(null);
   const [anularModal, setAnularModal] = useState(null);
@@ -384,22 +387,42 @@ export default function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
+  // FIX BUG 4: Refs para evitar stale closure en saveConfig — siempre leen estado actual
+  const actsRef      = useRef(acts);
+  const tiendasRef   = useRef(tiendas);
+  const pinsRef      = useRef(pins);
+  const excepsRef    = useRef(exceps);
+  const rangosDiaRef = useRef(rangosDia);
+  const auditoresRef = useRef(auditores);
+  useEffect(()=>{ actsRef.current=acts; },[acts]);
+  useEffect(()=>{ tiendasRef.current=tiendas; },[tiendas]);
+  useEffect(()=>{ pinsRef.current=pins; },[pins]);
+  useEffect(()=>{ excepsRef.current=exceps; },[exceps]);
+  useEffect(()=>{ rangosDiaRef.current=rangosDia; },[rangosDia]);
+  useEffect(()=>{ auditoresRef.current=auditores; },[auditores]);
+
   const saveConfig = useCallback(async (overrides={})=>{
-    // Filtrar excepciones legacy (true) antes de guardar
-    const excToSave = overrides.excepciones ?? exceps;
+    // FIX BUG 4: Sin dependencias en deps array — usa refs actualizados en cada render
+    const excToSave = overrides.excepciones ?? excepsRef.current;
     const excClean = Object.fromEntries(
       Object.entries(excToSave).filter(([,v])=>Array.isArray(v)&&v.length>0)
     );
-    await setDoc(doc(db,"config","app"),{
-      actividades: overrides.actividades ?? acts,
-      tiendas:     overrides.tiendas     ?? tiendas,
-      pins:        overrides.pins        ?? pins,
-      auditores:   overrides.auditores   ?? auditores,
-      excepciones: excClean,
-      rangosDia:   overrides.rangosDia   ?? rangosDia,
-      updatedAt:   new Date().toISOString(),
-    });
-  },[acts,tiendas,pins,exceps,rangosDia,auditores]);
+    try {
+      await setDoc(doc(db,"config","app"),{
+        actividades: overrides.actividades ?? actsRef.current,
+        tiendas:     overrides.tiendas     ?? tiendasRef.current,
+        pins:        overrides.pins        ?? pinsRef.current,
+        auditores:   overrides.auditores   ?? auditoresRef.current,
+        excepciones: excClean,
+        rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
+        updatedAt:   new Date().toISOString(),
+      });
+    } catch(err) {
+      console.error("[saveConfig] Error guardando en Firebase:", err);
+      throw err;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const dow = getDow(fecha);
   const esFS = dow===0||dow===6;
@@ -486,18 +509,17 @@ export default function ChecklistApp() {
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
   },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
 
-  // calcEficiencia: retorna {pct, obtenidos, maximos, registros}
-  // pct = (pts obtenidos / pts máximos posibles) * 100
-  // actsConRegistroIds: actividades con al menos 1 registro en el MES EN VISTA
-  // Filtra por mes — evita columnas fantasma y maximos inflados → RIESGO falso.
+  // FIX BUG 2: actsConRegistroIds — fallback a docId cuando .fecha está ausente (registros legacy)
   const actsConRegistroIds = useMemo(()=>{
     const ids = new Set();
     const ymPrefix = `${vYear}-${String(vMonth+1).padStart(2,"0")}`;
-    Object.entries(regs).forEach(([,r])=>{
+    Object.entries(regs).forEach(([docId,r])=>{
       if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
-      const f = r.fecha||"";
-      // Solo contar si la fecha del registro corresponde al mes en vista
-      // y el registro tiene campo fecha explícito (evita registros de prueba sin fecha)
+      // Fuente 1: campo .fecha explícito (registros nuevos)
+      const fFromField = r.fecha||"";
+      // Fuente 2: extraer fecha del docId "YYYY-MM-DD--tXX--aXX" (registros legacy sin .fecha)
+      const fFromDocId = docId.replace(/--/g,"|").split("|")[0]||"";
+      const f = (fFromField.length===10 ? fFromField : fFromDocId);
       if(f.startsWith(ymPrefix) && f.length===10) ids.add(r.actividadId);
     });
     return ids;
@@ -570,8 +592,15 @@ export default function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
+
+    // FIX BUG 8: Auditores solo pueden registrar en fecha de hoy
+    const hoyReal = todayStr();
+    if(!isAdmin && fecha !== hoyReal){
+      showToast(`⚠️ Solo puedes registrar en la fecha de hoy (${hoyReal}). Contacta al Admin para ajustes históricos.`);
+      return;
+    }
+
     // REGLA UNIVERSAL: nadie puede insertar si la tienda ya tiene registro válido hoy
-    // para esta actividad. Admin debe usar "Actualizar registro" desde el Reporte.
     const yaRegistradas = [...tSel].filter(tId=>{
       const reg = getReg(fecha,tId,actSel);
       return reg?.evidencias?.length>0 && !reg?.anulado;
@@ -579,11 +608,12 @@ export default function ChecklistApp() {
     if(yaRegistradas.length>0){
       const nombres = yaRegistradas.map(tId=>tiendas.find(x=>x.id===tId)?.n||tId).join(", ");
       showToast(`⚠️ Ya registradas: ${nombres}. Usa "Actualizar" desde el Reporte.`);
-      // Quitar automáticamente las ya registradas de la selección
       setTSel(prev=>{const ns=new Set(prev);yaRegistradas.forEach(id=>ns.delete(id));return ns;});
       return;
     }
-    const AR = rangoExt || actInfo?.r || RANGOS_DEFAULT;
+    // FIX BUG 1: Fuente única de verdad para el rango — getRangoActivo incluye overrides del día
+    // rangoExt es SOLO visual para el auditor en paso 2; al confirmar, prima el rango del sistema
+    const AR = rangoExt || getRangoActivo(actSel, fecha);
     const pct=calcP(horaEx,AR);
     const tier=getTierPts(pct);
     let n=0;
@@ -600,8 +630,14 @@ export default function ChecklistApp() {
       promises.push(setDoc(doc(db,"registros",docId),{evidencias:newEvs,fecha,tiendaId:tId,actividadId:actSel,updatedAt:now.toISOString()}));
       n++;
     });
-    await Promise.all(promises);
-    showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
+    try {
+      await Promise.all(promises);
+      showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
+    } catch(err) {
+      console.error("[confirmarRegistro] Error Firebase:", err);
+      showToast(`❌ Error al guardar. Verifica tu conexión e intenta nuevamente.`);
+      return;
+    }
     setTSel(new Set());setRango(null);setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));setObsEx("");setPaso(2);setVerRegistradas(false);
   };
 
@@ -1493,8 +1529,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       return{a,v,ob,mx};
     });
 
-    const exportPDF=window._vegaPDF=()=>{
+    const exportPDF=()=>{
       const w=window.open("","_blank");
+      if(!w){ showToast("⚠️ El navegador bloqueó la ventana emergente. Permite popups para este sitio."); return; }
       w.document.write(`<html><head><title>VEGA Evidencias - ${MESES[vMonth]} ${vYear}</title>
       <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
       h1{font-size:18px;border-bottom:2px solid #1a2f4a;padding-bottom:8px;margin-bottom:16px;}
@@ -1539,6 +1576,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       w.document.close();
       w.print();
     };
+    // FIX BUG 9: Asignar ref aquí (en cada render de Dashboard) para que el header la tenga
+    exportPdfRef.current = exportPDF;
 
     return(
       <div style={{padding:"16px"}}>
@@ -2759,8 +2798,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       const sorted=[...grupo].sort((a,b)=>a.hora.localeCompare(b.hora));
                       sorted.slice(1).forEach(l=>aEliminar.add(l.uid));
                     });
-                    window._logTableSelDups=aEliminar;
-                    window.dispatchEvent(new Event("selectDups"));
+                    // FIX BUG 6: Comunicar selección via estado React, no window global
+                    setSelDupsExterno(aEliminar);
                   }} style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
                     ⚠️ Ver y seleccionar duplicados a eliminar
                   </button>
@@ -2772,7 +2811,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
           {!filtered.length
             ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados</div>
-            :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin}/>
+            :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin} selLogsExterno={selDupsExterno} onSelLogsExternoConsumed={()=>setSelDupsExterno(new Set())}/>
           }
         </div>
         );
@@ -2783,15 +2822,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
             <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Ajusta los horarios de puntaje para actividades Ad-hoc o Promocionales en una fecha específica. Los Always On usan su rango fijo.</div>
           </div>
-          {/* Selector de fecha */}
+          {/* FIX BUG 7: Input controlado con rangoFecha state — eliminado getElementById */}
           <div style={{...S.card,padding:"12px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:12,fontWeight:700,color:"#5a7a9a"}}>📆 Fecha:</span>
-            <input type="date" defaultValue={fecha}
-              id="rango-fecha-input"
+            <input type="date" value={rangoFecha}
+              onChange={e=>setRangoFecha(e.target.value)}
               style={{...S.inp,flex:1,fontSize:13}}/>
           </div>
           {acts.filter(a=>a.activa&&a.cat!=="Always On").map(a=>{
-            const fechaInput = document.getElementById?.("rango-fecha-input")?.value||fecha;
+            const fechaInput = rangoFecha;
             const override = rangosDia?.[a.id]?.[fechaInput];
             const base = a.r||RANGOS_DEFAULT;
             const RR = override||base;
@@ -2805,7 +2844,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                   {override&&(
                     <button onClick={()=>{
-                      const fi=document.getElementById("rango-fecha-input")?.value||fecha;
+                      const fi=rangoFecha;
                       setRangosDia(prev=>{
                         const next={...prev};
                         if(next[a.id]) { delete next[a.id][fi]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
@@ -2824,7 +2863,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
                       <input type="time" value={RR[f.k]}
                         onChange={e=>{
-                          const fi=document.getElementById("rango-fecha-input")?.value||fecha;
+                          const fi=rangoFecha;
                           setRangosDia(prev=>{
                             const next={...prev,[a.id]:{...(prev[a.id]||{}),[fi]:{...(prev[a.id]?.[fi]||base),[f.k]:e.target.value}}};
                             saveConfig({rangosDia:next});
@@ -3198,7 +3237,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
-          {isAdmin&&<button onClick={()=>window._vegaPDF?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
+          {isAdmin&&<button onClick={()=>exportPdfRef.current?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
           {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
@@ -3713,13 +3752,16 @@ function LoginScreen({pins,auditores,onLogin}){
     if(pin===pins.admin){onLogin("admin","Administrador","");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
+  // FIX BUG 11: Viewer ahora valida pin real
+  const tryViewer=()=>{
+    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
+  };
   const tryDni=()=>{
     const clean=dni.trim();
     if(clean.length<8){setErr("DNI debe tener 8 dígitos");return;}
-    // Si está registrado → entra con su nombre
     const found=auds.find(a=>a.dni===clean);
     if(found){onLogin("auditor",found.nombre,clean);return;}
-    // Fallback: si no hay auditores aún (marcha blanca) → código auditor88 como DNI
     if(auds.length===0&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
     setErr(auds.length===0
       ?"Sin auditores registrados. Contacta al Admin."
@@ -3757,11 +3799,8 @@ function LoginScreen({pins,auditores,onLogin}){
                 <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Código de acceso</div>
               </div>
             </button>
-            {/* Viewer → código directo */}
-            <button onClick={()=>{
-              const v=pins.viewer;
-              if(v){onLogin("viewer","Gerencia","");}
-            }}
+            {/* Viewer → requiere código — FIX BUG 11: no más entrada libre */}
+            <button onClick={()=>{setStep("pin_viewer");setErr("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
               <span style={{fontSize:24,flexShrink:0}}>👁️</span>
               <div>
@@ -3795,19 +3834,20 @@ function LoginScreen({pins,auditores,onLogin}){
           </>
         )}
 
-        {/* ── ADMIN / GERENCIA: código ── */}
-        {step==="pin"||step==="pin_admin"?(
+        {/* ── ADMIN: código ── */}
+        {(step==="pin"||step==="pin_admin")&&(
           <>
             <div style={{fontSize:32,marginBottom:10}}>🔑</div>
-            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Código de acceso</p>
+            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Código Administrador</p>
+            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Acceso total al sistema</p>
             <input autoFocus type="password" value={pin}
               onChange={e=>setPin(e.target.value)}
               onKeyDown={e=>e.key==="Enter"&&tryPin()}
               placeholder="••••••••"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#f6a623"}`,letterSpacing:8,fontSize:20}}/>
             {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
             <button onClick={tryPin}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#f6a623,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Ingresar →
             </button>
             <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
@@ -3815,7 +3855,30 @@ function LoginScreen({pins,auditores,onLogin}){
               ← Volver
             </button>
           </>
-        ):null}
+        )}
+
+        {/* ── VISOR: código — FIX BUG 11: requiere autenticación real ── */}
+        {step==="pin_viewer"&&(
+          <>
+            <div style={{fontSize:32,marginBottom:10}}>👁️</div>
+            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Código Visor</p>
+            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Dashboard de gerencia — solo lectura</p>
+            <input autoFocus type="password" value={pin}
+              onChange={e=>setPin(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&tryViewer()}
+              placeholder="••••••••"
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#74b9ff"}`,letterSpacing:8,fontSize:20}}/>
+            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
+            <button onClick={tryViewer}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#74b9ff,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+              Ver Dashboard →
+            </button>
+            <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
+              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
+              ← Volver
+            </button>
+          </>
+        )}
 
       </div>
     </div>
