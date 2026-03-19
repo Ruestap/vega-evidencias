@@ -2059,9 +2059,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                           const dm=dayMap[ds];
                           const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
                           const cs=hCell(eficDia);
+                          // Issue 5 fix: construir desglose por actividad para este día específico
+                          const actsTipDia=dm?acts.filter(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
+                            const reg=getReg(ds,null,a.id); // buscar cualquier registro de cualquier tienda ese día
+                            // Contar tiendas con registro y su distribución horaria
+                            const tiConReg=tsBase.filter(ti=>{
+                              const r=getReg(ds,ti.id,a.id);
+                              return r?.evidencias?.length&&!r?.anulado&&!isExc(ti.id,a.id,ds);
+                            });
+                            const tiEval=tsBase.filter(ti=>!isExc(ti.id,a.id,ds));
+                            if(!tiEval.length) return null;
+                            let aPts=0;
+                            tiConReg.forEach(ti=>{const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));if(p!==null)aPts+=p;});
+                            const aMx=tiEval.length*10;
+                            const aEf=aMx>0?Math.round((aPts/aMx)*100):0;
+                            return `${a.e}${a.n}: ${tiConReg.length}/${tiEval.length} tiendas · ${aPts}/${aMx}pts (${aEf}%)`;
+                          }).filter(Boolean):[];
                           const tip=dm
-                            ?`${dm.expected} actividades programadas · ${dm.oro+dm.plata+dm.bronce+dm.fuera} enviaron evidencia · ${dm.ptsObt}/${dm.ptsMax} pts → ${eficDia}%  |  🥇 ${dm.oro} antes de 08:00 (10pts)  🥈 ${dm.plata} entre 08-09h (8pts)  🥉 ${dm.bronce} entre 09-10h (6pts)  🔴 ${dm.fuera} después de 10:00 (0pts)`
-                            :"Sin datos — semana pendiente o sin actividades";
+                            ?`${eficDia}% · ${dm.ptsObt}/${dm.ptsMax}pts\n${actsTipDia.join('\n')}\n──────\n🥇${dm.oro} ORO · 🥈${dm.plata} Plata · 🥉${dm.bronce} Bronce · 🔴${dm.fuera} Fuera`
+                            :"Sin datos";
                           return(
                           <td key={dow} style={{padding:0}}>
                             <div title={tip} style={{background:cs.bg,color:cs.color,borderRadius:6,padding:"8px 4px",textAlign:"center",fontSize:12,fontWeight:700,minWidth:36,cursor:"default"}}>
@@ -2958,52 +2974,81 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       return {fmt,pct:mx>0?Math.round((ob/mx)*100):null};
     });
 
-    // Bug 2 fix: tiendas en riesgo — excluir tiendas sin ningún día evaluable en el mes
-    // Una tienda está en riesgo SOLO si tuvo al menos un día evaluable (no N/A global)
+    // Issue 1 fix: tiendas en riesgo SOLO si tuvieron al menos 1 registro real en el mes
+    // Esto evita el falso positivo de tiendas con 0% por nunca haber registrado (no evaluadas)
     const scoresMesV=tiAct.map(ti=>{
       const ef=calcMesDetalle(ti.id);
-      // Verificar que la tienda tuvo al menos 1 actividad evaluable en el mes
+      // Requiere días evaluables Y al menos 1 registro real
       const tuvoDiasEvaluables=semanasDelMes.some(s=>s.days.some(d=>{
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return false;
         const dw=getDow(ds);
         return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
       }));
-      if(!tuvoDiasEvaluables) return {ti,pct:null}; // completamente excluida, no mostrar
-      return {ti,pct:ef?.pct??null};
+      const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        return acts.some(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
+          const reg=getReg(ds,ti.id,a.id);
+          return reg?.evidencias?.length>0&&!reg?.anulado;
+        })());
+      }));
+      if(!tuvoDiasEvaluables||!tuvoRegistros) return {ti,pct:null,sinDatos:!tuvoDiasEvaluables};
+      return {ti,pct:ef?.pct??null,sinDatos:false};
     });
     const enRiesgo=scoresMesV.filter(s=>s.pct!==null&&s.pct<60).sort((a,b)=>(a.pct??99)-(b.pct??99));
     const enAtención=scoresMesV.filter(s=>s.pct!==null&&s.pct>=60&&s.pct<80).sort((a,b)=>(a.pct??99)-(b.pct??99)).slice(0,3);
+    // Tiendas sin datos para mostrar en la leyenda
+    const sinDatosCount=scoresMesV.filter(s=>s.sinDatos).length;
 
     // Bug 4 fix: nombre del día de la semana dinámico para comparativa
     const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
     const semAntDate=new Date(hoy); semAntDate.setDate(semAntDate.getDate()-7);
     const diaSemAnt=DIAS_ES[semAntDate.getDay()]; // nombre real del día
 
-    // Sentencia narrativa — usa semana de referencia correcta
-    const semLabel=semanasDelMes[iSemRef]?.label||"Período";
-    const esAlerta=(deltaSem!==null&&deltaSem<-5)||enRiesgo.length>0;
-    let narrativa="";
-    if(vSemActual){
-      narrativa=esMesActual
-        ?`${semLabel} registra ${vSemActual.pct}% de eficiencia`
-        :`${MESES[vMonth]} cerró con ${efMes!==null?efMes+"%":"—"} de eficiencia global`;
-    }
-    if(deltaSem!==null&&esMesActual) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
     const actMejor=actEfectV[0];
     const actPeor=actEfectV[actEfectV.length-1];
-    if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
-    if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} requiere atención (${actPeor.pct}%)`;
-    if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} en zona crítica`;
+
+    // Issue 2 fix: narrativa respeta la semana seleccionada
+    const periodoLabel=selWeek!==null?semanasDelMes[selWeek]?.label:null;
+    const semLabel=periodoLabel||semanasDelMes[iSemRef]?.label||"Período";
+    const esAlerta=(deltaSem!==null&&deltaSem<-5)||enRiesgo.length>0;
+    let narrativa="";
+    if(selWeek!==null){
+      // Vista de semana específica
+      const vSel=tendenciaViewer[selWeek];
+      narrativa=vSel
+        ?`${semLabel} registró ${vSel.pct}% de eficiencia`
+        :`${semLabel} sin datos registrados`;
+      if(actMejor) narrativa+=`. ${actMejor.a.n} lideró con ${actMejor.pct}%`;
+      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} con ${actPeor.pct}% requiere revisión`;
+    } else {
+      // Vista de mes completo
+      if(vSemActual){
+        narrativa=esMesActual
+          ?`${semLabel} registra ${vSemActual.pct}% de eficiencia`
+          :`${MESES[vMonth]} cerró con ${efMes!==null?efMes+"%":"—"} de eficiencia global`;
+      }
+      if(deltaSem!==null&&esMesActual) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
+      if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
+      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} requiere atención (${actPeor.pct}%)`;
+      if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} con bajo rendimiento`;
+    }
     narrativa+=".";
 
     return(
     <div style={{padding:"clamp(10px,3vw,20px)",maxWidth:900,margin:"0 auto",width:"100%"}}>
-      {/* Nav mes */}
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14}}>
+      {/* Nav mes + selector de semana */}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
         <button onClick={()=>navMes(-1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>←</button>
         <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
         <button onClick={()=>navMes(1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>→</button>
+      </div>
+      {/* Selector semana — comparte selWeek con el reporte */}
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes completo</button>
+        {semanasDelMes.map((s,i)=>(
+          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+        ))}
       </div>
 
       {/* Sentencia ejecutiva */}
@@ -3099,16 +3144,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         })}
       </div>
 
-      {/* Tiendas que requieren atención — Bug 2: solo tiendas con días evaluables reales */}
+      {/* Tiendas que requieren atención — Issue 1: solo tiendas con registros reales */}
       {(enRiesgo.length>0||enAtención.length>0)&&(
       <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>TIENDAS QUE REQUIEREN ATENCIÓN</div>
+        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>TIENDAS QUE REQUIEREN ATENCIÓN</div>
+        <div style={{fontSize:10,color:"#8aaabb",marginBottom:12,padding:"6px 10px",background:"#f8fafc",borderRadius:6}}>
+          Solo se muestran tiendas con al menos 1 registro en el período. Tiendas con excepción N/A en todos sus días evaluables no aparecen aquí.
+          {sinDatosCount>0&&` · ${sinDatosCount} tienda${sinDatosCount>1?"s":""} excluidas por N/A no se evalúan.`}
+        </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {enRiesgo.map(({ti,pct})=>(
             <div key={ti.id} style={{flex:"1 1 160px",padding:"10px 12px",background:"#FCEBEB",borderRadius:8,border:"0.5px solid #F7C1C1"}}>
               <div style={{fontSize:12,fontWeight:700,color:"#791F1F"}}>Vega {ti.n}</div>
               <div style={{fontSize:10,color:"#A32D2D",marginTop:2}}>{ti.f} · {pct}%</div>
-              <div style={{fontSize:10,color:"#A32D2D"}}>Zona crítica — acción inmediata</div>
+              <div style={{fontSize:10,color:"#A32D2D"}}>Eficiencia crítica — revisar registros</div>
             </div>
           ))}
           {enAtención.map(({ti,pct})=>(
@@ -3171,8 +3220,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       )}
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
-        const hoy=todayStr();
-        const fmts=[
+        // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
+        const hoy=fecha; // fecha = estado seleccionado en el header (puede ser distinto a todayStr())        const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
           {fmt:"Market",       icon:"🛒"},
