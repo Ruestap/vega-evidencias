@@ -136,7 +136,11 @@ const PUNTAJES = [
 ];
 
 /* ══ UTILS ══════════════════════════════════════════════ */
-const todayStr = () => new Date().toISOString().slice(0,10);
+// FIX: Usa fecha LOCAL del dispositivo, no UTC — evita desfase de zona horaria (ej. Peru UTC-5)
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 const getDow   = s  => new Date(s+"T12:00:00").getDay();
 const dStr     = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const rKey     = (f,tid,a) => `${f}|${tid}|${a}`;
@@ -344,7 +348,10 @@ function ChecklistApp() {
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
-  const [rangoFecha, setRangoFecha] = useState(()=>todayStr()); // B12 fix: llamar la función, no pasar referencia
+  const [rangoFecha, setRangoFecha] = useState(()=>todayStr());
+  // Cortes de supervisión independientes de los rangos de puntaje
+  // Admin los configura; se usan en la tarjeta Estado de Registros
+  const [cortesSupervision, setCortesSupervision] = useState({c1:"08:30", c2:"09:30"});
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
@@ -405,6 +412,7 @@ function ChecklistApp() {
       if(d.pins)        setPins(d.pins);
       if(d.auditores)   setAuditores(d.auditores);
       if(d.rangosDia)   setRangosDia(d.rangosDia);
+      if(d.cortesSupervision) setCortesSupervision(d.cortesSupervision);
       // Limpiar exceps: descartar true legacy y arrays vacíos
       const exc = d.excepciones || {};
       const cleaned = Object.fromEntries(
@@ -429,12 +437,14 @@ function ChecklistApp() {
   const excepsRef  = useRef(exceps);
   const rangosDiaRef = useRef(rangosDia);
   const auditoresRef = useRef(auditores);
+  const cortesSupervisionRef = useRef(cortesSupervision);
   useEffect(()=>{ actsRef.current=acts; },[acts]);
   useEffect(()=>{ tiendasRef.current=tiendas; },[tiendas]);
   useEffect(()=>{ pinsRef.current=pins; },[pins]);
   useEffect(()=>{ excepsRef.current=exceps; },[exceps]);
   useEffect(()=>{ rangosDiaRef.current=rangosDia; },[rangosDia]);
   useEffect(()=>{ auditoresRef.current=auditores; },[auditores]);
+  useEffect(()=>{ cortesSupervisionRef.current=cortesSupervision; },[cortesSupervision]);
 
   const saveConfig = useCallback(async (overrides={})=>{
     // Usa refs para evitar stale closure — siempre tiene el valor más reciente
@@ -450,6 +460,7 @@ function ChecklistApp() {
         auditores:   overrides.auditores   ?? auditoresRef.current,
         excepciones: excClean,
         rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
+        cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
         updatedAt:   new Date().toISOString(),
       });
     } catch(e) {
@@ -464,6 +475,7 @@ function ChecklistApp() {
           auditores:   overrides.auditores   ?? auditoresRef.current,
           excepciones: excClean,
           rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
+          cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
           updatedAt:   new Date().toISOString(),
         });
       } catch(e2) {
@@ -2765,7 +2777,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   const renderConfig = ()=>(
     <div style={{padding:"16px"}}>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Actividades","Tiendas","Auditores","Auditoría","Rangos Día"].map((l,i)=>(
+        {["Actividades","Tiendas","Auditores","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
@@ -3215,6 +3227,84 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       )}
 
+      {/* ── CORTES DE SUPERVISIÓN — cfgTab===5 ── */}
+      {cfgTab===5&&(
+        <div>
+          <div style={{marginBottom:14}}>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>⏱️ Cortes de Supervisión</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginTop:2,lineHeight:1.6}}>
+              Define los dos bloques horarios que se muestran en la <strong>Tarjeta de Estado</strong> para supervisar el trabajo del auditor en campo.<br/>
+              Son independientes de los rangos de puntaje — miden ventanas operativas, no scoring.
+            </div>
+          </div>
+          <div style={{...S.card,padding:"18px 20px",marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              {/* Corte 1 */}
+              <div>
+                <div style={{fontSize:10,fontWeight:800,color:"#BA7517",letterSpacing:".06em",marginBottom:8}}>
+                  🟡 CORTE 1 · BLOQUE ORO
+                </div>
+                <div style={{fontSize:11,color:"#5a7a9a",marginBottom:10}}>
+                  Desde <strong>00:00</strong> hasta:
+                </div>
+                <input type="time" value={cortesSupervision.c1}
+                  onChange={e=>{
+                    const next={...cortesSupervision, c1:e.target.value};
+                    setCortesSupervision(next);
+                    saveConfig({cortesSupervision:next});
+                  }}
+                  style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid #f6a623",background:"#fff8ec",color:"#1a2f4a",fontSize:22,outline:"none",textAlign:"center",fontWeight:700,boxSizing:"border-box"}}/>
+                <div style={{marginTop:8,padding:"6px 10px",background:"#fff8ec",borderRadius:8,fontSize:10,color:"#854F0B"}}>
+                  00:00 – {cortesSupervision.c1} → Bloque ORO
+                </div>
+              </div>
+              {/* Corte 2 */}
+              <div>
+                <div style={{fontSize:10,fontWeight:800,color:"#185FA5",letterSpacing:".06em",marginBottom:8}}>
+                  🔵 CORTE 2 · BLOQUE PLATA
+                </div>
+                <div style={{fontSize:11,color:"#5a7a9a",marginBottom:10}}>
+                  Desde <strong>{(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}</strong> hasta:
+                </div>
+                <input type="time" value={cortesSupervision.c2}
+                  onChange={e=>{
+                    const next={...cortesSupervision, c2:e.target.value};
+                    setCortesSupervision(next);
+                    saveConfig({cortesSupervision:next});
+                  }}
+                  style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid #74b9ff",background:"#e8f4fd",color:"#1a2f4a",fontSize:22,outline:"none",textAlign:"center",fontWeight:700,boxSizing:"border-box"}}/>
+                <div style={{marginTop:8,padding:"6px 10px",background:"#e8f4fd",borderRadius:8,fontSize:10,color:"#185FA5"}}>
+                  {(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}  – {cortesSupervision.c2} → Bloque PLATA
+                </div>
+              </div>
+            </div>
+            {/* Preview de la tarjeta */}
+            <div style={{marginTop:20,padding:"12px 14px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".06em",marginBottom:8}}>VISTA PREVIA — TARJETA ESTADO</div>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"#fff8ec",borderRadius:8,border:"1px solid #FAC775"}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#BA7517",display:"inline-block"}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:"#BA7517"}}>CORTE 1 · hasta las {cortesSupervision.c1} · ORO</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"#e8f4fd",borderRadius:8,border:"1px solid #74b9ff"}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block"}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:"#185FA5"}}>CORTE 2 · {(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}  a {cortesSupervision.c2} · PLATA</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Botón reset */}
+          <button onClick={()=>{
+            const def={c1:"08:30",c2:"09:30"};
+            setCortesSupervision(def);
+            saveConfig({cortesSupervision:def});
+            showToast("✅ Cortes restablecidos a valores por defecto");
+          }} style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>
+            ↺ Restablecer valores por defecto (08:30 / 09:30)
+          </button>
+        </div>
+      )}
+
       {/* ── LIMPIEZA MARCHA BLANCA — solo Admin ── */}
       <div style={{...S.card,padding:"14px 16px",marginTop:16,border:"1.5px solid #fecaca",background:"#fff1f2"}}>
         <div style={{fontWeight:700,fontSize:13,color:"#dc2626",marginBottom:4}}>🗑️ Limpieza de registros de prueba</div>
@@ -3444,22 +3534,24 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           const reg=getReg(hoy,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
         }));
-        const actsRef=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
+        const actsRefCard=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
         // Rangos de corte desde la actividad de referencia (respeta config del Admin)
-        const actRefRango = actsRef.length>0 ? getRangoActivo(actsRef[0].id, hoy) : RANGOS_DEFAULT;
-        const bloque1Hasta = actRefRango.c100 || "08:30";
+        const actRefRango = actsRefCard.length>0 ? getRangoActivo(actsRefCard[0].id, hoy) : RANGOS_DEFAULT;
+        // Cortes de supervisión: configurables por Admin (independientes del puntaje)
+        const bloque1Hasta = cortesSupervision.c1 || "08:30";
+        const bloque2Hasta = cortesSupervision.c2 || "09:30";
         const bloque2Desde = (()=>{
           const [h,m] = bloque1Hasta.split(":").map(Number);
           const next = h*60+m+1;
           return String(Math.floor(next/60)).padStart(2,"0")+":"+String(next%60).padStart(2,"0");
         })();
-        const bloque2Hasta = "09:30";
+        // bloque2Hasta viene de cortesSupervision.c2 (definido arriba)
         const getBloque=(fmtNombre, desdeMin, hastaMin, esCorteFinal=false)=>{
           const ts=tiAct.filter(ti=>ti.f===fmtNombre);
-          const excluidasList=ts.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy)));
-          const disponiblesList=ts.filter(ti=>!(actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))));
+          const excluidasList=ts.filter(ti=>actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy)));
+          const disponiblesList=ts.filter(ti=>!(actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy))));
           const registradas=disponiblesList.filter(ti=>{
-            return actsRef.some(a=>{
+            return actsRefCard.some(a=>{
               const reg=getReg(hoy,ti.id,a.id);
               if(!reg||!reg.evidencias||reg.anulado) return false;
               const hora=primerEnvio(reg.evidencias);
@@ -3470,7 +3562,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           });
           let horaMin=null, horaMax=null;
           disponiblesList.forEach(ti=>{
-            actsRef.forEach(a=>{
+            actsRefCard.forEach(a=>{
               const reg=getReg(hoy,ti.id,a.id);
               if(!reg||!reg.evidencias||reg.anulado) return;
               const hora=primerEnvio(reg.evidencias);
@@ -3484,7 +3576,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             });
           });
           const sinRegistroHoy = esCorteFinal
-            ? disponiblesList.filter(ti=>!actsRef.some(a=>{
+            ? disponiblesList.filter(ti=>!actsRefCard.some(a=>{
                 const reg=getReg(hoy,ti.id,a.id);
                 return reg?.evidencias?.length>0&&!reg?.anulado;
               }))
@@ -3496,12 +3588,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
         const totalTiendas=tiAct.length;
         // N/A: tiendas excluidas para TODAS las actividades de referencia
-        const totalNA=tiAct.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
+        const totalNA=tiAct.filter(ti=>actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy))).length;
         const totalDisp=totalTiendas-totalNA;
         // Registradas: tienen evidencia válida hoy en alguna actividad de referencia
         const totalReg=tiAct.filter(ti=>
-          !actsRef.every(a=>isExc(ti.id,a.id,hoy)) &&
-          actsRef.some(a=>{
+          !actsRefCard.every(a=>isExc(ti.id,a.id,hoy)) &&
+          actsRefCard.some(a=>{
             const reg=getReg(hoy,ti.id,a.id);
             return reg?.evidencias?.length>0&&!reg?.anulado;
           })
@@ -3546,11 +3638,11 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* ── VISTA GERENCIAL ── */}
             {statusCardView==="gerencial"&&isAdmin&&(()=>{
               // Actividad con registros hoy
-              const actHoyLabel=actsRef.length>0?actsRef[0]:null;
+              const actHoyLabel=actsRefCard.length>0?actsRefCard[0]:null;
               // KPI 1: cumplimiento hoy = registradas / disponibles
               const cumplHoy=totalDisp>0?Math.round((totalReg/totalDisp)*100):0;
               // KPI 2: registradas en Corte 1 (ORO) = registradas con hora <= bloque1Hasta
-              const regC1=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{
+              const regC1=tiAct.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))&&actsRefCard.some(a=>{
                 const reg=getReg(hoy,ti.id,a.id);
                 if(!reg?.evidencias?.length||reg?.anulado) return false;
                 return toMin(primerEnvio(reg.evidencias))<=b1Max;
@@ -3565,24 +3657,24 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const hoyDate=new Date(hoy);
               const semAntDate=new Date(hoyDate); semAntDate.setDate(hoyDate.getDate()-7);
               const semAntStr=semAntDate.toISOString().slice(0,10);
-              const totalDispSA=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+              const totalDispSA=tiAct.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))).length;
               const totalRegSA=tiAct.filter(ti=>
-                !actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&
-                actsRef.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
+                !actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))&&
+                actsRefCard.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
               ).length;
               const cumplSA=totalDispSA>0?Math.round((totalRegSA/totalDispSA)*100):null;
               const deltaCumpl=cumplSA!==null?cumplHoy-cumplSA:null;
               // Cumplimiento y delta por formato
               const fmtStats=fmts.map(({fmt,icon})=>{
                 const tsFmt=tiAct.filter(ti=>ti.f===fmt);
-                const dispFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
-                const regFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{
+                const dispFmt=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))).length;
+                const regFmt=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))&&actsRefCard.some(a=>{
                   const r=getReg(hoy,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
                 })).length;
                 const pctFmt=dispFmt>0?Math.round((regFmt/dispFmt)*100):null;
                 // Delta vs semana anterior para este formato
-                const dispFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
-                const regFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRef.some(a=>{
+                const dispFmtSA=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+                const regFmtSA=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRefCard.some(a=>{
                   const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
                 })).length;
                 const pctFmtSA=dispFmtSA>0?Math.round((regFmtSA/dispFmtSA)*100):null;
