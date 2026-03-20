@@ -848,6 +848,182 @@ function ChecklistApp() {
   };
 
   /* ══ LOGIN ══ */
+
+  /* ══ VIEWER DASHBOARD — narrativa estratégica para gerencia ══ */
+  // B6 fix: memoizar cálculos pesados del viewer para evitar recálculo en cada render
+  const viewerData = useMemo(()=>{
+    const hoy=todayStr();
+    const esMesActual=vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
+    const tendenciaViewer=semanasDelMes.map(s=>{
+      let ob=0,mx=0;
+      tiAct.forEach(ti=>{
+        s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy) return; // no contar días futuros
+          const dw=getDow(ds);
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+            mx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) ob+=p;
+          });
+        });
+      });
+      return mx>0?{pct:Math.round((ob/mx)*100),ob,mx}:null;
+    });
+
+    // Bug 1 fix: semana "actual" = hoy si es mes actual, última semana con datos si es mes histórico
+    const iSemActual=esMesActual
+      ? semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===hoy))
+      : tendenciaViewer.reduce((last,v,i)=>v!==null?i:last,-1); // última semana con datos
+    const iSemRef=iSemActual>=0?iSemActual:tendenciaViewer.length-1;
+    const vSemActual=tendenciaViewer[iSemRef];
+    const vSemAnt=iSemRef>0?tendenciaViewer[iSemRef-1]:null;
+    const deltaSem=vSemActual&&vSemAnt?vSemActual.pct-vSemAnt.pct:null;
+
+    // Eficiencia global del mes visualizado
+    const efMes=(()=>{
+      let ob=0,mx=0;
+      tendenciaViewer.forEach(v=>{if(v){ob+=v.ob;mx+=v.mx;}});
+      return mx>0?Math.round((ob/mx)*100):null;
+    })();
+
+    // Bug 5 fix: distribución de cortes SOLO del mes visualizado, con rangos reales por actividad
+    // En lugar de contar evidencias brutas, calculamos por combinación tienda+actividad+día
+    let nOroV=0,nC2V=0,nFueraV=0,nSinRegV=0,nTotalEsperadoV=0;
+    // Determinar el rango de corte dominante para mostrar en el KPI
+    const rangosUsados=new Set();
+    tiAct.forEach(ti=>{
+      semanasDelMes.forEach(s=>s.days.forEach(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        if(ds>hoy) return;
+        const dw=getDow(ds);
+        acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          nTotalEsperadoV++;
+          const rango=getRangoActivo(a.id,ds);
+          const c1=toMin(rango.c100||"08:30");
+          const c2=toMin(rango.c80||"09:00");
+          rangosUsados.add(rango.c100||"08:30"); // para mostrar en KPI
+          const reg=getReg(ds,ti.id,a.id);
+          if(!reg?.evidencias||reg.anulado){nSinRegV++;return;}
+          const m=toMin(primerEnvio(reg.evidencias));
+          if(m<=c1) nOroV++;
+          else if(m<=c2) nC2V++;
+          else nFueraV++;
+        });
+      }));
+    });
+    const totalContadoV=nOroV+nC2V+nFueraV+nSinRegV||1;
+    // Rango dominante para mostrar en KPI (el más frecuente)
+    const rangoMostrar=[...rangosUsados].sort()[0]||"08:30";
+
+    // Actividades por eficiencia — mes visualizado
+    const actEfectV=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+      let ob=0,mx=0,nC1=0,nC2act=0;
+      const rango=getRangoActivo(a.id,hoy);
+      const c1=toMin(rango.c100||"08:30");
+      tiAct.forEach(ti=>{
+        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+          mx+=10;
+          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+          if(p!==null){
+            ob+=p;
+            const reg=getReg(ds,ti.id,a.id);
+            const m=toMin(primerEnvio(reg?.evidencias));
+            if(m<=c1) nC1++; else nC2act++;
+          }
+        }));
+      });
+      return {a,pct:mx>0?Math.round((ob/mx)*100):null,ob,mx,nC1,nC2act,total:mx/10||1};
+    }).filter(x=>x.pct!==null).sort((a,b)=>b.pct-a.pct);
+
+    // Formato eficiencia
+    const fmtEfV=["Mayorista","Supermayorista","Market"].map(fmt=>{
+      let ob=0,mx=0;
+      tiAct.filter(ti=>ti.f===fmt).forEach(ti=>{
+        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+          const ds=dStr(vYear,vMonth,d);
+          if(ds>hoy) return;
+          const dw=getDow(ds);
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+            mx+=10;
+            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+            if(p!==null) ob+=p;
+          });
+        }));
+      });
+      return {fmt,pct:mx>0?Math.round((ob/mx)*100):null};
+    });
+
+    // Issue 1 fix: tiendas en riesgo SOLO si tuvieron al menos 1 registro real en el mes
+    // Esto evita el falso positivo de tiendas con 0% por nunca haber registrado (no evaluadas)
+    const scoresMesV=tiAct.map(ti=>{
+      const ef=calcMesDetalle(ti.id);
+      // Requiere días evaluables Y al menos 1 registro real
+      const tuvoDiasEvaluables=semanasDelMes.some(s=>s.days.some(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        if(ds>hoy) return false;
+        const dw=getDow(ds);
+        return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
+      }));
+      const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
+        const ds=dStr(vYear,vMonth,d);
+        return acts.some(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
+          const reg=getReg(ds,ti.id,a.id);
+          return reg?.evidencias?.length>0&&!reg?.anulado;
+        })());
+      }));
+      if(!tuvoDiasEvaluables||!tuvoRegistros) return {ti,pct:null,sinDatos:!tuvoDiasEvaluables};
+      return {ti,pct:ef?.pct??null,sinDatos:false};
+    });
+    const enRiesgo=scoresMesV.filter(s=>s.pct!==null&&s.pct<60).sort((a,b)=>(a.pct??99)-(b.pct??99));
+    const enAtención=scoresMesV.filter(s=>s.pct!==null&&s.pct>=60&&s.pct<80).sort((a,b)=>(a.pct??99)-(b.pct??99)).slice(0,3);
+    // Tiendas sin datos para mostrar en la leyenda
+    const sinDatosCount=scoresMesV.filter(s=>s.sinDatos).length;
+
+    // Bug 4 fix: nombre del día de la semana dinámico para comparativa
+    const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    const semAntDate=new Date(hoy); semAntDate.setDate(semAntDate.getDate()-7);
+    const diaSemAnt=DIAS_ES[semAntDate.getDay()]; // nombre real del día
+
+    const actMejor=actEfectV[0];
+    const actPeor=actEfectV[actEfectV.length-1];
+
+    // Issue 2 fix: narrativa respeta la semana seleccionada
+    const periodoLabel=selWeek!==null?semanasDelMes[selWeek]?.label:null;
+    const semLabel=periodoLabel||semanasDelMes[iSemRef]?.label||"Período";
+    const esAlerta=(deltaSem!==null&&deltaSem<-5)||enRiesgo.length>0;
+    let narrativa="";
+    if(selWeek!==null){
+      // Vista de semana específica
+      const vSel=tendenciaViewer[selWeek];
+      narrativa=vSel
+        ?`${semLabel} registró ${vSel.pct}% de eficiencia`
+        :`${semLabel} sin datos registrados`;
+      if(actMejor) narrativa+=`. ${actMejor.a.n} lideró con ${actMejor.pct}%`;
+      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} con ${actPeor.pct}% requiere revisión`;
+    } else {
+      // Vista de mes completo
+      if(vSemActual){
+        narrativa=esMesActual
+          ?`${semLabel} registra ${vSemActual.pct}% de eficiencia`
+          :`${MESES[vMonth]} cerró con ${efMes!==null?efMes+"%":"—"} de eficiencia global`;
+      }
+      if(deltaSem!==null&&esMesActual) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
+      if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
+      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} requiere atención (${actPeor.pct}%)`;
+      if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} con bajo rendimiento`;
+    }
+    narrativa+=".";
+    return {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
+            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
+            actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
+            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
+            DIAS_ES,semAntDate,diaSemAnt};
+  },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
+     vYear,vMonth,selWeek]);
+
   if(!role) return <LoginScreen pins={pins} auditores={auditores} onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?1:0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
@@ -3059,180 +3235,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     </div>
   );
 
-  /* ══ VIEWER DASHBOARD — narrativa estratégica para gerencia ══ */
-  // B6 fix: memoizar cálculos pesados del viewer para evitar recálculo en cada render
-  const viewerData = useMemo(()=>{
-    const hoy=todayStr();
-    const esMesActual=vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
-    const tendenciaViewer=semanasDelMes.map(s=>{
-      let ob=0,mx=0;
-      tiAct.forEach(ti=>{
-        s.days.forEach(d=>{
-          const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy) return; // no contar días futuros
-          const dw=getDow(ds);
-          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
-            mx+=10;
-            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-            if(p!==null) ob+=p;
-          });
-        });
-      });
-      return mx>0?{pct:Math.round((ob/mx)*100),ob,mx}:null;
-    });
-
-    // Bug 1 fix: semana "actual" = hoy si es mes actual, última semana con datos si es mes histórico
-    const iSemActual=esMesActual
-      ? semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===hoy))
-      : tendenciaViewer.reduce((last,v,i)=>v!==null?i:last,-1); // última semana con datos
-    const iSemRef=iSemActual>=0?iSemActual:tendenciaViewer.length-1;
-    const vSemActual=tendenciaViewer[iSemRef];
-    const vSemAnt=iSemRef>0?tendenciaViewer[iSemRef-1]:null;
-    const deltaSem=vSemActual&&vSemAnt?vSemActual.pct-vSemAnt.pct:null;
-
-    // Eficiencia global del mes visualizado
-    const efMes=(()=>{
-      let ob=0,mx=0;
-      tendenciaViewer.forEach(v=>{if(v){ob+=v.ob;mx+=v.mx;}});
-      return mx>0?Math.round((ob/mx)*100):null;
-    })();
-
-    // Bug 5 fix: distribución de cortes SOLO del mes visualizado, con rangos reales por actividad
-    // En lugar de contar evidencias brutas, calculamos por combinación tienda+actividad+día
-    let nOroV=0,nC2V=0,nFueraV=0,nSinRegV=0,nTotalEsperadoV=0;
-    // Determinar el rango de corte dominante para mostrar en el KPI
-    const rangosUsados=new Set();
-    tiAct.forEach(ti=>{
-      semanasDelMes.forEach(s=>s.days.forEach(d=>{
-        const ds=dStr(vYear,vMonth,d);
-        if(ds>hoy) return;
-        const dw=getDow(ds);
-        acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
-          nTotalEsperadoV++;
-          const rango=getRangoActivo(a.id,ds);
-          const c1=toMin(rango.c100||"08:30");
-          const c2=toMin(rango.c80||"09:00");
-          rangosUsados.add(rango.c100||"08:30"); // para mostrar en KPI
-          const reg=getReg(ds,ti.id,a.id);
-          if(!reg?.evidencias||reg.anulado){nSinRegV++;return;}
-          const m=toMin(primerEnvio(reg.evidencias));
-          if(m<=c1) nOroV++;
-          else if(m<=c2) nC2V++;
-          else nFueraV++;
-        });
-      }));
-    });
-    const totalContadoV=nOroV+nC2V+nFueraV+nSinRegV||1;
-    // Rango dominante para mostrar en KPI (el más frecuente)
-    const rangoMostrar=[...rangosUsados].sort()[0]||"08:30";
-
-    // Actividades por eficiencia — mes visualizado
-    const actEfectV=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
-      let ob=0,mx=0,nC1=0,nC2act=0;
-      const rango=getRangoActivo(a.id,hoy);
-      const c1=toMin(rango.c100||"08:30");
-      tiAct.forEach(ti=>{
-        semanasDelMes.forEach(s=>s.days.forEach(d=>{
-          const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
-          mx+=10;
-          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-          if(p!==null){
-            ob+=p;
-            const reg=getReg(ds,ti.id,a.id);
-            const m=toMin(primerEnvio(reg?.evidencias));
-            if(m<=c1) nC1++; else nC2act++;
-          }
-        }));
-      });
-      return {a,pct:mx>0?Math.round((ob/mx)*100):null,ob,mx,nC1,nC2act,total:mx/10||1};
-    }).filter(x=>x.pct!==null).sort((a,b)=>b.pct-a.pct);
-
-    // Formato eficiencia
-    const fmtEfV=["Mayorista","Supermayorista","Market"].map(fmt=>{
-      let ob=0,mx=0;
-      tiAct.filter(ti=>ti.f===fmt).forEach(ti=>{
-        semanasDelMes.forEach(s=>s.days.forEach(d=>{
-          const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy) return;
-          const dw=getDow(ds);
-          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
-            mx+=10;
-            const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-            if(p!==null) ob+=p;
-          });
-        }));
-      });
-      return {fmt,pct:mx>0?Math.round((ob/mx)*100):null};
-    });
-
-    // Issue 1 fix: tiendas en riesgo SOLO si tuvieron al menos 1 registro real en el mes
-    // Esto evita el falso positivo de tiendas con 0% por nunca haber registrado (no evaluadas)
-    const scoresMesV=tiAct.map(ti=>{
-      const ef=calcMesDetalle(ti.id);
-      // Requiere días evaluables Y al menos 1 registro real
-      const tuvoDiasEvaluables=semanasDelMes.some(s=>s.days.some(d=>{
-        const ds=dStr(vYear,vMonth,d);
-        if(ds>hoy) return false;
-        const dw=getDow(ds);
-        return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
-      }));
-      const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
-        const ds=dStr(vYear,vMonth,d);
-        return acts.some(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
-          const reg=getReg(ds,ti.id,a.id);
-          return reg?.evidencias?.length>0&&!reg?.anulado;
-        })());
-      }));
-      if(!tuvoDiasEvaluables||!tuvoRegistros) return {ti,pct:null,sinDatos:!tuvoDiasEvaluables};
-      return {ti,pct:ef?.pct??null,sinDatos:false};
-    });
-    const enRiesgo=scoresMesV.filter(s=>s.pct!==null&&s.pct<60).sort((a,b)=>(a.pct??99)-(b.pct??99));
-    const enAtención=scoresMesV.filter(s=>s.pct!==null&&s.pct>=60&&s.pct<80).sort((a,b)=>(a.pct??99)-(b.pct??99)).slice(0,3);
-    // Tiendas sin datos para mostrar en la leyenda
-    const sinDatosCount=scoresMesV.filter(s=>s.sinDatos).length;
-
-    // Bug 4 fix: nombre del día de la semana dinámico para comparativa
-    const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-    const semAntDate=new Date(hoy); semAntDate.setDate(semAntDate.getDate()-7);
-    const diaSemAnt=DIAS_ES[semAntDate.getDay()]; // nombre real del día
-
-    const actMejor=actEfectV[0];
-    const actPeor=actEfectV[actEfectV.length-1];
-
-    // Issue 2 fix: narrativa respeta la semana seleccionada
-    const periodoLabel=selWeek!==null?semanasDelMes[selWeek]?.label:null;
-    const semLabel=periodoLabel||semanasDelMes[iSemRef]?.label||"Período";
-    const esAlerta=(deltaSem!==null&&deltaSem<-5)||enRiesgo.length>0;
-    let narrativa="";
-    if(selWeek!==null){
-      // Vista de semana específica
-      const vSel=tendenciaViewer[selWeek];
-      narrativa=vSel
-        ?`${semLabel} registró ${vSel.pct}% de eficiencia`
-        :`${semLabel} sin datos registrados`;
-      if(actMejor) narrativa+=`. ${actMejor.a.n} lideró con ${actMejor.pct}%`;
-      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} con ${actPeor.pct}% requiere revisión`;
-    } else {
-      // Vista de mes completo
-      if(vSemActual){
-        narrativa=esMesActual
-          ?`${semLabel} registra ${vSemActual.pct}% de eficiencia`
-          :`${MESES[vMonth]} cerró con ${efMes!==null?efMes+"%":"—"} de eficiencia global`;
-      }
-      if(deltaSem!==null&&esMesActual) narrativa+=` — ${Math.abs(deltaSem)}pts ${deltaSem>=0?"por encima":"por debajo"} de la semana anterior`;
-      if(actMejor) narrativa+=`. ${actMejor.a.n} lidera con ${actMejor.pct}%`;
-      if(actPeor&&actPeor.pct<80) narrativa+=`. ${actPeor.a.n} requiere atención (${actPeor.pct}%)`;
-      if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} con bajo rendimiento`;
-    }
-    narrativa+=".";
-    return {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
-            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
-            actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
-            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
-            DIAS_ES,semAntDate,diaSemAnt};
-  },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
-     vYear,vMonth,selWeek]);
 
   const renderViewerDash = ()=>{
     const {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
