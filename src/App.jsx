@@ -1039,8 +1039,7 @@ function ChecklistApp() {
     return {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
             nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
             actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
-            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
-            DIAS_ES,semAntStr,diaSemAnt};
+            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa};
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
@@ -1932,10 +1931,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
-        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
           <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>←</button>
           <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
           <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>→</button>
+        </div>
+        {/* selector semana — igual que en Reporte y visor */}
+        <div style={{display:"flex",gap:6,marginBottom:14}}>
+          <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
+          {semanasDelMes.map((s,i)=>(
+            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+          ))}
         </div>
 
         {/* filtros */}
@@ -1970,45 +1976,113 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
         </div>
 
-        {/* ── SENTENCIA EJECUTIVA ── narrativa que conecta la historia antes de los números */}
+        {/* ── SENTENCIA EJECUTIVA — respeta selWeek (S1/S2/S3/S4/Mes completo) ── */}
         {(()=>{
-          const semActual=semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===todayStr()));
-          const iSem=semActual>=0?semActual:semanasDelMes.length-1;
-          const vSem=tendencia[iSem];
-          const vSemAnt=iSem>0?tendencia[iSem-1]:null;
-          const delta=vSem!==null&&vSemAnt!==null?vSem-vSemAnt:null;
-          // Formato con mayor riesgo: el que tiene más tiendas <60%
+          const esMesActualDash = vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
+
+          // Período de referencia: semana seleccionada o semana actual/última con datos
+          let iSemRef, periodoLabel, vSemRef, vSemAntRef, deltaRef;
+
+          if(selWeek!==null){
+            // Semana seleccionada explícitamente por el usuario
+            iSemRef = selWeek;
+            periodoLabel = semanasDelMes[selWeek]?.label || `S${selWeek+1}`;
+            vSemRef = tendencia[selWeek];
+            vSemAntRef = selWeek>0 ? tendencia[selWeek-1] : null;
+          } else {
+            // Mes completo: usar semana actual si es mes activo, o última con datos si es histórico
+            const semActual = esMesActualDash
+              ? semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===_hoyDash))
+              : tendencia.reduce((last,v,i)=>v!==null?i:last,-1);
+            iSemRef = semActual>=0 ? semActual : semanasDelMes.length-1;
+            periodoLabel = selWeek===null ? `${MESES[vMonth]} ${vYear}` : semanasDelMes[iSemRef]?.label;
+            vSemRef = tendencia[iSemRef];
+            vSemAntRef = iSemRef>0 ? tendencia[iSemRef-1] : null;
+          }
+          deltaRef = vSemRef!==null&&vSemAntRef!==null ? vSemRef-vSemAntRef : null;
+
+          // Eficiencia global del período visible
+          const efPeriodo = selWeek!==null
+            ? tendencia[selWeek]
+            : (totalMx>0 ? Math.round((totalOb/totalMx)*100) : null);
+
+          // Actividad con mayor y menor eficiencia
+          const actEfectDash = acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+            let ob=0,mx=0;
+            const semsVis = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
+            tsEval.forEach(ti=>{
+              semsVis.forEach(s=>s.days.forEach(d=>{
+                const ds=dStr(vYear,vMonth,d);
+                if(ds>_hoyDash||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                mx+=10;
+                const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                if(p!==null) ob+=p;
+              }));
+            });
+            return {a,pct:mx>0?Math.round((ob/mx)*100):null};
+          }).filter(x=>x.pct!==null).sort((a,b)=>b.pct-a.pct);
+          const actMejorDash = actEfectDash[0];
+          const actPeorDash  = actEfectDash[actEfectDash.length-1];
+
+          // Formato con mayor riesgo (más tiendas <60%)
           const riesgoPorFmt=["Mayorista","Supermayorista","Market"].map(fmt=>({
             fmt,
             nRiesgo:scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score<60).length,
-            efic:Math.round((scoresMes.filter(s=>s.t.f===fmt).reduce((a,s)=>a+(s.obtenidos||0),0)/Math.max(1,scoresMes.filter(s=>s.t.f===fmt).reduce((a,s)=>a+(s.maximos||0),0)))*100)
           })).sort((a,b)=>b.nRiesgo-a.nRiesgo);
           const fmtRiesgo=riesgoPorFmt[0];
           const nCriticas=scoresMes.filter(s=>s.score!==null&&s.score<60).length;
-          const nSinReg=tsEval.filter(ti=>!semanasDelMes.some(s=>s.days.some(d=>{
+
+          // Tiendas sin ningún registro en el período visible
+          const semsVis = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
+          const nSinReg=tsEval.filter(ti=>!semsVis.some(s=>s.days.some(d=>{
             const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
             return actsBase.some(a=>a.dias.includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
           }))).length;
-          // Construir la sentencia narrativa
+
+          // Construir narrativa según período
           let sentencia="";
-          if(vSem!==null){
-            const semLabel=semanasDelMes[iSem]?.label||"Semana actual";
-            sentencia=`${semLabel} registra ${vSem}% de eficiencia`;
-            if(delta!==null) sentencia+=` — ${Math.abs(delta)} pts ${delta>0?"por encima":"por debajo"} de la semana anterior`;
+          if(selWeek!==null){
+            // Vista semana específica
+            const etiqueta = semanasDelMes[selWeek]?.label || `S${selWeek+1}`;
+            sentencia = vSemRef!==null
+              ? `${etiqueta} registra ${vSemRef}% de eficiencia`
+              : `${etiqueta} sin datos registrados aún`;
+            if(deltaRef!==null) sentencia+=` — ${Math.abs(deltaRef)} pts ${deltaRef>=0?"por encima":"por debajo"} de la semana anterior`;
+            if(actMejorDash) sentencia+=`. ${actMejorDash.a.n} lidera con ${actMejorDash.pct}%`;
+            if(actPeorDash&&actPeorDash.pct<80&&actPeorDash!==actMejorDash) sentencia+=`. ${actPeorDash.a.n} requiere atención (${actPeorDash.pct}%)`;
+            if(fmtRiesgo.nRiesgo>0) sentencia+=`. ${fmtRiesgo.fmt} concentra ${fmtRiesgo.nRiesgo} tienda${fmtRiesgo.nRiesgo>1?"s":""} en zona crítica`;
+            if(nSinReg>0) sentencia+=`. ${nSinReg} tienda${nSinReg>1?"s":""} sin registro esta semana`;
+          } else {
+            // Vista mes completo
+            if(efPeriodo!==null){
+              sentencia = esMesActualDash
+                ? `${semanasDelMes[iSemRef]?.label||"Semana actual"} registra ${vSemRef??efPeriodo}% de eficiencia`
+                : `${MESES[vMonth]} cerró con ${efPeriodo}% de eficiencia global`;
+            }
+            if(deltaRef!==null&&esMesActualDash) sentencia+=` — ${Math.abs(deltaRef)} pts ${deltaRef>=0?"por encima":"por debajo"} de la semana anterior`;
+            if(actMejorDash) sentencia+=`. ${actMejorDash.a.n} lidera con ${actMejorDash.pct}%`;
+            if(actPeorDash&&actPeorDash.pct<80&&actPeorDash!==actMejorDash) sentencia+=`. ${actPeorDash.a.n} requiere atención (${actPeorDash.pct}%)`;
             if(fmtRiesgo.nRiesgo>0) sentencia+=`. ${fmtRiesgo.fmt} concentra ${fmtRiesgo.nRiesgo} tienda${fmtRiesgo.nRiesgo>1?"s":""} en zona crítica`;
             if(nSinReg>0) sentencia+=`. ${nSinReg} tienda${nSinReg>1?"s":""} sin ningún registro en el período`;
-            sentencia+=".";
           }
-          if(!sentencia) return null;
-          const esAlerta=delta!==null&&delta<-5||nCriticas>2;
+          sentencia+=".";
+
+          if(!sentencia||sentencia===".") return null;
+          const esAlerta=(deltaRef!==null&&deltaRef<-5)||nCriticas>2||nSinReg>3;
           return(
           <div style={{marginBottom:12,padding:"10px 14px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:10,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`,display:"flex",alignItems:"flex-start",gap:10}}>
             <span style={{fontSize:16,flexShrink:0,marginTop:1}}>{esAlerta?"⚠️":"📊"}</span>
-            <div>
+            <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.6}}>{sentencia}</div>
-              {delta!==null&&Math.abs(delta)>=10&&(
+              {deltaRef!==null&&Math.abs(deltaRef)>=10&&(
                 <div style={{fontSize:10,color:esAlerta?"#dc2626":"#2563eb",marginTop:2}}>
-                  {delta<0?"Caída significativa — revisar actividades con mayor pendiente":"Mejora significativa respecto a la semana anterior"}
+                  {deltaRef<0?"⬇ Caída significativa — revisar actividades con mayor pendiente":"⬆ Mejora significativa respecto a la semana anterior"}
+                </div>
+              )}
+              {selWeek!==null&&(
+                <div style={{fontSize:10,color:"#5a7a9a",marginTop:4,display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <span>📅 {semanasDelMes[selWeek]?.label} · días {semanasDelMes[selWeek]?.start}–{semanasDelMes[selWeek]?.end} de {MESES[vMonth]}</span>
+                  {efPeriodo!==null&&<span style={{fontWeight:700,color:sc(efPeriodo)}}>{getTier(efPeriodo).icon} {getTier(efPeriodo).label}</span>}
                 </div>
               )}
             </div>
