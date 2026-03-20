@@ -141,6 +141,13 @@ const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
+// Suma offsetDays a una fecha "YYYY-MM-DD" usando hora local — evita UTC rollover
+const localDateAdd = (dateStr, offsetDays) => {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
+
 const getDow   = s  => new Date(s+"T12:00:00").getDay();
 const dStr     = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const rKey     = (f,tid,a) => `${f}|${tid}|${a}`;
@@ -995,10 +1002,10 @@ function ChecklistApp() {
     // Tiendas sin datos para mostrar en la leyenda
     const sinDatosCount=scoresMesV.filter(s=>s.sinDatos).length;
 
-    // Bug 4 fix: nombre del día de la semana dinámico para comparativa
+    // FIX: usar localDateAdd+getDow evita UTC midnight parse bug (getDay() devolvía día erróneo)
     const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-    const semAntDate=new Date(hoy); semAntDate.setDate(semAntDate.getDate()-7);
-    const diaSemAnt=DIAS_ES[semAntDate.getDay()]; // nombre real del día
+    const semAntStr = localDateAdd(hoy, -7);
+    const diaSemAnt = DIAS_ES[getDow(semAntStr)];
 
     const actMejor=actEfectV[0];
     const actPeor=actEfectV[actEfectV.length-1];
@@ -3492,9 +3499,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>VEGA · EVIDENCIAS</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>CONTROL DE IMPLEMENTACIÓN</div>
           </div>
-          <input type="date" value={fecha} onChange={e=>{setFecha(e.target.value);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}} disabled={!isAdmin}
-            title={!isAdmin?"Solo el Administrador puede cambiar la fecha":""}
-            style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none"}}/>
+          <input type="date" value={fecha} onChange={e=>{setFecha(e.target.value);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}} disabled={isViewer}
+            title={isViewer?"El visor no puede cambiar la fecha":isAdmin?"Cambiar fecha (Admin)":"Cambiar fecha para consultar históricos"}
+            style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none",opacity:isViewer?0.5:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.1)"}}>
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
@@ -3653,10 +3660,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const pctC2=totalDisp>0?Math.round((regC2/totalDisp)*100):0;
               // KPI 4: sin registrar
               const pctSin=totalDisp>0?Math.round(((totalDisp-totalReg)/totalDisp)*100):0;
-              // Comparativa vs semana anterior — mismo día de la semana pasada
-              const hoyDate=new Date(hoy);
-              const semAntDate=new Date(hoyDate); semAntDate.setDate(hoyDate.getDate()-7);
-              const semAntStr=semAntDate.toISOString().slice(0,10);
+              // FIX: localDateAdd evita UTC midnight parse bug en new Date("YYYY-MM-DD")
+              const semAntStr=localDateAdd(hoy, -7);
               const totalDispSA=tiAct.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))).length;
               const totalRegSA=tiAct.filter(ti=>
                 !actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))&&
@@ -3684,10 +3689,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               });
               // Formato con mayor riesgo
               const fmtRiesgo=[...fmtStats].sort((a,b)=>b.pendFmt-a.pendFmt)[0];
-              // Bug 4 fix: nombre del día real de la semana anterior
+              // FIX: localDateAdd+getDow evita UTC midnight parse bug
               const DIAS_GER=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-              const semAntDateG=new Date(hoy); semAntDateG.setDate(semAntDateG.getDate()-7);
-              const diaSemAntG=DIAS_GER[semAntDateG.getDay()];
+              const diaSemAntG=DIAS_GER[getDow(localDateAdd(hoy,-7))];
               return(
               <>
                 {/* Actividad */}
