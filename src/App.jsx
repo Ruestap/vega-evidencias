@@ -2201,18 +2201,48 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               const maxV=Math.max(...tendencia.filter(x=>x!==null),1);
               const barH=v!==null?Math.max(8,Math.round((v/maxV)*80)):0;
               const trend=i>0&&tendencia[i-1]!==null&&v!==null?(v>tendencia[i-1]?"↑":v<tendencia[i-1]?"↓":"→"):null;
+              // Tooltip detalle por actividad para esta semana
+              const actTip = actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+                let aOb=0,aMx=0;
+                s.days.forEach(d=>{
+                  const ds=dStr(vYear,vMonth,d);
+                  if(ds>todayStr()||!a.dias.includes(getDow(ds))) return;
+                  tsEval.forEach(ti=>{
+                    if(isExc(ti.id,a.id,ds)) return;
+                    aMx+=10;
+                    const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                    if(p!==null) aOb+=p;
+                  });
+                });
+                return aMx>0?`${a.e} ${a.n}: ${aOb}/${aMx}pts (${Math.round((aOb/aMx)*100)}%)`:null;
+              }).filter(Boolean);
               return(
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                  {trend&&<div style={{fontSize:10,fontWeight:800,color:trend==="↑"?"#00b894":trend==="↓"?"#d63031":"#8aaabb"}}>{trend}</div>}
-                  {!trend&&<div style={{fontSize:10}}> </div>}
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,position:"relative"}}
+                  onMouseEnter={e=>{const t=e.currentTarget.querySelector(".sem-tip");if(t)t.style.display="block";}}
+                  onMouseLeave={e=>{const t=e.currentTarget.querySelector(".sem-tip");if(t)t.style.display="none";}}
+                  onTouchStart={e=>{const t=e.currentTarget.querySelector(".sem-tip");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
+                  {/* Trend + % ARRIBA, fuera del contenedor de barra */}
+                  {trend&&<div style={{fontSize:11,fontWeight:800,color:trend==="↑"?"#00b894":trend==="↓"?"#d63031":"#8aaabb"}}>{trend}</div>}
+                  {!trend&&<div style={{fontSize:11}}> </div>}
                   <div style={{fontSize:13,fontWeight:800,color:isFuture?"#b2bec3":v!==null?sc(v):"#b2bec3"}}>{v!==null?v+"%":"—"}</div>
-                  <div style={{width:"100%",height:80,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",position:"relative"}}>
+                  {/* Barra — crece hacia arriba, no tapa el texto */}
+                  <div style={{width:"100%",height:80,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
                     {v!==null&&!isFuture&&<div style={{width:"100%",height:barH+"px",background:sc(v),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
-                    {isFuture&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700,flexDirection:"column",gap:2}}><span>⏳</span><span>PENDIENTE</span></div>}
+                    {isFuture&&<div style={{height:"100%",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700,flexDirection:"column",gap:2}}><span>⏳</span><span>PENDIENTE</span></div>}
                   </div>
                   <div style={{fontSize:10,color:"#1a2f4a",fontWeight:800}}>{s.label}</div>
                   {mx>0&&!isFuture&&<div style={{fontSize:9,color:"#8aaabb",textAlign:"center",lineHeight:1.3}}>{ob}/{mx}<br/>pts</div>}
                   {isFuture&&<div style={{fontSize:8,color:"#b2bec3"}}>sin datos</div>}
+                  {/* Tooltip detalle actividades */}
+                  {!isFuture&&v!==null&&actTip.length>0&&(
+                  <div className="sem-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 8px)",left:"50%",transform:"translateX(-50%)",background:"#1a2f4a",color:"#fff",fontSize:10,padding:"10px 13px",borderRadius:10,zIndex:30,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,.3)",lineHeight:1.7,minWidth:180}}>
+                    <div style={{fontWeight:800,fontSize:11,marginBottom:4,color:sc(v)}}>{s.label} · {v}% eficiencia</div>
+                    <div style={{borderBottom:"1px solid rgba(255,255,255,.15)",marginBottom:6,paddingBottom:4,fontSize:9,color:"rgba(255,255,255,.5)"}}>Desglose por actividad</div>
+                    {actTip.map((t,ti)=><div key={ti} style={{fontSize:9,lineHeight:1.6}}>{t}</div>)}
+                    <div style={{marginTop:6,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,color:"rgba(255,255,255,.5)"}}>Total: {ob}/{mx}pts</div>
+                    <div style={{position:"absolute",bottom:-5,left:"50%",transform:"translateX(-50%)",width:10,height:10,background:"#1a2f4a",rotate:"45deg",borderRadius:1}}/>
+                  </div>
+                  )}
                 </div>
               );
             })}
@@ -2686,15 +2716,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
             ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
         ══════════════════════════════════════════════════════════════ */}
-        <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
-          <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+        <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
             <span style={{fontSize:14}}>⚙️</span>
             <div>
               <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>OPERATIVO · JEFES / SUPERVISORES</div>
               <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Cómo avanzamos? · ranking tiendas y acciones inmediatas</div>
             </div>
           </div>
-          <div style={{background:"#fff",padding:"12px 14px"}}>
+          <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px"}}>
 
         {/* por formato */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
@@ -2775,13 +2805,42 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                   );
                 })()}
-                <div className="fmt-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"10px 12px",borderRadius:10,zIndex:20,lineHeight:1.7,boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>
-                  <div style={{fontWeight:800,marginBottom:4,fontSize:11}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
-                  {prom!==null&&<div>{fmtOb} pts obtenidos de {fmtMx} pts posibles</div>}
-                  <div>{ftsEval.length} de {fts.length} tiendas con días evaluables</div>
-                  {fts.length-ftsEval.length>0&&<div style={{color:"#FAC775"}}>⚠️ {fts.length-ftsEval.length} tienda{fts.length-ftsEval.length>1?"s":""} excluidas (N/A en toda actividad)</div>}
-                  <div style={{marginTop:4,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,opacity:.8}}>Los N/A por día individual ya están descontados del denominador</div>
-                  <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                <div className="fmt-tip" style={{display:"none",position:"absolute",top:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"12px 14px",borderRadius:10,zIndex:50,lineHeight:1.7,boxShadow:"0 8px 28px rgba(0,0,0,.35)"}}>
+                  <div style={{fontWeight:800,marginBottom:4,fontSize:12,color:sc(prom||0)}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
+                  {prom!==null&&<div style={{color:"rgba(255,255,255,.8)"}}>{fmtOb} pts obtenidos de {fmtMx} posibles</div>}
+                  <div style={{color:"rgba(255,255,255,.7)"}}>{ftsEval.length} de {fts.length} tiendas evaluables{fts.length-ftsEval.length>0?` · ${fts.length-ftsEval.length} excluidas N/A`:""}</div>
+                  {/* Desglose por actividad para este formato */}
+                  {(()=>{
+                    const actRows=actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+                      let aOb=0,aMx=0;
+                      ftsEval.forEach(ti=>{
+                        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+                          const ds=dStr(vYear,vMonth,d);
+                          if(ds>todayStr()||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                          aMx+=10;
+                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                          if(p!==null) aOb+=p;
+                        }));
+                      });
+                      return aMx>0?{a,ob:aOb,mx:aMx,pct:Math.round((aOb/aMx)*100)}:null;
+                    }).filter(Boolean);
+                    if(!actRows.length) return null;
+                    return(
+                      <div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(255,255,255,.15)"}}>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,.5)",fontWeight:700,letterSpacing:".04em",marginBottom:4}}>DESGLOSE POR ACTIVIDAD</div>
+                        {actRows.map(({a,ob,mx,pct})=>(
+                          <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                            <span style={{fontSize:10}}>{a.e}</span>
+                            <span style={{fontSize:9,flex:1,color:"rgba(255,255,255,.75)"}}>{a.n}</span>
+                            <span style={{fontSize:9,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
+                            <span style={{fontSize:10,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right"}}>{pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div style={{marginTop:6,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,color:"rgba(255,255,255,.4)"}}>Los N/A por día ya están descontados del denominador</div>
+                  <div style={{position:"absolute",top:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
                 </div>
               </div>
             );
@@ -3589,24 +3648,46 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           {/* Efectividad por actividad — con desglose pts obtenidos/posibles */}
           <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12}}>
             <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:2}}>EFECTIVIDAD POR ACTIVIDAD</div>
-            <div style={{fontSize:9,color:"#b2bec3",marginBottom:8}}>pts obtenidos / pts posibles · barra: ORO / Tardíos / Sin registrar</div>
+            <div style={{fontSize:9,color:"#b2bec3",marginBottom:8}}>pts obtenidos / pts posibles · barra: ORO / Tardíos / Sin registrar · pasa el mouse para ver el desglose</div>
             {(()=>{
               let totOb=0, totMx=0;
               const rows = actEfectV.map(({a,pct,nC1,nC2act,total,ob,mx})=>{
                 totOb+=ob; totMx+=mx;
                 const nSin=Math.max(0,total-nC1-nC2act);
+                const rango=getRangoActivo(a.id,hoy);
                 return(
-                <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                  <span style={{fontSize:11,flexShrink:0}}>{a.e}</span>
-                  <span style={{fontSize:10,color:"#1a2f4a",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:90,maxWidth:110}}>{a.n}</span>
-                  <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",display:"flex",minWidth:40}}>
-                    {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
-                    {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
-                    {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+                <div key={a.id} style={{position:"relative",marginBottom:6}}
+                  onMouseEnter={e=>{const t=e.currentTarget.querySelector(".act-tip-v");if(t)t.style.display="block";}}
+                  onMouseLeave={e=>{const t=e.currentTarget.querySelector(".act-tip-v");if(t)t.style.display="none";}}
+                  onTouchStart={e=>{const t=e.currentTarget.querySelector(".act-tip-v");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,cursor:"default"}}>
+                    <span style={{fontSize:11,flexShrink:0}}>{a.e}</span>
+                    <span style={{fontSize:10,color:"#1a2f4a",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:90,maxWidth:110}}>{a.n}</span>
+                    <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",display:"flex",minWidth:40}}>
+                      {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
+                      {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
+                      {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+                    </div>
+                    <span style={{fontSize:9,color:"#8aaabb",flexShrink:0,whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
+                    <span style={{fontSize:11,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right",flexShrink:0}}>{pct}%</span>
                   </div>
-                  {/* pts obtenidos / posibles */}
-                  <span style={{fontSize:9,color:"#8aaabb",flexShrink:0,whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
-                  <span style={{fontSize:11,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right",flexShrink:0}}>{pct}%</span>
+                  {/* Tooltip custom dark */}
+                  <div className="act-tip-v" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"10px 13px",borderRadius:10,zIndex:40,boxShadow:"0 6px 24px rgba(0,0,0,.35)",lineHeight:1.7}}>
+                    <div style={{fontWeight:800,fontSize:11,marginBottom:4,color:sc(pct)}}>{a.e} {a.n} · {pct}%</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 12px",marginBottom:6}}>
+                      <div style={{color:"rgba(255,255,255,.7)"}}>Pts obtenidos</div><div style={{fontWeight:700}}>{ob} pts</div>
+                      <div style={{color:"rgba(255,255,255,.7)"}}>Pts posibles</div><div style={{fontWeight:700}}>{mx} pts</div>
+                      <div style={{color:"rgba(255,255,255,.7)"}}>ORO ≤{rango.c100||"09:00"}</div><div style={{fontWeight:700,color:"#f6a623"}}>{nC1} evidencias</div>
+                      <div style={{color:"rgba(255,255,255,.7)"}}>Tardíos</div><div style={{fontWeight:700,color:"#74b9ff"}}>{nC2act} evidencias</div>
+                      <div style={{color:"rgba(255,255,255,.7)"}}>Sin registrar</div><div style={{fontWeight:700,color:"#F09595"}}>{nSin} tiendas</div>
+                    </div>
+                    <div style={{height:4,borderRadius:2,overflow:"hidden",display:"flex",marginTop:4}}>
+                      {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
+                      {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
+                      {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+                    </div>
+                    <div style={{position:"absolute",bottom:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                  </div>
                 </div>
                 );
               });
