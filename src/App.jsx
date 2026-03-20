@@ -2173,15 +2173,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* ══ NIVEL 2 — TÁCTICO · DIRECTORES / GERENTES ══════════════════
             ¿Por qué pasó? — tendencias, actividades, horarios, formatos
         ══════════════════════════════════════════════════════════════ */}
-        <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
-          <div style={{background:"#1e5f8a",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+        <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#1e5f8a",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
             <span style={{fontSize:14}}>🔍</span>
             <div>
               <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>TÁCTICO · DIRECTORES / GERENTES</div>
               <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Por qué pasó? · tendencias, actividades y distribución horaria</div>
             </div>
           </div>
-          <div style={{background:"#fff",padding:"12px 14px"}}>
+          <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px",overflow:"visible"}}>
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
@@ -3594,47 +3594,109 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           NIVEL 2 — TÁCTICO  ·  Directores / Gerentes
           Pregunta: ¿Por qué pasó? ¿Dónde están las brechas?
       ══════════════════════════════════════════════════════ */}
-      <div style={{borderRadius:14,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-        <div style={{background:"#1e5f8a",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{borderRadius:14,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+        <div style={{background:"#1e5f8a",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderRadius:"14px 14px 0 0"}}>
           <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🔍</div>
           <div>
             <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>TÁCTICO · DIRECTORES / GERENTES</div>
             <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>¿Por qué pasó? · tendencias y brechas por formato y actividad</div>
           </div>
         </div>
-        <div style={{background:"#fff",padding:"14px 16px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))",gap:10,marginBottom:12}}>
-            {/* Tendencia semanal compacta */}
-            <div>
-              {/* Label FUERA del contenedor de barras — evita que las barras lo tapen */}
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:6}}>TENDENCIA SEMANAL</div>
-              <div style={{display:"flex",gap:5,alignItems:"flex-end",height:80}}>
-                {tendenciaViewer.map((v,i)=>{
-                  const s=semanasDelMes[i];
-                  const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
-                  const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
-                  const barH=v?Math.max(8,Math.round((v.pct/maxV)*68)):0;
-                  const isRef=i===iSemRef;
-                  const trend=i>0&&tendenciaViewer[i-1]&&v?(v.pct>tendenciaViewer[i-1].pct?"↑":v.pct<tendenciaViewer[i-1].pct?"↓":"→"):null;
-                  return(
-                    <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                      <div style={{fontSize:9,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
-                      <div style={{width:"100%",height:68,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",position:"relative"}}>
-                        {v&&!isFut&&<div style={{width:"100%",height:barH,background:isRef?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
-                        {trend&&v&&!isFut&&<div style={{position:"absolute",top:3,right:3,fontSize:9,color:"#fff",fontWeight:800,textShadow:"0 1px 2px rgba(0,0,0,.4)"}}>{trend}</div>}
-                      </div>
-                      <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
-                      {v&&!isFut&&<div style={{fontSize:8,color:"#b2bec3",textAlign:"center"}}>{v.ob}/{v.mx}</div>}
-                    </div>
-                  );
-                })}
-              </div>
+        <div style={{background:"#fff",padding:"14px 16px",borderRadius:"0 0 14px 14px",overflow:"visible"}}>
+
+          {/* ── TENDENCIA SEMANAL — label fijo arriba, barras abajo, nunca se tapan ── */}
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em"}}>TENDENCIA SEMANAL</div>
+              <div style={{fontSize:9,color:"#b2bec3"}}>pts obtenidos ÷ pts posibles · hover para desglose</div>
             </div>
-            {/* Cumplimiento por formato */}
-            <div>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>POR FORMATO</div>
-              {fmtEfV.map(({fmt,pct})=>(
-                <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+            {/* ROW 1: % + flechas — completamente separado del área de barras */}
+            <div style={{display:"flex",gap:5,marginBottom:4}}>
+              {tendenciaViewer.map((v,i)=>{
+                const isFut=semanasDelMes[i].days.every(d=>dStr(vYear,vMonth,d)>hoy);
+                const trend=i>0&&tendenciaViewer[i-1]&&v?(v.pct>tendenciaViewer[i-1].pct?"↑":v.pct<tendenciaViewer[i-1].pct?"↓":"→"):null;
+                return(
+                  <div key={i} style={{flex:1,textAlign:"center"}}>
+                    <div style={{fontSize:11,fontWeight:800,color:trend==="↑"?"#00b894":trend==="↓"?"#d63031":"#8aaabb",lineHeight:1,marginBottom:2}}>{trend||" "}</div>
+                    <div style={{fontSize:13,fontWeight:800,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3",lineHeight:1}}>{v&&!isFut?v.pct+"%":"—"}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* ROW 2: barras — altura fija, crecen hacia arriba */}
+            <div style={{display:"flex",gap:5}}>
+              {tendenciaViewer.map((v,i)=>{
+                const s=semanasDelMes[i];
+                const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
+                const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
+                const barH=v?Math.max(8,Math.round((v.pct/maxV)*64)):0;
+                const isRef=i===iSemRef;
+                // Tooltip: desglose por actividad para esta semana
+                const actTipV=actEfectV.map(({a,ob:aOb,mx:aMx,nC1,nC2act,total})=>{
+                  // Calcular pts de esta actividad en esta semana específica
+                  let sOb=0,sMx=0;
+                  s.days.forEach(d=>{
+                    const ds=dStr(vYear,vMonth,d);
+                    if(ds>hoy||!a.dias.includes(getDow(ds))) return;
+                    tiAct.forEach(ti=>{
+                      if(isExc(ti.id,a.id,ds)) return;
+                      sMx+=10;
+                      const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                      if(p!==null) sOb+=p;
+                    });
+                  });
+                  return sMx>0?{a,ob:sOb,mx:sMx,pct:Math.round((sOb/sMx)*100)}:null;
+                }).filter(Boolean);
+                return(
+                  <div key={i} style={{flex:1,position:"relative"}}
+                    onMouseEnter={e=>{const t=e.currentTarget.querySelector(".sem-tip-v");if(t)t.style.display="block";}}
+                    onMouseLeave={e=>{const t=e.currentTarget.querySelector(".sem-tip-v");if(t)t.style.display="none";}}
+                    onTouchStart={e=>{const t=e.currentTarget.querySelector(".sem-tip-v");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
+                    <div style={{height:64,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",cursor:(!isFut&&v)?'default':'default'}}>
+                      {v&&!isFut&&<div style={{width:"100%",height:barH,background:isRef?"#0984e3":sc(v.pct),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
+                      {isFut&&<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}><span style={{fontSize:9,color:"#b2bec3"}}>⏳</span><span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>PEND.</span></div>}
+                    </div>
+                    <div style={{textAlign:"center",marginTop:4}}>
+                      <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
+                      {v&&!isFut&&<div style={{fontSize:8,color:"#b2bec3"}}>{v.ob}/{v.mx}</div>}
+                    </div>
+                    {/* Tooltip desglose por actividad */}
+                    {!isFut&&v&&actTipV.length>0&&(
+                    <div className="sem-tip-v" style={{display:"none",position:"absolute",bottom:"calc(100% + 10px)",left:"50%",transform:"translateX(-50%)",background:"#1a2f4a",color:"#fff",fontSize:10,padding:"10px 13px",borderRadius:10,zIndex:50,whiteSpace:"nowrap",boxShadow:"0 6px 24px rgba(0,0,0,.35)",lineHeight:1.7,minWidth:190}}>
+                      <div style={{fontWeight:800,fontSize:11,marginBottom:4,color:sc(v.pct)}}>{s.label} · {v.pct}% · {v.ob}/{v.mx}pts</div>
+                      <div style={{borderBottom:"1px solid rgba(255,255,255,.15)",marginBottom:5,paddingBottom:3,fontSize:9,color:"rgba(255,255,255,.4)"}}>DESGLOSE POR ACTIVIDAD</div>
+                      {actTipV.map(({a,ob:sOb,mx:sMx,pct:sPct})=>(
+                        <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                          <span>{a.e}</span>
+                          <span style={{flex:1,fontSize:9,color:"rgba(255,255,255,.75)"}}>{a.n}</span>
+                          <span style={{fontSize:9,color:"rgba(255,255,255,.5)"}}>{sOb}/{sMx}pts</span>
+                          <span style={{fontWeight:800,color:sc(sPct),minWidth:28,textAlign:"right"}}>{sPct}%</span>
+                        </div>
+                      ))}
+                      <div style={{position:"absolute",bottom:-5,left:"50%",transform:"translateX(-50%)",width:10,height:10,background:"#1a2f4a",rotate:"45deg",borderRadius:1}}/>
+                    </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── POR FORMATO — igual al admin, con tooltip desglose ── */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>POR FORMATO</div>
+            {fmtEfV.map(({fmt,pct})=>{
+              const fc=FMT[fmt];
+              const ftsV=tiAct.filter(ti=>ti.f===fmt);
+              const ftsEvalV=ftsV.filter(ti=>actEfectV.some(({a})=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
+              // Desglose por actividad para el tooltip
+              const actRowsV=actEfectV.filter(({a})=>a.activa).map(({a,ob,mx,pct:aPct})=>({a,ob,mx,pct:aPct}));
+              return(
+              <div key={fmt} style={{position:"relative",marginBottom:8}}
+                onMouseEnter={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display="block";}}
+                onMouseLeave={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display="none";}}
+                onTouchStart={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,cursor:"default"}}>
                   <span style={{fontSize:13,flexShrink:0}}>{fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"}</span>
                   <span style={{fontSize:11,fontWeight:700,color:"#1a2f4a",minWidth:80,flexShrink:0}}>{fmt}</span>
                   <div style={{flex:1,background:"#f0f4f8",borderRadius:20,height:7,overflow:"hidden"}}>
@@ -3642,8 +3704,29 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                   <span style={{fontSize:12,fontWeight:800,color:pct?sc(pct):"#888",minWidth:34,textAlign:"right"}}>{pct!==null?pct+"%":"—"}</span>
                 </div>
-              ))}
-            </div>
+                {/* Tooltip formato */}
+                <div className="fmt-tip-v" style={{display:"none",position:"absolute",top:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"12px 14px",borderRadius:10,zIndex:50,boxShadow:"0 8px 28px rgba(0,0,0,.35)",lineHeight:1.7}}>
+                  <div style={{fontWeight:800,fontSize:11,marginBottom:4,color:sc(pct||0)}}>{fmt} · {pct!==null?pct+"%":"sin datos"}</div>
+                  <div style={{color:"rgba(255,255,255,.7)",marginBottom:6}}>{ftsV.length} tiendas · {ftsEvalV.length} con días evaluables</div>
+                  {actRowsV.length>0&&(
+                    <div style={{borderTop:"1px solid rgba(255,255,255,.15)",paddingTop:6}}>
+                      <div style={{fontSize:9,color:"rgba(255,255,255,.4)",fontWeight:700,letterSpacing:".04em",marginBottom:4}}>DESGLOSE POR ACTIVIDAD (global)</div>
+                      {actRowsV.map(({a,ob,mx,pct:aPct})=>(
+                        <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                          <span style={{fontSize:10}}>{a.e}</span>
+                          <span style={{flex:1,fontSize:9,color:"rgba(255,255,255,.75)"}}>{a.n}</span>
+                          <span style={{fontSize:9,color:"rgba(255,255,255,.5)"}}>{ob}/{mx}pts</span>
+                          <span style={{fontWeight:800,color:sc(aPct),minWidth:28,textAlign:"right"}}>{aPct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{marginTop:6,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.1)",fontSize:9,color:"rgba(255,255,255,.35)"}}>Denominador excluye N/A por día</div>
+                  <div style={{position:"absolute",top:-5,left:20,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                </div>
+              </div>
+              );
+            })}
           </div>
           {/* Efectividad por actividad — con desglose pts obtenidos/posibles */}
           <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12}}>
