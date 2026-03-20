@@ -3547,23 +3547,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))",gap:10,marginBottom:12}}>
             {/* Tendencia semanal compacta */}
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>TENDENCIA SEMANAL</div>
-              <div style={{display:"flex",gap:5,alignItems:"flex-end",height:64}}>
+              {/* Label FUERA del contenedor de barras — evita que las barras lo tapen */}
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:6}}>TENDENCIA SEMANAL</div>
+              <div style={{display:"flex",gap:5,alignItems:"flex-end",height:80}}>
                 {tendenciaViewer.map((v,i)=>{
                   const s=semanasDelMes[i];
                   const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
                   const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
-                  const barH=v?Math.max(6,Math.round((v.pct/maxV)*56)):0;
+                  const barH=v?Math.max(8,Math.round((v.pct/maxV)*68)):0;
                   const isRef=i===iSemRef;
                   const trend=i>0&&tendenciaViewer[i-1]&&v?(v.pct>tendenciaViewer[i-1].pct?"↑":v.pct<tendenciaViewer[i-1].pct?"↓":"→"):null;
                   return(
                     <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
                       <div style={{fontSize:9,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
-                      <div style={{width:"100%",height:56,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",position:"relative"}}>
+                      <div style={{width:"100%",height:68,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",position:"relative"}}>
                         {v&&!isFut&&<div style={{width:"100%",height:barH,background:isRef?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
-                        {trend&&v&&!isFut&&<div style={{position:"absolute",top:2,right:2,fontSize:8,color:trend==="↑"?"#00b894":trend==="↓"?"#dc2626":"#8aaabb",fontWeight:800}}>{trend}</div>}
+                        {trend&&v&&!isFut&&<div style={{position:"absolute",top:3,right:3,fontSize:9,color:"#fff",fontWeight:800,textShadow:"0 1px 2px rgba(0,0,0,.4)"}}>{trend}</div>}
                       </div>
                       <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
+                      {v&&!isFut&&<div style={{fontSize:8,color:"#b2bec3",textAlign:"center"}}>{v.ob}/{v.mx}</div>}
                     </div>
                   );
                 })}
@@ -3584,25 +3586,49 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               ))}
             </div>
           </div>
-          {/* Efectividad por actividad — barras stacked */}
+          {/* Efectividad por actividad — con desglose pts obtenidos/posibles */}
           <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:6}}>EFECTIVIDAD POR ACTIVIDAD <span style={{fontWeight:400,color:"#b2bec3"}}>· ORO / Tardíos / Sin registrar</span></div>
-            {actEfectV.map(({a,pct,nC1,nC2act,total})=>{
-              const nSin=Math.max(0,total-nC1-nC2act);
-              return(
-              <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                <span style={{fontSize:12,flexShrink:0}}>{a.e}</span>
-                <span style={{fontSize:11,color:"#1a2f4a",minWidth:100,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.n}</span>
-                <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",display:"flex",minWidth:60}}>
-                  {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
-                  {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
-                  {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+            <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:2}}>EFECTIVIDAD POR ACTIVIDAD</div>
+            <div style={{fontSize:9,color:"#b2bec3",marginBottom:8}}>pts obtenidos / pts posibles · barra: ORO / Tardíos / Sin registrar</div>
+            {(()=>{
+              let totOb=0, totMx=0;
+              const rows = actEfectV.map(({a,pct,nC1,nC2act,total,ob,mx})=>{
+                totOb+=ob; totMx+=mx;
+                const nSin=Math.max(0,total-nC1-nC2act);
+                return(
+                <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                  <span style={{fontSize:11,flexShrink:0}}>{a.e}</span>
+                  <span style={{fontSize:10,color:"#1a2f4a",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:90,maxWidth:110}}>{a.n}</span>
+                  <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",display:"flex",minWidth:40}}>
+                    {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
+                    {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
+                    {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+                  </div>
+                  {/* pts obtenidos / posibles */}
+                  <span style={{fontSize:9,color:"#8aaabb",flexShrink:0,whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
+                  <span style={{fontSize:11,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right",flexShrink:0}}>{pct}%</span>
                 </div>
-                <span style={{fontSize:11,fontWeight:800,color:sc(pct),minWidth:32,textAlign:"right"}}>{pct}%</span>
-              </div>
+                );
+              });
+              return(
+                <>
+                  {rows}
+                  {actEfectV.length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"6px 0"}}>Sin actividades con registros en este período.</div>}
+                  {/* FILA TOTAL */}
+                  {actEfectV.length>0&&(
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,paddingTop:8,borderTop:"1px dashed #e2e8f0"}}>
+                      <span style={{fontSize:10,flexShrink:0}}>📊</span>
+                      <span style={{fontSize:10,color:"#1a2f4a",fontWeight:800,flexShrink:0,minWidth:90}}>TOTAL PERÍODO</span>
+                      <div style={{flex:1,background:"#f0f4f8",borderRadius:4,height:7,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:(totMx>0?Math.round((totOb/totMx)*100):0)+"%",background:sc(totMx>0?Math.round((totOb/totMx)*100):0),borderRadius:4,transition:"width .4s"}}/>
+                      </div>
+                      <span style={{fontSize:9,color:"#5a7a9a",flexShrink:0,whiteSpace:"nowrap",fontWeight:700}}>{totOb}/{totMx}pts</span>
+                      <span style={{fontSize:12,fontWeight:800,color:sc(totMx>0?Math.round((totOb/totMx)*100):0),minWidth:30,textAlign:"right",flexShrink:0}}>{totMx>0?Math.round((totOb/totMx)*100):"—"}%</span>
+                    </div>
+                  )}
+                </>
               );
-            })}
-            {actEfectV.length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 0"}}>Sin actividades con registros en este período.</div>}
+            })()}
           </div>
           {/* KPIs de distribución horaria */}
           <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginTop:4}}>
