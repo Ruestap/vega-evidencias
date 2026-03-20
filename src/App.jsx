@@ -1040,7 +1040,7 @@ function ChecklistApp() {
             nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
             actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
             actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
-            DIAS_ES,semAntDate,diaSemAnt};
+            DIAS_ES,semAntStr,diaSemAnt};
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
