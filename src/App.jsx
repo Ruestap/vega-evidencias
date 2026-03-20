@@ -3416,141 +3416,227 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
            actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa} = viewerData;
+
+    const tierMes = getTier(efMes);
+    const periodoTexto = selWeek!==null ? semanasDelMes[selWeek]?.label : MESES[vMonth];
+
     return(
-    <div style={{padding:"clamp(10px,3vw,20px)",maxWidth:900,margin:"0 auto",width:"100%"}}>
-      {/* Nav mes + selector de semana */}
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
-        <button onClick={()=>navMes(-1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>←</button>
+    <div style={{padding:"clamp(10px,3vw,18px)",maxWidth:860,margin:"0 auto",width:"100%",paddingBottom:24}}>
+
+      {/* ── NAV MES + SEMANAS ── */}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+        <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:38}}>←</button>
         <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
-        <button onClick={()=>navMes(1)} style={{padding:"10px 18px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>→</button>
+        <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:38}}>→</button>
       </div>
-      {/* Selector semana — comparte selWeek con el reporte */}
-      <div style={{display:"flex",gap:6,marginBottom:14}}>
-        <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes completo</button>
+      <div style={{display:"flex",gap:5,marginBottom:16}}>
+        <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
         {semanasDelMes.map((s,i)=>(
-          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
         ))}
       </div>
 
-      {/* Sentencia ejecutiva */}
-      <div style={{padding:"12px 16px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:12,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`,marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
-        <span style={{fontSize:18,flexShrink:0}}>{esAlerta?"⚠️":"📊"}</span>
-        <div>
-          <div style={{fontSize:13,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.6}}>{narrativa}</div>
-          {!esMesActual&&<div style={{fontSize:11,color:"#6b7280",marginTop:3}}>Datos del mes completo · {MESES[vMonth]} {vYear}</div>}
+      {/* ══════════════════════════════════════════════════════
+          NIVEL 1 — ESTRATÉGICO  ·  CEO / Dirección
+          Pregunta: ¿Vamos bien o mal?
+      ══════════════════════════════════════════════════════ */}
+      <div style={{borderRadius:14,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+        {/* Header del nivel */}
+        <div style={{background:"#1a2f4a",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>💡</div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>ESTRATÉGICO · CEO / DIRECCIÓN</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>¿Vamos bien o mal? · {periodoTexto} {vYear}</div>
+          </div>
+          {efMes!==null&&(
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:22,fontWeight:800,color:sc(efMes)}}>{efMes}%</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.5)"}}>{tierMes.icon} {tierMes.label}</div>
+            </div>
+          )}
+        </div>
+        {/* Contenido estratégico */}
+        <div style={{background:"#fff",padding:"14px 16px"}}>
+          {/* Narrativa ejecutiva */}
+          <div style={{padding:"10px 14px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:10,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`,marginBottom:12,display:"flex",gap:8,alignItems:"flex-start"}}>
+            <span style={{fontSize:16,flexShrink:0}}>{esAlerta?"⚠️":"📊"}</span>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:esAlerta?"#991b1b":"#1e40af",lineHeight:1.7}}>{narrativa}</div>
+              {!esMesActual&&<div style={{fontSize:10,color:"#6b7280",marginTop:2}}>Período cerrado · {MESES[vMonth]} {vYear}</div>}
+            </div>
+          </div>
+          {/* 3 KPIs clave: eficiencia, cobertura, riesgo */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+            {[
+              {icon:"🎯",label:"Eficiencia global",  value:efMes!==null?efMes+"%":"—",   color:efMes!==null?sc(efMes):"#888", sub:tierMes.label, bg:efMes!==null?sb(efMes):"#f8fafc"},
+              {icon:"📬",label:"Cobertura tiendas",  value:Math.round((scoresMesV.filter(s=>s.pct!==null).length/Math.max(1,tiAct.length))*100)+"%", color:"#0984e3", sub:`${scoresMesV.filter(s=>s.pct!==null).length} de ${tiAct.length}`, bg:"#e8f4fd"},
+              {icon:"🚨",label:"Tiendas en riesgo",  value:enRiesgo.length>0?enRiesgo.length+" tiendas":"✓ Ninguna", color:enRiesgo.length>0?"#dc2626":"#00b894", sub:enRiesgo.length>0?"eficiencia <60%":"todas sobre el umbral", bg:enRiesgo.length>0?"#fff1f2":"#e8faf5"},
+            ].map((k,i)=>(
+              <div key={i} style={{background:k.bg,borderRadius:10,padding:"10px 12px"}}>
+                <div style={{fontSize:14,marginBottom:4}}>{k.icon}</div>
+                <div style={{fontSize:18,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
+                <div style={{fontSize:9,color:"#5a7a9a",marginTop:3,fontWeight:600}}>{k.label}</div>
+                <div style={{fontSize:9,color:k.color,marginTop:1}}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* KPIs — Bug 3 fix: mostrar rango real en cortes */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8,marginBottom:14}}>
-        {[
-          {label:"Eficiencia global",value:efMes!==null?efMes+"%":"—",color:efMes!==null?sc(efMes):"#888",sub:MESES[vMonth]},
-          {label:"Corte 1 · ORO",value:nTotalEsperadoV>0?Math.round(nOroV/totalContadoV*100)+"%":"—",color:"#BA7517",sub:`hasta las ${rangoMostrar}`},
-          {label:"Corte 2 · tardíos",value:nTotalEsperadoV>0?Math.round(nC2V/totalContadoV*100)+"%":"—",color:"#185FA5",sub:"llegaron pero cumplieron"},
-          {label:"Sin registrar",value:nTotalEsperadoV>0?Math.round(nSinRegV/totalContadoV*100)+"%":"—",color:enRiesgo.length>0?"#A32D2D":"#888780",sub:`${enRiesgo.length} tiendas críticas`},
-          {label:"Cobertura",value:Math.round((scoresMesV.filter(s=>s.pct!==null).length/Math.max(1,tiAct.length))*100)+"%",color:"#0984e3",sub:`${scoresMesV.filter(s=>s.pct!==null).length}/${tiAct.length} tiendas`},
-        ].map((k,i)=>(
-          <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"12px 14px",border:"0.5px solid #e2e8f0"}}>
-            <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
-            <div style={{fontSize:22,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
-            <div style={{fontSize:10,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
+      {/* ══════════════════════════════════════════════════════
+          NIVEL 2 — TÁCTICO  ·  Directores / Gerentes
+          Pregunta: ¿Por qué pasó? ¿Dónde están las brechas?
+      ══════════════════════════════════════════════════════ */}
+      <div style={{borderRadius:14,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+        <div style={{background:"#1e5f8a",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🔍</div>
+          <div>
+            <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>TÁCTICO · DIRECTORES / GERENTES</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>¿Por qué pasó? · tendencias y brechas por formato y actividad</div>
           </div>
-        ))}
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))",gap:12,marginBottom:14}}>
-        {/* Tendencia semanal */}
-        <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>TENDENCIA SEMANAL</div>
-          <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
-            {tendenciaViewer.map((v,i)=>{
-              const s=semanasDelMes[i];
-              const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
-              const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
-              const h=v?Math.max(8,Math.round((v.pct/maxV)*70)):0;
-              const isRef=i===iSemRef;
-              return(
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                  <div style={{fontSize:10,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
-                  <div style={{width:"100%",height:70,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none"}}>
-                    {v&&!isFut&&<div style={{width:"100%",height:h,background:isRef?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
+        </div>
+        <div style={{background:"#fff",padding:"14px 16px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))",gap:10,marginBottom:12}}>
+            {/* Tendencia semanal compacta */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>TENDENCIA SEMANAL</div>
+              <div style={{display:"flex",gap:5,alignItems:"flex-end",height:64}}>
+                {tendenciaViewer.map((v,i)=>{
+                  const s=semanasDelMes[i];
+                  const isFut=s.days.every(d=>dStr(vYear,vMonth,d)>hoy);
+                  const maxV=Math.max(...tendenciaViewer.filter(x=>x).map(x=>x.pct),1);
+                  const barH=v?Math.max(6,Math.round((v.pct/maxV)*56)):0;
+                  const isRef=i===iSemRef;
+                  const trend=i>0&&tendenciaViewer[i-1]&&v?(v.pct>tendenciaViewer[i-1].pct?"↑":v.pct<tendenciaViewer[i-1].pct?"↓":"→"):null;
+                  return(
+                    <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <div style={{fontSize:9,fontWeight:700,color:isFut?"#b2bec3":v?sc(v.pct):"#b2bec3"}}>{v?v.pct+"%":"—"}</div>
+                      <div style={{width:"100%",height:56,background:"#f0f4f8",borderRadius:4,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",position:"relative"}}>
+                        {v&&!isFut&&<div style={{width:"100%",height:barH,background:isRef?"#0984e3":sc(v.pct),borderRadius:"3px 3px 0 0"}}/>}
+                        {trend&&v&&!isFut&&<div style={{position:"absolute",top:2,right:2,fontSize:8,color:trend==="↑"?"#00b894":trend==="↓"?"#dc2626":"#8aaabb",fontWeight:800}}>{trend}</div>}
+                      </div>
+                      <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Cumplimiento por formato */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>POR FORMATO</div>
+              {fmtEfV.map(({fmt,pct})=>(
+                <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <span style={{fontSize:13,flexShrink:0}}>{fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#1a2f4a",minWidth:80,flexShrink:0}}>{fmt}</span>
+                  <div style={{flex:1,background:"#f0f4f8",borderRadius:20,height:7,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:(pct||0)+"%",background:sc(pct||0),borderRadius:20,transition:"width .4s"}}/>
                   </div>
-                  <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
+                  <span style={{fontSize:12,fontWeight:800,color:pct?sc(pct):"#888",minWidth:34,textAlign:"right"}}>{pct!==null?pct+"%":"—"}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+          {/* Efectividad por actividad — barras stacked */}
+          <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:6}}>EFECTIVIDAD POR ACTIVIDAD <span style={{fontWeight:400,color:"#b2bec3"}}>· ORO / Tardíos / Sin registrar</span></div>
+            {actEfectV.map(({a,pct,nC1,nC2act,total})=>{
+              const nSin=Math.max(0,total-nC1-nC2act);
+              return(
+              <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                <span style={{fontSize:12,flexShrink:0}}>{a.e}</span>
+                <span style={{fontSize:11,color:"#1a2f4a",minWidth:100,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.n}</span>
+                <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",display:"flex",minWidth:60}}>
+                  {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
+                  {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
+                  {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
+                </div>
+                <span style={{fontSize:11,fontWeight:800,color:sc(pct),minWidth:32,textAlign:"right"}}>{pct}%</span>
+              </div>
               );
             })}
+            {actEfectV.length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 0"}}>Sin actividades con registros en este período.</div>}
+          </div>
+          {/* KPIs de distribución horaria */}
+          <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginTop:4}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>DISTRIBUCIÓN DE HORARIO DE ENVÍO</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+              {[
+                {icon:"🥇",label:"ORO",    n:nOroV,   c:"#BA7517",bg:"#fff8ec",desc:`≤${rangoMostrar}`},
+                {icon:"🥈",label:"Tardíos",n:nC2V,    c:"#185FA5",bg:"#e8f4fd",desc:"llegaron tarde"},
+                {icon:"🔴",label:"Fuera",  n:nFueraV, c:"#dc2626",bg:"#fff1f2",desc:"sin puntaje"},
+                {icon:"⬜",label:"Sin reg.",n:nSinRegV,c:"#6b7280",bg:"#f4f6f8",desc:"no registraron"},
+              ].map((f,i)=>(
+                <div key={i} style={{background:f.bg,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:13}}>{f.icon}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:f.c,lineHeight:1.1}}>{nTotalEsperadoV>0?Math.round(f.n/totalContadoV*100)+"%":"—"}</div>
+                  <div style={{fontSize:8,color:f.c,fontWeight:700,marginTop:2}}>{f.label}</div>
+                  <div style={{fontSize:8,color:"#8aaabb"}}>{f.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Formato eficiencia */}
-        <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:12}}>CUMPLIMIENTO POR FORMATO</div>
-          {fmtEfV.map(({fmt,pct})=>(
-            <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <span style={{fontSize:15}}>{fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"}</span>
-              <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a",minWidth:90}}>{fmt}</span>
-              <div style={{flex:1,background:"#f0f4f8",borderRadius:20,height:7,overflow:"hidden"}}>
-                <div style={{height:"100%",width:(pct||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
-              </div>
-              <span style={{fontSize:12,fontWeight:700,color:pct?sc(pct):"#888",minWidth:32,textAlign:"right"}}>{pct!==null?pct+"%":"—"}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* Efectividad por actividad con distribución real de cortes */}
-      <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px",marginBottom:14}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>EFECTIVIDAD POR ACTIVIDAD · distribución ORO / Corte 2 / sin registrar</div>
-        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#BA7517",display:"inline-block"}}/>Corte 1 ORO</span>
-          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#378ADD",display:"inline-block"}}/>Corte 2</span>
-          <span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#8aaabb"}}><span style={{width:10,height:10,borderRadius:2,background:"#F09595",display:"inline-block"}}/>Sin registrar</span>
-        </div>
-        {actEfectV.map(({a,pct,nC1,nC2act,total})=>{
-          const nSin=Math.max(0,total-nC1-nC2act);
-          const rango=getRangoActivo(a.id,hoy);
-          return(
-          <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:13,flexShrink:0}}>{a.e}</span>
-            <span style={{fontSize:12,color:"#1a2f4a",minWidth:110,flexShrink:0}}>{a.n}</span>
-            <span style={{fontSize:9,color:"#8aaabb",flexShrink:0}}>ORO≤{rango.c100||"08:30"}</span>
-            <div style={{flex:1,height:8,borderRadius:4,overflow:"hidden",display:"flex",minWidth:80}}>
-              {nC1>0&&<div style={{width:(nC1/total*100)+"%",background:"#BA7517"}}/>}
-              {nC2act>0&&<div style={{width:(nC2act/total*100)+"%",background:"#378ADD"}}/>}
-              {nSin>0&&<div style={{width:(nSin/total*100)+"%",background:"#F09595"}}/>}
-            </div>
-            <span style={{fontSize:12,fontWeight:700,color:sc(pct),minWidth:32,textAlign:"right"}}>{pct}%</span>
+      {/* ══════════════════════════════════════════════════════
+          NIVEL 3 — OPERATIVO  ·  Jefes / Supervisores
+          Pregunta: ¿Cómo avanzamos? ¿Quién requiere acción inmediata?
+      ══════════════════════════════════════════════════════ */}
+      <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+        <div style={{background:"#855F00",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>⚙️</div>
+          <div>
+            <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>OPERATIVO · JEFES / SUPERVISORES</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>¿Cómo avanzamos hoy? · tiendas y acciones inmediatas</div>
           </div>
-          );
-        })}
+        </div>
+        <div style={{background:"#fff",padding:"14px 16px"}}>
+          {(enRiesgo.length===0&&enAtención.length===0)?(
+            <div style={{textAlign:"center",padding:"20px 0",color:"#00b894"}}>
+              <div style={{fontSize:28,marginBottom:6}}>✅</div>
+              <div style={{fontWeight:700,fontSize:13}}>Sin alertas operativas</div>
+              <div style={{fontSize:11,color:"#8aaabb",marginTop:3}}>Todas las tiendas evaluadas están sobre el umbral mínimo en este período</div>
+            </div>
+          ):(
+            <>
+              {enRiesgo.length>0&&(
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#dc2626",letterSpacing:".06em",marginBottom:6}}>🚨 CRÍTICAS — ACCIÓN INMEDIATA ({enRiesgo.length})</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {enRiesgo.map(({ti,pct})=>(
+                      <div key={ti.id} style={{flex:"1 1 140px",padding:"8px 10px",background:"#FCEBEB",borderRadius:8,border:"1px solid #F7C1C1"}}>
+                        <div style={{fontSize:11,fontWeight:800,color:"#791F1F",marginBottom:2}}>Vega {ti.n}</div>
+                        <div style={{fontSize:16,fontWeight:800,color:"#dc2626"}}>{pct}%</div>
+                        <div style={{fontSize:9,color:"#A32D2D"}}>{ti.f} · eficiencia crítica</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {enAtención.length>0&&(
+                <div style={{borderTop:enRiesgo.length>0?"1px solid #f0f4f8":"none",paddingTop:enRiesgo.length>0?10:0}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#854F0B",letterSpacing:".06em",marginBottom:6}}>⚠️ EN VIGILANCIA — MONITOREAR ({enAtención.length})</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {enAtención.map(({ti,pct})=>(
+                      <div key={ti.id} style={{flex:"1 1 140px",padding:"8px 10px",background:"#FAEEDA",borderRadius:8,border:"1px solid #FAC775"}}>
+                        <div style={{fontSize:11,fontWeight:800,color:"#633806",marginBottom:2}}>Vega {ti.n}</div>
+                        <div style={{fontSize:16,fontWeight:800,color:"#854F0B"}}>{pct}%</div>
+                        <div style={{fontSize:9,color:"#854F0B"}}>{ti.f} · vigilancia</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sinDatosCount>0&&(
+                <div style={{marginTop:10,padding:"6px 10px",background:"#f4f6f8",borderRadius:8,fontSize:10,color:"#6b7280"}}>
+                  ℹ️ {sinDatosCount} tienda{sinDatosCount>1?"s":""} excluidas del análisis por N/A en todos sus días evaluables.
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Tiendas que requieren atención — Issue 1: solo tiendas con registros reales */}
-      {(enRiesgo.length>0||enAtención.length>0)&&(
-      <div style={{background:"#fff",borderRadius:12,border:"0.5px solid #e2e8f0",padding:"14px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>TIENDAS QUE REQUIEREN ATENCIÓN</div>
-        <div style={{fontSize:10,color:"#8aaabb",marginBottom:12,padding:"6px 10px",background:"#f8fafc",borderRadius:6}}>
-          Solo se muestran tiendas con al menos 1 registro en el período. Tiendas con excepción N/A en todos sus días evaluables no aparecen aquí.
-          {sinDatosCount>0&&` · ${sinDatosCount} tienda${sinDatosCount>1?"s":""} excluidas por N/A no se evalúan.`}
-        </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {enRiesgo.map(({ti,pct})=>(
-            <div key={ti.id} style={{flex:"1 1 160px",padding:"10px 12px",background:"#FCEBEB",borderRadius:8,border:"0.5px solid #F7C1C1"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#791F1F"}}>Vega {ti.n}</div>
-              <div style={{fontSize:10,color:"#A32D2D",marginTop:2}}>{ti.f} · {pct}%</div>
-              <div style={{fontSize:10,color:"#A32D2D"}}>Eficiencia crítica — revisar registros</div>
-            </div>
-          ))}
-          {enAtención.map(({ti,pct})=>(
-            <div key={ti.id} style={{flex:"1 1 160px",padding:"10px 12px",background:"#FAEEDA",borderRadius:8,border:"0.5px solid #FAC775"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#633806"}}>Vega {ti.n}</div>
-              <div style={{fontSize:10,color:"#854F0B",marginTop:2}}>{ti.f} · {pct}%</div>
-              <div style={{fontSize:10,color:"#854F0B"}}>Tendencia a monitorear</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      )}
     </div>
     );
   };
