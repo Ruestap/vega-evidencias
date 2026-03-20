@@ -204,9 +204,14 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
         return setDoc(doc(db, "registros", docId), {...reg, evidencias: newEvs, updatedAt: new Date().toISOString()});
       }
     });
-    await Promise.all(promises);
-    showToast(`🗑️ ${selLogs.size} registro(s) eliminado(s)`);
-    setSelLogs(new Set());
+    try {
+      await Promise.all(promises);
+      showToast(`🗑️ ${selLogs.size} registro(s) eliminado(s)`);
+      setSelLogs(new Set());
+    } catch(e) {
+      console.error("eliminarSeleccionados error:", e);
+      showToast("❌ Error al eliminar. Verifica tu conexión.");
+    }
   };
 
   return (
@@ -307,7 +312,7 @@ export default function ChecklistApp() {
   const [showNAud, setShowNAud] = useState(false);
   const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
-  const [rangoFecha, setRangoFecha] = useState(todayStr); // Bug 7 fix: reemplaza document.getElementById
+  const [rangoFecha, setRangoFecha] = useState(()=>todayStr()); // B12 fix: llamar la función, no pasar referencia
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
@@ -383,6 +388,8 @@ export default function ChecklistApp() {
   },[]);
 
   // Bug 4 fix: refs siempre actualizados para evitar stale closure en saveConfig
+  const roleRef    = useRef(role);
+  useEffect(()=>{ roleRef.current=role; },[role]);
   const actsRef    = useRef(acts);
   const tiendasRef = useRef(tiendas);
   const pinsRef    = useRef(pins);
@@ -448,6 +455,22 @@ export default function ChecklistApp() {
   const isAuditor = role==="admin"||role==="auditor";
   const isViewer  = role==="viewer";
 
+  // B1 fix: regsIndex declarado ANTES de getReg que lo referencia
+  // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
+  const regsIndex = useMemo(()=>{
+    const idx = {};
+    Object.entries(regs).forEach(([docId, data]) => {
+      idx[docId] = data;
+      // Índice inverso por fecha+tienda para queries rápidas
+      if(data.fecha && data.tiendaId) {
+        const dateKey = `date|${data.fecha}|${data.tiendaId}`;
+        if(!idx[dateKey]) idx[dateKey] = [];
+        idx[dateKey].push(docId);
+      }
+    });
+    return idx;
+  },[regs]);
+
   const getReg = useCallback((f,tid,a)=>{
     const k=rKey(f,tid,a);
     const docId=k.replace(/\|/g,"--");
@@ -476,11 +499,13 @@ export default function ChecklistApp() {
       const t2=9*60+30; // 09:30
       const key1=`statusShown_${todayStr()}_0830`;
       const key2=`statusShown_${todayStr()}_0930`;
-      if(hhmm===t1&&!sessionStorage.getItem(key1)){
+      // B14 fix: solo mostrar a auditores/admin, no al viewer
+      const currentRole = roleRef.current;
+      if(hhmm===t1&&!sessionStorage.getItem(key1)&&(currentRole==="admin"||currentRole==="auditor")){
         sessionStorage.setItem(key1,"1");
         setShowStatusCard(true);
       }
-      if(hhmm===t2&&!sessionStorage.getItem(key2)){
+      if(hhmm===t2&&!sessionStorage.getItem(key2)&&(currentRole==="admin"||currentRole==="auditor")){
         sessionStorage.setItem(key2,"1");
         setShowStatusCard(true);
       }
@@ -501,37 +526,24 @@ export default function ChecklistApp() {
     const AR=getRangoActivo(actSel,fecha);
     const ts=tiAct.filter(ti=>!isExc(ti.id,actSel,fecha));
     const total=ts.length;
-    const withEnv=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)!==null);
-    const pts=ts.map(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR));
+    // B13 fix: cachear getReg+puntajeReg una sola vez por tienda — evita 7 llamadas duplicadas
+    const ptsMap=new Map(ts.map(ti=>[ti.id, puntajeReg(getReg(fecha,ti.id,actSel),AR)]));
+    const withEnv=ts.filter(ti=>ptsMap.get(ti.id)!==null);
+    const pts=[...ptsMap.values()];
     const IC=total>0?Math.round((withEnv.length/total)*100):0;
     const valid=pts.filter(p=>p!==null);
-    const IP_pts=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length):0; // promedio puntos 0-10
-    const IP=Math.round((IP_pts/10)*100); // normalizar a % para que SG sea coherente
+    const IP_pts=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    const IP=Math.round((IP_pts/10)*100);
     const al100=pts.filter(p=>p===10).length;
     const SE=total>0?Math.round((al100/total)*100):0;
-    const TR=total>0?Math.round((ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null).length/total)*100):0;
-    const SG=Math.round((IC*IP)/100); // IC% × IP% → Score Global %
-    const r100=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===10);
-    const r80=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===8);
-    const r60=withEnv.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===6);
-    const r0=ts.filter(ti=>puntajeReg(getReg(fecha,ti.id,actSel),AR)===null);
+    const TR=total>0?Math.round((ts.filter(ti=>ptsMap.get(ti.id)===null).length/total)*100):0;
+    const SG=Math.round((IC*IP)/100);
+    const r100=withEnv.filter(ti=>ptsMap.get(ti.id)===10);
+    const r80=withEnv.filter(ti=>ptsMap.get(ti.id)===8);
+    const r60=withEnv.filter(ti=>ptsMap.get(ti.id)===6);
+    const r0=ts.filter(ti=>ptsMap.get(ti.id)===null);
     return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
-  },[actSel,actInfo,tiAct,isExc,getReg,fecha]);
-
-  // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
-  const regsIndex = useMemo(()=>{
-    const idx = {};
-    Object.entries(regs).forEach(([docId, data]) => {
-      idx[docId] = data;
-      // Índice inverso por fecha+tienda para queries rápidas
-      if(data.fecha && data.tiendaId) {
-        const dateKey = `date|${data.fecha}|${data.tiendaId}`;
-        if(!idx[dateKey]) idx[dateKey] = [];
-        idx[dateKey].push(docId);
-      }
-    });
-    return idx;
-  },[regs]);
+  },[actSel,tiAct,isExc,getReg,getRangoActivo,rangosDia,fecha]); // B2 fix: quitar actInfo (derivado), agregar getRangoActivo+rangosDia
 
   // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
   const actsConRegistroIds = useMemo(()=>{
@@ -576,7 +588,7 @@ export default function ChecklistApp() {
     });
     if(maximos===0) return null;
     return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,regs,actsConRegistroIds,isExc,getReg,getRangoActivo]);
+  },[acts,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]); // B7 fix: regsIndex en deps
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -1506,12 +1518,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     // calcular score con filtros aplicados
     // calcEficienciaFiltrada: acumula pts obtenidos / pts maximos del período completo
     // respeta filtros de actividad, formato y franja horaria
+    const _hoyDash = todayStr(); // B8 fix: calcular una sola vez fuera del loop
     const calcEficienciaFiltrada = (tId)=>{
       let obtenidos=0, maximos=0;
       semanasDelMes.forEach(s=>{
         s.days.forEach(day=>{
           const ds=dStr(vYear,vMonth,day);
-          if(ds>todayStr()) return; // día futuro
+          if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
           actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
             maximos+=10;
@@ -1539,6 +1552,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       let ob=0, mx=0;
       sem.days.forEach(day=>{
         const ds=dStr(vYear,vMonth,day);
+        if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
         actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
           mx+=10;
@@ -1572,15 +1586,33 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       return mx>0?Math.round((ob/mx)*100):null;
     });
 
-    // distribución horaria
-    const allEvs=Object.values(regs).filter(r=>!r.anulado).flatMap(r=>r.evidencias||[]);
+    // B4 fix: distribución horaria usando rangos reales por actividad (no hardcoded)
+    let _nOro=0,_nPlata=0,_nBronce=0,_nFuera=0;
+    tsBase.forEach(ti=>{
+      semanasDelMes.forEach(s=>s.days.forEach(day=>{
+        const ds=dStr(vYear,vMonth,day);
+        if(ds>_hoyDash) return;
+        const dw=getDow(ds);
+        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          const reg=getReg(ds,ti.id,a.id);
+          if(!reg?.evidencias||reg.anulado) return;
+          const AR=getRangoActivo(a.id,ds);
+          const h=primerEnvio(reg.evidencias);
+          const m=toMin(h);
+          if(m<=toMin(AR.c100)) _nOro++;
+          else if(m<=toMin(AR.c80)) _nPlata++;
+          else if(m<=toMin(AR.c60)) _nBronce++;
+          else _nFuera++;
+        });
+      }));
+    });
     const horasDist=[
-      {l:"🥇 ORO ≤08:00",   c:"#f6a623", n:allEvs.filter(e=>toMin(e.hora)<=toMin("08:00")).length},
-      {l:"🥈 PLATA ≤09:00", c:"#74b9ff", n:allEvs.filter(e=>toMin(e.hora)>toMin("08:00")&&toMin(e.hora)<=toMin("09:00")).length},
-      {l:"🥉 BRONCE ≤10:00",c:"#a29bfe", n:allEvs.filter(e=>toMin(e.hora)>toMin("09:00")&&toMin(e.hora)<=toMin("10:00")).length},
-      {l:"🔴 FUERA >10:00",  c:"#d63031", n:allEvs.filter(e=>toMin(e.hora)>toMin("10:00")).length},
+      {l:"🥇 ORO",   c:"#f6a623", n:_nOro,    desc:"En tiempo óptimo (c100)"},
+      {l:"🥈 PLATA", c:"#74b9ff", n:_nPlata,  desc:"Dentro del rango c80"},
+      {l:"🥉 BRONCE",c:"#a29bfe", n:_nBronce, desc:"Dentro del rango c60"},
+      {l:"🔴 FUERA", c:"#d63031", n:_nFuera,  desc:"Fuera de todos los rangos"},
     ];
-    const totalEvs=allEvs.length||1;
+    const totalEvs=(_nOro+_nPlata+_nBronce+_nFuera)||1;
 
     // ranking
     const sorted=[...scoresMes].sort((a,b)=>(b.score??-1)-(a.score??-1));
@@ -2885,7 +2917,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       const sorted=[...grupo].sort((a,b)=>a.hora.localeCompare(b.hora));
                       sorted.slice(1).forEach(l=>aEliminar.add(l.uid));
                     });
-                    window._logTableSelDups=aEliminar; // kept for compatibility — also set React state
                     setSelDupsExterno([...aEliminar]);
                     setLogSoloDups(true);
                   }} style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
@@ -2978,10 +3009,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{fontWeight:700,fontSize:13,color:"#dc2626",marginBottom:4}}>🗑️ Limpieza de registros de prueba</div>
         <div style={{fontSize:11,color:"#5a7a9a",marginBottom:12}}>Elimina todos los registros de Firestore. Úsalo solo en marcha blanca para limpiar datos de prueba que afectan el % de eficiencia.</div>
         <button onClick={async()=>{
-          if(!window.confirm("¿Eliminar TODOS los registros de Firestore? Esta acción es irreversible.")) return;
-          const promises = Object.keys(regs).map(docId=>deleteDoc(doc(db,"registros",docId)));
-          await Promise.all(promises);
-          showToast("🗑️ Todos los registros eliminados");
+          if(!window.confirm("⚠️ ATENCIÓN: Esto eliminará TODOS los registros de Firestore.\n\nEsta acción es IRREVERSIBLE. ¿Estás seguro?")) return;
+          const confirmText = window.prompt("Escribe CONFIRMAR para proceder:");
+          if(confirmText !== "CONFIRMAR") { showToast("❌ Cancelado — texto incorrecto"); return; }
+          try {
+            const promises = Object.keys(regs).map(docId=>deleteDoc(doc(db,"registros",docId)));
+            await Promise.all(promises);
+            showToast("🗑️ Todos los registros eliminados");
+          } catch(e) {
+            console.error("limpieza masiva error:", e);
+            showToast("❌ Error durante la limpieza. Algunos registros pueden no haberse eliminado.");
+          }
         }}
           style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
           Eliminar todos los registros
@@ -2991,11 +3029,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   );
 
   /* ══ VIEWER DASHBOARD — narrativa estratégica para gerencia ══ */
-  const renderViewerDash = ()=>{
+  // B6 fix: memoizar cálculos pesados del viewer para evitar recálculo en cada render
+  const viewerData = useMemo(()=>{
     const hoy=todayStr();
     const esMesActual=vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
-
-    // ── Tendencia semanal — solo días del mes visualizado hasta hoy ──
     const tendenciaViewer=semanasDelMes.map(s=>{
       let ob=0,mx=0;
       tiAct.forEach(ti=>{
@@ -3158,7 +3195,19 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       if(enRiesgo.length>0) narrativa+=`. ${enRiesgo.length} tienda${enRiesgo.length>1?"s":""} con bajo rendimiento`;
     }
     narrativa+=".";
+    return {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
+            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,rangoMostrar,
+            actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
+            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
+            DIAS_ES,semAntDate,diaSemAnt};
+  },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
+     vYear,vMonth,selWeek]);
 
+  const renderViewerDash = ()=>{
+    const {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
+           nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,rangoMostrar,
+           actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
+           actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa} = viewerData;
     return(
     <div style={{padding:"clamp(10px,3vw,20px)",maxWidth:900,margin:"0 auto",width:"100%"}}>
       {/* Nav mes + selector de semana */}
