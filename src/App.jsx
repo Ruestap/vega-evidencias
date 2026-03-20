@@ -1,9 +1,41 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React from "react";
 import { db } from "./firebase";
 import {
   collection, doc, onSnapshot,
-  setDoc, getDoc, deleteDoc
+  setDoc, deleteDoc
 } from "firebase/firestore";
+
+/* ══ ERROR BOUNDARY — captura crashes de render y evita pantalla blanca ══ */
+class AppErrorBoundary extends React.Component {
+  constructor(props){ super(props); this.state={hasError:false,error:null}; }
+  static getDerivedStateFromError(error){ return {hasError:true,error}; }
+  componentDidCatch(error,info){ console.error("[VEGA ErrorBoundary]",error,info); }
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{fontFamily:"system-ui,sans-serif",background:"#f0f4f8",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:420,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.1)",textAlign:"center"}}>
+            <div style={{fontSize:40,marginBottom:12}}>⚠️</div>
+            <div style={{fontWeight:800,fontSize:16,color:"#1a2f4a",marginBottom:8}}>Error de aplicación</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:20,lineHeight:1.6}}>
+              Ocurrió un error inesperado. Por favor recarga la página.<br/>
+              Si el error persiste, contacta al administrador.
+            </div>
+            <div style={{fontSize:10,color:"#b2bec3",background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontFamily:"monospace",marginBottom:16,textAlign:"left",wordBreak:"break-all"}}>
+              {String(this.state.error?.message||this.state.error||"Unknown error")}
+            </div>
+            <button onClick={()=>window.location.reload()}
+              style={{padding:"12px 24px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+              🔄 Recargar página
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /* ══ DATOS ══════════════════════════════════════════════ */
 const TIENDAS_INIT = [
@@ -267,7 +299,7 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 }
 
 /* ══ APP ══════════════════════════════════════════════ */
-export default function ChecklistApp() {
+function ChecklistApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(()=>new Date(),[]); // evita new Date() en cada render
   /* ── auth ── */
@@ -2962,12 +2994,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                   {override&&(
                     <button onClick={()=>{
-                      setRangosDia(prev=>{
-                        const next={...prev};
-                        if(next[a.id]) { delete next[a.id][rangoFecha]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
-                        saveConfig({rangosDia:next});
-                        return next;
-                      });
+                      // FIX BUG3: saveConfig FUERA del updater — los updaters deben ser funciones puras
+                      const cur = rangosDia;
+                      const next={...cur};
+                      if(next[a.id]) { delete next[a.id][rangoFecha]; if(!Object.keys(next[a.id]).length) delete next[a.id]; }
+                      setRangosDia(next);
+                      saveConfig({rangosDia:next});
                       showToast("🗑️ Rango del día eliminado");
                     }} style={{padding:"4px 10px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>
                       Quitar override
@@ -2980,11 +3012,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
                       <input type="time" value={RR[f.k]}
                         onChange={e=>{
-                          setRangosDia(prev=>{
-                            const next={...prev,[a.id]:{...(prev[a.id]||{}),[rangoFecha]:{...(prev[a.id]?.[rangoFecha]||base),[f.k]:e.target.value}}};
-                            saveConfig({rangosDia:next});
-                            return next;
-                          });
+                          // FIX BUG3: saveConfig FUERA del updater — los updaters deben ser funciones puras
+                          const next={...rangosDia,[a.id]:{...(rangosDia[a.id]||{}),[rangoFecha]:{...(rangosDia[a.id]?.[rangoFecha]||base),[f.k]:e.target.value}}};
+                          setRangosDia(next);
+                          saveConfig({rangosDia:next});
                         }}
                         style={{width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid "+a.c+"55",background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center",boxSizing:"border-box"}}/>
                     </div>
@@ -3196,7 +3227,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     }
     narrativa+=".";
     return {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
-            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,rangoMostrar,
+            nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
             actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
             actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa,
             DIAS_ES,semAntDate,diaSemAnt};
@@ -3871,6 +3902,15 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 
     </div>
+  );
+}
+
+/* ══ EXPORT — envuelto en ErrorBoundary para capturar crashes de render ══ */
+export default function App(props){
+  return(
+    <AppErrorBoundary>
+      <ChecklistApp {...props}/>
+    </AppErrorBoundary>
   );
 }
 
