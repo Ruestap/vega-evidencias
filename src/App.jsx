@@ -351,6 +351,7 @@ function ChecklistApp() {
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
+  const exportPDFRef = useRef(null); // ref para exponer exportPDF al header desde renderDashboard
   /* ── modales de registro ── */
   const [delModal,    setDelModal]    = useState(null);
   const [anularModal, setAnularModal] = useState(null);
@@ -1906,6 +1907,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       }
     };
 
+    // Exponer exportPDF al header via ref — evita "exportPDF is not defined" en scope externo
+    exportPDFRef.current = exportPDF;
+
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
@@ -3238,7 +3242,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
   const renderViewerDash = ()=>{
     const {hoy,esMesActual,tendenciaViewer,iSemRef,vSemActual,vSemAnt,deltaSem,efMes,
-           nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,rangoMostrar,
+           nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
            actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
            actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa} = viewerData;
     return(
@@ -3405,7 +3409,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
-          {isAdmin&&<button onClick={exportPDF} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
+          {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
           {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
