@@ -2090,6 +2090,20 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           );
         })()}
 
+        {/* ══ NIVEL 1 — ESTRATÉGICO · CEO / DIRECCIÓN ══════════════════
+            ¿Vamos bien o mal? — eficiencia global + cobertura + riesgo
+        ══════════════════════════════════════════════════════════════ */}
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#1a2f4a",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>💡</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>ESTRATÉGICO · CEO / DIRECCIÓN</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Vamos bien o mal? · {selWeek!==null?(semanasDelMes[selWeek]?.label||"Semana"):MESES[vMonth]} {vYear}</div>
+            </div>
+            {SG>0&&<div style={{textAlign:"right"}}><div style={{fontSize:20,fontWeight:800,color:sc(SG)}}>{SG}%</div><div style={{fontSize:8,color:"rgba(255,255,255,.4)"}}>{getTier(SG).icon} {getTier(SG).label}</div></div>}
+          </div>
+          <div style={{background:"#fff",padding:"12px 14px"}}>
+
         {/* KPIs */}
         {(()=>{
           const nEval=tsEval.length;
@@ -2152,6 +2166,22 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
           );
         })()}
+
+          </div>
+        </div>{/* fin ESTRATÉGICO */}
+
+        {/* ══ NIVEL 2 — TÁCTICO · DIRECTORES / GERENTES ══════════════════
+            ¿Por qué pasó? — tendencias, actividades, horarios, formatos
+        ══════════════════════════════════════════════════════════════ */}
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#1e5f8a",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>🔍</span>
+            <div>
+              <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>TÁCTICO · DIRECTORES / GERENTES</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Por qué pasó? · tendencias, actividades y distribución horaria</div>
+            </div>
+          </div>
+          <div style={{background:"#fff",padding:"12px 14px"}}>
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
@@ -2650,6 +2680,22 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           );
         })()}
 
+          </div>
+        </div>{/* fin TÁCTICO */}
+
+        {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
+            ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
+        ══════════════════════════════════════════════════════════════ */}
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>⚙️</span>
+            <div>
+              <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>OPERATIVO · JEFES / SUPERVISORES</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Cómo avanzamos? · ranking tiendas y acciones inmediatas</div>
+            </div>
+          </div>
+          <div style={{background:"#fff",padding:"12px 14px"}}>
+
         {/* por formato */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
@@ -2850,6 +2896,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </table>
           </div>
         </div>
+          </div>
+        </div>{/* fin OPERATIVO */}
       </div>
     );
   };
@@ -3864,7 +3912,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {/* 4 KPIs */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
                   {[
-                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl!==null?`${deltaCumpl>0?"▲":"▼"} ${Math.abs(deltaCumpl)}pts vs ${diaSemAntG} pasado`:"sin comparativa"},
+                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl===null?"sin comparativa":deltaCumpl===0?`→ igual que el ${diaSemAntG} pasado`:deltaCumpl>0?`▲ ${deltaCumpl}pts vs ${diaSemAntG} pasado`:`▼ ${Math.abs(deltaCumpl)}pts vs ${diaSemAntG} pasado`},
                     {label:"Registros en ORO",value:pctC1+"%",color:"#BA7517",sub:`antes de ${bloque1Hasta}`},
                     {label:"Tardíos rescatados",value:pctC2+"%",color:"#185FA5",sub:`${bloque2Desde} – ${bloque2Hasta}`},
                     {label:"Sin registrar",value:pctSin+"%",color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ dentro del rango"},
