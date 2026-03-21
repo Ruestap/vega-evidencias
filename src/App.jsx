@@ -319,7 +319,8 @@ function ChecklistApp() {
   const [uDni,    setUDni]    = useState("");
   const [pins,    setPins]    = useState({admin:"vega2026",auditor:"auditor88",viewer:"gerencia1"});
   const [pinMod,  setPinMod]  = useState(false);
-  const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}]
+  const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
+  const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [fecha,   setFecha]   = useState(todayStr());
@@ -361,6 +362,8 @@ function ChecklistApp() {
   const [cortesSupervision, setCortesSupervision] = useState({c1:"08:30", c2:"09:30"});
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
+  const [showNUsuario, setShowNUsuario] = useState(false);
+  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",credencial:""});
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
@@ -452,6 +455,37 @@ function ChecklistApp() {
   useEffect(()=>{ rangosDiaRef.current=rangosDia; },[rangosDia]);
   useEffect(()=>{ auditoresRef.current=auditores; },[auditores]);
   useEffect(()=>{ cortesSupervisionRef.current=cortesSupervision; },[cortesSupervision]);
+
+  // Sync colección usuarios desde Firestore
+  useEffect(()=>{
+    const unsub = onSnapshot(collection(db,"usuarios"), snap=>{
+      const data=[];
+      snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
+      setUsuarios(data);
+    });
+    return ()=>unsub();
+  },[]);
+
+  // Guardar o actualizar un usuario en Firestore
+  const saveUsuario = useCallback(async (u)=>{
+    const ref = u.id ? doc(db,"usuarios",u.id) : doc(collection(db,"usuarios"));
+    await setDoc(ref,{
+      nombre:       u.nombre,
+      rol:          u.rol,
+      credencial:   u.credencial,
+      activo:       u.activo!==false,
+      ultimoAcceso: u.ultimoAcceso||null,
+    });
+  },[]);
+
+  const deleteUsuario = useCallback(async (id)=>{
+    await deleteDoc(doc(db,"usuarios",id));
+  },[]);
+
+  const registrarAcceso = useCallback(async (id)=>{
+    if(!id) return;
+    await setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString()},{merge:true});
+  },[]);
 
   const saveConfig = useCallback(async (overrides={})=>{
     // Usa refs para evitar stale closure — siempre tiene el valor más reciente
@@ -1043,7 +1077,9 @@ function ChecklistApp() {
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
-  if(!role) return <LoginScreen pins={pins} auditores={auditores} onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?1:0);}}/>;
+  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
+    onAcceso={(id)=>registrarAcceso(id)}
+    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?2:0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -2965,7 +3001,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   const renderConfig = ()=>(
     <div style={{padding:"16px"}}>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Actividades","Tiendas","Auditores","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
+        {["Usuarios","Actividades","Tiendas","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
@@ -2974,6 +3010,98 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       </div>
 
       {cfgTab===0&&(
+        /* ══ TAB USUARIOS ══ */
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Usuarios</div>
+              <div style={{fontSize:11,color:"#8aaabb"}}>
+                {usuarios.filter(u=>u.activo!==false).length} activos · Admin, Auditores y Visores
+              </div>
+            </div>
+            <button onClick={()=>setShowNUsuario(v=>!v)}
+              style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nuevo</button>
+          </div>
+          {showNUsuario&&(
+            <div style={{...S.card,padding:"14px",marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                <div>
+                  <label style={S.lbl}>NOMBRE</label>
+                  <input value={newUsuario.nombre} onChange={e=>setNewUsuario(p=>({...p,nombre:e.target.value}))}
+                    placeholder="Ej: Roberto Ruesta" style={S.inp}/>
+                </div>
+                <div>
+                  <label style={S.lbl}>ROL</label>
+                  <div style={{display:"flex",gap:6}}>
+                    {[{r:"admin",l:"Admin",c:"#f6a623"},{r:"auditor",l:"Auditor",c:"#00b5b4"},{r:"viewer",l:"Visor",c:"#74b9ff"}].map(({r,l,c})=>(
+                      <button key={r} onClick={()=>setNewUsuario(p=>({...p,rol:r}))}
+                        style={{flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${newUsuario.rol===r?c:"#e2e8f0"}`,background:newUsuario.rol===r?c+"22":"#fff",color:newUsuario.rol===r?c:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{marginBottom:10}}>
+                <label style={S.lbl}>{newUsuario.rol==="auditor"?"DNI (credencial de ingreso)":"CÓDIGO DE ACCESO"}</label>
+                <input
+                  type={newUsuario.rol==="auditor"?"tel":"password"}
+                  value={newUsuario.credencial}
+                  onChange={e=>setNewUsuario(p=>({...p,credencial:newUsuario.rol==="auditor"?e.target.value.replace(/[^0-9]/g,"").slice(0,8):e.target.value}))}
+                  placeholder={newUsuario.rol==="auditor"?"12345678":"código secreto"}
+                  style={{...S.inp,letterSpacing:newUsuario.rol!=="auditor"?4:0}}/>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={async()=>{
+                  if(!newUsuario.nombre.trim()||!newUsuario.credencial.trim()) return;
+                  await saveUsuario({...newUsuario,activo:true});
+                  setNewUsuario({nombre:"",rol:"auditor",credencial:""});
+                  setShowNUsuario(false);
+                  showToast("✅ Usuario registrado");
+                }} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Guardar</button>
+                <button onClick={()=>setShowNUsuario(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {/* Lista de usuarios agrupada por rol */}
+          {[{rol:"admin",label:"👑 Administradores",c:"#f6a623"},{rol:"auditor",label:"🪪 Auditores",c:"#00b5b4"},{rol:"viewer",label:"👁️ Visores",c:"#74b9ff"}].map(({rol,label,c})=>{
+            const us=usuarios.filter(u=>u.rol===rol);
+            if(!us.length) return null;
+            return(
+            <div key={rol} style={{marginBottom:16}}>
+              <div style={{fontSize:10,fontWeight:800,color:c,letterSpacing:".06em",marginBottom:6}}>{label}</div>
+              {us.map(u=>(
+                <div key={u.id} style={{...S.card,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:c+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                    {rol==="admin"?"👑":rol==="auditor"?"🪪":"👁️"}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>{u.nombre}</div>
+                    <div style={{fontSize:10,color:"#8aaabb"}}>
+                      {rol==="auditor"?"DNI: "+u.credencial:"Código configurado"}
+                      {u.ultimoAcceso&&<span style={{marginLeft:8}}>· Último acceso: {new Date(u.ultimoAcceso).toLocaleDateString("es-PE")}</span>}
+                    </div>
+                  </div>
+                  <button onClick={()=>saveUsuario({...u,activo:u.activo===false})}
+                    style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                    {u.activo===false?"Activar":"Desactivar"}
+                  </button>
+                  <button onClick={()=>{if(window.confirm(`¿Eliminar a ${u.nombre}?`))deleteUsuario(u.id);}}
+                    style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11}}>🗑️</button>
+                </div>
+              ))}
+            </div>
+            );
+          })}
+          {usuarios.length===0&&(
+            <div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:13}}>
+              Sin usuarios registrados. Crea el primer usuario con el botón ＋ Nuevo.
+            </div>
+          )}
+        </div>
+      )}
+
+      {cfgTab===1&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
@@ -3897,7 +4025,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>VEGA · EVIDENCIAS</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>CONTROL DE IMPLEMENTACIÓN</div>
           </div>
-          <input type="date" value={fecha} onChange={e=>{setFecha(e.target.value);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}} disabled={isViewer}
+          <input type="date" value={fecha}
+            onChange={e=>{
+              const d=e.target.value;
+              // Auditor: solo puede registrar hoy (no fechas pasadas ni futuras)
+              if(!isAdmin&&d!==todayStr()) return;
+              setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);
+            }}
+            disabled={isViewer}
             title={isViewer?"El visor no puede cambiar la fecha":isAdmin?"Cambiar fecha (Admin)":"Cambiar fecha para consultar históricos"}
             style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none",opacity:isViewer?0.5:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.1)"}}>
@@ -3905,7 +4040,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
           </div>
           {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
-          {isAdmin&&<button onClick={()=>setPinMod(true)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>🔑</button>}
+
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
         <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center"}}>
@@ -4323,14 +4458,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{padding:"10px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",fontSize:11,color:"#5a7a9a",fontWeight:700}}>
               Vega {ctxMenu.t.n} · {ctxMenu.sem.label} · {ctxMenu.a.e}
             </div>
-            <div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setUpdModal({docId:d.docId,docData:d.docData,actividadId:d.actividadId});setHoraUpd(primerEnvio(d.docData?.evidencias)||"");} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
+            {isAdmin&&<div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setUpdModal({docId:d.docId,docData:d.docData,actividadId:d.actividadId});setHoraUpd(primerEnvio(d.docData?.evidencias)||"");} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
               <div style={{width:28,height:28,borderRadius:8,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✏️</div>
               <div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Actualizar registro</div><div style={{fontSize:10,color:"#8aaabb"}}>Corregir hora · queda en historial</div></div>
-            </div>
-            <div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setAnularModal({docId:d.docId,docData:d.docData});} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
+            </div>}
+            {isAdmin&&<div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setAnularModal({docId:d.docId,docData:d.docData});} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer",borderBottom:"1px solid #f0f4f8"}}>
               <div style={{width:28,height:28,borderRadius:8,background:"#FAEEDA",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚠️</div>
               <div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Anular con motivo</div><div style={{fontSize:10,color:"#8aaabb"}}>Se mantiene en historial · no cuenta</div></div>
-            </div>
+            </div>}
             {isAdmin&&<div onClick={()=>{ const d=ctxMenu.docIds[0]; if(d){setDelModal({docIds:[d.docId],label:`Vega ${ctxMenu.t.n} · ${ctxMenu.a.e} · ${ctxMenu.sem.label}`});} setCtxMenu(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
               <div style={{width:28,height:28,borderRadius:8,background:"#fff1f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🗑️</div>
               <div><div style={{fontSize:13,fontWeight:700,color:"#dc2626"}}>Eliminar registro</div><div style={{fontSize:10,color:"#8aaabb"}}>Solo marcha blanca · irreversible</div></div>
@@ -4415,8 +4550,12 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,auditores,onLogin}){
-  const auds = (auditores||[]).filter(a=>a.activo!==false);
+function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
+  // Unificar: usuarios colección (nuevo) + auditores legacy (fallback)
+  const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
+  const auds = usuariosActivos.filter(u=>u.rol==="auditor").length>0
+    ? usuariosActivos.filter(u=>u.rol==="auditor").map(u=>({dni:u.credencial,nombre:u.nombre,id:u.id}))
+    : (auditores||[]).filter(a=>a.activo!==false);
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
   const[step,setStep]=useState("inicio");
@@ -4424,6 +4563,10 @@ function LoginScreen({pins,auditores,onLogin}){
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
 
   const tryPin=()=>{
+    // Buscar en colección usuarios primero
+    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&u.credencial===pin);
+    if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,"");return;}
+    // Fallback a pins legacy
     if(pin===pins.admin){onLogin("admin","Administrador","");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
@@ -4431,7 +4574,7 @@ function LoginScreen({pins,auditores,onLogin}){
     const clean=dni.trim();
     if(clean.length<8){setErr("DNI debe tener 8 dígitos");return;}
     const found=auds.find(a=>a.dni===clean);
-    if(found){onLogin("auditor",found.nombre,clean);return;}
+    if(found){onAcceso?.(found.id);onLogin("auditor",found.nombre,clean);return;}
     if(auds.length===0&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
     setErr(auds.length===0
       ?"Sin auditores registrados. Contacta al Admin."
@@ -4440,6 +4583,8 @@ function LoginScreen({pins,auditores,onLogin}){
   };
   // Bug 11 fix: viewer requiere pin real, no entrada directa
   const tryViewer=()=>{
+    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&u.credencial===pin);
+    if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,"");return;}
     if(!pins.viewer){setErr("Acceso no configurado. Contacta al Admin.");return;}
     if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
