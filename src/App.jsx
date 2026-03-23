@@ -353,8 +353,6 @@ function ChecklistApp() {
   const [logFecha,setLogFecha]= useState("Todos");
   const [logSoloDups,setLogSoloDups]= useState(false);
   const [selDupsExterno, setSelDupsExterno] = useState([]); // Bug 6 fix: reemplaza window._logTableSelDups
-  const [showNAud, setShowNAud] = useState(false);
-  const [newAud,   setNewAud]   = useState({dni:"",nombre:""});
   const [rangosDia, setRangosDia] = useState({}); // {actId: {fecha: {c100,c80,c60}}}
   const [rangoFecha, setRangoFecha] = useState(()=>todayStr());
   // Cortes de supervisión independientes de los rangos de puntaje
@@ -421,7 +419,6 @@ function ChecklistApp() {
       if(d.actividades) setActs(d.actividades);
       if(d.tiendas)     setTiendas(d.tiendas);
       if(d.pins)        setPins(d.pins);
-      if(d.auditores)   setAuditores(d.auditores);
       if(d.rangosDia)   setRangosDia(d.rangosDia);
       if(d.cortesSupervision) setCortesSupervision(d.cortesSupervision);
       // Limpiar exceps: descartar true legacy y arrays vacíos
@@ -499,7 +496,6 @@ function ChecklistApp() {
         actividades: overrides.actividades ?? actsRef.current,
         tiendas:     overrides.tiendas     ?? tiendasRef.current,
         pins:        overrides.pins        ?? pinsRef.current,
-        auditores:   overrides.auditores   ?? auditoresRef.current,
         excepciones: excClean,
         rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
         cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
@@ -514,7 +510,6 @@ function ChecklistApp() {
           actividades: overrides.actividades ?? actsRef.current,
           tiendas:     overrides.tiendas     ?? tiendasRef.current,
           pins:        overrides.pins        ?? pinsRef.current,
-          auditores:   overrides.auditores   ?? auditoresRef.current,
           excepciones: excClean,
           rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
           cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
