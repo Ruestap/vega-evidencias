@@ -3191,7 +3191,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       )}
 
-      {fgTab===1&&(
+      {cfgTab===1&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
