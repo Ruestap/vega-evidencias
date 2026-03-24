@@ -4904,17 +4904,18 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   const tryLogin=(rol)=>{
     const clean=cred.trim();
-    if(clean.length<8){setErr("Ingresa 8 caracteres");return;}
+    if(clean.length<4){setErr("Ingresa tu credencial");return;}
+    // 1. Buscar en usuarios registrados por DNI
     const found=usuariosActivos.find(u=>u.rol===rol&&u.dni===clean);
     if(found){onAcceso?.(found.id);onLogin(rol,found.nombre,clean);return;}
-    // Fallbacks legacy
-    if(rol==="admin"){
-      const hayAdmins=usuariosActivos.some(u=>u.rol==="admin");
-      if(!hayAdmins&&clean===pins.admin){onLogin("admin","Administrador","");return;}
-    }
-    if(rol==="viewer"){
-      const hayViewers=usuariosActivos.some(u=>u.rol==="viewer");
-      if(!hayViewers&&pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    // 2. Fallback siempre disponible — pins de emergencia (independiente de si hay usuarios)
+    if(rol==="admin"&&pins.admin&&clean===pins.admin){onLogin("admin","Administrador","");return;}
+    if(rol==="viewer"&&pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    // 3. Fallback legacy auditores
+    if(rol==="auditor"){
+      const audsLeg=(auditores||[]).filter(a=>a.activo!==false);
+      const leg=audsLeg.find(a=>a.dni===clean);
+      if(leg){onAcceso?.(leg.id);onLogin("auditor",leg.nombre,clean);return;}
     }
     setErr("Código no encontrado. Verifica con el Administrador.");
     setTimeout(()=>{setErr("");},2500);
@@ -4985,16 +4986,31 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
       <div style={{width:"100%",maxWidth:400,background:"#fff",borderRadius:24,padding:"32px 28px",boxShadow:"0 24px 60px rgba(0,0,0,.35)",textAlign:"center"}}>
 
-        {/* Logo */}
-        <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
-          <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-            <rect x="8" y="6" width="32" height="42" rx="4" fill="white"/>
-            <rect x="12" y="16" width="24" height="3" rx="1.5" fill="#00b5b4"/>
-            <rect x="12" y="24" width="20" height="3" rx="1.5" fill="#00b5b4"/>
-            <rect x="12" y="32" width="16" height="3" rx="1.5" fill="#00b5b4"/>
-            <circle cx="46" cy="46" r="14" fill="#1a2f4a" stroke="white" strokeWidth="2"/>
-            <circle cx="46" cy="46" r="8" fill="none" stroke="#00b5b4" strokeWidth="2.5"/>
-            <line x1="52" y1="52" x2="57" y2="57" stroke="#00b5b4" strokeWidth="3" strokeLinecap="round"/>
+        {/* Logo — grocery store icon */}
+        <div style={{width:72,height:72,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+          <svg width="44" height="44" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Basket on roof */}
+            <rect x="190" y="30" width="40" height="60" rx="4" fill="#9E9E9E"/>
+            <rect x="282" y="30" width="40" height="60" rx="4" fill="#9E9E9E"/>
+            <rect x="160" y="10" width="192" height="70" rx="14" fill="#EF9A9A"/>
+            <rect x="185" y="18" width="18" height="52" rx="4" fill="#E57373"/>
+            <rect x="220" y="18" width="18" height="52" rx="4" fill="#E57373"/>
+            <rect x="275" y="18" width="18" height="52" rx="4" fill="#E57373"/>
+            <rect x="310" y="18" width="18" height="52" rx="4" fill="#E57373"/>
+            {/* Awning */}
+            <rect x="80" y="100" width="352" height="30" rx="4" fill="#EF9A9A"/>
+            <polygon points="80,130 432,130 460,160 52,160" fill="#FFCC80"/>
+            {/* Building */}
+            <rect x="80" y="160" width="352" height="280" rx="8" fill="#B0BEC5"/>
+            {/* Door */}
+            <rect x="100" y="260" width="80" height="180" rx="4" fill="#B3E5FC"/>
+            <rect x="108" y="268" width="30" height="160" rx="2" fill="#81D4FA"/>
+            <rect x="142" y="268" width="30" height="160" rx="2" fill="#81D4FA"/>
+            <circle cx="148" cy="360" r="5" fill="#546E7A"/>
+            {/* Windows */}
+            <rect x="220" y="200" width="200" height="200" rx="4" fill="#B3E5FC"/>
+            <rect x="230" y="210" width="80" height="180" rx="2" fill="#81D4FA"/>
+            <rect x="330" y="210" width="80" height="180" rx="2" fill="#81D4FA"/>
           </svg>
         </div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>VEGA · EVIDENCIAS</div>
