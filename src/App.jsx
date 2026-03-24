@@ -361,7 +361,7 @@ function ChecklistApp() {
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
-  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",credencial:"",email:"",telefono:"",area:"",dni:"",editId:null});
+  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
@@ -373,6 +373,9 @@ function ChecklistApp() {
   const [anularModal, setAnularModal] = useState(null);
   const [updModal,    setUpdModal]    = useState(null);
   const [ctxMenu,     setCtxMenu]     = useState(null);
+  /* ── modal de exclusión con comentario ── */
+  // excModal = { tId, aId, tiendaNombre, estaExcluida, comentarioActual } | null
+  const [excModal,    setExcModal]    = useState(null);
   const [motivoAnu,   setMotivoAnu]   = useState("");
   const [detalleAnu,  setDetalleAnu]  = useState("");
   const [horaUpd,     setHoraUpd]     = useState("");
@@ -465,12 +468,15 @@ function ChecklistApp() {
   },[]);
 
   // Guardar o actualizar un usuario en Firestore
+  // NOTA ARQUITECTURA: campo "credencial" eliminado — el DNI es LA credencial para todos los roles.
+  // Si hay registros legacy con campo "credencial" en Firestore, no causan error (se ignoran).
+  // Puedes borrarlos manualmente en Firebase Console una vez confirmado el despliegue.
   const saveUsuario = useCallback(async (u)=>{
     const ref = u.id ? doc(db,"usuarios",u.id) : doc(collection(db,"usuarios"));
     await setDoc(ref,{
       nombre:       u.nombre,
       rol:          u.rol,
-      credencial:   u.credencial,
+      dni:          u.dni,          // DNI es la credencial universal
       activo:       u.activo!==false,
       ultimoAcceso: u.ultimoAcceso||null,
     });
@@ -562,14 +568,22 @@ function ChecklistApp() {
   const isExc = useCallback((tId,aId,fechaCheck)=>{
     const v = exceps[tId+"|"+aId];
     if(!v) return false;
-    // legacy true: ya no aplica — debe reregistrarse con fecha específica
+    // legacy true: ya no aplica
     if(v===true) return false;
-    // array de fechas: solo excluir si la fecha específica está en el array
-    if(Array.isArray(v)){
-      if(!fechaCheck) return false; // sin fecha = no excluir
-      return v.includes(fechaCheck);
-    }
-    return false;
+    if(!Array.isArray(v)) return false;
+    if(!fechaCheck) return false;
+    // Soporta tanto formato legacy [{fecha}] como nuevo [{fecha, comentario}]
+    // y también array de strings puro (migración)
+    return v.some(entry=>(typeof entry==="string"?entry:entry?.fecha)===fechaCheck);
+  },[exceps]);
+
+  // Helper: obtener el comentario de una excepción específica tienda+actividad+fecha
+  const getExcComment = useCallback((tId,aId,fechaCheck)=>{
+    const v = exceps[tId+"|"+aId];
+    if(!v||!Array.isArray(v)) return "";
+    const entry = v.find(e=>(typeof e==="string"?e:e?.fecha)===fechaCheck);
+    if(!entry||typeof entry==="string") return "";
+    return entry.comentario||"";
   },[exceps]);
 
   // Auto-mostrar tarjeta de estado a las 08:30 y 09:30
@@ -854,21 +868,49 @@ function ChecklistApp() {
     }
   };
 
-  const toggleExcepcion = async (tId, aId) => {
+  // toggleExcepcion: ahora acepta comentario y modo "aplicar a todo el período"
+  // applyAll=true → aplica la exclusión a todas las fechas de la semana actual (L-V del período activo)
+  const toggleExcepcion = async (tId, aId, comentario="", applyAll=false) => {
     const key = tId+"|"+aId;
     const newExceps = {...exceps};
     const cur = newExceps[key];
-    // cur puede ser: undefined, true (legacy), o array de fechas
-    const fechas = Array.isArray(cur) ? cur : (cur===true ? [] : []);
-    if(fechas.includes(fecha)){
-      // quitar esta fecha
-      const updated = fechas.filter(f=>f!==fecha);
+    // Normalizar: convertir strings legacy a objetos {fecha, comentario:""}
+    const entries = Array.isArray(cur)
+      ? cur.map(e=>typeof e==="string"?{fecha:e,comentario:""}:e)
+      : (cur===true?[]:[]);
+
+    const yaExcluida = entries.some(e=>e.fecha===fecha);
+    if(yaExcluida){
+      // Quitar esta fecha (y opcionalmente todas si applyAll)
+      const updated = applyAll
+        ? [] // quitar todas las entradas del período
+        : entries.filter(e=>e.fecha!==fecha);
       if(updated.length===0) delete newExceps[key];
       else newExceps[key] = updated;
-      showToast("✅ Excepción removida para esta fecha");
+      showToast("✅ Excepción removida");
     } else {
-      newExceps[key] = [...fechas, fecha];
-      showToast("⚠️ Tienda excluida solo para "+fecha);
+      if(applyAll){
+        // Aplicar a todas las fechas L-V de la semana activa del mes visualizado
+        const semActiva = semanasDelMes.find(s=>s.days.some(d=>dStr(vYear,vMonth,d)===fecha))
+          || semanasDelMes[0];
+        const fechasAplicar = semActiva
+          ? semActiva.days.map(d=>dStr(vYear,vMonth,d))
+          : [fecha];
+        const existingFechas = new Set(entries.map(e=>e.fecha));
+        const nuevasEntradas = fechasAplicar
+          .filter(f=>!existingFechas.has(f))
+          .map(f=>({fecha:f,comentario}));
+        // Actualizar comentario en las existentes si se pasa uno nuevo
+        const actualizadas = entries.map(e=>
+          fechasAplicar.includes(e.fecha)?{...e,comentario:comentario||e.comentario}:e
+        );
+        newExceps[key] = [...actualizadas, ...nuevasEntradas];
+        showToast(`⚠️ ${fechasAplicar.length} fechas excluidas con comentario`);
+      } else {
+        // Agregar solo esta fecha
+        newExceps[key] = [...entries, {fecha, comentario}];
+        showToast("⚠️ Tienda excluida para "+fecha+(comentario?` · "${comentario.slice(0,20)}..."`:"")); 
+      }
     }
     setExceps(newExceps);
     try {
@@ -878,6 +920,9 @@ function ChecklistApp() {
       showToast("❌ Error al guardar excepción. Verifica tu conexión.");
     }
   };
+
+  // Estado para el modal de comentario de exclusión
+  // excModal = { tId, aId, tiendaNombre, estaExcluida, comentarioActual } | null
 
   const navMes=(dir)=>{
     if(dir<0){if(vMonth===0){setVMonth(11);setVYear(y=>y-1);}else setVMonth(m=>m-1);}
@@ -1243,7 +1288,22 @@ function ChecklistApp() {
               {sel&&!exc&&<span style={{fontSize:18,color:actInfo?.c,fontWeight:700}}>✓</span>}
               {isAuditor&&(
                 <button
-                  onClick={e=>{e.stopPropagation();toggleExcepcion(tienda.id,actSel);}}
+                  onClick={e=>{
+                    e.stopPropagation();
+                    if(exc){
+                      // Si ya está excluida: quitar directo (sin modal)
+                      toggleExcepcion(tienda.id,actSel,"",false);
+                    } else {
+                      // Abrir modal para ingresar comentario antes de excluir
+                      setExcModal({
+                        tId:tienda.id,
+                        aId:actSel,
+                        tiendaNombre:tienda.n,
+                        estaExcluida:false,
+                        comentarioActual:getExcComment(tienda.id,actSel,fecha),
+                      });
+                    }
+                  }}
                   style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${exc?"#00b894":"#FAC775"}`,background:exc?"#f0fdf4":"#fff8ec",color:exc?"#16a34a":"#854F0B",cursor:"pointer",fontSize:11,fontWeight:800,flexShrink:0,minWidth:44,textAlign:"center"}}>
                   {exc?"✓ OK":"N/A"}
                 </button>
@@ -1542,7 +1602,24 @@ function ChecklistApp() {
                                 {anulado?(
                                   <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
                                 ):excepcion?(
-                                  <span title="Excepción: tienda no aplica para esta actividad" style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"default"}}>N/A</span>
+                                  <span
+                                    title={getExcComment(tr.id,a.id,ds[0]||fecha)||"Excepción: tienda no aplica para esta actividad"}
+                                    style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help",position:"relative"}}>
+                                    N/A {getExcComment(tr.id,a.id,ds[0]||fecha)?"💬":""}
+                                    {isAdmin&&(
+                                      <span
+                                        title="Editar comentario de esta exclusión"
+                                        onClick={e=>{
+                                          e.stopPropagation();
+                                          setExcModal({
+                                            tId:tr.id,aId:a.id,tiendaNombre:tr.n,
+                                            estaExcluida:true,
+                                            comentarioActual:getExcComment(tr.id,a.id,ds[0]||fecha),
+                                          });
+                                        }}
+                                        style={{marginLeft:3,cursor:"pointer",opacity:.7,fontSize:8}}>✏️</span>
+                                    )}
+                                  </span>
                                 ):v!==null?(
                                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
                                     onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
@@ -3015,7 +3092,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {usuarios.filter(u=>u.activo!==false).length} activos · {usuarios.length} totales
               </div>
             </div>
-            <button onClick={()=>{setShowNUsuario(true);setNewUsuario({nombre:"",rol:"auditor",credencial:"",email:"",telefono:"",area:"",dni:"",editId:null});}}
+            <button onClick={()=>{setShowNUsuario(true);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});}}
               style={{padding:"9px 16px",borderRadius:10,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
               ＋ Nuevo usuario
             </button>
@@ -3042,7 +3119,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </div>
                 <div>
                   <label style={S.lbl}>DNI *</label>
-                  <input type="tel" value={newUsuario.dni||""} onChange={e=>setNewUsuario(p=>({...p,dni:e.target.value.replace(/[^0-9]/g,"").slice(0,8),credencial:p.rol==="auditor"?e.target.value.replace(/[^0-9]/g,"").slice(0,8):p.credencial}))}
+                  <input type="tel" value={newUsuario.dni||""} onChange={e=>setNewUsuario(p=>({...p,dni:e.target.value.replace(/[^0-9]/g,"").slice(0,8)}))}
                     placeholder="12345678" maxLength={8} style={{...S.inp,letterSpacing:3,fontFamily:"monospace"}}/>
                 </div>
                 <div>
@@ -3072,44 +3149,44 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   </div>
                 </div>
               </div>
-              {/* Código de acceso para admin y viewer */}
+              {/* Nota: el DNI es la credencial de acceso para todos los roles */}
               {newUsuario.rol!=="auditor"&&(
-                <div style={{marginBottom:10}}>
-                  <label style={S.lbl}>CÓDIGO DE ACCESO * (para login)</label>
-                  <input type="password" value={newUsuario.credencial||""} onChange={e=>setNewUsuario(p=>({...p,credencial:e.target.value}))}
-                    placeholder="Código secreto" style={{...S.inp,letterSpacing:4}}/>
+                <div style={{marginBottom:10,padding:"10px 13px",background:"#e0fafa",borderRadius:10,border:"1px solid #00b5b4"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#0d7a79",marginBottom:2}}>🔑 Credencial de acceso</div>
+                  <div style={{fontSize:11,color:"#0d7a79",lineHeight:1.5}}>
+                    El <strong>DNI ingresado arriba</strong> ({newUsuario.dni||"—"}) será el código de acceso de este usuario.
+                    Al iniciar sesión debe ingresar ese mismo código en la pantalla de login.
+                  </div>
                 </div>
               )}
               <div style={{display:"flex",gap:8,marginTop:4}}>
                 <button onClick={async()=>{
                   if(!newUsuario.nombre.trim()) return showToast("⚠️ Ingresa el nombre");
                   if(!newUsuario.dni||newUsuario.dni.length<8) return showToast("⚠️ DNI debe tener 8 dígitos");
-                  if(newUsuario.rol!=="auditor"&&!newUsuario.credencial.trim()) return showToast("⚠️ Ingresa el código de acceso");
-                  const cred=newUsuario.rol==="auditor"?newUsuario.dni:newUsuario.credencial;
                   if(newUsuario.editId){
                     await setDoc(doc(db,"usuarios",newUsuario.editId),{
-                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,credencial:cred,
+                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
                       dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
                       area:newUsuario.area||"",activo:true,
                     },{merge:true});
                     showToast("✅ Usuario actualizado");
                   } else {
-                    // Check duplicate DNI
+                    // Verificar DNI duplicado
                     if(usuarios.some(u=>u.dni===newUsuario.dni&&u.id!==newUsuario.editId)) return showToast("⚠️ DNI ya registrado");
                     const ref=doc(collection(db,"usuarios"));
                     await setDoc(ref,{
-                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,credencial:cred,
+                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
                       dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
                       area:newUsuario.area||"",activo:true,ultimoAcceso:null,
                     });
-                    showToast("✅ Usuario registrado");
+                    showToast("✅ Usuario registrado · el DNI es su código de acceso");
                   }
                   setShowNUsuario(false);
-                  setNewUsuario({nombre:"",rol:"auditor",credencial:"",email:"",telefono:"",area:"",dni:"",editId:null});
+                  setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});
                 }} style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
                   {newUsuario.editId?"Guardar cambios":"Registrar usuario"}
                 </button>
-                <button onClick={()=>{setShowNUsuario(false);setNewUsuario({nombre:"",rol:"auditor",credencial:"",email:"",telefono:"",area:"",dni:"",editId:null});}}
+                <button onClick={()=>{setShowNUsuario(false);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});}}
                   style={{padding:"11px 18px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
               </div>
             </div>
@@ -3156,8 +3233,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {/* Rol selector */}
                 <select value={u.rol} onChange={async e=>{
                   const newRol=e.target.value;
-                  const newCred=newRol==="auditor"?u.dni:u.credencial;
-                  await setDoc(doc(db,"usuarios",u.id),{rol:newRol,credencial:newCred||""},{merge:true});
+                  await setDoc(doc(db,"usuarios",u.id),{rol:newRol},{merge:true});
                   showToast(`✅ Rol actualizado a ${newRol}`);
                 }} style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${rc.c}55`,background:rc.bg,color:rc.c,fontSize:11,fontWeight:700,cursor:"pointer",outline:"none"}}>
                   <option value="admin">👑 Admin</option>
@@ -3166,7 +3242,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </select>
                 {/* Edit */}
                 <button onClick={()=>{
-                  setNewUsuario({nombre:u.nombre,rol:u.rol,credencial:u.credencial||"",email:u.email||"",telefono:u.telefono||"",area:u.area||"",dni:u.dni||"",editId:u.id});
+                  setNewUsuario({nombre:u.nombre,rol:u.rol,email:u.email||"",telefono:u.telefono||"",area:u.area||"",dni:u.dni||"",editId:u.id});
                   setShowNUsuario(true);
                 }} style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:14}}>✏️</button>
                 {/* Pausar/Activar */}
@@ -3183,119 +3259,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               );
             });
           })()}
-        </div>
-      )}
-
-      {cfgTab===1&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
-            <button onClick={()=>setShowNA(!showNA)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nueva</button>
-          </div>
-          {showNA&&(
-            <div style={{...S.card,padding:"14px",marginBottom:14}}>
-              <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <input value={newA.e} onChange={e=>setNewA(p=>({...p,e:e.target.value}))} style={{width:50,padding:"10px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:18,textAlign:"center",outline:"none"}}/>
-                <input value={newA.n} onChange={e=>setNewA(p=>({...p,n:e.target.value}))} placeholder="Nombre" style={{...S.inp,flex:1}}/>
-              </div>
-              <div style={{display:"flex",gap:5,marginBottom:10}}>
-                {[1,2,3,4,5].map(d=>(
-                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d]}))}
-                    style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?"#f0edff":"#fff",color:newA.dias.includes(d)?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                    {["L","M","X","J","V"][d-1]}
-                  </button>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>{if(!newA.n||!newA.dias.length)return;const na={...newA,id:"a"+Date.now(),cat:"Ad-hoc",r:null,activa:true};setActs(p=>{const np=[...p,na];saveConfig({actividades:np});return np;});setNewA({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});setShowNA(false);}}
-                  style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Agregar</button>
-                <button onClick={()=>setShowNA(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
-              </div>
-            </div>
-          )}
-          {acts.map(a=>{
-            const RR=a.r||RANGOS_DEFAULT;
-            return(
-            <div key={a.id} style={{...S.card,padding:"12px 14px",marginBottom:8,opacity:a.activa?1:.55}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:18}}>{a.e}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:a.activa?a.c:"#94a3b8"}}>{a.n}</div>
-                  <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>
-                    {a.dias.map(d=>["L","M","X","J","V"][d-1]).join("·")} · {a.cat}
-                    {a.r&&<span style={{color:"#f6a623",marginLeft:4}}>⏱️ rangos custom</span>}
-                  </div>
-                </div>
-                <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_er:!x._er}:x))}
-                  title="Rangos horarios"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._er?"#f0f4f8":"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>⏱️</button>
-                <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_edit:!x._edit}:x))}
-                  title="Editar actividad"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._edit?"#e8f4fd":"#fff",color:"#0984e3",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️</button>
-                <button onClick={()=>setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,activa:!x.activa}:x);saveConfig({actividades:np});return np;})}
-                  style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
-                  {a.activa?"⏸":"▶"}
-                </button>
-                <button onClick={()=>{ if(window.confirm(`¿Eliminar "${a.n}"? Se perderá del listado (los registros históricos se conservan en Firebase).`)){setActs(p=>{const np=p.filter(x=>x.id!==a.id);saveConfig({actividades:np});return np;});}}}
-                  title="Eliminar actividad"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑️</button>
-              </div>
-              {a._edit&&(
-                <div style={{marginTop:10,padding:"12px",borderRadius:10,background:"#e8f4fd",border:"1px solid #74b9ff55"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#0984e3",marginBottom:8}}>✏️ EDITAR · {a.n.toUpperCase()}</div>
-                  <div style={{display:"flex",gap:8,marginBottom:8}}>
-                    <input value={a.e} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,e:e.target.value}:x))} style={{width:44,padding:"8px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:16,textAlign:"center",outline:"none"}}/>
-                    <input value={a.n} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,n:e.target.value}:x))} style={{...S.inp,flex:1,fontSize:13}}/>
-                  </div>
-                  <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {[1,2,3,4,5].map(d=>(
-                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
-                        style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?"#e8f4fd":"#fff",color:a.dias.includes(d)?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                        {["L","M","X","J","V"][d-1]}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {["Always On","Promocional","Ad-hoc"].map(cat=>(
-                      <button key={cat} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,cat}:x))}
-                        style={{flex:1,padding:"6px",borderRadius:8,border:`1.5px solid ${a.cat===cat?"#0984e3":"#e2e8f0"}`,background:a.cat===cat?"#e8f4fd":"#fff",color:a.cat===cat?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={()=>{setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
-                    style={{width:"100%",padding:"9px",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
-                    💾 Guardar cambios
-                  </button>
-                </div>
-              )}
-              {a._er&&(
-                <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:"1px solid "+a.c+"33"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:a.c,marginBottom:10,letterSpacing:".05em"}}>⏱️ RANGOS HORARIOS · {a.n.toUpperCase()}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
-                    {[{k:"c100",icon:"🥇",label:"100% hasta"},{k:"c80",icon:"🥈",label:"80% hasta"},{k:"c60",icon:"🥉",label:"60% hasta"}].map(f=>(
-                      <div key={f.k}>
-                        <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
-                        <input type="time" value={RR[f.k]}
-                          onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,r:{...(x.r||RANGOS_DEFAULT),[f.k]:e.target.value}}:x))}
-                          style={{width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid "+a.c+"55",background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center"}}/>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
-                    {[["10 pts","#f6a623",`≤${RR.c100}`],["8 pts","#74b9ff",`${RR.c100}–${RR.c80}`],["6 pts","#a29bfe",`${RR.c80}–${RR.c60}`],["0 pts","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
-                      <span key={p} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{t}→{p}</span>
-                    ))}
-                  </div>
-                  <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,r:null}:x))}
-                    style={{fontSize:9,color:"#8aaabb",background:"none",border:"none",cursor:"pointer",padding:0,textDecoration:"underline"}}>
-                    Restablecer default
-                  </button>
-                </div>
-              )}
-            </div>
-            );
-          })}
         </div>
       )}
 
@@ -4680,6 +4643,119 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       )}
 
+      {/* ══ MODAL EXCLUSIÓN CON COMENTARIO ══
+          Se abre al pulsar N/A (nueva exclusión) o ✏️ (editar comentario de exclusión existente).
+          Permite ingresar el comentario que aparecerá como tooltip en las celdas N/A del reporte.
+          Checkbox "Aplicar a toda la semana" crea la exclusión en cada fecha L-V del período activo.
+      */}
+      {excModal&&(()=>{
+        const [excComentario, setExcComentario] = [excModal._comentario||"", (v)=>setExcModal(m=>({...m,_comentario:v}))];
+        const [excApplyAll,   setExcApplyAll]   = [excModal._applyAll||false, (v)=>setExcModal(m=>({...m,_applyAll:v}))];
+        const comentario = excModal._comentario??excModal.comentarioActual??"";
+        const applyAll   = excModal._applyAll??false;
+        const semActiva  = semanasDelMes.find(s=>s.days.some(d=>dStr(vYear,vMonth,d)===fecha));
+        const fechasPreview = semActiva
+          ? semActiva.days.map(d=>dStr(vYear,vMonth,d))
+          : [fecha];
+        return(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:65,backdropFilter:"blur(6px)"}}>
+          <div style={{background:"#fff",borderRadius:20,padding:28,width:"92%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+              <div style={{width:44,height:44,borderRadius:13,background:"#fff8ec",border:"1.5px solid #FAC775",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+                {excModal.estaExcluida?"✏️":"⚠️"}
+              </div>
+              <div>
+                <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>
+                  {excModal.estaExcluida?"Editar comentario de exclusión":"Excluir tienda — agregar comentario"}
+                </div>
+                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>
+                  Vega {excModal.tiendaNombre} · {fecha}
+                </div>
+              </div>
+            </div>
+
+            {/* Info contextual */}
+            <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 13px",marginBottom:14,fontSize:11,color:"#5a7a9a",lineHeight:1.6}}>
+              {excModal.estaExcluida
+                ?"El comentario aparecerá como tooltip (💬) al pasar el cursor sobre las celdas N/A en los reportes y dashboards."
+                :"Al confirmar, la tienda quedará excluida del conteo de eficiencia para esta fecha y el comentario aparecerá en los reportes."
+              }
+            </div>
+
+            {/* Campo comentario */}
+            <label style={{fontSize:10,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",display:"block",marginBottom:6}}>
+              COMENTARIO / MOTIVO DE EXCLUSIÓN
+            </label>
+            <textarea
+              autoFocus
+              value={comentario}
+              onChange={e=>setExcModal(m=>({...m,_comentario:e.target.value}))}
+              placeholder="Ej: Tienda en remodelación, sin operación esta semana..."
+              rows={3}
+              style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1.5px solid ${comentario?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
+            />
+            <div style={{fontSize:9,color:"#b2bec3",marginTop:3,marginBottom:14}}>{comentario.length}/200 caracteres · opcional pero recomendado</div>
+
+            {/* Checkbox aplicar a toda la semana — solo si es nueva exclusión */}
+            {!excModal.estaExcluida&&semActiva&&(
+              <div style={{marginBottom:18}}>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",padding:"11px 13px",background:applyAll?"#e0fafa":"#f8fafc",borderRadius:10,border:`1.5px solid ${applyAll?"#00b5b4":"#e2e8f0"}`,transition:"all .15s"}}>
+                  <input
+                    type="checkbox"
+                    checked={applyAll}
+                    onChange={e=>setExcModal(m=>({...m,_applyAll:e.target.checked}))}
+                    style={{width:16,height:16,marginTop:1,cursor:"pointer",accentColor:"#00b5b4",flexShrink:0}}
+                  />
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:applyAll?"#0d7a79":"#1a2f4a"}}>
+                      Aplicar a todas las fechas de {semActiva.label}
+                    </div>
+                    <div style={{fontSize:10,color:"#8aaabb",marginTop:2,lineHeight:1.5}}>
+                      Excluirá {fechasPreview.length} días:&nbsp;
+                      <span style={{fontFamily:"monospace",color:"#5a7a9a"}}>{fechasPreview.join(" · ")}</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            {/* Botones */}
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button
+                onClick={()=>setExcModal(null)}
+                style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                Cancelar
+              </button>
+              <button
+                onClick={async()=>{
+                  if(excModal.estaExcluida){
+                    // Modo edición: actualizar el comentario de la exclusión existente
+                    const key = excModal.tId+"|"+excModal.aId;
+                    const cur = exceps[key];
+                    const entries = Array.isArray(cur)
+                      ? cur.map(e=>typeof e==="string"?{fecha:e,comentario:""}:e)
+                      : [];
+                    const updated = entries.map(e=>e.fecha===fecha?{...e,comentario:comentario.trim()}:e);
+                    const newExceps = {...exceps,[key]:updated};
+                    setExceps(newExceps);
+                    try{ await saveConfig({excepciones:newExceps}); showToast("💬 Comentario actualizado"); }
+                    catch(e){ showToast("❌ Error al guardar comentario"); }
+                  } else {
+                    // Modo nuevo: llamar toggleExcepcion con comentario y applyAll
+                    await toggleExcepcion(excModal.tId, excModal.aId, comentario.trim(), applyAll);
+                  }
+                  setExcModal(null);
+                }}
+                style={{flex:2,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>
+                {excModal.estaExcluida?"Guardar comentario":applyAll?"⚠️ Excluir toda la semana":"⚠️ Confirmar exclusión"}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
 
     </div>
   );
@@ -4696,42 +4772,62 @@ export default function App(props){
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
-  // Unificar: usuarios colección (nuevo) + auditores legacy (fallback)
+  // ARQUITECTURA UNIFICADA: el DNI (8 chars alfanumérico) es LA credencial para todos los roles.
+  // Admin/viewer ingresan su DNI registrado — no un PIN global separado.
+  // pins.admin/viewer se mantienen como fallback de emergencia (acceso sin usuarios registrados).
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
-  const auds = usuariosActivos.filter(u=>u.rol==="auditor").length>0
-    ? usuariosActivos.filter(u=>u.rol==="auditor").map(u=>({dni:u.credencial,nombre:u.nombre,id:u.id}))
-    : (auditores||[]).filter(a=>a.activo!==false);
+
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
   const[step,setStep]=useState("inicio");
   const[err,setErr]=useState("");
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
 
-  const tryPin=()=>{
-    // Buscar en colección usuarios primero
-    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&u.credencial===pin);
-    if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,"");return;}
-    // Fallback a pins legacy
-    if(pin===pins.admin){onLogin("admin","Administrador","");return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
-  };
+  // Auditor — busca por dni en la colección usuarios (rol=auditor)
   const tryDni=()=>{
     const clean=dni.trim();
-    if(clean.length<8){setErr("DNI debe tener 8 dígitos");return;}
-    const found=auds.find(a=>a.dni===clean);
+    if(clean.length<8){setErr("Código debe tener 8 caracteres");return;}
+    // 1. Buscar en usuarios registrados con rol auditor
+    const found=usuariosActivos.find(u=>u.rol==="auditor"&&u.dni===clean);
     if(found){onAcceso?.(found.id);onLogin("auditor",found.nombre,clean);return;}
-    if(auds.length===0&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
-    setErr(auds.length===0
-      ?"Sin auditores registrados. Contacta al Admin."
-      :"DNI no encontrado. Contacta al Admin.");
+    // 2. Fallback legacy: colección auditores antigua
+    const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
+    if(audsLegacy.length>0){
+      const leg=audsLegacy.find(a=>a.dni===clean);
+      if(leg){onAcceso?.(leg.id);onLogin("auditor",leg.nombre,clean);return;}
+    }
+    // 3. Fallback pins legacy si no hay ningún usuario auditor registrado
+    const hayAuditores=usuariosActivos.some(u=>u.rol==="auditor");
+    if(!hayAuditores&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
+    setErr(hayAuditores||audsLegacy.length>0
+      ?"Código no encontrado. Verifica con el Admin."
+      :"Sin auditores registrados. Contacta al Admin.");
     setTimeout(()=>{setErr("");setDni("");},2500);
   };
-  // Bug 11 fix: viewer requiere pin real, no entrada directa
+
+  // Admin — busca por DNI en usuarios con rol admin. Fallback a pins.admin para emergencias.
+  const tryPin=()=>{
+    const clean=pin.trim();
+    if(!clean){setErr("Ingresa tu código de acceso");return;}
+    // 1. Buscar en usuarios registrados con rol admin por DNI
+    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&u.dni===clean);
+    if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,clean);return;}
+    // 2. Fallback: código global de emergencia (para cuando no hay admins registrados)
+    const hayAdmins=usuariosActivos.some(u=>u.rol==="admin");
+    if(!hayAdmins&&clean===pins.admin){onLogin("admin","Administrador","");return;}
+    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
+  };
+
+  // Viewer — busca por DNI en usuarios con rol viewer. Fallback a pins.viewer.
   const tryViewer=()=>{
-    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&u.credencial===pin);
-    if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,"");return;}
-    if(!pins.viewer){setErr("Acceso no configurado. Contacta al Admin.");return;}
-    if(pin===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    const clean=pin.trim();
+    if(!clean){setErr("Ingresa tu código de acceso");return;}
+    // 1. Buscar en usuarios registrados con rol viewer por DNI
+    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&u.dni===clean);
+    if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,clean);return;}
+    // 2. Fallback: código global (para cuando no hay viewers registrados)
+    const hayViewers=usuariosActivos.some(u=>u.rol==="viewer");
+    if(!hayViewers&&pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
 
@@ -4751,7 +4847,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               <span style={{fontSize:24,flexShrink:0}}>🪪</span>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
-                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingreso con mi DNI</div>
+                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI de 8 dígitos</div>
               </div>
             </button>
             <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
@@ -4759,26 +4855,26 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               <span style={{fontSize:24,flexShrink:0}}>👑</span>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
-                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Código de acceso</div>
+                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Ingresa tu DNI / código registrado</div>
               </div>
             </button>
-            {/* Bug 11 fix: Viewer ahora requiere código, no entrada directa */}
             <button onClick={()=>{setStep("pin_viewer");setErr("");setPin("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
               <span style={{fontSize:24,flexShrink:0}}>👁️</span>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
-                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Código de acceso</div>
+                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Ingresa tu DNI / código registrado</div>
               </div>
             </button>
           </>
         )}
 
+        {/* Paso: Auditor — DNI numérico 8 dígitos */}
         {(step==="dni_auditor"||step==="dni")&&(
           <>
             <div style={{fontSize:32,marginBottom:10}}>🪪</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI</p>
-            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>Tu identificador de auditor</p>
+            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>8 dígitos · registrado por el administrador</p>
             <input autoFocus type="tel" value={dni}
               onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
               onKeyDown={e=>e.key==="Enter"&&tryDni()}
@@ -4796,21 +4892,34 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           </>
         )}
 
+        {/* Paso: Admin y Viewer — DNI o código alfanumérico de 8 chars */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"🔑"}</div>
+            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
-              {step==="pin_viewer"?"Código de acceso gerencial":"Código de administrador"}
+              {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
-            <p style={{margin:"0 0 16px",fontSize:12,color:"#8aaabb"}}>Solicitado por el Administrador</p>
-            <input autoFocus type="password" value={pin}
-              onChange={e=>setPin(e.target.value)}
+            <p style={{margin:"0 0 6px",fontSize:12,color:"#8aaabb"}}>Ingresa tu DNI o código alfanumérico de 8 caracteres</p>
+            <p style={{margin:"0 0 16px",fontSize:10,color:"#b2bec3"}}>Asignado por el Administrador al registrar tu cuenta</p>
+            {/* Input alfanumérico — no type=password para que el admin vea lo que escribe */}
+            <input autoFocus
+              type="text"
+              value={pin}
+              onChange={e=>setPin(e.target.value.slice(0,8))}
               onKeyDown={e=>e.key==="Enter"&&(step==="pin_viewer"?tryViewer():tryPin())}
-              placeholder="••••••••"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#c8d8e8"}`,letterSpacing:8,fontSize:20}}/>
+              placeholder="12345678"
+              maxLength={8}
+              autoComplete="off"
+              style={{...inpS,border:`2px solid ${err?"#ef4444":step==="pin_viewer"?"#74b9ff":"#f6a623"}`,letterSpacing:6,fontSize:24,fontWeight:700,textTransform:"uppercase"}}/>
             {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
-            <button onClick={step==="pin_viewer"?tryViewer:tryPin}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin?"white":"#94a3b8",cursor:pin?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            {/* Indicador de longitud */}
+            <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:12,marginTop:-8}}>
+              {[...Array(8)].map((_,i)=>(
+                <div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<pin.length?(step==="pin_viewer"?"#74b9ff":"#f6a623"):"#e2e8f0",transition:"background .1s"}}/>
+              ))}
+            </div>
+            <button onClick={step==="pin_viewer"?tryViewer:tryPin} disabled={pin.length<8}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin.length===8?"white":"#94a3b8",cursor:pin.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Ingresar →
             </button>
             <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
