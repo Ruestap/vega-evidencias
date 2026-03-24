@@ -501,7 +501,7 @@ function ChecklistApp() {
       await setDoc(doc(db,"config","app"),{
         actividades: overrides.actividades ?? actsRef.current,
         tiendas:     overrides.tiendas     ?? tiendasRef.current,
-        pins:        overrides.pins        ?? pinsRef.current,
+        pins:        {admin: overrides.pins?.admin ?? pinsRef.current?.admin, viewer: overrides.pins?.viewer ?? pinsRef.current?.viewer},
         excepciones: excClean,
         rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
         cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
@@ -515,7 +515,7 @@ function ChecklistApp() {
         await setDoc(doc(db,"config","app"),{
           actividades: overrides.actividades ?? actsRef.current,
           tiendas:     overrides.tiendas     ?? tiendasRef.current,
-          pins:        overrides.pins        ?? pinsRef.current,
+          pins:        {admin: overrides.pins?.admin ?? pinsRef.current?.admin, viewer: overrides.pins?.viewer ?? pinsRef.current?.viewer},
           excepciones: excClean,
           rangosDia:   overrides.rangosDia   ?? rangosDiaRef.current,
           cortesSupervision: overrides.cortesSupervision ?? cortesSupervisionRef.current,
@@ -2291,6 +2291,130 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </div>
           </div>
           <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px",overflow:"visible"}}>
+
+        {/* ══ ESTADO DE CORTE POR ACTIVIDAD ══ */}
+        {(()=>{
+          const hoy=todayStr();
+          const actsHoy=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id));
+          if(!actsHoy.length) return null;
+          // Usar primera actividad o la seleccionada
+          const actCorte=actsHoy.find(a=>a.id===dashAct)||actsHoy[0];
+          // Semana visible en dashboard
+          const semCorte=dashSelWeek!==null?semanasDelMes[dashSelWeek]:null;
+          const daysCorte=semCorte?semCorte.days.map(d=>dStr(vYear,vMonth,d)):semanasDelMes.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
+          const daysPasados=daysCorte.filter(d=>d<=hoy&&actCorte.dias.includes(getDow(d)));
+
+          // Calcular por cada tienda: primera hora de envío en ese período
+          const CORTE1=toMin("08:30"), CORTE2_FIN=toMin("09:30"), CORTE3=toMin("10:00");
+          let nOro=0,nTardio=0,nFuera=0,nSinReg=0,nTotal=0;
+          let horasOro=[],horasTardio=[];
+
+          const fmtCorte=["Mayorista","Supermayorista","Market"].map(fmt=>{
+            const ts=tiAct.filter(ti=>ti.f===fmt);
+            const excluidas=ts.filter(ti=>daysPasados.some(d=>isExc(ti.id,actCorte.id,d)&&ts.every(t=>t.id!==ti.id||daysPasados.every(d2=>isExc(ti.id,actCorte.id,d2)))));
+            const excUnicas=new Set(ts.filter(ti=>daysPasados.every(d=>isExc(ti.id,actCorte.id,d))).map(t=>t.id));
+            const disp=ts.filter(ti=>!excUnicas.has(ti.id));
+            let reg=[],pend=[],excArr=[];
+            let hMin=null,hMax=null;
+            disp.forEach(ti=>{
+              let mejorHora=null;
+              daysPasados.forEach(d=>{
+                if(isExc(ti.id,actCorte.id,d)) return;
+                const rv=getReg(d,ti.id,actCorte.id);
+                if(!rv||!rv.evidencias?.length||rv.anulado) return;
+                const h=primerEnvio(rv.evidencias);
+                if(h&&(!mejorHora||h<mejorHora)) mejorHora=h;
+              });
+              if(mejorHora){
+                reg.push({ti,hora:mejorHora});
+                if(!hMin||mejorHora<hMin) hMin=mejorHora;
+                if(!hMax||mejorHora>hMax) hMax=mejorHora;
+                const m=toMin(mejorHora);
+                if(m<=CORTE1){nOro++;horasOro.push(mejorHora);}
+                else if(m<=CORTE2_FIN){nTardio++;horasTardio.push(mejorHora);}
+                else if(m<=CORTE3){nFuera++;}
+                else{nFuera++;}
+              } else {
+                pend.push(ti);
+                nSinReg++;
+              }
+            });
+            nTotal+=disp.length;
+            ts.filter(ti=>excUnicas.has(ti.id)).forEach(()=>{});
+            return {fmt,total:ts.length,disp:disp.length,reg:reg.length,pend:pend.length,exc:excUnicas.size,hMin,hMax};
+          });
+
+          const totalReg=nOro+nTardio+nFuera;
+          const pctOro=totalReg>0?Math.round(nOro/totalReg*100):0;
+          const pctTardio=totalReg>0?Math.round(nTardio/totalReg*100):0;
+          const pctFuera=totalReg>0?Math.round(nFuera/totalReg*100):0;
+          const pctSin=nTotal>0?Math.round(nSinReg/nTotal*100):0;
+
+          return(
+          <div style={{...S.card,padding:"16px",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>
+                {actCorte.e} {actCorte.n}
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                <button onClick={()=>{if(typeof setDashSelWeek==="function") setDashSelWeek(null);}}
+                  style={{padding:"4px 10px",borderRadius:7,border:`1.5px solid ${dashSelWeek===null?"#00b5b4":"#e2e8f0"}`,background:dashSelWeek===null?"#e0fafa":"#fff",color:dashSelWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
+                {semanasDelMes.map((s,i)=>(
+                  <button key={i} onClick={()=>{if(typeof setDashSelWeek==="function") setDashSelWeek(i);}}
+                    style={{padding:"4px 10px",borderRadius:7,border:`1.5px solid ${dashSelWeek===i?"#6c5ce7":"#e2e8f0"}`,background:dashSelWeek===i?"#f0edff":"#fff",color:dashSelWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4 tarjetas resumen */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:14}}>
+              <div style={{background:"#fff8ec",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid #f6a62333"}}>
+                <div style={{fontSize:9,color:"#854F0B",fontWeight:700,marginBottom:3}}>Registros en ORO</div>
+                <div style={{fontSize:20,fontWeight:800,color:"#f6a623",lineHeight:1}}>{pctOro}%</div>
+                <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>antes de 08:30</div>
+              </div>
+              <div style={{background:"#e8f4fd",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid #74b9ff33"}}>
+                <div style={{fontSize:9,color:"#185FA5",fontWeight:700,marginBottom:3}}>Tardíos rescatados</div>
+                <div style={{fontSize:20,fontWeight:800,color:"#0984e3",lineHeight:1}}>{pctTardio}%</div>
+                <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>08:31 – 09:30</div>
+              </div>
+              <div style={{background:nFuera>0?"#ffeae6":"#e8faf5",borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1px solid ${nFuera>0?"#d6303133":"#00b89433"}`}}>
+                <div style={{fontSize:9,color:nFuera>0?"#A32D2D":"#00b894",fontWeight:700,marginBottom:3}}>Fuera de rango</div>
+                <div style={{fontSize:20,fontWeight:800,color:nFuera>0?"#d63031":"#00b894",lineHeight:1}}>{pctFuera}%</div>
+                <div style={{fontSize:8,color:nFuera>0?"#d63031":"#8aaabb",marginTop:2}}>10:00 a más</div>
+              </div>
+              <div style={{background:nSinReg>0?"#fff1ee":"#e8faf5",borderRadius:10,padding:"10px 8px",textAlign:"center",border:`1px solid ${nSinReg>0?"#e1705533":"#00b89433"}`}}>
+                <div style={{fontSize:9,color:nSinReg>0?"#e17055":"#00b894",fontWeight:700,marginBottom:3}}>Sin registrar</div>
+                <div style={{fontSize:20,fontWeight:800,color:nSinReg>0?"#e17055":"#00b894",lineHeight:1}}>{pctSin}%</div>
+                <div style={{fontSize:8,color:"#8aaabb",marginTop:2}}>{nSinReg===0?"✓ dentro del rango":nSinReg+" tiendas"}</div>
+              </div>
+            </div>
+
+            {/* Por formato */}
+            {fmtCorte.filter(f=>f.disp>0).map(({fmt,total,disp,reg,pend,exc,hMin,hMax})=>{
+              const fc=FMT[fmt];
+              const iconFmt=fmt==="Mayorista"?"🏬":fmt==="Supermayorista"?"🏪":"🛒";
+              return(
+              <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:10,background:fc.bg,border:`1px solid ${fc.c}33`,marginBottom:6,flexWrap:"wrap"}}>
+                <span style={{fontSize:16,flexShrink:0}}>{iconFmt}</span>
+                <span style={{fontWeight:800,fontSize:12,color:fc.c,minWidth:90}}>{fmt}</span>
+                <span style={{fontSize:11,color:"#5a7a9a"}}>{total}</span>
+                <span style={{fontSize:10,color:"#8aaabb"}}>{disp} disp.</span>
+                {reg>0&&<span style={{padding:"2px 8px",borderRadius:20,background:"#e8faf5",border:"1px solid #00b89444",fontSize:11,fontWeight:700,color:"#00b894",display:"flex",alignItems:"center",gap:4}}>
+                  ✅ {String(reg).padStart(2,"0")} reg.{hMin&&<span style={{fontSize:9,color:"#8aaabb",fontWeight:400}}>({hMin} a {hMax||hMin})</span>}
+                </span>}
+                {pend>0&&<span style={{padding:"2px 8px",borderRadius:20,background:"#fff8ec",border:"1px solid #f6a62344",fontSize:11,fontWeight:700,color:"#f6a623",display:"flex",alignItems:"center",gap:3}}>
+                  ⏰ {String(pend).padStart(2,"0")} pend.
+                </span>}
+                {exc>0&&<span style={{padding:"2px 8px",borderRadius:20,background:"#ffeae6",border:"1px solid #d6303133",fontSize:11,fontWeight:700,color:"#d63031",display:"flex",alignItems:"center",gap:3}}>
+                  🚫 {exc} excluidas
+                </span>}
+              </div>
+              );
+            })}
+          </div>
+          );
+        })()}
 
         {/* tendencia */}
         <div style={{...S.card,padding:"16px",marginBottom:14}}>
@@ -4772,162 +4896,168 @@ export default function App(props){
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
-  // ARQUITECTURA UNIFICADA: el DNI (8 chars alfanumérico) es LA credencial para todos los roles.
-  // Admin/viewer ingresan su DNI registrado — no un PIN global separado.
-  // pins.admin/viewer se mantienen como fallback de emergencia (acceso sin usuarios registrados).
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
-
-  const[pin,setPin]=useState("");
-  const[dni,setDni]=useState("");
-  const[step,setStep]=useState("inicio");
+  const[cred,setCred]=useState("");
+  const[step,setStep]=useState("inicio"); // "inicio" | "auditor" | "admin" | "viewer"
   const[err,setErr]=useState("");
-  const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
+  const inpS={width:"100%",padding:"16px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:10,fontSize:22,fontWeight:700,letterSpacing:6,fontFamily:"monospace"};
 
-  // Auditor — busca por dni en la colección usuarios (rol=auditor)
-  const tryDni=()=>{
-    const clean=dni.trim();
-    if(clean.length<8){setErr("Código debe tener 8 caracteres");return;}
-    // 1. Buscar en usuarios registrados con rol auditor
-    const found=usuariosActivos.find(u=>u.rol==="auditor"&&u.dni===clean);
-    if(found){onAcceso?.(found.id);onLogin("auditor",found.nombre,clean);return;}
-    // 2. Fallback legacy: colección auditores antigua
-    const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    if(audsLegacy.length>0){
-      const leg=audsLegacy.find(a=>a.dni===clean);
-      if(leg){onAcceso?.(leg.id);onLogin("auditor",leg.nombre,clean);return;}
+  const tryLogin=(rol)=>{
+    const clean=cred.trim();
+    if(clean.length<8){setErr("Ingresa 8 caracteres");return;}
+    const found=usuariosActivos.find(u=>u.rol===rol&&u.dni===clean);
+    if(found){onAcceso?.(found.id);onLogin(rol,found.nombre,clean);return;}
+    // Fallbacks legacy
+    if(rol==="admin"){
+      const hayAdmins=usuariosActivos.some(u=>u.rol==="admin");
+      if(!hayAdmins&&clean===pins.admin){onLogin("admin","Administrador","");return;}
     }
-    // 3. Fallback pins legacy si no hay ningún usuario auditor registrado
-    const hayAuditores=usuariosActivos.some(u=>u.rol==="auditor");
-    if(!hayAuditores&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
-    setErr(hayAuditores||audsLegacy.length>0
-      ?"Código no encontrado. Verifica con el Admin."
-      :"Sin auditores registrados. Contacta al Admin.");
-    setTimeout(()=>{setErr("");setDni("");},2500);
+    if(rol==="viewer"){
+      const hayViewers=usuariosActivos.some(u=>u.rol==="viewer");
+      if(!hayViewers&&pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
+    }
+    setErr("Código no encontrado. Verifica con el Administrador.");
+    setTimeout(()=>{setErr("");},2500);
   };
 
-  // Admin — busca por DNI en usuarios con rol admin. Fallback a pins.admin para emergencias.
-  const tryPin=()=>{
-    const clean=pin.trim();
-    if(!clean){setErr("Ingresa tu código de acceso");return;}
-    // 1. Buscar en usuarios registrados con rol admin por DNI
-    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&u.dni===clean);
-    if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,clean);return;}
-    // 2. Fallback: código global de emergencia (para cuando no hay admins registrados)
-    const hayAdmins=usuariosActivos.some(u=>u.rol==="admin");
-    if(!hayAdmins&&clean===pins.admin){onLogin("admin","Administrador","");return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
-  };
-
-  // Viewer — busca por DNI en usuarios con rol viewer. Fallback a pins.viewer.
-  const tryViewer=()=>{
-    const clean=pin.trim();
-    if(!clean){setErr("Ingresa tu código de acceso");return;}
-    // 1. Buscar en usuarios registrados con rol viewer por DNI
-    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&u.dni===clean);
-    if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,clean);return;}
-    // 2. Fallback: código global (para cuando no hay viewers registrados)
-    const hayViewers=usuariosActivos.some(u=>u.rol==="viewer");
-    if(!hayViewers&&pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
-  };
+  const ROLES=[
+    {
+      id:"auditor",
+      label:"Auditor",
+      sub:"Ingresa tu DNI de 8 dígitos",
+      color:"#0984e3",
+      bg:"#e8f4fd",
+      border:"#0984e3",
+      icon:(
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#1565C0"/>
+          <rect x="14" y="10" width="28" height="36" rx="4" fill="white"/>
+          <rect x="18" y="20" width="20" height="3" rx="1.5" fill="#90CAF9"/>
+          <rect x="18" y="27" width="16" height="3" rx="1.5" fill="#90CAF9"/>
+          <rect x="18" y="34" width="12" height="3" rx="1.5" fill="#90CAF9"/>
+          <circle cx="44" cy="44" r="10" fill="#37474F" stroke="white" strokeWidth="2"/>
+          <circle cx="44" cy="44" r="6" fill="none" stroke="#78909C" strokeWidth="2.5"/>
+          <line x1="48.2" y1="48.2" x2="52" y2="52" stroke="#37474F" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      id:"admin",
+      label:"Administrador",
+      sub:"Ingresa tu DNI / código registrado",
+      color:"#f6a623",
+      bg:"#fff8ec",
+      border:"#f6a623",
+      icon:(
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#F57F17"/>
+          <circle cx="32" cy="24" r="10" fill="white"/>
+          <path d="M12 52c0-11 9-18 20-18s20 7 20 18" fill="white"/>
+          <circle cx="44" cy="40" r="8" fill="#FDD835"/>
+          <path d="M44 36v4l2.5 2.5" stroke="#F57F17" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      id:"viewer",
+      label:"Visor Gerencial",
+      sub:"Ingresa tu código de acceso",
+      color:"#6c5ce7",
+      bg:"#f0edff",
+      border:"#6c5ce7",
+      icon:(
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="14" fill="#4527A0"/>
+          <rect x="10" y="18" width="44" height="30" rx="4" fill="white"/>
+          <rect x="10" y="18" width="44" height="8" rx="4" fill="#7E57C2"/>
+          <rect x="14" y="31" width="36" height="3" rx="1.5" fill="#D1C4E9"/>
+          <rect x="14" y="38" width="28" height="3" rx="1.5" fill="#D1C4E9"/>
+          <circle cx="52" cy="52" r="10" fill="white" stroke="#4527A0" strokeWidth="2"/>
+          <ellipse cx="52" cy="52" rx="5" ry="3" fill="#4527A0"/>
+          <circle cx="52" cy="52" r="1.5" fill="white"/>
+        </svg>
+      ),
+    },
+  ];
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:36,boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
-        <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 20px"}}>🏪</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
-        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
+      <div style={{width:"100%",maxWidth:400,background:"#fff",borderRadius:24,padding:"32px 28px",boxShadow:"0 24px 60px rgba(0,0,0,.35)",textAlign:"center"}}>
+
+        {/* Logo */}
+        <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+          <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+            <rect x="8" y="6" width="32" height="42" rx="4" fill="white"/>
+            <rect x="12" y="16" width="24" height="3" rx="1.5" fill="#00b5b4"/>
+            <rect x="12" y="24" width="20" height="3" rx="1.5" fill="#00b5b4"/>
+            <rect x="12" y="32" width="16" height="3" rx="1.5" fill="#00b5b4"/>
+            <circle cx="46" cy="46" r="14" fill="#1a2f4a" stroke="white" strokeWidth="2"/>
+            <circle cx="46" cy="46" r="8" fill="none" stroke="#00b5b4" strokeWidth="2.5"/>
+            <line x1="52" y1="52" x2="57" y2="57" stroke="#00b5b4" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>VEGA · EVIDENCIAS</div>
+        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:22}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
 
         {step==="inicio"&&(
           <>
-            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
-            <button onClick={()=>{setStep("dni_auditor");setErr("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <span style={{fontSize:24,flexShrink:0}}>🪪</span>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
-                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI de 8 dígitos</div>
-              </div>
-            </button>
-            <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <span style={{fontSize:24,flexShrink:0}}>👑</span>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
-                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Ingresa tu DNI / código registrado</div>
-              </div>
-            </button>
-            <button onClick={()=>{setStep("pin_viewer");setErr("");setPin("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <span style={{fontSize:24,flexShrink:0}}>👁️</span>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
-                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Ingresa tu DNI / código registrado</div>
-              </div>
-            </button>
+            <p style={{margin:"0 0 14px",fontSize:12,color:"#5a7a9a",fontWeight:600}}>Selecciona tu tipo de acceso</p>
+            {ROLES.map(r=>(
+              <button key={r.id} onClick={()=>{setStep(r.id);setCred("");setErr("");}}
+                style={{width:"100%",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${r.border}`,background:r.bg,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left",transition:"opacity .15s"}}>
+                <div style={{flexShrink:0}}>{r.icon}</div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:r.color}}>{r.label}</div>
+                  <div style={{fontSize:11,color:r.color,opacity:.75}}>{r.sub}</div>
+                </div>
+              </button>
+            ))}
           </>
         )}
 
-        {/* Paso: Auditor — DNI numérico 8 dígitos */}
-        {(step==="dni_auditor"||step==="dni")&&(
+        {step!=="inicio"&&(()=>{
+          const rol=ROLES.find(r=>r.id===step);
+          return(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>🪪</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI</p>
-            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>8 dígitos · registrado por el administrador</p>
-            <input autoFocus type="tel" value={dni}
-              onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
-              onKeyDown={e=>e.key==="Enter"&&tryDni()}
-              placeholder="12345678" maxLength={8}
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:6,fontSize:24,fontWeight:700}}/>
-            {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>❌ {err}</div>}
-            <button onClick={tryDni} disabled={dni.length<8}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
-              Entrar →
-            </button>
-            <button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
-              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
-              ← Volver
-            </button>
-          </>
-        )}
+            <div style={{display:"flex",justifyContent:"center",marginBottom:10}}>{rol.icon}</div>
+            <p style={{margin:"0 0 2px",fontSize:14,fontWeight:800,color:rol.color}}>{rol.label}</p>
+            <p style={{margin:"0 0 16px",fontSize:11,color:"#8aaabb"}}>{rol.sub}</p>
 
-        {/* Paso: Admin y Viewer — DNI o código alfanumérico de 8 chars */}
-        {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
-          <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
-              {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
-            </p>
-            <p style={{margin:"0 0 6px",fontSize:12,color:"#8aaabb"}}>Ingresa tu DNI o código alfanumérico de 8 caracteres</p>
-            <p style={{margin:"0 0 16px",fontSize:10,color:"#b2bec3"}}>Asignado por el Administrador al registrar tu cuenta</p>
-            {/* Input alfanumérico — no type=password para que el admin vea lo que escribe */}
-            <input autoFocus
-              type="text"
-              value={pin}
-              onChange={e=>setPin(e.target.value.slice(0,8))}
-              onKeyDown={e=>e.key==="Enter"&&(step==="pin_viewer"?tryViewer():tryPin())}
+            <input
+              autoFocus
+              type="tel"
+              value={cred}
+              onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,8))}
+              onKeyDown={e=>e.key==="Enter"&&tryLogin(step)}
               placeholder="12345678"
               maxLength={8}
-              autoComplete="off"
-              style={{...inpS,border:`2px solid ${err?"#ef4444":step==="pin_viewer"?"#74b9ff":"#f6a623"}`,letterSpacing:6,fontSize:24,fontWeight:700,textTransform:"uppercase"}}/>
-            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,marginTop:-8}}>❌ {err}</div>}
-            {/* Indicador de longitud */}
-            <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:12,marginTop:-8}}>
+              style={{...inpS,border:`2px solid ${err?"#ef4444":rol.border}`}}
+            />
+
+            {/* Indicador de 8 puntos */}
+            <div style={{display:"flex",justifyContent:"center",gap:5,marginBottom:12,marginTop:2}}>
               {[...Array(8)].map((_,i)=>(
-                <div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<pin.length?(step==="pin_viewer"?"#74b9ff":"#f6a623"):"#e2e8f0",transition:"background .1s"}}/>
+                <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<cred.length?rol.color:"#e2e8f0",transition:"background .1s"}}/>
               ))}
             </div>
-            <button onClick={step==="pin_viewer"?tryViewer:tryPin} disabled={pin.length<8}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin.length===8?"white":"#94a3b8",cursor:pin.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+
+            {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,lineHeight:1.4}}>❌ {err}</div>}
+
+            <button
+              onClick={()=>tryLogin(step)}
+              onTouchEnd={e=>{e.preventDefault();tryLogin(step);}}
+              disabled={cred.length<8}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:cred.length===8?`linear-gradient(135deg,${rol.color},#1a2f4a)`:"#e2e8f0",color:cred.length===8?"#fff":"#94a3b8",cursor:cred.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:8}}>
               Ingresar →
             </button>
-            <button onClick={()=>{setStep("inicio");setPin("");setErr("");}}
+            <button onClick={()=>{setStep("inicio");setCred("");setErr("");}}
               style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
               ← Volver
             </button>
           </>
-        )}
+          );
+        })()}
 
       </div>
     </div>
