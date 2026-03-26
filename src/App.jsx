@@ -2819,6 +2819,171 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
         </div>{/* fin TÁCTICO */}
 
+        {/* ══ REGISTROS POR FRANJA HORARIA — tiendas únicas, período visible ══
+            Respeta selWeek (semana o mes) + dashAct (actividad) + dashFmt (formato)
+            Unidad: tienda que registró al menos UNA vez en esa franja en el período.
+        ══*/}
+        {(()=>{
+          const semsVis2 = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
+          const hoyF = todayStr();
+          // Período label para el encabezado
+          const periodoFH = selWeek!==null
+            ? semanasDelMes[selWeek]?.label
+            : `${MESES[vMonth]} ${vYear}`;
+          // Actividad label
+          const actFHLabel = dashAct==="Todas"
+            ? "todas las actividades"
+            : acts.find(a=>a.id===dashAct)?.n||"";
+
+          // Para cada tienda evaluable, determinar su MEJOR franja del período
+          // (si en algún día del período llegó en ORO, se cuenta como ORO)
+          // Mapa: tiendaId → mejor puntaje en el período
+          const mejorPorTienda = new Map();
+          const totalDispFH = new Set(); // tiendas con al menos 1 día evaluable
+          const conRegistroFH = new Set(); // tiendas que registraron algo
+
+          tsBase.forEach(ti=>{
+            semsVis2.forEach(s=>{
+              s.days.forEach(day=>{
+                const ds=dStr(vYear,vMonth,day);
+                if(ds>hoyF) return;
+                const dw=getDow(ds);
+                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                  totalDispFH.add(ti.id);
+                  const reg=getReg(ds,ti.id,a.id);
+                  if(!reg?.evidencias?.length||reg.anulado) return;
+                  conRegistroFH.add(ti.id);
+                  const AR=getRangoActivo(a.id,ds);
+                  const h=primerEnvio(reg.evidencias);
+                  const m=toMin(h);
+                  const franjaVal = m<=toMin(AR.c100)?10 : m<=toMin(AR.c80)?8 : m<=toMin(AR.c60)?6 : 0;
+                  const prev=mejorPorTienda.get(ti.id)??-1;
+                  if(franjaVal>prev) mejorPorTienda.set(ti.id,franjaVal);
+                });
+              });
+            });
+          });
+
+          const nDisp = totalDispFH.size||1;
+          const nConReg = conRegistroFH.size;
+          const nOroT   = [...mejorPorTienda.values()].filter(v=>v===10).length;
+          const nPlataT = [...mejorPorTienda.values()].filter(v=>v===8).length;
+          const nBronT  = [...mejorPorTienda.values()].filter(v=>v===6).length;
+          const nFueraT = [...mejorPorTienda.values()].filter(v=>v===0).length;
+          const nSinRegT = totalDispFH.size - conRegistroFH.size;
+
+          if(totalDispFH.size===0) return null;
+
+          // Por formato: mismo cálculo
+          const fmtFH=["Mayorista","Supermayorista","Market"].map(fmt=>{
+            const tsFmt=tsBase.filter(ti=>ti.f===fmt);
+            const fmtDisp=new Set(), fmtReg=new Set();
+            const fmtMejor=new Map();
+            tsFmt.forEach(ti=>{
+              semsVis2.forEach(s=>{
+                s.days.forEach(day=>{
+                  const ds=dStr(vYear,vMonth,day);
+                  if(ds>hoyF) return;
+                  const dw=getDow(ds);
+                  actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                    fmtDisp.add(ti.id);
+                    const reg=getReg(ds,ti.id,a.id);
+                    if(!reg?.evidencias?.length||reg.anulado) return;
+                    fmtReg.add(ti.id);
+                    const AR=getRangoActivo(a.id,ds);
+                    const m=toMin(primerEnvio(reg.evidencias));
+                    const fv=m<=toMin(AR.c100)?10:m<=toMin(AR.c80)?8:m<=toMin(AR.c60)?6:0;
+                    if(fv>(fmtMejor.get(ti.id)??-1)) fmtMejor.set(ti.id,fv);
+                  });
+                });
+              });
+            });
+            const nd=fmtDisp.size, nr=fmtReg.size;
+            const fo=[...fmtMejor.values()].filter(v=>v===10).length;
+            const fp=[...fmtMejor.values()].filter(v=>v===8).length;
+            const fb=[...fmtMejor.values()].filter(v=>v===6).length;
+            const ff=[...fmtMejor.values()].filter(v=>v===0).length;
+            const fNR=nd-nr;
+            const fcfg=FMT[fmt];
+            const fmtIcon=fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒";
+            return {fmt,fmtIcon,fcfg,nd,nr,fo,fp,fb,ff,fNR};
+          }).filter(f=>f.nd>0);
+
+          const franjasFH=[
+            {l:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec",n:nOroT,   lbl:"Registros en ORO",   sub:"antes del corte 1"},
+            {l:"PLATA", icon:"🥈",c:"#185FA5",bg:"#e8f4fd",n:nPlataT, lbl:"Tardíos rescatados",  sub:"entre corte 1 y 2"},
+            {l:"FUERA", icon:"🔴",c:"#dc2626",bg:"#fff1f2",n:nFueraT, lbl:"Fuera de rango",      sub:"después del corte 2"},
+            {l:"S/R",   icon:"⬜",c:"#6b7280",bg:"#f4f6f8",n:nSinRegT,lbl:"Sin registrar",       sub:"no enviaron evidencia"},
+          ];
+          const totalFHbar=nConReg+nSinRegT||1;
+
+          return(
+          <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
+            <div style={{background:"#0d4f6e",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14}}>🏪</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>REGISTROS POR FRANJA · {periodoFH.toUpperCase()}</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1}}>Tiendas únicas — {actFHLabel} · mejor franja registrada en el período</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:18,fontWeight:800,color:nDisp>0?sc(Math.round(nConReg/nDisp*100)):"#888"}}>{nConReg}<span style={{fontSize:10,color:"rgba(255,255,255,.5)",fontWeight:400}}>/{nDisp}</span></div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>tiendas registradas</div>
+              </div>
+            </div>
+            <div style={{background:"#fff",padding:"12px 14px"}}>
+              {/* KPI cards */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:10}}>
+                {franjasFH.map(f=>(
+                  <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 10px",textAlign:"center",border:`1px solid ${f.c}22`}}>
+                    <div style={{fontSize:16,marginBottom:2}}>{f.icon}</div>
+                    <div style={{fontSize:22,fontWeight:800,color:f.c,lineHeight:1}}>{nDisp>0?Math.round(f.n/nDisp*100)+"%":"—"}</div>
+                    <div style={{fontSize:9,fontWeight:700,color:f.c,marginTop:3}}>{f.lbl}</div>
+                    <div style={{fontSize:8,color:f.c,opacity:.7,marginTop:1}}>{f.sub}</div>
+                    <div style={{fontSize:10,color:f.c,fontWeight:700,marginTop:4}}>{f.n} tiendas</div>
+                  </div>
+                ))}
+              </div>
+              {/* Barra apilada global */}
+              <div style={{height:14,borderRadius:7,overflow:"hidden",display:"flex",marginBottom:10}}>
+                {nOroT>0&&<div style={{width:(nOroT/nDisp*100)+"%",background:"#f6a623",transition:"width .4s"}}/>}
+                {nPlataT>0&&<div style={{width:(nPlataT/nDisp*100)+"%",background:"#185FA5",transition:"width .4s"}}/>}
+                {nBronT>0&&<div style={{width:(nBronT/nDisp*100)+"%",background:"#a29bfe",transition:"width .4s"}}/>}
+                {nFueraT>0&&<div style={{width:(nFueraT/nDisp*100)+"%",background:"#dc2626",transition:"width .4s"}}/>}
+                {nSinRegT>0&&<div style={{flex:1,background:"#e2e8f0",transition:"width .4s"}}/>}
+              </div>
+              {/* Por formato */}
+              {fmtFH.map(({fmt,fmtIcon,fcfg,nd,nr,fo,fp,fb,ff,fNR})=>(
+                <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#f8fafc",borderRadius:9,marginBottom:6,border:`1px solid ${fcfg.c}22`}}>
+                  <span style={{fontSize:14,flexShrink:0}}>{fmtIcon}</span>
+                  <div style={{minWidth:90,flexShrink:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:fcfg.c}}>{fmt}</div>
+                    <div style={{fontSize:9,color:"#8aaabb"}}>{nd} total · {nr} disp.</div>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{height:8,borderRadius:4,overflow:"hidden",display:"flex"}}>
+                      {fo>0&&<div style={{width:(fo/nd*100)+"%",background:"#f6a623"}}/>}
+                      {fp>0&&<div style={{width:(fp/nd*100)+"%",background:"#185FA5"}}/>}
+                      {fb>0&&<div style={{width:(fb/nd*100)+"%",background:"#a29bfe"}}/>}
+                      {ff>0&&<div style={{width:(ff/nd*100)+"%",background:"#dc2626"}}/>}
+                      {fNR>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:4,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                    {fo>0&&<span style={{fontSize:9,fontWeight:700,color:"#854F0B",background:"#fff8ec",padding:"1px 6px",borderRadius:8}}>🥇 {fo} reg.</span>}
+                    {fp>0&&<span style={{fontSize:9,fontWeight:700,color:"#185FA5",background:"#e8f4fd",padding:"1px 6px",borderRadius:8}}>🥈 {fp} tard.</span>}
+                    {ff>0&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:8}}>🔴 {ff} fuera</span>}
+                    {fNR>0&&<span style={{fontSize:9,fontWeight:700,color:"#6b7280",background:"#f4f6f8",padding:"1px 6px",borderRadius:8}}>⬜ {fNR} pend.</span>}
+                  </div>
+                </div>
+              ))}
+              <div style={{fontSize:9,color:"#b2bec3",marginTop:6,textAlign:"right"}}>
+                Cada tienda contada una vez · mejor franja del período · excluye N/A
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
         {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
             ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
         ══════════════════════════════════════════════════════════════ */}
@@ -4172,6 +4337,153 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
         </div>
       </div>
+
+      {/* ══ REGISTROS POR FRANJA HORARIA — viewer, período visible ══ */}
+      {(()=>{
+        const semsVisV = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
+        const hoyFV = hoy;
+        const periodoFHV = selWeek!==null
+          ? semanasDelMes[selWeek]?.label
+          : `${MESES[vMonth]} ${vYear}`;
+
+        // Para cada tienda, determinar su MEJOR franja en el período visible
+        const mejorPorTiendaV = new Map();
+        const totalDispV = new Set();
+        const conRegV = new Set();
+
+        tiAct.forEach(ti=>{
+          semsVisV.forEach(s=>{
+            s.days.forEach(day=>{
+              const ds=dStr(vYear,vMonth,day);
+              if(ds>hoyFV) return;
+              const dw=getDow(ds);
+              acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                totalDispV.add(ti.id);
+                const reg=getReg(ds,ti.id,a.id);
+                if(!reg?.evidencias?.length||reg.anulado) return;
+                conRegV.add(ti.id);
+                const AR=getRangoActivo(a.id,ds);
+                const m=toMin(primerEnvio(reg.evidencias));
+                const fv=m<=toMin(AR.c100)?10:m<=toMin(AR.c80)?8:m<=toMin(AR.c60)?6:0;
+                if(fv>(mejorPorTiendaV.get(ti.id)??-1)) mejorPorTiendaV.set(ti.id,fv);
+              });
+            });
+          });
+        });
+
+        const ndV=totalDispV.size||1;
+        const nrV=conRegV.size;
+        const nOroV2=[...mejorPorTiendaV.values()].filter(v=>v===10).length;
+        const nPlatV=[...mejorPorTiendaV.values()].filter(v=>v===8).length;
+        const nBronV=[...mejorPorTiendaV.values()].filter(v=>v===6).length;
+        const nFuerV=[...mejorPorTiendaV.values()].filter(v=>v===0).length;
+        const nSinV=totalDispV.size-conRegV.size;
+
+        if(totalDispV.size===0) return null;
+
+        // Por formato
+        const fmtFHV=["Mayorista","Supermayorista","Market"].map(fmt=>{
+          const tsFmt=tiAct.filter(ti=>ti.f===fmt);
+          const fD=new Set(),fR=new Set(),fM=new Map();
+          tsFmt.forEach(ti=>{
+            semsVisV.forEach(s=>{
+              s.days.forEach(day=>{
+                const ds=dStr(vYear,vMonth,day);
+                if(ds>hoyFV) return;
+                const dw=getDow(ds);
+                acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                  fD.add(ti.id);
+                  const reg=getReg(ds,ti.id,a.id);
+                  if(!reg?.evidencias?.length||reg.anulado) return;
+                  fR.add(ti.id);
+                  const AR=getRangoActivo(a.id,ds);
+                  const m=toMin(primerEnvio(reg.evidencias));
+                  const fv=m<=toMin(AR.c100)?10:m<=toMin(AR.c80)?8:m<=toMin(AR.c60)?6:0;
+                  if(fv>(fM.get(ti.id)??-1)) fM.set(ti.id,fv);
+                });
+              });
+            });
+          });
+          const nd=fD.size,nr=fR.size;
+          const fo=[...fM.values()].filter(v=>v===10).length;
+          const fp=[...fM.values()].filter(v=>v===8).length;
+          const ff=[...fM.values()].filter(v=>v===0).length;
+          const fNR=nd-nr;
+          const fcfg=FMT[fmt];
+          const fmtIcon=fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒";
+          return{fmt,fmtIcon,fcfg,nd,nr,fo,fp,ff,fNR};
+        }).filter(f=>f.nd>0);
+
+        return(
+        <div style={{borderRadius:14,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+          <div style={{background:"#0d4f6e",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🏪</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>REGISTROS POR FRANJA · {periodoFHV.toUpperCase()}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>Tiendas únicas · mejor franja registrada en el período</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:20,fontWeight:800,color:sc(Math.round(nrV/ndV*100))}}>{nrV}<span style={{fontSize:11,color:"rgba(255,255,255,.5)",fontWeight:400}}>/{ndV}</span></div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>tiendas registradas</div>
+            </div>
+          </div>
+          <div style={{background:"#fff",padding:"14px 16px"}}>
+            {/* KPI cards */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:10}}>
+              {[
+                {icon:"🥇",c:"#f6a623",bg:"#fff8ec",n:nOroV2,lbl:"En ORO",      sub:"antes corte 1"},
+                {icon:"🥈",c:"#185FA5",bg:"#e8f4fd",n:nPlatV, lbl:"Tardíos",    sub:"entre cortes"},
+                {icon:"🔴",c:"#dc2626",bg:"#fff1f2",n:nFuerV, lbl:"Fuera rango",sub:"después corte 2"},
+                {icon:"⬜",c:"#6b7280",bg:"#f4f6f8",n:nSinV,  lbl:"Sin registrar",sub:"no enviaron"},
+              ].map((f,i)=>(
+                <div key={i} style={{background:f.bg,borderRadius:10,padding:"10px",textAlign:"center",border:`1px solid ${f.c}22`}}>
+                  <div style={{fontSize:16,marginBottom:2}}>{f.icon}</div>
+                  <div style={{fontSize:20,fontWeight:800,color:f.c,lineHeight:1}}>{ndV>0?Math.round(f.n/ndV*100)+"%":"—"}</div>
+                  <div style={{fontSize:9,fontWeight:700,color:f.c,marginTop:3}}>{f.lbl}</div>
+                  <div style={{fontSize:8,color:f.c,opacity:.7}}>{f.sub}</div>
+                  <div style={{fontSize:10,color:f.c,fontWeight:700,marginTop:3}}>{f.n} tiendas</div>
+                </div>
+              ))}
+            </div>
+            {/* Barra apilada */}
+            <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",marginBottom:10}}>
+              {nOroV2>0&&<div style={{width:(nOroV2/ndV*100)+"%",background:"#f6a623"}}/>}
+              {nPlatV>0&&<div style={{width:(nPlatV/ndV*100)+"%",background:"#185FA5"}}/>}
+              {nBronV>0&&<div style={{width:(nBronV/ndV*100)+"%",background:"#a29bfe"}}/>}
+              {nFuerV>0&&<div style={{width:(nFuerV/ndV*100)+"%",background:"#dc2626"}}/>}
+              {nSinV>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
+            </div>
+            {/* Por formato */}
+            {fmtFHV.map(({fmt,fmtIcon,fcfg,nd,nr,fo,fp,ff,fNR})=>(
+              <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#f8fafc",borderRadius:9,marginBottom:6,border:`1px solid ${fcfg.c}22`}}>
+                <span style={{fontSize:13,flexShrink:0}}>{fmtIcon}</span>
+                <div style={{minWidth:88,flexShrink:0}}>
+                  <div style={{fontSize:11,fontWeight:700,color:fcfg.c}}>{fmt}</div>
+                  <div style={{fontSize:9,color:"#8aaabb"}}>{nd} total · {nr} reg.</div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{height:7,borderRadius:4,overflow:"hidden",display:"flex"}}>
+                    {fo>0&&<div style={{width:(fo/nd*100)+"%",background:"#f6a623"}}/>}
+                    {fp>0&&<div style={{width:(fp/nd*100)+"%",background:"#185FA5"}}/>}
+                    {ff>0&&<div style={{width:(ff/nd*100)+"%",background:"#dc2626"}}/>}
+                    {fNR>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:3,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  {fo>0&&<span style={{fontSize:9,fontWeight:700,color:"#854F0B",background:"#fff8ec",padding:"1px 6px",borderRadius:8}}>🥇 {fo}</span>}
+                  {fp>0&&<span style={{fontSize:9,fontWeight:700,color:"#185FA5",background:"#e8f4fd",padding:"1px 6px",borderRadius:8}}>🥈 {fp}</span>}
+                  {ff>0&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:8}}>🔴 {ff}</span>}
+                  {fNR>0&&<span style={{fontSize:9,fontWeight:700,color:"#6b7280",background:"#f4f6f8",padding:"1px 6px",borderRadius:8}}>⬜ {fNR}</span>}
+                </div>
+              </div>
+            ))}
+            <div style={{fontSize:9,color:"#b2bec3",marginTop:6,textAlign:"right"}}>
+              Cada tienda contada una vez · mejor franja del período · excluye N/A
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* ══════════════════════════════════════════════════════
           NIVEL 3 — OPERATIVO  ·  Jefes / Supervisores
