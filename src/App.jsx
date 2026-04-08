@@ -196,42 +196,63 @@ function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8e
 // laborales (L–V) dentro del mes. El label incluye el número de semana y el
 // rango de fechas (por ejemplo: S1 (1–3)).
 function getWeeksOfMonth(year, month) {
+  // Obtiene las semanas ISO de un mes. Cada semana comienza en lunes y
+  // comprende 7 días naturales (lunes a domingo). Se incluyen en
+  // `days` únicamente los días laborables (lunes a viernes) para las
+  // métricas, mientras que `start` y `end` reflejan el rango completo
+  // (incluyendo fines de semana) dentro del mes para mostrar al usuario.
   const weeks = [];
+  // Último día del mes
   const lastDay = new Date(year, month + 1, 0).getDate();
 
-  // Día 1 del mes y su día de la semana (0=domingo, 1=lunes, ... 6=sábado)
+  // Primer día del mes y su día de la semana (0=domingo, 1=lunes, ... 6=sábado)
   const firstOfMonth = new Date(year, month, 1);
   const dow = firstOfMonth.getDay();
   // Desplazamiento hasta el lunes de la semana ISO que contiene el día 1
-  // Si es domingo (0), isoOffset = 6, si es lunes (1) isoOffset = 0, ...
+  // Si es domingo (0), isoOffset = 6; si es lunes (1), isoOffset = 0; etc.
   const isoOffset = dow === 0 ? 6 : dow - 1;
 
-  // Día de inicio (lunes) de la primera semana del mes. Puede ser <= 0 si
-  // incluye días del mes anterior.
+  // Día de inicio (lunes) de la primera semana del mes (puede ser <=0)
   let weekStart = 1 - isoOffset;
   let weekNum = 1;
 
+  // Para decidir qué días de la semana considerar como laborables, tomamos
+  // la unión de los días definidos en ACTIVIDADES_INIT (campo `dias`). De
+  // este modo, si en el futuro se agregan actividades en sábado (6) o
+  // domingo (0), se incluirán automáticamente. Si ACTIVIDADES_INIT no
+  // existe (pruebas), por defecto se considera lunes–viernes.
+  const diasHabiles = new Set(
+    typeof ACTIVIDADES_INIT !== "undefined" && Array.isArray(ACTIVIDADES_INIT)
+      ? ACTIVIDADES_INIT.flatMap(a => Array.isArray(a.dias) ? a.dias : [])
+      : [1,2,3,4,5]
+  );
+
+  // Bucle hasta que se hayan cubierto todos los días del mes
   while (weekStart <= lastDay) {
     const days = [];
+    const allDays = [];
     // Recorrer los 7 días naturales de la semana ISO (lunes a domingo)
     for (let i = 0; i < 7; i++) {
       const dayOfMonth = weekStart + i;
       // Considerar sólo días válidos del mes actual
       if (dayOfMonth >= 1 && dayOfMonth <= lastDay) {
+        allDays.push(dayOfMonth);
         const d = new Date(year, month, dayOfMonth);
         const wd = d.getDay();
-        // Incluir sólo días laborales (lunes=1 a viernes=5)
-        if (wd >= 1 && wd <= 5) {
+        // Incluir únicamente los días hábiles definidos en `diasHabiles`
+        if (diasHabiles.has(wd)) {
           days.push(dayOfMonth);
         }
       }
     }
+    // Si la semana tiene algún día laborable, agregarla
     if (days.length > 0) {
-      const startLabel = days[0];
-      const endLabel = days[days.length - 1];
+      const startLabel = allDays[0];
+      const endLabel = allDays[allDays.length - 1];
       weeks.push({
         num: weekNum,
-        label: `S${weekNum} (${startLabel}–${endLabel})`,
+        label: `S${weekNum} (${String(startLabel).padStart(2, "0")}–${String(endLabel).padStart(2, "0")})`,
+        // `start` y `end` se corresponden con el rango completo de la semana
         start: startLabel,
         end: endLabel,
         days,
@@ -1574,7 +1595,30 @@ function ChecklistApp() {
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
             {semanasDelMes.map((s,i)=>(
-              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+              <button
+                key={i}
+                onClick={()=>setSelWeek(i)}
+                style={{
+                  flex:1,
+                  padding:"7px",
+                  borderRadius:8,
+                  border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
+                  background:selWeek===i?"#f0edff":"#fff",
+                  color:selWeek===i?"#6c5ce7":"#5a7a9a",
+                  cursor:"pointer",
+                  fontSize:11,
+                  fontWeight:700,
+                  display:"flex",
+                  flexDirection:"column",
+                  alignItems:"center",
+                  lineHeight:1.1
+                }}
+              >
+                <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
+                <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
+                  {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
+                </span>
+              </button>
             ))}
           </div>
         </div>
@@ -2087,7 +2131,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
           {semanasDelMes.map((s,i)=>(
-            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+            <button
+              key={i}
+              onClick={()=>setSelWeek(i)}
+              style={{
+                flex:1,
+                padding:"7px",
+                borderRadius:8,
+                border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
+                background:selWeek===i?"#f0edff":"#fff",
+                color:selWeek===i?"#6c5ce7":"#5a7a9a",
+                cursor:"pointer",
+                fontSize:11,
+                fontWeight:700,
+                display:"flex",
+                flexDirection:"column",
+                alignItems:"center",
+                lineHeight:1.1
+              }}
+            >
+              <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
+              <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
+                {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
+              </span>
+            </button>
           ))}
         </div>
 
@@ -2974,7 +3041,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{display:"flex",gap:5,marginBottom:10}}>
                 <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
                 {semanasDelMes.map((s,i)=>(
-                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>{s.label}</button>
+                  <button
+                    key={i}
+                    onClick={() => setSelWeek(i)}
+                    style={{
+                      flex:1,
+                      padding:"5px",
+                      borderRadius:7,
+                      border:`1.5px solid ${selWeek===i ? "#6c5ce7" : "#e2e8f0"}`,
+                      background: selWeek===i ? "#f0edff" : "#fff",
+                      color: selWeek===i ? "#6c5ce7" : "#5a7a9a",
+                      cursor:"pointer",
+                      fontSize:10,
+                      fontWeight:700,
+                      display:"flex",
+                      flexDirection:"column",
+                      alignItems:"center",
+                      lineHeight:1.1
+                    }}
+                  >
+                    <span style={{fontSize:10,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
+                    <span style={{fontSize:6,fontWeight:600,opacity:0.8,lineHeight:1}}>
+                      {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
+                    </span>
+                  </button>
                 ))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -4132,8 +4222,31 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       </div>
       <div style={{display:"flex",gap:5,marginBottom:16}}>
         <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
-        {semanasDelMes.map((s,i)=>(
-          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+        {semanasDelMes.map((s,i)=> (
+          <button
+            key={i}
+            onClick={()=>setSelWeek(i)}
+            style={{
+              flex:1,
+              padding:"6px",
+              borderRadius:7,
+              border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
+              background:selWeek===i?"#f0edff":"#fff",
+              color:selWeek===i?"#6c5ce7":"#5a7a9a",
+              cursor:"pointer",
+              fontSize:11,
+              fontWeight:700,
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              lineHeight:1.1
+            }}
+          >
+            <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
+            <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
+              {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
+            </span>
+          </button>
         ))}
       </div>
 
@@ -4654,7 +4767,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{display:"flex", gap:5, marginBottom:10}}>
               <button onClick={() => setSelWeek(null)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === null ? "#00b5b4" : "#e2e8f0"}`, background: selWeek === null ? "#e0fafa" : "#fff", color: selWeek === null ? "#00b5b4" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>Mes</button>
               {semanasDelMes.map((s, i) => (
-                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>{s.label}</button>
+                <button
+                  key={i}
+                  onClick={() => setSelWeek(i)}
+                  style={{
+                    flex:1,
+                    padding:"5px",
+                    borderRadius:7,
+                    border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`,
+                    background: selWeek === i ? "#f0edff" : "#fff",
+                    color: selWeek === i ? "#6c5ce7" : "#5a7a9a",
+                    cursor:"pointer",
+                    fontSize:10,
+                    fontWeight:700,
+                    display:"flex",
+                    flexDirection:"column",
+                    alignItems:"center",
+                    lineHeight:1.1
+                  }}
+                >
+                  <span style={{fontSize:10,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
+                  <span style={{fontSize:6,fontWeight:600,opacity:0.8,lineHeight:1}}>
+                    {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
+                  </span>
+                </button>
               ))}
             </div>
             <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
