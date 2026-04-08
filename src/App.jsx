@@ -1584,6 +1584,8 @@ function ChecklistApp() {
   /* ══ TAB REPORTE SEMANAL ══ */
   const renderReporte = ()=>{
     const actsActivas=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)); // solo cols con historial en el mes
+    // Determinar los días de la semana presentes en al menos una actividad activa. 0=domingo..6=sábado.
+    const diasHabiles=[...new Set(actsActivas.flatMap(a=>a.dias))].sort((a,b)=>a-b);
     const semsVis=selWeek!==null?[semanasDelMes[selWeek]]:semanasDelMes;
     return(
       <div style={{padding:"16px"}}>
@@ -1640,9 +1642,36 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {semsVis.map(s=>actsActivas.map(a=>(
-                        <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0}}>{s.label}<br/>{a.e}</th>
-                      )))}
+                      {/* Encabezados por semana y por día de la semana */}
+                      {semsVis.map(sem=>diasHabiles.map(dow=>{
+                        // Obtener la abreviatura del día de la semana
+                        const dowLetters=["D","L","M","MI","J","V","S"];
+                        const dowLetter=dowLetters[dow];
+                        return (
+                          <th
+                            key={sem.label+"-"+dow}
+                            style={{
+                              padding:"8px 8px",
+                              textAlign:"center",
+                              color:"#5a7a9a",
+                              fontWeight:700,
+                              fontSize:9,
+                              borderBottom:"1px solid #e9eef5",
+                              minWidth:60,
+                              whiteSpace:"nowrap",
+                              background:"#f8fafc",
+                              position:"sticky",
+                              top:0
+                            }}
+                          >
+                            {/* Primera línea: número de semana */}
+                            <span style={{fontWeight:700}}>{`S${sem.num}`}</span>
+                            <br/>
+                            {/* Segunda línea: abreviatura del día (p. ej. L, M, MI, etc.) */}
+                            <span style={{fontSize:8,color:"#7c9db9"}}>{dowLetter}</span>
+                          </th>
+                        );
+                      }))}
                       {semsVis.map(s=>(
                         <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55,position:"sticky",top:0}}>
                           {s.label}<br/>EF.%
@@ -1663,61 +1692,58 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.map(sem=>actsActivas.map(a=>{
-                            // N/A solo si TODOS los días donde aplica la actividad tienen excepción
-                            const diasActSem=sem.days.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(dStr(vYear,vMonth,d))));
-                            const excepcion=diasActSem.length>0&&diasActSem.every(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
-                            const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
-                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
-                            // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
-                            const hoyC=todayStr();
-                            const diasConAct=ds.filter(d=>d<=hoyC&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
-                            // Solo contar si la actividad tiene historial real
-                            const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
-                            const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
-                            const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
-                            const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
-                            const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
-                            const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
-                            return(
-                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent"}}>
-                                {anulado?(
-                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
-                                ):excepcion?(
-                                  <span
-                                    title={getExcComment(tr.id,a.id,ds[0]||fecha)||"Excepción: tienda no aplica para esta actividad"}
-                                    style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help",position:"relative"}}>
-                                    N/A {getExcComment(tr.id,a.id,ds[0]||fecha)?"💬":""}
-                                    {isAdmin&&(
-                                      <span
-                                        title="Editar comentario de esta exclusión"
-                                        onClick={e=>{
-                                          e.stopPropagation();
-                                          setExcModal({
-                                            tId:tr.id,aId:a.id,tiendaNombre:tr.n,
-                                            estaExcluida:true,
-                                            comentarioActual:getExcComment(tr.id,a.id,ds[0]||fecha),
-                                          });
-                                        }}
-                                        style={{marginLeft:3,cursor:"pointer",opacity:.7,fontSize:8}}>✏️</span>
-                                    )}
-                                  </span>
-                                ):v!==null?(
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
-                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
-                                    onMouseUp={()=>clearTimeout(longPressRef.current)}
-                                    onMouseLeave={()=>clearTimeout(longPressRef.current)}
-                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
-                                    onTouchEnd={()=>clearTimeout(longPressRef.current)}
-                                    style={{cursor:"pointer"}}>
-                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</span>
-                                    <div style={{fontSize:8,color:"#8aaabb",marginTop:1}}>{v}%</div>
-                                    {auditorCell&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
-                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
-                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
-                                    </div>
-                                  </div>
-                                ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                          {semsVis.map(sem=>diasHabiles.map(dow=>{
+                            // Obtener las fechas de esta semana que coinciden con el día de la semana actual
+                            const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
+                            // Si no hay fechas, mostrar guion
+                            if(fechas.length===0){
+                              return <td key={`${sem.label}-${dow}`} style={{padding:'6px 8px',textAlign:'center',color:'#d1d5db',fontSize:9}}>—</td>;
+                            }
+                            // Actividades activas programadas para este día de la semana
+                            const actsDia=actsActivas.filter(ac=>ac.dias.includes(dow));
+                            return (
+                              <td key={`${sem.label}-${dow}`} style={{padding:'6px 8px',textAlign:'center',position:'relative'}}>
+                                <div style={{display:'flex',justifyContent:'center',flexWrap:'wrap',gap:3}}>
+                                  {actsDia.map(ac=>{
+                                    // Verificar si todas las fechas están excluidas para esta actividad
+                                    const todasExc=fechas.every(day=>{
+                                      const ds=dStr(vYear,vMonth,day);
+                                      return isExc(tr.id,ac.id,ds);
+                                    });
+                                    // Construir arreglo de strings de fechas
+                                    const dsStrs=fechas.map(day=>dStr(vYear,vMonth,day));
+                                    // Calcular puntajes para las evidencias de estas fechas
+                                    const puntajes=dsStrs.flatMap(ds=>{
+                                      const reg=getReg(ds,tr.id,ac.id);
+                                      const p=puntajeReg(reg,getRangoActivo(ac.id,ds));
+                                      return p!==null?[p]:[];
+                                    });
+                                    // Calcular denominador de puntos posibles (solo fechas válidas y con registro)
+                                    const hoy=_hoyDash;
+                                    const diasValidos=dsStrs.filter(ds=>ds<=hoy&&ac.dias.includes(getDow(ds)));
+                                    const maxPos=actsConRegistroIds.has(ac.id)?diasValidos.length*10:0;
+                                    const pct=(!todasExc&&puntajes.length>0&&maxPos>0)?Math.round((puntajes.reduce((x,y)=>x+y,0)/maxPos)*100):null;
+                                    if(todasExc){
+                                      return (
+                                        <span key={`${sem.label}-${ac.id}`} title={getExcComment(tr.id,ac.id,dsStrs[0]||"")||'Exclusión: tienda no aplica para esta actividad'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:'#854F0B',background:'#FAEEDA',border:'0.5px solid #FAC775',cursor:'help',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                          {ac.e}
+                                        </span>
+                                      );
+                                    }else if(pct!==null){
+                                      return (
+                                        <span key={`${sem.label}-${ac.id}`} title={ac.n + ' ' + (puntajes.reduce((a0,b0)=>a0+b0,0)) + '/' + maxPos + 'pts · ' + pct + '%'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:sc(pct),background:sb(pct),display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                          {ac.e}
+                                        </span>
+                                      );
+                                    }else{
+                                      return (
+                                        <span key={`${sem.label}-${ac.id}`} title={ac.n + ' sin datos'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:'#d1d5db',border:'1px dashed #e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                          {ac.e}
+                                        </span>
+                                      );
+                                    }
+                                  })}
+                                </div>
                               </td>
                             );
                           }))}
@@ -1791,29 +1817,32 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
-                      {semsVis.map(sem=>actsActivas.map(a=>{
+                      {semsVis.map(sem=>diasHabiles.map(dow=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{
-                          const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
-                          const diasA=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
-                          const hoyT=todayStr();
-                          diasA.forEach(d=>{
-                            if(d>hoyT) return; // día futuro
-                            if(isExc(tr.id,a.id,d)) return;
-                            mx+=10;
-                            const rv=getReg(d,tr.id,a.id);
-                            const p=puntajeReg(rv,getRangoActivo(a.id,d));
-                            if(p!==null) ob+=p;
+                          // Fechas de esta semana que coinciden con el día de la semana actual
+                          const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
+                          fechas.forEach(day=>{
+                            const ds=dStr(vYear,vMonth,day);
+                            // Para cada actividad activa en este día se suman los puntos posibles y obtenidos
+                            actsActivas.filter(ac=>ac.dias.includes(dow)&&!isExc(tr.id,ac.id,ds)&&actsConRegistroIds.has(ac.id)).forEach(ac=>{
+                              mx+=10;
+                              const rv=getReg(ds,tr.id,ac.id);
+                              const p=puntajeReg(rv,getRangoActivo(ac.id,ds));
+                              if(p!==null) ob+=p;
+                            });
                           });
                         });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
-                          {mx>0?(
-                            ob>0
-                              ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400}}>{ef}%</span></span>
-                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pend.</span>
-                          ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                        </td>;
+                        return (
+                          <td key={sem.label+"-"+dow} style={{padding:"6px 8px",textAlign:"center"}}>
+                            {mx>0?(
+                              ob>0
+                                ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400}}>{ef}%</span></span>
+                                :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pend.</span>
+                            ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                          </td>
+                        );
                       }))}
                       {semsVis.map(sem=>{
                         let ob=0,mx=0;
@@ -1874,23 +1903,32 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
                   {/* celdas vacías para alinear con columnas actividad×semana */}
-                  {semsVis.flatMap(s=>actsActivas.map(a=>(
-                    <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
+                  {semsVis.flatMap(sem=>diasHabiles.map(dow=>(
+                    <td key={sem.label+"-"+dow} style={{padding:"6px 8px",textAlign:"center"}}>
                       {(()=>{
                         let ob=0,mx=0;
-                        const ds=s.days.map(d=>dStr(vYear,vMonth,d));
+                        // Fechas de esta semana que corresponden al día de la semana actual
+                        const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
                         const hoyT=todayStr();
                         tiAct.forEach(tr=>{
-                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)).forEach(d=>{
-                            mx+=10;
-                            const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
-                            if(p!==null) ob+=p;
+                          fechas.forEach(day=>{
+                            const ds=dStr(vYear,vMonth,day);
+                            actsActivas.filter(ac=>ac.dias.includes(dow)&&!isExc(tr.id,ac.id,ds)&&actsConRegistroIds.has(ac.id)).forEach(ac=>{
+                              mx+=10;
+                              const p=puntajeReg(getReg(ds,tr.id,ac.id),getRangoActivo(ac.id,ds));
+                              if(p!==null) ob+=p;
+                            });
                           });
                         });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
                         return mx>0
-                          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
-                          :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
+                          ?(
+                            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
+                              <span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):'#b2bec3'}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span>
+                              <span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):'#b2bec3'}}>{ob>0?ef+'%':'pend.'}</span>
+                            </div>
+                          )
+                          :<span style={{color:'#5a7a9a',fontSize:9}}>—</span>;
                       })()}
                     </td>
                   )))}
