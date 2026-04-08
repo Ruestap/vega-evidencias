@@ -1587,6 +1587,8 @@ function ChecklistApp() {
     // Determinar los días de la semana presentes en al menos una actividad activa. 0=domingo..6=sábado.
     const diasHabiles=[...new Set(actsActivas.flatMap(a=>a.dias))].sort((a,b)=>a-b);
     const semsVis=selWeek!==null?[semanasDelMes[selWeek]]:semanasDelMes;
+    // Calcular una vez la fecha de hoy en formato YYYY-MM-DD para comparar fechas (B8 fix)
+    const hoyReporte = todayStr();
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
@@ -1719,7 +1721,8 @@ function ChecklistApp() {
                                       return p!==null?[p]:[];
                                     });
                                     // Calcular denominador de puntos posibles (solo fechas válidas y con registro)
-                                    const hoy=_hoyDash;
+                                    // Usar la fecha de hoy calculada en este contexto (report)
+                                    const hoy=hoyReporte;
                                     const diasValidos=dsStrs.filter(ds=>ds<=hoy&&ac.dias.includes(getDow(ds)));
                                     const maxPos=actsConRegistroIds.has(ac.id)?diasValidos.length*10:0;
                                     const pct=(!todasExc&&puntajes.length>0&&maxPos>0)?Math.round((puntajes.reduce((x,y)=>x+y,0)/maxPos)*100):null;
