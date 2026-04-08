@@ -3108,6 +3108,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
             ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
         ══════════════════════════════════════════════════════════════ */}
+        
         <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
           <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
             <span style={{fontSize:14}}>⚙️</span>
@@ -4037,6 +4038,48 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     const tierMes = getTier(efMes);
     const periodoTexto = selWeek!==null ? semanasDelMes[selWeek]?.label : MESES[vMonth];
 
+    // --- Variables adicionales para la sección de ranking duplicada ---
+    // actsBase y calcEficienciaFiltrada se definen aquí para que la sección
+    // de ranking operativa pueda reutilizar la misma lógica que el dashboard.
+    // actsBase: actividades activas (todas las actividades)
+    const actsBase = acts.filter(a => a.activa);
+    // calcEficienciaFiltrada: acumula puntos obtenidos y máximos para un ID de tienda
+    const calcEficienciaFiltrada = (tId) => {
+      let obtenidos = 0, maximos = 0;
+      // Recorremos semanas y días del mes
+      semanasDelMes.forEach(s => {
+        s.days.forEach(day => {
+          const ds = dStr(vYear, vMonth, day);
+          // Ignorar días futuros
+          if(ds > todayStr()) return;
+          const dw = getDow(ds);
+          // Filtrar actividades por día de la semana y sin excepción
+          actsBase.filter(a => a.dias.includes(dw) && !isExc(tId, a.id, ds) && actsConRegistroIds.has(a.id)).forEach(a => {
+            maximos += 10;
+            const reg = getReg(ds, tId, a.id);
+            const p = puntajeReg(reg, getRangoActivo(a.id, ds));
+            if(p !== null) {
+              obtenidos += p;
+            }
+          });
+        });
+      });
+      if(maximos === 0) return null;
+      return { pct: Math.round((obtenidos / maximos) * 100), obtenidos, maximos };
+    };
+    // scoresMes: lista de puntuaciones para cada tienda activa
+    const scoresMes = tiAct.map(ti => {
+      const ef = calcEficienciaFiltrada(ti.id);
+      return { t: ti, score: ef?.pct ?? null, obtenidos: ef?.obtenidos ?? 0, maximos: ef?.maximos ?? 0 };
+    });
+
+    // ranking completo para el visor: ordenar tiendas por score mensual
+    // y obtener los 5 mejores y los 5 peores. Esta lógica replica la del dashboard
+    // pero utilizando las variables locales definidas arriba.
+    const sorted = [...scoresMes].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    const top5 = sorted.filter(s => s.score !== null).slice(0, 5);
+    const bot5 = [...sorted].reverse().filter(s => s.score !== null).slice(0, 5);
+
     return(
     <div style={{padding:"clamp(10px,3vw,18px)",maxWidth:860,margin:"0 auto",width:"100%",paddingBottom:24}}>
 
@@ -4666,9 +4709,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             );
           })}
         </div>
-          </div>
-        </div>
-
     </div>
     );
   };
