@@ -191,14 +191,55 @@ function getTierPts(p) {
 function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
 function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
+// Devuelve las semanas "ISO" de un mes, etiquetadas y con días hábiles.
+// Cada semana empieza en lunes y termina en domingo; solo se incluyen los días
+// laborales (L–V) dentro del mes. El label incluye el número de semana y el
+// rango de fechas (por ejemplo: S1 (1–3)).
 function getWeeksOfMonth(year, month) {
-  const weeks=[], last=new Date(year,month+1,0).getDate();
-  let wn=1,ws=1;
-  while(ws<=last){
-    const we=Math.min(ws+6,last), days=[];
-    for(let i=ws;i<=we;i++){const d=new Date(year,month,i).getDay();if(d>=1&&d<=5)days.push(i);}
-    if(days.length>0) weeks.push({num:wn,label:"S"+wn,start:ws,end:we,days});
-    wn++;ws+=7;
+  const weeks = [];
+  const lastDay = new Date(year, month + 1, 0).getDate();
+
+  // Día 1 del mes y su día de la semana (0=domingo, 1=lunes, ... 6=sábado)
+  const firstOfMonth = new Date(year, month, 1);
+  const dow = firstOfMonth.getDay();
+  // Desplazamiento hasta el lunes de la semana ISO que contiene el día 1
+  // Si es domingo (0), isoOffset = 6, si es lunes (1) isoOffset = 0, ...
+  const isoOffset = dow === 0 ? 6 : dow - 1;
+
+  // Día de inicio (lunes) de la primera semana del mes. Puede ser <= 0 si
+  // incluye días del mes anterior.
+  let weekStart = 1 - isoOffset;
+  let weekNum = 1;
+
+  while (weekStart <= lastDay) {
+    const days = [];
+    // Recorrer los 7 días naturales de la semana ISO (lunes a domingo)
+    for (let i = 0; i < 7; i++) {
+      const dayOfMonth = weekStart + i;
+      // Considerar sólo días válidos del mes actual
+      if (dayOfMonth >= 1 && dayOfMonth <= lastDay) {
+        const d = new Date(year, month, dayOfMonth);
+        const wd = d.getDay();
+        // Incluir sólo días laborales (lunes=1 a viernes=5)
+        if (wd >= 1 && wd <= 5) {
+          days.push(dayOfMonth);
+        }
+      }
+    }
+    if (days.length > 0) {
+      const startLabel = days[0];
+      const endLabel = days[days.length - 1];
+      weeks.push({
+        num: weekNum,
+        label: `S${weekNum} (${startLabel}–${endLabel})`,
+        start: startLabel,
+        end: endLabel,
+        days,
+      });
+      weekNum++;
+    }
+    // Avanzar al lunes de la siguiente semana
+    weekStart += 7;
   }
   return weeks;
 }
@@ -4683,27 +4724,70 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </div>
           </div>
           <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px"}}>
-            {/* Top 5 */}
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>TOP&nbsp;5&nbsp;TIENDAS</div>
-              {top5.length>0?top5.map(({t,score},idx)=>(
-                <div key={t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:10}}>
-                  <span style={{fontWeight:800,width:12,textAlign:"right"}}>{idx+1}.</span>
-                  <span style={{flex:1}}>{t.n}</span>
-                  <span style={{fontWeight:800,color:sc(score),minWidth:30,textAlign:"right"}}>{score}%</span>
+            {/* ranking top/bottom - visor */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10}}>
+              {[
+                {title:"🏅 Top 5",sub:"Mayor eficiencia de implementación",list:top5,icon:(i)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":i===3?"🏅":"⭐"},
+                {title:"⚠️ Bottom 5",sub:"Menor eficiencia — requieren atención",list:bot5,icon:()=>"🔴"},
+              ].map(panel=>(
+                <div key={panel.title} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:"12px"}}>
+                  <div style={{fontWeight:800,fontSize:11,color:"#1a2f4a"}}>{panel.title}</div>
+                  <div style={{fontSize:9,color:"#8aaabb",marginBottom:10}}>{panel.sub}</div>
+                  {panel.list.length>0 ? panel.list.map((s,i)=>{
+                    const det={obtenidos:s.obtenidos,maximos:s.maximos};
+                    return(
+                      <div key={s.t.id} style={{position:"relative",marginBottom:8}}
+                        onMouseEnter={e=>e.currentTarget.querySelector(".rank-tip").style.display="block"}
+                        onMouseLeave={e=>e.currentTarget.querySelector(".rank-tip").style.display="none"}
+                        onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".rank-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,cursor:"default"}}>
+                          <span style={{fontSize:12,width:16}}>{panel.icon(i)}</span>
+                          <div style={{flex:1,overflow:"hidden"}}>
+                            <div style={{fontSize:11,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>Vega {s.t.n}</div>
+                            <div style={{height:3,background:"#f0f4f8",borderRadius:2,marginTop:2,overflow:"hidden"}}>
+                              <div style={{width:(s.score||0)+"%",height:"100%",background:sc(s.score),borderRadius:2}}/>
+                            </div>
+                          </div>
+                          <div style={{textAlign:"right",minWidth:44}}>
+                            <div style={{fontSize:12,fontWeight:800,color:sc(s.score)}}>{s.score!==null?s.score+"%":"—"}</div>
+                            <div style={{fontSize:8,color:"#8aaabb"}}>{det.obtenidos}/{det.maximos}pts</div>
+                          </div>
+                        </div>
+                        {(()=>{
+                          const tevs=Object.values(regs).filter(r=>r.tiendaId===s.t.id && !r.anulado).flatMap(r=>r.evidencias||[]);
+                          const fOro   = tevs.filter(e=>toMin(e.hora)<=toMin("08:00")).length;
+                          const fPlata = tevs.filter(e=>toMin(e.hora)>toMin("08:00") && toMin(e.hora)<=toMin("09:00")).length;
+                          const fBronce= tevs.filter(e=>toMin(e.hora)>toMin("09:00") && toMin(e.hora)<=toMin("10:00")).length;
+                          const fFuera = tevs.filter(e=>toMin(e.hora)>toMin("10:00")).length;
+                          const tTotal = tevs.length || 1;
+                          return (
+                            <div className="rank-tip" style={{display:"none",position:"absolute",bottom:"calc(100% + 6px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,padding:"10px 12px",borderRadius:10,zIndex:30,lineHeight:1.6,boxShadow:"0 4px 16px rgba(0,0,0,.3)"}}>
+                              <div style={{fontWeight:800,marginBottom:4,fontSize:11}}>Vega {s.t.n} · {s.score!==null?s.score+"%":"—"}</div>
+                              <div style={{marginBottom:6,color:"#8aaabb"}}>{det.obtenidos}/{det.maximos} pts · {s.t.f}</div>
+                              <div style={{borderTop:"1px solid rgba(255,255,255,.15)",paddingTop:6,marginTop:2}}>
+                                <div style={{fontSize:9,color:"#8aaabb",marginBottom:4,fontWeight:700}}>DISTRIBUCIÓN DE HORARIO</div>
+                                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:4}}>
+                                  <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥇</span><span>ORO: {fOro} ({Math.round(fOro/tTotal*100)}%)</span></div>
+                                  <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥈</span><span>PLATA: {fPlata} ({Math.round(fPlata/tTotal*100)}%)</span></div>
+                                  <div style={{display:"flex",alignItems:"center",gap:4}}><span>🥉</span><span>BRONCE: {fBronce} ({Math.round(fBronce/tTotal*100)}%)</span></div>
+                                  <div style={{display:"flex",alignItems:"center",gap:4,color:fFuera>0?'#f17e7e':'inherit'}}><span>🔴</span><span>FUERA: {fFuera} ({Math.round(fFuera/tTotal*100)}%)</span></div>
+                                </div>
+                                <div style={{height:6,borderRadius:3,overflow:"hidden",display:"flex",marginTop:8}}>
+                                  {fOro>0 && <div style={{width:(fOro/tTotal*100)+'%',background:'#f6a623'}}/>}
+                                  {fPlata>0&& <div style={{width:(fPlata/tTotal*100)+'%',background:'#74b9ff'}}/>}
+                                  {fBronce>0&& <div style={{width:(fBronce/tTotal*100)+'%',background:'#a29bfe'}}/>}
+                                  {fFuera>0&& <div style={{width:(fFuera/tTotal*100)+'%',background:'#d63031'}}/>}
+                                </div>
+                              </div>
+                              <div style={{position:'absolute',bottom:-5,left:20,width:10,height:10,background:'#1a2f4a',transform:'rotate(45deg)',borderRadius:1}}/>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  }): <div style={{fontSize:10,color:"#8aaabb"}}>Sin datos suficientes</div>}
                 </div>
-              )):<div style={{fontSize:10,color:"#8aaabb"}}>Sin datos suficientes</div>}
-            </div>
-            {/* Bottom 5 */}
-            <div>
-              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>BOTTOM&nbsp;5&nbsp;TIENDAS</div>
-              {bot5.length>0?bot5.map(({t,score},idx)=>(
-                <div key={t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:10}}>
-                  <span style={{fontWeight:800,width:12,textAlign:"right"}}>{idx+1}.</span>
-                  <span style={{flex:1}}>{t.n}</span>
-                  <span style={{fontWeight:800,color:sc(score),minWidth:30,textAlign:"right"}}>{score}%</span>
-                </div>
-              )):<div style={{fontSize:10,color:"#8aaabb"}}>Sin datos suficientes</div>}
+              ))}
             </div>
           </div>
         </div>
