@@ -4576,7 +4576,102 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       </div>
 
 
-        {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
+      {/* ══ REGISTROS INGRESADOS POR HORARIO — viewer (agregados) ══ */}
+      {(() => {
+        // Agregados de registros por horario para el visor.
+        // Usamos los valores de viewerData (nOroV, nC2V, nFueraV, nSinRegV, totalContadoV, rangoMostrar)
+        // para calcular porcentajes y mostrar KPI similares a la vista de administrador.
+        const total = totalContadoV || 1;
+        const pctOro   = Math.round((nOroV || 0) / total * 100);
+        const pctPlata = Math.round((nC2V || 0) / total * 100);
+        const pctFuera = Math.round((nFueraV || 0) / total * 100);
+        const pctSin   = Math.round((nSinRegV || 0) / total * 100);
+        // Calcular cortes aproximados: rangoMostrar es el c100 más frecuente; sumamos 30 y 60 min para c80 y c60.
+        const [rh, rm] = (rangoMostrar || "08:30").split(":").map(Number);
+        const addMins = (mins) => {
+          const t = rh * 60 + rm + mins;
+          const hh = String(Math.floor(t / 60)).padStart(2, "0");
+          const mm = String(t % 60).padStart(2, "0");
+          return `${hh}:${mm}`;
+        };
+        const c2 = addMins(30);
+        const c3 = addMins(60);
+        // Etiquetas de período y actividad para el pie del card
+        const periodoText = selWeek !== null ? (semanasDelMes[selWeek]?.label || "") : `${MESES[vMonth]} ${vYear}`;
+        const actLabel = dashAct === "Todas" ? "Todas las actividades" : (acts.find(a => a.id === dashAct)?.n || "");
+        return (
+        <div style={{...S.card, padding:0, marginBottom:14, overflow:"hidden"}}>
+          <div style={{padding:"12px 16px", borderBottom:"1px solid #e2e8f0"}}>
+            <div style={{fontWeight:800, fontSize:13, color:"#1a2f4a", marginBottom:10}}>📊 REGISTROS INGRESADOS POR HORARIO</div>
+            {/* Navegación de meses */}
+            <div style={{display:"flex", gap:8, alignItems:"center", marginBottom:10}}>
+              <button onClick={() => navMes(-1)} style={{padding:"6px 12px", borderRadius:8, border:"1px solid #c8d8e8", background:"#fff", cursor:"pointer", fontWeight:700, fontSize:13}}>←</button>
+              <span style={{flex:1, textAlign:"center", fontWeight:800, fontSize:13, color:"#1a2f4a"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+              <button onClick={() => navMes(1)} style={{padding:"6px 12px", borderRadius:8, border:"1px solid #c8d8e8", background:"#fff", cursor:"pointer", fontWeight:700, fontSize:13}}>→</button>
+            </div>
+            {/* Navegación por semanas */}
+            <div style={{display:"flex", gap:5, marginBottom:10}}>
+              <button onClick={() => setSelWeek(null)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === null ? "#00b5b4" : "#e2e8f0"}`, background: selWeek === null ? "#e0fafa" : "#fff", color: selWeek === null ? "#00b5b4" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>Mes</button>
+              {semanasDelMes.map((s, i) => (
+                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>{s.label}</button>
+              ))}
+            </div>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
+              <div>
+                <div style={{fontSize:9, color:"#8aaabb", fontWeight:700, marginBottom:3}}>ACTIVIDAD</div>
+                <select value={dashAct} onChange={e => setDashAct(e.target.value)} style={{width:"100%", padding:"7px 10px", borderRadius:8, border:"1px solid #c8d8e8", background:"#f8fafc", color:"#1a2f4a", fontSize:12, outline:"none"}}>
+                  <option value="Todas">Todas las actividades</option>
+                  {acts.filter(a => a.activa).map(a => <option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9, color:"#8aaabb", fontWeight:700, marginBottom:3}}>FORMATO</div>
+                <select value={dashFmt} onChange={e => setDashFmt(e.target.value)} style={{width:"100%", padding:"7px 10px", borderRadius:8, border:"1px solid #c8d8e8", background:"#f8fafc", color:"#1a2f4a", fontSize:12, outline:"none"}}>
+                  <option value="Todas">Todos los formatos</option>
+                  {[
+                    "Mayorista",
+                    "Supermayorista",
+                    "Market"
+                  ].map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style={{padding:"14px 16px"}}>
+            {/* Cuatro KPIs */}
+            <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:12}}>
+              {[
+                {pct:pctOro,   lbl:"Registros en ORO",  sub:`antes de ${rangoMostrar}`,   barC:"#00b894", c:"#f6a623"},
+                {pct:pctPlata, lbl:"Tardíos rescatados", sub:`${rangoMostrar} a ${c2}`, barC:"#74b9ff", c:"#0984e3"},
+                {pct:pctFuera, lbl:"Fuera de rango",     sub:`${c2} a ${c3}`,           barC:"#d63031", c:"#d63031"},
+                {pct:pctSin,   lbl:"Sin registrar",      sub:"dentro del rango",       barC:"#b2bec3", c:"#b2bec3"},
+              ].map((k, i) => (
+                <div key={i} style={{border:"1px solid #e2e8f0", borderRadius:12, padding:"14px 12px", background:"#fff"}}>
+                  <div style={{fontSize:30, fontWeight:800, color:k.c, lineHeight:1}}>{k.pct}%</div>
+                  <div style={{fontSize:11, color:"#5a7a9a", marginTop:4, fontWeight:600}}>{k.lbl}</div>
+                  <div style={{fontSize:10, color:"#8aaabb", marginTop:2}}>{k.sub}</div>
+                  <div style={{height:4, borderRadius:2, background:"#f0f4f8", marginTop:8}}>
+                    <div style={{height:"100%", width: k.pct + "%", background:k.barC, borderRadius:2, transition:"width .4s"}} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Barra apilada global */}
+            <div style={{height:10, borderRadius:5, overflow:"hidden", display:"flex", marginBottom:14}}>
+              {nOroV>0   && <div style={{width:(nOroV/total*100) + "%", background:"#00b894"}} />}
+              {nC2V>0   && <div style={{width:(nC2V/total*100) + "%", background:"#74b9ff"}} />}
+              {nFueraV>0 && <div style={{width:(nFueraV/total*100) + "%", background:"#d63031"}} />}
+              {nSinRegV>0&& <div style={{flex:1, background:"#e2e8f0"}} />}
+            </div>
+            <div style={{fontSize:9, color:"#b2bec3", marginTop:4, textAlign:"right"}}>
+              {periodoText}{dashAct !== "Todas" ? ` · ${actLabel}` : ""} · excluye N/A
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
             ¿Cómo avanzamos? — ranking simplificado para visor
         ══════════════════════════════════════════════════════════════ */}
         <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
