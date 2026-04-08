@@ -3108,6 +3108,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
             ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
         ══════════════════════════════════════════════════════════════ */}
+        
         <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
           <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
             <span style={{fontSize:14}}>⚙️</span>
@@ -4037,6 +4038,48 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     const tierMes = getTier(efMes);
     const periodoTexto = selWeek!==null ? semanasDelMes[selWeek]?.label : MESES[vMonth];
 
+    // --- Variables adicionales para la sección de ranking duplicada ---
+    // actsBase y calcEficienciaFiltrada se definen aquí para que la sección
+    // de ranking operativa pueda reutilizar la misma lógica que el dashboard.
+    // actsBase: actividades activas (todas las actividades)
+    const actsBase = acts.filter(a => a.activa);
+    // calcEficienciaFiltrada: acumula puntos obtenidos y máximos para un ID de tienda
+    const calcEficienciaFiltrada = (tId) => {
+      let obtenidos = 0, maximos = 0;
+      // Recorremos semanas y días del mes
+      semanasDelMes.forEach(s => {
+        s.days.forEach(day => {
+          const ds = dStr(vYear, vMonth, day);
+          // Ignorar días futuros
+          if(ds > todayStr()) return;
+          const dw = getDow(ds);
+          // Filtrar actividades por día de la semana y sin excepción
+          actsBase.filter(a => a.dias.includes(dw) && !isExc(tId, a.id, ds) && actsConRegistroIds.has(a.id)).forEach(a => {
+            maximos += 10;
+            const reg = getReg(ds, tId, a.id);
+            const p = puntajeReg(reg, getRangoActivo(a.id, ds));
+            if(p !== null) {
+              obtenidos += p;
+            }
+          });
+        });
+      });
+      if(maximos === 0) return null;
+      return { pct: Math.round((obtenidos / maximos) * 100), obtenidos, maximos };
+    };
+    // scoresMes: lista de puntuaciones para cada tienda activa
+    const scoresMes = tiAct.map(ti => {
+      const ef = calcEficienciaFiltrada(ti.id);
+      return { t: ti, score: ef?.pct ?? null, obtenidos: ef?.obtenidos ?? 0, maximos: ef?.maximos ?? 0 };
+    });
+
+    // ranking completo para el visor: ordenar tiendas por score mensual
+    // y obtener los 5 mejores y los 5 peores. Esta lógica replica la del dashboard
+    // pero utilizando las variables locales definidas arriba.
+    const sorted = [...scoresMes].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    const top5 = sorted.filter(s => s.score !== null).slice(0, 5);
+    const bot5 = [...sorted].reverse().filter(s => s.score !== null).slice(0, 5);
+
     return(
     <div style={{padding:"clamp(10px,3vw,18px)",maxWidth:860,margin:"0 auto",width:"100%",paddingBottom:24}}>
 
@@ -4534,7 +4577,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 
         {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
-            ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
+            ¿Cómo avanzamos? — ranking simplificado para visor
         ══════════════════════════════════════════════════════════════ */}
         <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
           <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
@@ -4545,131 +4588,32 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             </div>
           </div>
           <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px"}}>
-
-        {/* por formato */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
-          {["Mayorista","Supermayorista","Market"].map(fmt=>{
-            const fc=FMT[fmt];
-            const fts=tiAct.filter(ti=>ti.f===fmt);
-            // solo las evaluables (sin excepción en todas las actividades)
-            const ftsEval=fts.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
-            // eficiencia acumulada del formato: sum(obtenidos) / sum(maximos)
-            let fmtOb=0, fmtMx=0;
-            ftsEval.forEach(ti=>{ const ef=calcEficienciaFiltrada(ti.id); if(ef){fmtOb+=ef.obtenidos;fmtMx+=ef.maximos;} });
-            const prom=fmtMx>0?Math.round((fmtOb/fmtMx)*100):null;
-            const tier=getTier(prom);
-            const excCount=fts.length-ftsEval.length;
-            return(
-              <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
-                onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
-                onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
-                onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".fmt-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}>
-                <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
-                <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.7}}>
-                  <span style={{color:"#5a7a9a",fontWeight:700}}>{fts.length} tiendas</span>
-                  {ftsEval.length<fts.length&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{fts.length-ftsEval.length} excluidas N/A</span>}
-                  {ftsEval.length===fts.length&&<span style={{color:"#00b894",fontWeight:700}}> · todas activas</span>}
+            {/* Top 5 */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>TOP&nbsp;5&nbsp;TIENDAS</div>
+              {top5.length>0?top5.map(({t,score},idx)=>(
+                <div key={t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:10}}>
+                  <span style={{fontWeight:800,width:12,textAlign:"right"}}>{idx+1}.</span>
+                  <span style={{flex:1}}>{t.n}</span>
+                  <span style={{fontWeight:800,color:sc(score),minWidth:30,textAlign:"right"}}>{score}%</span>
                 </div>
-                <div style={{fontWeight:800,fontSize:26,color:sc(prom),marginTop:8,lineHeight:1}}>{prom!==null?prom+"%":"—"}</div>
-                <div style={{fontSize:9,color:"#b2bec3",marginTop:2}}>{fmtOb}/{fmtMx} pts · eficiencia período</div>
-                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{...S.pill(tier.c,tier.bg),fontSize:10}}>{tier.icon} {tier.label}</span>
-                  {(()=>{
-                    const nFmtExc=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score>=95).length;
-                    const nFmtRie=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score<60).length;
-                    return<span style={{fontSize:9,color:"#8aaabb",marginLeft:"auto"}}>{nFmtExc>0?`🥇 ${nFmtExc}`:""}{nFmtRie>0?` ⚠️ ${nFmtRie}`:""}</span>;
-                  })()}
+              )):<div style={{fontSize:10,color:"#8aaabb"}}>Sin datos suficientes</div>}
+            </div>
+            {/* Bottom 5 */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:4}}>BOTTOM&nbsp;5&nbsp;TIENDAS</div>
+              {bot5.length>0?bot5.map(({t,score},idx)=>(
+                <div key={t.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:10}}>
+                  <span style={{fontWeight:800,width:12,textAlign:"right"}}>{idx+1}.</span>
+                  <span style={{flex:1}}>{t.n}</span>
+                  <span style={{fontWeight:800,color:sc(score),minWidth:30,textAlign:"right"}}>{score}%</span>
                 </div>
-                <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
-                  <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
-                </div>
-                {/* Sparkline tendencia semanal S1→S2→S3 */}
-                {(()=>{
-                  const semPts=semanasDelMes.map(s=>{
-                    let ob=0,mx=0;
-                    ftsEval.forEach(ti=>{
-                      s.days.forEach(d=>{
-                        const ds=dStr(vYear,vMonth,d);
-                        if(ds>todayStr()) return;
-                        const dw=getDow(ds);
-                        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                          mx+=10;
-                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-                          if(p!==null) ob+=p;
-                        });
-                      });
-                    });
-                    return mx>0?Math.round((ob/mx)*100):null;
-                  }).filter(v=>v!==null);
-                  if(semPts.length<2) return null;
-                  const maxV=Math.max(...semPts,1);
-                  const minV=Math.min(...semPts);
-                  const range=maxV-minV||1;
-                  const w=60,h=24,pts=semPts.length;
-                  const coords=semPts.map((v,i)=>`${Math.round((i/(pts-1))*w)},${Math.round(h-((v-minV)/range)*(h-4)-2)}`).join(" ");
-                  const lastDelta=semPts.length>=2?semPts[semPts.length-1]-semPts[semPts.length-2]:0;
-                  const trendColor=lastDelta>0?"#0F6E56":lastDelta<0?"#A32D2D":"#888780";
-                  return(
-                  <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
-                    <svg width={w} height={h} style={{flexShrink:0}}>
-                      <polyline points={coords} fill="none" stroke={trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      {semPts.map((v,i)=>{
-                        const cx=Math.round((i/(pts-1))*w);
-                        const cy=Math.round(h-((v-minV)/range)*(h-4)-2);
-                        return <circle key={i} cx={cx} cy={cy} r="2" fill={trendColor}/>;
-                      })}
-                    </svg>
-                    <div style={{fontSize:9,color:trendColor,fontWeight:700}}>
-                      {semPts.map((v,i)=>`S${i+1}: ${v}%`).join(" → ")}
-                    </div>
-                  </div>
-                  );
-                })()}
-                <div className="fmt-tip" style={{display:"none",position:"absolute",top:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"12px 14px",borderRadius:10,zIndex:50,lineHeight:1.7,boxShadow:"0 8px 28px rgba(0,0,0,.35)"}}>
-                  <div style={{fontWeight:800,marginBottom:4,fontSize:12,color:sc(prom||0)}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
-                  {prom!==null&&<div style={{color:"rgba(255,255,255,.8)"}}>{fmtOb} pts obtenidos de {fmtMx} posibles</div>}
-                  <div style={{color:"rgba(255,255,255,.7)"}}>{ftsEval.length} de {fts.length} tiendas evaluables{fts.length-ftsEval.length>0?` · ${fts.length-ftsEval.length} excluidas N/A`:""}</div>
-                  {/* Desglose por actividad para este formato */}
-                  {(()=>{
-                    const actRows=actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
-                      let aOb=0,aMx=0;
-                      ftsEval.forEach(ti=>{
-                        semanasDelMes.forEach(s=>s.days.forEach(d=>{
-                          const ds=dStr(vYear,vMonth,d);
-                          if(ds>todayStr()||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
-                          aMx+=10;
-                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
-                          if(p!==null) aOb+=p;
-                        }));
-                      });
-                      return aMx>0?{a,ob:aOb,mx:aMx,pct:Math.round((aOb/aMx)*100)}:null;
-                    }).filter(Boolean);
-                    if(!actRows.length) return null;
-                    return(
-                      <div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(255,255,255,.15)"}}>
-                        <div style={{fontSize:9,color:"rgba(255,255,255,.5)",fontWeight:700,letterSpacing:".04em",marginBottom:4}}>DESGLOSE POR ACTIVIDAD</div>
-                        {actRows.map(({a,ob,mx,pct})=>(
-                          <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                            <span style={{fontSize:10}}>{a.e}</span>
-                            <span style={{fontSize:9,flex:1,color:"rgba(255,255,255,.75)"}}>{a.n}</span>
-                            <span style={{fontSize:9,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
-                            <span style={{fontSize:10,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right"}}>{pct}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                  <div style={{marginTop:6,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,color:"rgba(255,255,255,.4)"}}>Los N/A por día ya están descontados del denominador</div>
-                  <div style={{position:"absolute",top:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              )):<div style={{fontSize:10,color:"#8aaabb"}}>Sin datos suficientes</div>}
+            </div>
           </div>
         </div>
 
-    </div>
+      </div>
     );
   };
 
