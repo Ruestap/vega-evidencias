@@ -2819,165 +2819,286 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           </div>
         </div>{/* fin TÁCTICO */}
 
-        {/* ══ REGISTROS POR FRANJA HORARIA — tiendas únicas, período visible ══
-            Respeta selWeek (semana o mes) + dashAct (actividad) + dashFmt (formato)
-            Unidad: tienda que registró al menos UNA vez en esa franja en el período.
+        {/* ══ REGISTROS INGRESADOS POR HORARIO
+            TOP 3 dinámico: cambia con filtros semana/actividad/formato
+            Muestra hora del mejor registro en cada tarjeta del podio
         ══*/}
         {(()=>{
-          const semsVis2 = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
           const hoyF = todayStr();
-          // Período label para el encabezado
-          const periodoFH = selWeek!==null
-            ? semanasDelMes[selWeek]?.label
-            : `${MESES[vMonth]} ${vYear}`;
-          // Actividad label
-          const actFHLabel = dashAct==="Todas"
-            ? "todas las actividades"
-            : acts.find(a=>a.id===dashAct)?.n||"";
+          const semsVis2 = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
+          const actsH2 = dashAct==="Todas"
+            ? acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id))
+            : acts.filter(a=>a.activa&&a.id===dashAct&&actsConRegistroIds.has(a.id));
+          const tsFH = dashFmt==="Todas" ? tiAct : tiAct.filter(ti=>ti.f===dashFmt);
+          if(actsH2.length===0||tsFH.length===0) return null;
 
-          // Para cada tienda evaluable, determinar su MEJOR franja del período
-          // (si en algún día del período llegó en ORO, se cuenta como ORO)
-          // Mapa: tiendaId → mejor puntaje en el período
-          const mejorPorTienda = new Map();
-          const totalDispFH = new Set(); // tiendas con al menos 1 día evaluable
-          const conRegistroFH = new Set(); // tiendas que registraron algo
+          const _dsRef = semsVis2.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d))).find(d=>d<=hoyF)||hoyF;
+          const AR0 = actsH2[0] ? getRangoActivo(actsH2[0].id, _dsRef) : {c100:"08:30",c80:"09:30",c60:"10:30"};
 
-          tsBase.forEach(ti=>{
+          let gTotal=0,gDisp=0,gOro=0,gPlata=0,gBronce=0,gFuera=0,gPend=0,gExc=0;
+          let oroMin="99:99",oroMax="00:00",plataMin="99:99",plataMax="00:00";
+          let bronceMin="99:99",bronceMax="00:00",fueraMin="99:99",fueraMax="00:00";
+
+          // tiendaScore tracks per-tienda medal counts + best (earliest) registered hour
+          const tiendaScore = new Map();
+
+          const fmtRows = ["Mayorista","Supermayorista","Market"].map(fmt=>{
+            const tsFmt = tsFH.filter(ti=>ti.f===fmt);
+            if(tsFmt.length===0) return null;
+            let fTotal=0,fDisp=0,fOro=0,fPlata=0,fBronce=0,fFuera=0,fPend=0,fExc=0;
+            let fOroMin="99:99",fOroMax="00:00",fPlataMin="99:99",fPlataMax="00:00";
             semsVis2.forEach(s=>{
               s.days.forEach(day=>{
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyF) return;
                 const dw=getDow(ds);
-                actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                  totalDispFH.add(ti.id);
-                  const reg=getReg(ds,ti.id,a.id);
-                  if(!reg?.evidencias?.length||reg.anulado) return;
-                  conRegistroFH.add(ti.id);
-                  const AR=getRangoActivo(a.id,ds);
-                  const h=primerEnvio(reg.evidencias);
-                  const m=toMin(h);
-                  const franjaVal = m<=toMin(AR.c100)?10 : m<=toMin(AR.c80)?8 : m<=toMin(AR.c60)?6 : 0;
-                  const prev=mejorPorTienda.get(ti.id)??-1;
-                  if(franjaVal>prev) mejorPorTienda.set(ti.id,franjaVal);
-                });
-              });
-            });
-          });
-
-          const nDisp = totalDispFH.size||1;
-          const nConReg = conRegistroFH.size;
-          const nOroT   = [...mejorPorTienda.values()].filter(v=>v===10).length;
-          const nPlataT = [...mejorPorTienda.values()].filter(v=>v===8).length;
-          const nBronT  = [...mejorPorTienda.values()].filter(v=>v===6).length;
-          const nFueraT = [...mejorPorTienda.values()].filter(v=>v===0).length;
-          const nSinRegT = totalDispFH.size - conRegistroFH.size;
-
-          if(totalDispFH.size===0) return null;
-
-          // Por formato: mismo cálculo
-          const fmtFH=["Mayorista","Supermayorista","Market"].map(fmt=>{
-            const tsFmt=tsBase.filter(ti=>ti.f===fmt);
-            const fmtDisp=new Set(), fmtReg=new Set();
-            const fmtMejor=new Map();
-            tsFmt.forEach(ti=>{
-              semsVis2.forEach(s=>{
-                s.days.forEach(day=>{
-                  const ds=dStr(vYear,vMonth,day);
-                  if(ds>hoyF) return;
-                  const dw=getDow(ds);
-                  actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
-                    fmtDisp.add(ti.id);
+                actsH2.filter(a=>a.dias.includes(dw)).forEach(a=>{
+                  tsFmt.forEach(ti=>{
+                    fTotal++;
+                    const sc0=tiendaScore.get(ti.id)||{oro:0,plata:0,bronce:0,fuera:0,pend:0,nombre:ti.n,fmt:ti.f,mejorHora:null};
+                    if(isExc(ti.id,a.id,ds)){fExc++;tiendaScore.set(ti.id,sc0);return;}
+                    fDisp++;
                     const reg=getReg(ds,ti.id,a.id);
-                    if(!reg?.evidencias?.length||reg.anulado) return;
-                    fmtReg.add(ti.id);
+                    if(!reg?.evidencias?.length||reg.anulado){fPend++;sc0.pend++;tiendaScore.set(ti.id,sc0);return;}
                     const AR=getRangoActivo(a.id,ds);
-                    const m=toMin(primerEnvio(reg.evidencias));
-                    const fv=m<=toMin(AR.c100)?10:m<=toMin(AR.c80)?8:m<=toMin(AR.c60)?6:0;
-                    if(fv>(fmtMejor.get(ti.id)??-1)) fmtMejor.set(ti.id,fv);
+                    const h=primerEnvio(reg.evidencias);
+                    const m=toMin(h);
+                    if(m<=toMin(AR.c100)){
+                      fOro++;sc0.oro++;
+                      if(!sc0.mejorHora||h<sc0.mejorHora)sc0.mejorHora=h;
+                      if(h<fOroMin)fOroMin=h;if(h>fOroMax)fOroMax=h;
+                      if(h<oroMin)oroMin=h;if(h>oroMax)oroMax=h;
+                    } else if(m<=toMin(AR.c80)){
+                      fPlata++;sc0.plata++;
+                      if(!sc0.mejorHora||h<sc0.mejorHora)sc0.mejorHora=h;
+                      if(h<fPlataMin)fPlataMin=h;if(h>fPlataMax)fPlataMax=h;
+                      if(h<plataMin)plataMin=h;if(h>plataMax)plataMax=h;
+                    } else if(m<=toMin(AR.c60)){
+                      fBronce++;sc0.bronce++;
+                      if(!sc0.mejorHora||h<sc0.mejorHora)sc0.mejorHora=h;
+                      if(h<bronceMin)bronceMin=h;if(h>bronceMax)bronceMax=h;
+                    } else {
+                      fFuera++;sc0.fuera++;
+                      if(h<fueraMin)fueraMin=h;if(h>fueraMax)fueraMax=h;
+                    }
+                    tiendaScore.set(ti.id,sc0);
                   });
                 });
               });
             });
-            const nd=fmtDisp.size, nr=fmtReg.size;
-            const fo=[...fmtMejor.values()].filter(v=>v===10).length;
-            const fp=[...fmtMejor.values()].filter(v=>v===8).length;
-            const fb=[...fmtMejor.values()].filter(v=>v===6).length;
-            const ff=[...fmtMejor.values()].filter(v=>v===0).length;
-            const fNR=nd-nr;
-            const fcfg=FMT[fmt];
-            const fmtIcon=fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒";
-            return {fmt,fmtIcon,fcfg,nd,nr,fo,fp,fb,ff,fNR};
-          }).filter(f=>f.nd>0);
+            gTotal+=fTotal;gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gBronce+=fBronce;gFuera+=fFuera;gPend+=fPend;gExc+=fExc;
+            return {fmt,nd:fTotal,fDisp,fOro,fPlata,fBronce,fFuera,fPend,fExc,
+              fOroMin,fOroMax,fPlataMin,fPlataMax,
+              fc:FMT[fmt],icon:fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"};
+          }).filter(Boolean).filter(r=>r.fDisp>0);
 
-          const franjasFH=[
-            {l:"ORO",   icon:"🥇",c:"#f6a623",bg:"#fff8ec",n:nOroT,   lbl:"Registros en ORO",   sub:"antes del corte 1"},
-            {l:"PLATA", icon:"🥈",c:"#185FA5",bg:"#e8f4fd",n:nPlataT, lbl:"Tardíos rescatados",  sub:"entre corte 1 y 2"},
-            {l:"FUERA", icon:"🔴",c:"#dc2626",bg:"#fff1f2",n:nFueraT, lbl:"Fuera de rango",      sub:"después del corte 2"},
-            {l:"S/R",   icon:"⬜",c:"#6b7280",bg:"#f4f6f8",n:nSinRegT,lbl:"Sin registrar",       sub:"no enviaron evidencia"},
-          ];
-          const totalFHbar=nConReg+nSinRegT||1;
+          if(gDisp===0) return null;
+
+          // TOP 3: puntaje = oro*3 + plata*2 + bronce*1
+          // desempate: más OROs → más PLATA → mejor hora (más temprana)
+          const ranking = [...tiendaScore.entries()]
+            .map(([id,s])=>({id,nombre:s.nombre,fmt:s.fmt,
+              pts:s.oro*3+s.plata*2+s.bronce,
+              oro:s.oro,plata:s.plata,bronce:s.bronce,fuera:s.fuera,
+              mejorHora:s.mejorHora}))
+            .filter(r=>r.pts>0)
+            .sort((a,b)=>
+              b.pts!==a.pts?b.pts-a.pts:
+              b.oro!==a.oro?b.oro-a.oro:
+              b.plata!==a.plata?b.plata-a.plata:
+              (a.mejorHora&&b.mejorHora?(a.mejorHora<b.mejorHora?-1:1):0))
+            .slice(0,3);
+
+          const pctOro=Math.round(gOro/gDisp*100);
+          const pctPlata=Math.round(gPlata/gDisp*100);
+          const pctFuera=Math.round(gFuera/gDisp*100);
+          const pctSinReg=Math.round(gPend/gDisp*100);
+          const podiumIcons=["🥇","🥈","🥉"];
+          const podiumBg=["#fff8ec","#f0f4f8","#fff1ee"];
+          const podiumBorder=["#f6a623","#8aaabb","#e17055"];
+          const periodoLabel=selWeek!==null?semanasDelMes[selWeek]?.label:`${MESES[vMonth]} ${vYear}`;
+          const actLabel=dashAct==="Todas"?"Todas las actividades":acts.find(a=>a.id===dashAct)?.n||"";
 
           return(
-          <div style={{borderRadius:12,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0"}}>
-            <div style={{background:"#0d4f6e",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:14}}>🏪</span>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>REGISTROS POR FRANJA · {periodoFH.toUpperCase()}</div>
-                <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1}}>Tiendas únicas — {actFHLabel} · mejor franja registrada en el período</div>
+          <div style={{...S.card,padding:0,marginBottom:14,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:"1px solid #e2e8f0"}}>
+              <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:10}}>📊 REGISTROS INGRESADOS POR HORARIO</div>
+              {/* Nav MES */}
+              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+                <button onClick={()=>navMes(-1)} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>←</button>
+                <span style={{flex:1,textAlign:"center",fontWeight:800,fontSize:13,color:"#1a2f4a"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+                <button onClick={()=>navMes(1)} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>→</button>
               </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:18,fontWeight:800,color:nDisp>0?sc(Math.round(nConReg/nDisp*100)):"#888"}}>{nConReg}<span style={{fontSize:10,color:"rgba(255,255,255,.5)",fontWeight:400}}>/{nDisp}</span></div>
-                <div style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>tiendas registradas</div>
+              {/* Semanas */}
+              <div style={{display:"flex",gap:5,marginBottom:10}}>
+                <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
+                {semanasDelMes.map((s,i)=>(
+                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>{s.label}</button>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
+                  <select value={dashAct} onChange={e=>setDashAct(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
+                    <option value="Todas">Todas las actividades</option>
+                    {acts.filter(a=>a.activa).map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>FORMATO</div>
+                  <select value={dashFmt} onChange={e=>setDashFmt(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
+                    <option value="Todas">Todos los formatos</option>
+                    {["Mayorista","Supermayorista","Market"].map(f=><option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
-            <div style={{background:"#fff",padding:"12px 14px"}}>
-              {/* KPI cards */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:10}}>
-                {franjasFH.map(f=>(
-                  <div key={f.l} style={{background:f.bg,borderRadius:10,padding:"10px 10px",textAlign:"center",border:`1px solid ${f.c}22`}}>
-                    <div style={{fontSize:16,marginBottom:2}}>{f.icon}</div>
-                    <div style={{fontSize:22,fontWeight:800,color:f.c,lineHeight:1}}>{nDisp>0?Math.round(f.n/nDisp*100)+"%":"—"}</div>
-                    <div style={{fontSize:9,fontWeight:700,color:f.c,marginTop:3}}>{f.lbl}</div>
-                    <div style={{fontSize:8,color:f.c,opacity:.7,marginTop:1}}>{f.sub}</div>
-                    <div style={{fontSize:10,color:f.c,fontWeight:700,marginTop:4}}>{f.n} tiendas</div>
+
+            <div style={{padding:"14px 16px"}}>
+              {/* 4 KPIs */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:12}}>
+                {[
+                  {pct:pctOro,   lbl:"Registros en ORO",  sub:`antes de ${AR0.c100}`,barC:"#00b894",c:"#f6a623"},
+                  {pct:pctPlata, lbl:"Tardíos rescatados", sub:`${AR0.c100} a ${AR0.c80}`,barC:"#74b9ff",c:"#0984e3"},
+                  {pct:pctFuera, lbl:"Fuera de rango",     sub:`${AR0.c60} a más`,   barC:"#d63031",c:"#d63031"},
+                  {pct:pctSinReg,lbl:"Sin registrar",      sub:"dentro del rango",   barC:"#b2bec3",c:"#b2bec3"},
+                ].map((k,i)=>(
+                  <div key={i} style={{border:"1px solid #e2e8f0",borderRadius:12,padding:"14px 12px",background:"#fff"}}>
+                    <div style={{fontSize:30,fontWeight:800,color:k.c,lineHeight:1}}>{k.pct}%</div>
+                    <div style={{fontSize:11,color:"#5a7a9a",marginTop:4,fontWeight:600}}>{k.lbl}</div>
+                    <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{k.sub}</div>
+                    <div style={{height:4,borderRadius:2,background:"#f0f4f8",marginTop:8}}>
+                      <div style={{height:"100%",width:k.pct+"%",background:k.barC,borderRadius:2,transition:"width .4s"}}/>
+                    </div>
                   </div>
                 ))}
               </div>
-              {/* Barra apilada global */}
-              <div style={{height:14,borderRadius:7,overflow:"hidden",display:"flex",marginBottom:10}}>
-                {nOroT>0&&<div style={{width:(nOroT/nDisp*100)+"%",background:"#f6a623",transition:"width .4s"}}/>}
-                {nPlataT>0&&<div style={{width:(nPlataT/nDisp*100)+"%",background:"#185FA5",transition:"width .4s"}}/>}
-                {nBronT>0&&<div style={{width:(nBronT/nDisp*100)+"%",background:"#a29bfe",transition:"width .4s"}}/>}
-                {nFueraT>0&&<div style={{width:(nFueraT/nDisp*100)+"%",background:"#dc2626",transition:"width .4s"}}/>}
-                {nSinRegT>0&&<div style={{flex:1,background:"#e2e8f0",transition:"width .4s"}}/>}
+
+              {/* Barra apilada */}
+              <div style={{height:10,borderRadius:5,overflow:"hidden",display:"flex",marginBottom:14}}>
+                {gOro>0&&<div style={{width:(gOro/gDisp*100)+"%",background:"#00b894"}}/>}
+                {gPlata>0&&<div style={{width:(gPlata/gDisp*100)+"%",background:"#74b9ff"}}/>}
+                {gBronce>0&&<div style={{width:(gBronce/gDisp*100)+"%",background:"#a29bfe"}}/>}
+                {gFuera>0&&<div style={{width:(gFuera/gDisp*100)+"%",background:"#d63031"}}/>}
+                {gPend>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
               </div>
-              {/* Por formato */}
-              {fmtFH.map(({fmt,fmtIcon,fcfg,nd,nr,fo,fp,fb,ff,fNR})=>(
-                <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#f8fafc",borderRadius:9,marginBottom:6,border:`1px solid ${fcfg.c}22`}}>
-                  <span style={{fontSize:14,flexShrink:0}}>{fmtIcon}</span>
-                  <div style={{minWidth:90,flexShrink:0}}>
-                    <div style={{fontSize:11,fontWeight:700,color:fcfg.c}}>{fmt}</div>
-                    <div style={{fontSize:9,color:"#8aaabb"}}>{nd} total · {nr} disp.</div>
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{height:8,borderRadius:4,overflow:"hidden",display:"flex"}}>
-                      {fo>0&&<div style={{width:(fo/nd*100)+"%",background:"#f6a623"}}/>}
-                      {fp>0&&<div style={{width:(fp/nd*100)+"%",background:"#185FA5"}}/>}
-                      {fb>0&&<div style={{width:(fb/nd*100)+"%",background:"#a29bfe"}}/>}
-                      {ff>0&&<div style={{width:(ff/nd*100)+"%",background:"#dc2626"}}/>}
-                      {fNR>0&&<div style={{flex:1,background:"#e2e8f0"}}/>}
+
+              {/* 🏆 TOP 3 tiendas — dinámico por filtros */}
+              {ranking.length>0&&(
+              <div style={{marginBottom:14,padding:"12px 14px",background:"linear-gradient(135deg,#fffbf0,#fff8ec)",borderRadius:12,border:"1px solid #f6a62333"}}>
+                <div style={{fontWeight:800,fontSize:11,color:"#854F0B",letterSpacing:".06em",marginBottom:4}}>🏆 TOP TIENDAS · MEJOR PROMEDIO ACUMULADO</div>
+                <div style={{fontSize:9,color:"#b2bec3",marginBottom:10}}>{periodoLabel}{dashAct!=="Todas"?` · ${actLabel}`:""}</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {ranking.map((r,i)=>(
+                    <div key={r.id} style={{flex:"1 1 140px",background:podiumBg[i],borderRadius:10,padding:"10px 12px",border:`1.5px solid ${podiumBorder[i]}`}}>
+                      <div style={{fontSize:22,marginBottom:2}}>{podiumIcons[i]}</div>
+                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:1}}>Vega {r.nombre}</div>
+                      <div style={{fontSize:9,color:"#8aaabb",marginBottom:r.mejorHora?4:6}}>{r.fmt}</div>
+                      {r.mejorHora&&(
+                        <div style={{fontSize:12,fontWeight:800,color:podiumBorder[i],marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:10}}>⏱</span>{r.mejorHora}
+                          <span style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginLeft:2}}>mejor reg.</span>
+                        </div>
+                      )}
+                      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                        {r.oro>0&&<span style={{fontSize:9,fontWeight:700,color:"#854F0B",background:"#fff8ec",padding:"1px 6px",borderRadius:8,border:"1px solid #f6a62344"}}>🥇 {r.oro}</span>}
+                        {r.plata>0&&<span style={{fontSize:9,fontWeight:700,color:"#185FA5",background:"#e8f4fd",padding:"1px 6px",borderRadius:8}}>🥈 {r.plata}</span>}
+                        {r.bronce>0&&<span style={{fontSize:9,fontWeight:700,color:"#534AB7",background:"#f0edff",padding:"1px 6px",borderRadius:8}}>🥉 {r.bronce}</span>}
+                        {r.fuera>0&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:8}}>🔴 {r.fuera}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:8,color:"#b2bec3",marginTop:6}}>Puntaje: 🥇×3 + 🥈×2 + 🥉×1 · desempate por hora más temprana</div>
+              </div>
+              )}
+
+              {/* CORTE 1 — ORO */}
+              {gOro>0&&(
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#BA7517",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#BA7517",display:"inline-block"}}/>
+                  CORTE 1 · hasta las {AR0.c100} · ORO
+                </div>
+                {fmtRows.filter(r=>r.fOro>0).map(({fmt,icon,fc,nd,fDisp,fOro,fPend,fExc,fOroMin,fOroMax})=>(
+                  <div key={fmt+"oro"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
+                      <span style={{fontSize:11,color:"#8aaabb",fontWeight:700}}>{nd} total · {fDisp} disp.</span>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0F6E56",background:"#E1F5EE",whiteSpace:"nowrap"}}>✅ {String(fOro).padStart(2,"0")} reg.</span>
+                      {fOroMin!=="99:99"&&<span style={{fontSize:11,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap"}}>({fOroMin}{fOroMax!==fOroMin?` a ${fOroMax}`:""})</span>}
+                      {fPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0984e3",background:"#e8f4fd",whiteSpace:"nowrap"}}>⏰ {String(fPend).padStart(2,"0")} pend.</span>}
+                      {fExc>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {fExc}</span>}
                     </div>
                   </div>
-                  <div style={{display:"flex",gap:4,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                    {fo>0&&<span style={{fontSize:9,fontWeight:700,color:"#854F0B",background:"#fff8ec",padding:"1px 6px",borderRadius:8}}>🥇 {fo} reg.</span>}
-                    {fp>0&&<span style={{fontSize:9,fontWeight:700,color:"#185FA5",background:"#e8f4fd",padding:"1px 6px",borderRadius:8}}>🥈 {fp} tard.</span>}
-                    {ff>0&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:8}}>🔴 {ff} fuera</span>}
-                    {fNR>0&&<span style={{fontSize:9,fontWeight:700,color:"#6b7280",background:"#f4f6f8",padding:"1px 6px",borderRadius:8}}>⬜ {fNR} pend.</span>}
-                  </div>
+                ))}
+              </div>
+              )}
+
+              {/* CORTE 2 — PLATA */}
+              {gPlata>0&&(
+              <div style={{marginBottom:12,borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#185FA5",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block"}}/>
+                  CORTE 2 · {AR0.c100} a {AR0.c80} · PLATA
+                  <span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",marginLeft:4}}>⚠️ Puntaje reducido</span>
                 </div>
-              ))}
-              <div style={{fontSize:9,color:"#b2bec3",marginTop:6,textAlign:"right"}}>
-                Cada tienda contada una vez · mejor franja del período · excluye N/A
+                {fmtRows.filter(r=>r.fPlata>0).map(({fmt,icon,nd,fDisp,fPlata,fPend,fExc,fPlataMin,fPlataMax})=>(
+                  <div key={fmt+"plata"} style={{marginBottom:8,padding:"8px 12px",background:"#EDF4FF",borderRadius:10,border:"0.5px solid #B5D4F4"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#185FA5",background:"#e8f4fd",whiteSpace:"nowrap"}}>✅ {String(fPlata).padStart(2,"0")} reg.</span>
+                      {fPlataMin!=="99:99"&&<span style={{fontSize:11,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap"}}>({fPlataMin}{fPlataMax!==fPlataMin?` a ${fPlataMax}`:""})</span>}
+                      {fPend>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#A32D2D",background:"#FCEBEB",whiteSpace:"nowrap"}}>⏰ {String(fPend).padStart(2,"0")} pend.</span>}
+                      {fExc>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {fExc}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              )}
+
+              {/* BRONCE */}
+              {gBronce>0&&(
+              <div style={{marginBottom:12,borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#534AB7",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#534AB7",display:"inline-block"}}/>
+                  CORTE 3 · {AR0.c80} a {AR0.c60} · BRONCE
+                </div>
+                {fmtRows.filter(r=>r.fBronce>0).map(({fmt,icon,fBronce})=>(
+                  <div key={fmt+"bronce"} style={{marginBottom:8,padding:"8px 12px",background:"#f0edff",borderRadius:10,border:"0.5px solid #a29bfe"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#534AB7",background:"#f0edff",border:"1px solid #a29bfe",whiteSpace:"nowrap"}}>🥉 {String(fBronce).padStart(2,"0")} reg.</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              )}
+
+              {/* FUERA */}
+              {gFuera>0&&(
+              <div style={{marginBottom:8,borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#dc2626",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:8,height:8,borderRadius:"50%",background:"#dc2626",display:"inline-block"}}/>
+                  FUERA DE RANGO · después de {AR0.c60} · 0 pts
+                </div>
+                {fmtRows.filter(r=>r.fFuera>0).map(({fmt,icon,fFuera})=>(
+                  <div key={fmt+"fuera"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
+                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#dc2626",background:"#fff1f2",whiteSpace:"nowrap"}}>🔴 {String(fFuera).padStart(2,"0")} fuera</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              )}
+
+              <div style={{fontSize:9,color:"#b2bec3",marginTop:4,textAlign:"right"}}>
+                {periodoLabel}{dashAct!=="Todas"?` · ${actLabel}`:""} · excluye N/A
               </div>
             </div>
           </div>
@@ -3280,9 +3401,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     placeholder="Ej: Roberto Ruesta" style={S.inp}/>
                 </div>
                 <div>
-                  <label style={S.lbl}>DNI *</label>
-                  <input type="tel" value={newUsuario.dni||""} onChange={e=>setNewUsuario(p=>({...p,dni:e.target.value.replace(/[^0-9]/g,"").slice(0,8)}))}
-                    placeholder="12345678" maxLength={8} style={{...S.inp,letterSpacing:3,fontFamily:"monospace"}}/>
+                  <label style={S.lbl}>DNI / CE / RUC / CREDENCIAL *</label>
+                  <input type="text" value={newUsuario.dni||""} onChange={e=>setNewUsuario(p=>({...p,dni:e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12).toUpperCase()}))}
+                    placeholder="DNI/CE/RUC/código" maxLength={12} style={{...S.inp,letterSpacing:2,fontFamily:"monospace"}}/>
+                  <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</div>
                 </div>
                 <div>
                   <label style={S.lbl}>EMAIL (opcional)</label>
@@ -3313,21 +3435,21 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               </div>
               {/* Nota: el DNI es la credencial de acceso para todos los roles */}
               {newUsuario.rol!=="auditor"&&(
-                <div style={{marginBottom:10,padding:"11px 14px",background:newUsuario.dni&&newUsuario.dni.length===8?"#e0fafa":"#fff8ec",borderRadius:10,border:`1.5px solid ${newUsuario.dni&&newUsuario.dni.length===8?"#00b5b4":"#f6a623"}`}}>
+                <div style={{marginBottom:10,padding:"11px 14px",background:newUsuario.dni&&newUsuario.dni.length>=4?"#e0fafa":"#fff8ec",borderRadius:10,border:`1.5px solid ${newUsuario.dni&&newUsuario.dni.length>=4?"#00b5b4":"#f6a623"}`}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                     {/* Candado: cerrado+rojo si DNI vacío, abierto+verde si completo */}
-                    {newUsuario.dni&&newUsuario.dni.length===8
+                    {newUsuario.dni&&newUsuario.dni.length>=4
                       ? <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:"#e8faf5",border:"1.5px solid #00b894",fontSize:12,flexShrink:0}}>✓</span>
                       : <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:"#fff1f2",border:"1.5px solid #ef4444",fontSize:12,flexShrink:0}}>🔒</span>
                     }
-                    <div style={{fontSize:11,fontWeight:700,color:newUsuario.dni&&newUsuario.dni.length===8?"#0d7a79":"#854F0B"}}>
-                      {newUsuario.dni&&newUsuario.dni.length===8?"🔑 Credencial lista":"⚠️ Ingresa el DNI primero"}
+                    <div style={{fontSize:11,fontWeight:700,color:newUsuario.dni&&newUsuario.dni.length>=4?"#0d7a79":"#854F0B"}}>
+                      {newUsuario.dni&&newUsuario.dni.length>=4?"🔑 Credencial lista":"⚠️ Ingresa la credencial primero"}
                     </div>
                   </div>
-                  <div style={{fontSize:11,color:newUsuario.dni&&newUsuario.dni.length===8?"#0d7a79":"#854F0B",lineHeight:1.5}}>
-                    {newUsuario.dni&&newUsuario.dni.length===8
+                  <div style={{fontSize:11,color:newUsuario.dni&&newUsuario.dni.length>=4?"#0d7a79":"#854F0B",lineHeight:1.5}}>
+                    {newUsuario.dni&&newUsuario.dni.length>=4
                       ? <>El código de acceso será <strong style={{fontFamily:"monospace",letterSpacing:2}}>{newUsuario.dni}</strong>. Al iniciar sesión debe ingresar este número.</>
-                      : "El DNI de 8 dígitos que ingreses arriba será el código con el que este usuario accede al sistema."
+                      : "La credencial (mín. 4 chars) será el código de acceso al sistema."
                     }
                   </div>
                 </div>
@@ -3335,7 +3457,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{display:"flex",gap:8,marginTop:4}}>
                 <button onClick={async()=>{
                   if(!newUsuario.nombre.trim()) return showToast("⚠️ Ingresa el nombre");
-                  if(!newUsuario.dni||newUsuario.dni.length<8) return showToast("⚠️ DNI debe tener 8 dígitos");
+                  if(!newUsuario.dni||newUsuario.dni.length<4) return showToast("⚠️ La credencial debe tener al menos 4 caracteres");
                   if(newUsuario.editId){
                     await setDoc(doc(db,"usuarios",newUsuario.editId),{
                       nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
@@ -3432,119 +3554,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               );
             });
           })()}
-        </div>
-      )}
-
-      {cfgTab===1&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
-            <button onClick={()=>setShowNA(!showNA)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nueva</button>
-          </div>
-          {showNA&&(
-            <div style={{...S.card,padding:"14px",marginBottom:14}}>
-              <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <input value={newA.e} onChange={e=>setNewA(p=>({...p,e:e.target.value}))} style={{width:50,padding:"10px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:18,textAlign:"center",outline:"none"}}/>
-                <input value={newA.n} onChange={e=>setNewA(p=>({...p,n:e.target.value}))} placeholder="Nombre" style={{...S.inp,flex:1}}/>
-              </div>
-              <div style={{display:"flex",gap:5,marginBottom:10}}>
-                {[1,2,3,4,5].map(d=>(
-                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d]}))}
-                    style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?"#f0edff":"#fff",color:newA.dias.includes(d)?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                    {["L","M","X","J","V"][d-1]}
-                  </button>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>{if(!newA.n||!newA.dias.length)return;const na={...newA,id:"a"+Date.now(),cat:"Ad-hoc",r:null,activa:true};setActs(p=>{const np=[...p,na];saveConfig({actividades:np});return np;});setNewA({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});setShowNA(false);}}
-                  style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Agregar</button>
-                <button onClick={()=>setShowNA(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
-              </div>
-            </div>
-          )}
-          {acts.map(a=>{
-            const RR=a.r||RANGOS_DEFAULT;
-            return(
-            <div key={a.id} style={{...S.card,padding:"12px 14px",marginBottom:8,opacity:a.activa?1:.55}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:18}}>{a.e}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:a.activa?a.c:"#94a3b8"}}>{a.n}</div>
-                  <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>
-                    {a.dias.map(d=>["L","M","X","J","V"][d-1]).join("·")} · {a.cat}
-                    {a.r&&<span style={{color:"#f6a623",marginLeft:4}}>⏱️ rangos custom</span>}
-                  </div>
-                </div>
-                <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_er:!x._er}:x))}
-                  title="Rangos horarios"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._er?"#f0f4f8":"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>⏱️</button>
-                <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,_edit:!x._edit}:x))}
-                  title="Editar actividad"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:a._edit?"#e8f4fd":"#fff",color:"#0984e3",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️</button>
-                <button onClick={()=>setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,activa:!x.activa}:x);saveConfig({actividades:np});return np;})}
-                  style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
-                  {a.activa?"⏸":"▶"}
-                </button>
-                <button onClick={()=>{ if(window.confirm(`¿Eliminar "${a.n}"? Se perderá del listado (los registros históricos se conservan en Firebase).`)){setActs(p=>{const np=p.filter(x=>x.id!==a.id);saveConfig({actividades:np});return np;});}}}
-                  title="Eliminar actividad"
-                  style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑️</button>
-              </div>
-              {a._edit&&(
-                <div style={{marginTop:10,padding:"12px",borderRadius:10,background:"#e8f4fd",border:"1px solid #74b9ff55"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#0984e3",marginBottom:8}}>✏️ EDITAR · {a.n.toUpperCase()}</div>
-                  <div style={{display:"flex",gap:8,marginBottom:8}}>
-                    <input value={a.e} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,e:e.target.value}:x))} style={{width:44,padding:"8px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:16,textAlign:"center",outline:"none"}}/>
-                    <input value={a.n} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,n:e.target.value}:x))} style={{...S.inp,flex:1,fontSize:13}}/>
-                  </div>
-                  <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {[1,2,3,4,5].map(d=>(
-                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
-                        style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?"#e8f4fd":"#fff",color:a.dias.includes(d)?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                        {["L","M","X","J","V"][d-1]}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {["Always On","Promocional","Ad-hoc"].map(cat=>(
-                      <button key={cat} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,cat}:x))}
-                        style={{flex:1,padding:"6px",borderRadius:8,border:`1.5px solid ${a.cat===cat?"#0984e3":"#e2e8f0"}`,background:a.cat===cat?"#e8f4fd":"#fff",color:a.cat===cat?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={()=>{setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
-                    style={{width:"100%",padding:"9px",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
-                    💾 Guardar cambios
-                  </button>
-                </div>
-              )}
-              {a._er&&(
-                <div style={{marginTop:12,padding:"12px",borderRadius:10,background:a.c+"0a",border:"1px solid "+a.c+"33"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:a.c,marginBottom:10,letterSpacing:".05em"}}>⏱️ RANGOS HORARIOS · {a.n.toUpperCase()}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
-                    {[{k:"c100",icon:"🥇",label:"100% hasta"},{k:"c80",icon:"🥈",label:"80% hasta"},{k:"c60",icon:"🥉",label:"60% hasta"}].map(f=>(
-                      <div key={f.k}>
-                        <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:4}}>{f.icon} {f.label}</div>
-                        <input type="time" value={RR[f.k]}
-                          onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,r:{...(x.r||RANGOS_DEFAULT),[f.k]:e.target.value}}:x))}
-                          style={{width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid "+a.c+"55",background:"#fff",color:"#1a2f4a",fontSize:13,outline:"none",textAlign:"center"}}/>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
-                    {[["10 pts","#f6a623",`≤${RR.c100}`],["8 pts","#74b9ff",`${RR.c100}–${RR.c80}`],["6 pts","#a29bfe",`${RR.c80}–${RR.c60}`],["0 pts","#d63031",`>${RR.c60}`]].map(([p,c,t])=>(
-                      <span key={p} style={{padding:"2px 8px",borderRadius:20,fontSize:9,fontWeight:700,color:c,background:c+"18"}}>{t}→{p}</span>
-                    ))}
-                  </div>
-                  <button onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,r:null}:x))}
-                    style={{fontSize:9,color:"#8aaabb",background:"none",border:"none",cursor:"pointer",padding:0,textDecoration:"underline"}}>
-                    Restablecer default
-                  </button>
-                </div>
-              )}
-            </div>
-            );
-          })}
         </div>
       )}
 
@@ -4015,27 +4024,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         </div>
       )}
 
-      {/* ── LIMPIEZA MARCHA BLANCA — solo Admin ── */}
-      <div style={{...S.card,padding:"14px 16px",marginTop:16,border:"1.5px solid #fecaca",background:"#fff1f2"}}>
-        <div style={{fontWeight:700,fontSize:13,color:"#dc2626",marginBottom:4}}>🗑️ Limpieza de registros de prueba</div>
-        <div style={{fontSize:11,color:"#5a7a9a",marginBottom:12}}>Elimina todos los registros de Firestore. Úsalo solo en marcha blanca para limpiar datos de prueba que afectan el % de eficiencia.</div>
-        <button onClick={async()=>{
-          if(!window.confirm("⚠️ ATENCIÓN: Esto eliminará TODOS los registros de Firestore.\n\nEsta acción es IRREVERSIBLE. ¿Estás seguro?")) return;
-          const confirmText = window.prompt("Escribe CONFIRMAR para proceder:");
-          if(confirmText !== "CONFIRMAR") { showToast("❌ Cancelado — texto incorrecto"); return; }
-          try {
-            const promises = Object.keys(regs).map(docId=>deleteDoc(doc(db,"registros",docId)));
-            await Promise.all(promises);
-            showToast("🗑️ Todos los registros eliminados");
-          } catch(e) {
-            console.error("limpieza masiva error:", e);
-            showToast("❌ Error durante la limpieza. Algunos registros pueden no haberse eliminado.");
-          }
-        }}
-          style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
-          Eliminar todos los registros
-        </button>
-      </div>
     </div>
   );
 
@@ -4543,6 +4531,141 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           )}
         </div>
       </div>
+
+
+        {/* ══ NIVEL 3 — OPERATIVO · JEFES / SUPERVISORES ══════════════════
+            ¿Cómo avanzamos? — rankings, tiendas críticas, acciones
+        ══════════════════════════════════════════════════════════════ */}
+        <div style={{borderRadius:12,overflow:"visible",marginBottom:10,border:"1px solid #e2e8f0"}}>
+          <div style={{background:"#855F00",padding:"9px 14px",display:"flex",alignItems:"center",gap:8,borderRadius:"12px 12px 0 0"}}>
+            <span style={{fontSize:14}}>⚙️</span>
+            <div>
+              <div style={{fontWeight:800,fontSize:11,color:"#fff",letterSpacing:".06em"}}>OPERATIVO · JEFES / SUPERVISORES</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)"}}>¿Cómo avanzamos? · ranking tiendas y acciones inmediatas</div>
+            </div>
+          </div>
+          <div style={{background:"#fff",padding:"12px 14px",borderRadius:"0 0 12px 12px"}}>
+
+        {/* por formato */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
+          {["Mayorista","Supermayorista","Market"].map(fmt=>{
+            const fc=FMT[fmt];
+            const fts=tiAct.filter(ti=>ti.f===fmt);
+            // solo las evaluables (sin excepción en todas las actividades)
+            const ftsEval=fts.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
+            // eficiencia acumulada del formato: sum(obtenidos) / sum(maximos)
+            let fmtOb=0, fmtMx=0;
+            ftsEval.forEach(ti=>{ const ef=calcEficienciaFiltrada(ti.id); if(ef){fmtOb+=ef.obtenidos;fmtMx+=ef.maximos;} });
+            const prom=fmtMx>0?Math.round((fmtOb/fmtMx)*100):null;
+            const tier=getTier(prom);
+            const excCount=fts.length-ftsEval.length;
+            return(
+              <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
+                onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
+                onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
+                onTouchStart={e=>{const tipEl=e.currentTarget.querySelector(".fmt-tip");tipEl.style.display=tipEl.style.display==="block"?"none":"block";}}>
+                <div style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:2,lineHeight:1.7}}>
+                  <span style={{color:"#5a7a9a",fontWeight:700}}>{fts.length} tiendas</span>
+                  {ftsEval.length<fts.length&&<span style={{color:"#854F0B",fontWeight:700}}>{" · "}{fts.length-ftsEval.length} excluidas N/A</span>}
+                  {ftsEval.length===fts.length&&<span style={{color:"#00b894",fontWeight:700}}> · todas activas</span>}
+                </div>
+                <div style={{fontWeight:800,fontSize:26,color:sc(prom),marginTop:8,lineHeight:1}}>{prom!==null?prom+"%":"—"}</div>
+                <div style={{fontSize:9,color:"#b2bec3",marginTop:2}}>{fmtOb}/{fmtMx} pts · eficiencia período</div>
+                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{...S.pill(tier.c,tier.bg),fontSize:10}}>{tier.icon} {tier.label}</span>
+                  {(()=>{
+                    const nFmtExc=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score>=95).length;
+                    const nFmtRie=scoresMes.filter(s=>s.t.f===fmt&&s.score!==null&&s.score<60).length;
+                    return<span style={{fontSize:9,color:"#8aaabb",marginLeft:"auto"}}>{nFmtExc>0?`🥇 ${nFmtExc}`:""}{nFmtRie>0?` ⚠️ ${nFmtRie}`:""}</span>;
+                  })()}
+                </div>
+                <div style={{height:4,background:"#f0f4f8",borderRadius:2,marginTop:8}}>
+                  <div style={{width:(prom||0)+"%",height:"100%",background:fc.c,borderRadius:2}}/>
+                </div>
+                {/* Sparkline tendencia semanal S1→S2→S3 */}
+                {(()=>{
+                  const semPts=semanasDelMes.map(s=>{
+                    let ob=0,mx=0;
+                    ftsEval.forEach(ti=>{
+                      s.days.forEach(d=>{
+                        const ds=dStr(vYear,vMonth,d);
+                        if(ds>todayStr()) return;
+                        const dw=getDow(ds);
+                        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                          mx+=10;
+                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                          if(p!==null) ob+=p;
+                        });
+                      });
+                    });
+                    return mx>0?Math.round((ob/mx)*100):null;
+                  }).filter(v=>v!==null);
+                  if(semPts.length<2) return null;
+                  const maxV=Math.max(...semPts,1);
+                  const minV=Math.min(...semPts);
+                  const range=maxV-minV||1;
+                  const w=60,h=24,pts=semPts.length;
+                  const coords=semPts.map((v,i)=>`${Math.round((i/(pts-1))*w)},${Math.round(h-((v-minV)/range)*(h-4)-2)}`).join(" ");
+                  const lastDelta=semPts.length>=2?semPts[semPts.length-1]-semPts[semPts.length-2]:0;
+                  const trendColor=lastDelta>0?"#0F6E56":lastDelta<0?"#A32D2D":"#888780";
+                  return(
+                  <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
+                    <svg width={w} height={h} style={{flexShrink:0}}>
+                      <polyline points={coords} fill="none" stroke={trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      {semPts.map((v,i)=>{
+                        const cx=Math.round((i/(pts-1))*w);
+                        const cy=Math.round(h-((v-minV)/range)*(h-4)-2);
+                        return <circle key={i} cx={cx} cy={cy} r="2" fill={trendColor}/>;
+                      })}
+                    </svg>
+                    <div style={{fontSize:9,color:trendColor,fontWeight:700}}>
+                      {semPts.map((v,i)=>`S${i+1}: ${v}%`).join(" → ")}
+                    </div>
+                  </div>
+                  );
+                })()}
+                <div className="fmt-tip" style={{display:"none",position:"absolute",top:"calc(100% + 8px)",left:0,right:0,background:"#1a2f4a",color:"#fff",fontSize:10,fontWeight:600,padding:"12px 14px",borderRadius:10,zIndex:50,lineHeight:1.7,boxShadow:"0 8px 28px rgba(0,0,0,.35)"}}>
+                  <div style={{fontWeight:800,marginBottom:4,fontSize:12,color:sc(prom||0)}}>{fmt} · {prom!==null?prom+"%":"Sin datos"}</div>
+                  {prom!==null&&<div style={{color:"rgba(255,255,255,.8)"}}>{fmtOb} pts obtenidos de {fmtMx} posibles</div>}
+                  <div style={{color:"rgba(255,255,255,.7)"}}>{ftsEval.length} de {fts.length} tiendas evaluables{fts.length-ftsEval.length>0?` · ${fts.length-ftsEval.length} excluidas N/A`:""}</div>
+                  {/* Desglose por actividad para este formato */}
+                  {(()=>{
+                    const actRows=actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+                      let aOb=0,aMx=0;
+                      ftsEval.forEach(ti=>{
+                        semanasDelMes.forEach(s=>s.days.forEach(d=>{
+                          const ds=dStr(vYear,vMonth,d);
+                          if(ds>todayStr()||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                          aMx+=10;
+                          const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
+                          if(p!==null) aOb+=p;
+                        }));
+                      });
+                      return aMx>0?{a,ob:aOb,mx:aMx,pct:Math.round((aOb/aMx)*100)}:null;
+                    }).filter(Boolean);
+                    if(!actRows.length) return null;
+                    return(
+                      <div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(255,255,255,.15)"}}>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,.5)",fontWeight:700,letterSpacing:".04em",marginBottom:4}}>DESGLOSE POR ACTIVIDAD</div>
+                        {actRows.map(({a,ob,mx,pct})=>(
+                          <div key={a.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                            <span style={{fontSize:10}}>{a.e}</span>
+                            <span style={{fontSize:9,flex:1,color:"rgba(255,255,255,.75)"}}>{a.n}</span>
+                            <span style={{fontSize:9,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap"}}>{ob}/{mx}pts</span>
+                            <span style={{fontSize:10,fontWeight:800,color:sc(pct),minWidth:30,textAlign:"right"}}>{pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div style={{marginTop:6,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.15)",fontSize:9,color:"rgba(255,255,255,.4)"}}>Los N/A por día ya están descontados del denominador</div>
+                  <div style={{position:"absolute",top:-5,left:16,width:10,height:10,background:"#1a2f4a",transform:"rotate(45deg)",borderRadius:1}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
     </div>
     );
@@ -5220,7 +5343,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   // Auditor — busca por dni en la colección usuarios (rol=auditor)
   const tryDni=()=>{
     const clean=dni.trim();
-    if(clean.length<8){setErr("Código debe tener 8 caracteres");return;}
+    if(clean.length<4){setErr("Código debe tener al menos 4 caracteres");return;}
     // 1. Buscar en usuarios registrados con rol auditor
     const found=usuariosActivos.find(u=>u.rol==="auditor"&&u.dni===clean);
     if(found){onAcceso?.(found.id);onLogin("auditor",found.nombre,clean);return;}
@@ -5244,9 +5367,10 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const clean=pin.trim();
     if(!clean){setErr("Ingresa tu código de acceso");return;}
     // 1. Pin global de emergencia — SIEMPRE funciona independiente de usuarios registrados
-    if(pins.admin&&clean===pins.admin){onLogin("admin","Administrador","");return;}
-    // 2. Buscar en usuarios registrados con rol admin por DNI
-    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&u.dni===clean);
+    if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){onLogin("admin","Administrador","");return;}
+    // 2. Buscar en usuarios registrados con rol admin
+    //    Soporta campo "dni" (nuevo) y "credencial" (legacy) para compatibilidad
+    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&(u.dni===clean||u.credencial===clean));
     if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,clean);return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
@@ -5256,9 +5380,10 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const clean=pin.trim();
     if(!clean){setErr("Ingresa tu código de acceso");return;}
     // 1. Pin global de emergencia — SIEMPRE funciona
-    if(pins.viewer&&clean===pins.viewer){onLogin("viewer","Gerencia","");return;}
-    // 2. Buscar en usuarios registrados con rol viewer por DNI
-    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&u.dni===clean);
+    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){onLogin("viewer","Gerencia","");return;}
+    // 2. Buscar en usuarios registrados con rol viewer
+    //    Soporta campo "dni" (nuevo) y "credencial" (legacy) para compatibilidad
+    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&(u.dni===clean||u.credencial===clean));
     if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,clean);return;}
     setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
   };
@@ -5293,7 +5418,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               <span style={{fontSize:24,flexShrink:0}}>🪪</span>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
-                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI de 8 dígitos</div>
+                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI / CE / RUC registrado</div>
               </div>
             </button>
             <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
@@ -5336,20 +5461,20 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           </>
         )}
 
-        {/* Paso: Auditor — DNI numérico 8 dígitos */}
+        {/* Paso: Auditor — DNI / CE / RUC hasta 12 caracteres */}
         {(step==="dni_auditor"||step==="dni")&&(
           <>
             <div style={{fontSize:32,marginBottom:10}}>🪪</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI</p>
-            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>8 dígitos · registrado por el administrador</p>
-            <input autoFocus type="tel" value={dni}
-              onChange={e=>setDni(e.target.value.replace(/[^0-9]/g,"").slice(0,8))}
+            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI / CE / RUC</p>
+            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</p>
+            <input autoFocus type="text" value={dni}
+              onChange={e=>setDni(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
               onKeyDown={e=>e.key==="Enter"&&tryDni()}
-              placeholder="12345678" maxLength={8}
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:6,fontSize:24,fontWeight:700}}/>
+              placeholder="DNI / CE / RUC" maxLength={12}
+              style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:4,fontSize:20,fontWeight:700,fontFamily:"monospace"}}/>
             {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>❌ {err}</div>}
-            <button onClick={tryDni} disabled={dni.length<8}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length===8?"white":"#94a3b8",cursor:dni.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            <button onClick={tryDni} disabled={dni.length<4}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length>=4?"white":"#94a3b8",cursor:dni.length>=4?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Entrar →
             </button>
             <button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
@@ -5359,27 +5484,26 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           </>
         )}
 
-        {/* Paso: Admin y Viewer — DNI o código alfanumérico de 8 chars */}
+        {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
             <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
-            <p style={{margin:"0 0 6px",fontSize:12,color:"#8aaabb"}}>Ingresa tu DNI o código de 8 caracteres</p>
-            <p style={{margin:"0 0 12px",fontSize:10,color:"#b2bec3"}}>Asignado al registrar tu cuenta</p>
+            <p style={{margin:"0 0 6px",fontSize:12,color:"#8aaabb"}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</p>
+            <p style={{margin:"0 0 12px",fontSize:10,color:"#b2bec3"}}>Registrado en tu perfil de usuario</p>
             {/* Input con toggle candado: oculto por defecto, ojo para revelar */}
             <div style={{position:"relative",marginBottom:12}}>
               <input autoFocus
                 type={showPin?"text":"password"}
                 value={pin}
-                onChange={e=>setPin(e.target.value.slice(0,8))}
+                onChange={e=>setPin(e.target.value.replace(/[^a-zA-Z0-9]/g,'').slice(0,12))}
                 onKeyDown={e=>e.key==="Enter"&&(step==="pin_viewer"?tryViewer():tryPin())}
-                placeholder="••••••••"
-                maxLength={8}
+                placeholder="DNI / CE / código"
+                maxLength={12}
                 autoComplete="new-password"
-                style={{...inpS,border:`2px solid ${err?"#ef4444":step==="pin_viewer"?"#74b9ff":"#f6a623"}`,letterSpacing:showPin?6:10,fontSize:showPin?22:28,fontWeight:700,marginBottom:0,paddingRight:48}}/>
-              {/* Toggle candado — cerrado con X roja = oculto · abierto con check verde = visible */}
+                style={{...inpS,border:`2px solid ${err?"#ef4444":step==="pin_viewer"?"#74b9ff":"#f6a623"}`,letterSpacing:showPin?4:8,fontSize:showPin?20:24,fontWeight:700,marginBottom:0,paddingRight:48,fontFamily:"monospace"}}/>
               <button
                 type="button"
                 onClick={()=>setShowPin(v=>!v)}
@@ -5391,14 +5515,14 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               </button>
             </div>
             {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,lineHeight:1.4}}>❌ {err}</div>}
-            {/* Indicador de progreso — 8 puntos */}
-            <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:14}}>
-              {[...Array(8)].map((_,i)=>(
-                <div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<pin.length?(step==="pin_viewer"?"#74b9ff":"#f6a623"):"#e2e8f0",transition:"background .1s"}}/>
+            {/* Indicador de progreso — hasta 12 puntos */}
+            <div style={{display:"flex",justifyContent:"center",gap:3,marginBottom:14}}>
+              {[...Array(12)].map((_,i)=>(
+                <div key={i} style={{width:6,height:6,borderRadius:"50%",background:i<pin.length?(step==="pin_viewer"?"#74b9ff":"#f6a623"):"#e2e8f0",transition:"background .1s"}}/>
               ))}
             </div>
-            <button onClick={step==="pin_viewer"?tryViewer:tryPin} disabled={pin.length<8}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin.length===8?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin.length===8?"white":"#94a3b8",cursor:pin.length===8?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            <button onClick={step==="pin_viewer"?tryViewer:tryPin} disabled={pin.length<4}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin.length>=4?"white":"#94a3b8",cursor:pin.length>=4?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
               Ingresar →
             </button>
             <button onClick={()=>{setStep("inicio");setPin("");setErr("");setShowPin(false);}}
