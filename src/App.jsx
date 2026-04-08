@@ -191,75 +191,43 @@ function getTierPts(p) {
 function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a623";if(v>=80)return"#00b894";if(v>=60)return"#74b9ff";if(v>=40)return"#e17055";return"#d63031";}
 function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
-// Devuelve las semanas "ISO" de un mes, etiquetadas y con días hábiles.
-// Cada semana empieza en lunes y termina en domingo; solo se incluyen los días
-// laborales (L–V) dentro del mes. El label incluye el número de semana y el
-// rango de fechas (por ejemplo: S1 (1–3)).
 function getWeeksOfMonth(year, month) {
-  // Obtiene las semanas ISO de un mes. Cada semana comienza en lunes y
-  // comprende 7 días naturales (lunes a domingo). Se incluyen en
-  // `days` únicamente los días laborables (lunes a viernes) para las
-  // métricas, mientras que `start` y `end` reflejan el rango completo
-  // (incluyendo fines de semana) dentro del mes para mostrar al usuario.
+  // Semana COMERCIAL retail: Dom → Sáb (práctica estándar en retail Latam / Nielsen / SAP).
+  // El fin de semana queda dentro de la misma semana, no partido entre dos.
+  // `days`  = días L–V del mes en esa semana (para cálculos de puntaje y actividades).
+  // `start` = primer día del mes en la semana (puede ser dom, lun… según donde cae el 1ro).
+  // `end`   = último día del mes en la semana (puede ser sáb, vier… según fin de mes).
+  // Para agregar sábado a actividades en el futuro: añadir || wd === 6 en el filtro de days.
   const weeks = [];
-  // Último día del mes
   const lastDay = new Date(year, month + 1, 0).getDate();
 
-  // Primer día del mes y su día de la semana (0=domingo, 1=lunes, ... 6=sábado)
+  // Retroceder al domingo de la semana que contiene el día 1 del mes
   const firstOfMonth = new Date(year, month, 1);
-  const dow = firstOfMonth.getDay();
-  // Desplazamiento hasta el lunes de la semana ISO que contiene el día 1
-  // Si es domingo (0), isoOffset = 6; si es lunes (1), isoOffset = 0; etc.
-  const isoOffset = dow === 0 ? 6 : dow - 1;
-
-  // Día de inicio (lunes) de la primera semana del mes (puede ser <=0)
-  let weekStart = 1 - isoOffset;
+  const dow = firstOfMonth.getDay(); // 0=dom … 6=sáb
+  // dow ya es el offset desde el domingo (0 = ya es domingo, 1 = retroceder 1 día, etc.)
+  let weekStart = 1 - dow; // puede ser ≤0 si el 1ro no es domingo
   let weekNum = 1;
 
-  // Para decidir qué días de la semana considerar como laborables, tomamos
-  // la unión de los días definidos en ACTIVIDADES_INIT (campo `dias`). De
-  // este modo, si en el futuro se agregan actividades en sábado (6) o
-  // domingo (0), se incluirán automáticamente. Si ACTIVIDADES_INIT no
-  // existe (pruebas), por defecto se considera lunes–viernes.
-  const diasHabiles = new Set(
-    typeof ACTIVIDADES_INIT !== "undefined" && Array.isArray(ACTIVIDADES_INIT)
-      ? ACTIVIDADES_INIT.flatMap(a => Array.isArray(a.dias) ? a.dias : [])
-      : [1,2,3,4,5]
-  );
-
-  // Bucle hasta que se hayan cubierto todos los días del mes
   while (weekStart <= lastDay) {
+    const mStart = Math.max(1, weekStart);       // primer día del mes en esta semana
+    const mEnd   = Math.min(lastDay, weekStart + 6); // último día del mes en esta semana
+
     const days = [];
-    const allDays = [];
-    // Recorrer los 7 días naturales de la semana ISO (lunes a domingo)
-    for (let i = 0; i < 7; i++) {
-      const dayOfMonth = weekStart + i;
-      // Considerar sólo días válidos del mes actual
-      if (dayOfMonth >= 1 && dayOfMonth <= lastDay) {
-        allDays.push(dayOfMonth);
-        const d = new Date(year, month, dayOfMonth);
-        const wd = d.getDay();
-        // Incluir únicamente los días hábiles definidos en `diasHabiles`
-        if (diasHabiles.has(wd)) {
-          days.push(dayOfMonth);
-        }
-      }
+    for (let d = mStart; d <= mEnd; d++) {
+      const wd = new Date(year, month, d).getDay();
+      if (wd >= 1 && wd <= 5) days.push(d);     // solo L–V para actividades
     }
-    // Si la semana tiene algún día laborable, agregarla
+
     if (days.length > 0) {
-      const startLabel = allDays[0];
-      const endLabel = allDays[allDays.length - 1];
       weeks.push({
-        num: weekNum,
-        label: `S${weekNum} (${String(startLabel).padStart(2, "0")}–${String(endLabel).padStart(2, "0")})`,
-        // `start` y `end` se corresponden con el rango completo de la semana
-        start: startLabel,
-        end: endLabel,
+        num:   weekNum,
+        label: `S${weekNum}`,
+        start: mStart,
+        end:   mEnd,
         days,
       });
       weekNum++;
     }
-    // Avanzar al lunes de la siguiente semana
     weekStart += 7;
   }
   return weeks;
@@ -1584,11 +1552,7 @@ function ChecklistApp() {
   /* ══ TAB REPORTE SEMANAL ══ */
   const renderReporte = ()=>{
     const actsActivas=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)); // solo cols con historial en el mes
-    // Determinar los días de la semana presentes en al menos una actividad activa. 0=domingo..6=sábado.
-    const diasHabiles=[...new Set(actsActivas.flatMap(a=>a.dias))].sort((a,b)=>a-b);
     const semsVis=selWeek!==null?[semanasDelMes[selWeek]]:semanasDelMes;
-    // Calcular una vez la fecha de hoy en formato YYYY-MM-DD para comparar fechas (B8 fix)
-    const hoyReporte = todayStr();
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
@@ -1599,29 +1563,9 @@ function ChecklistApp() {
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
             {semanasDelMes.map((s,i)=>(
-              <button
-                key={i}
-                onClick={()=>setSelWeek(i)}
-                style={{
-                  flex:1,
-                  padding:"7px",
-                  borderRadius:8,
-                  border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
-                  background:selWeek===i?"#f0edff":"#fff",
-                  color:selWeek===i?"#6c5ce7":"#5a7a9a",
-                  cursor:"pointer",
-                  fontSize:11,
-                  fontWeight:700,
-                  display:"flex",
-                  flexDirection:"column",
-                  alignItems:"center",
-                  lineHeight:1.1
-                }}
-              >
-                <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
-                <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
-                  {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
-                </span>
+              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+                {s.label}
+                <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
               </button>
             ))}
           </div>
@@ -1644,36 +1588,9 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {/* Encabezados por semana y por día de la semana */}
-                      {semsVis.map(sem=>diasHabiles.map(dow=>{
-                        // Obtener la abreviatura del día de la semana
-                        const dowLetters=["D","L","M","MI","J","V","S"];
-                        const dowLetter=dowLetters[dow];
-                        return (
-                          <th
-                            key={sem.label+"-"+dow}
-                            style={{
-                              padding:"8px 8px",
-                              textAlign:"center",
-                              color:"#5a7a9a",
-                              fontWeight:700,
-                              fontSize:9,
-                              borderBottom:"1px solid #e9eef5",
-                              minWidth:60,
-                              whiteSpace:"nowrap",
-                              background:"#f8fafc",
-                              position:"sticky",
-                              top:0
-                            }}
-                          >
-                            {/* Primera línea: número de semana */}
-                            <span style={{fontWeight:700}}>{`S${sem.num}`}</span>
-                            <br/>
-                            {/* Segunda línea: abreviatura del día (p. ej. L, M, MI, etc.) */}
-                            <span style={{fontSize:8,color:"#7c9db9"}}>{dowLetter}</span>
-                          </th>
-                        );
-                      }))}
+                      {semsVis.map(s=>actsActivas.map(a=>(
+                        <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0}}>{s.label}<br/>{a.e}</th>
+                      )))}
                       {semsVis.map(s=>(
                         <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55,position:"sticky",top:0}}>
                           {s.label}<br/>EF.%
@@ -1694,59 +1611,61 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.map(sem=>diasHabiles.map(dow=>{
-                            // Obtener las fechas de esta semana que coinciden con el día de la semana actual
-                            const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
-                            // Si no hay fechas, mostrar guion
-                            if(fechas.length===0){
-                              return <td key={`${sem.label}-${dow}`} style={{padding:'6px 8px',textAlign:'center',color:'#d1d5db',fontSize:9}}>—</td>;
-                            }
-                            // Actividades activas programadas para este día de la semana
-                            const actsDia=actsActivas.filter(ac=>ac.dias.includes(dow));
-                            return (
-                              <td key={`${sem.label}-${dow}`} style={{padding:'6px 8px',textAlign:'center',position:'relative'}}>
-                                <div style={{display:'flex',justifyContent:'center',flexWrap:'wrap',gap:3}}>
-                                  {actsDia.map(ac=>{
-                                    // Verificar si todas las fechas están excluidas para esta actividad
-                                    const todasExc=fechas.every(day=>{
-                                      const ds=dStr(vYear,vMonth,day);
-                                      return isExc(tr.id,ac.id,ds);
-                                    });
-                                    // Construir arreglo de strings de fechas
-                                    const dsStrs=fechas.map(day=>dStr(vYear,vMonth,day));
-                                    // Calcular puntajes para las evidencias de estas fechas
-                                    const puntajes=dsStrs.flatMap(ds=>{
-                                      const reg=getReg(ds,tr.id,ac.id);
-                                      const p=puntajeReg(reg,getRangoActivo(ac.id,ds));
-                                      return p!==null?[p]:[];
-                                    });
-                                    // Calcular denominador de puntos posibles (solo fechas válidas y con registro)
-                                    // Usar la fecha de hoy calculada en este contexto (report)
-                                    const hoy=hoyReporte;
-                                    const diasValidos=dsStrs.filter(ds=>ds<=hoy&&ac.dias.includes(getDow(ds)));
-                                    const maxPos=actsConRegistroIds.has(ac.id)?diasValidos.length*10:0;
-                                    const pct=(!todasExc&&puntajes.length>0&&maxPos>0)?Math.round((puntajes.reduce((x,y)=>x+y,0)/maxPos)*100):null;
-                                    if(todasExc){
-                                      return (
-                                        <span key={`${sem.label}-${ac.id}`} title={getExcComment(tr.id,ac.id,dsStrs[0]||"")||'Exclusión: tienda no aplica para esta actividad'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:'#854F0B',background:'#FAEEDA',border:'0.5px solid #FAC775',cursor:'help',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
-                                          {ac.e}
-                                        </span>
-                                      );
-                                    }else if(pct!==null){
-                                      return (
-                                        <span key={`${sem.label}-${ac.id}`} title={ac.n + ' ' + (puntajes.reduce((a0,b0)=>a0+b0,0)) + '/' + maxPos + 'pts · ' + pct + '%'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:sc(pct),background:sb(pct),display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
-                                          {ac.e}
-                                        </span>
-                                      );
-                                    }else{
-                                      return (
-                                        <span key={`${sem.label}-${ac.id}`} title={ac.n + ' sin datos'} style={{padding:'2px 5px',borderRadius:12,fontSize:9,fontWeight:700,color:'#d1d5db',border:'1px dashed #e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
-                                          {ac.e}
-                                        </span>
-                                      );
-                                    }
-                                  })}
-                                </div>
+                          {semsVis.map(sem=>actsActivas.map(a=>{
+                            // N/A solo si TODOS los días donde aplica la actividad tienen excepción
+                            const diasActSem=sem.days.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(dStr(vYear,vMonth,d))));
+                            const excepcion=diasActSem.length>0&&diasActSem.every(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
+                            const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
+                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
+                            // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
+                            const hoyC=todayStr();
+                            const diasConAct=ds.filter(d=>d<=hoyC&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                            // Solo contar si la actividad tiene historial real
+                            const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
+                            const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
+                            const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
+                            const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
+                            const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
+                            const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
+                            return(
+                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent"}}>
+                                {anulado?(
+                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
+                                ):excepcion?(
+                                  <span
+                                    title={getExcComment(tr.id,a.id,ds[0]||fecha)||"Excepción: tienda no aplica para esta actividad"}
+                                    style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help",position:"relative"}}>
+                                    N/A {getExcComment(tr.id,a.id,ds[0]||fecha)?"💬":""}
+                                    {isAdmin&&(
+                                      <span
+                                        title="Editar comentario de esta exclusión"
+                                        onClick={e=>{
+                                          e.stopPropagation();
+                                          setExcModal({
+                                            tId:tr.id,aId:a.id,tiendaNombre:tr.n,
+                                            estaExcluida:true,
+                                            comentarioActual:getExcComment(tr.id,a.id,ds[0]||fecha),
+                                          });
+                                        }}
+                                        style={{marginLeft:3,cursor:"pointer",opacity:.7,fontSize:8}}>✏️</span>
+                                    )}
+                                  </span>
+                                ):v!==null?(
+                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
+                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
+                                    onMouseUp={()=>clearTimeout(longPressRef.current)}
+                                    onMouseLeave={()=>clearTimeout(longPressRef.current)}
+                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
+                                    onTouchEnd={()=>clearTimeout(longPressRef.current)}
+                                    style={{cursor:"pointer"}}>
+                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</span>
+                                    <div style={{fontSize:8,color:"#8aaabb",marginTop:1}}>{v}%</div>
+                                    {auditorCell&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
+                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
+                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
+                                    </div>
+                                  </div>
+                                ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                               </td>
                             );
                           }))}
@@ -1820,32 +1739,29 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
-                      {semsVis.map(sem=>diasHabiles.map(dow=>{
+                      {semsVis.map(sem=>actsActivas.map(a=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{
-                          // Fechas de esta semana que coinciden con el día de la semana actual
-                          const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
-                          fechas.forEach(day=>{
-                            const ds=dStr(vYear,vMonth,day);
-                            // Para cada actividad activa en este día se suman los puntos posibles y obtenidos
-                            actsActivas.filter(ac=>ac.dias.includes(dow)&&!isExc(tr.id,ac.id,ds)&&actsConRegistroIds.has(ac.id)).forEach(ac=>{
-                              mx+=10;
-                              const rv=getReg(ds,tr.id,ac.id);
-                              const p=puntajeReg(rv,getRangoActivo(ac.id,ds));
-                              if(p!==null) ob+=p;
-                            });
+                          const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
+                          const diasA=ds.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                          const hoyT=todayStr();
+                          diasA.forEach(d=>{
+                            if(d>hoyT) return; // día futuro
+                            if(isExc(tr.id,a.id,d)) return;
+                            mx+=10;
+                            const rv=getReg(d,tr.id,a.id);
+                            const p=puntajeReg(rv,getRangoActivo(a.id,d));
+                            if(p!==null) ob+=p;
                           });
                         });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return (
-                          <td key={sem.label+"-"+dow} style={{padding:"6px 8px",textAlign:"center"}}>
-                            {mx>0?(
-                              ob>0
-                                ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400}}>{ef}%</span></span>
-                                :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pend.</span>
-                            ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                          </td>
-                        );
+                        return <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
+                          {mx>0?(
+                            ob>0
+                              ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400}}>{ef}%</span></span>
+                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}pts<br/>pend.</span>
+                          ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                        </td>;
                       }))}
                       {semsVis.map(sem=>{
                         let ob=0,mx=0;
@@ -1906,32 +1822,23 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
                   {/* celdas vacías para alinear con columnas actividad×semana */}
-                  {semsVis.flatMap(sem=>diasHabiles.map(dow=>(
-                    <td key={sem.label+"-"+dow} style={{padding:"6px 8px",textAlign:"center"}}>
+                  {semsVis.flatMap(s=>actsActivas.map(a=>(
+                    <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
                       {(()=>{
                         let ob=0,mx=0;
-                        // Fechas de esta semana que corresponden al día de la semana actual
-                        const fechas=sem.days.filter(d=>getDow(dStr(vYear,vMonth,d))===dow);
+                        const ds=s.days.map(d=>dStr(vYear,vMonth,d));
                         const hoyT=todayStr();
                         tiAct.forEach(tr=>{
-                          fechas.forEach(day=>{
-                            const ds=dStr(vYear,vMonth,day);
-                            actsActivas.filter(ac=>ac.dias.includes(dow)&&!isExc(tr.id,ac.id,ds)&&actsConRegistroIds.has(ac.id)).forEach(ac=>{
-                              mx+=10;
-                              const p=puntajeReg(getReg(ds,tr.id,ac.id),getRangoActivo(ac.id,ds));
-                              if(p!==null) ob+=p;
-                            });
+                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)).forEach(d=>{
+                            mx+=10;
+                            const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
+                            if(p!==null) ob+=p;
                           });
                         });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
                         return mx>0
-                          ?(
-                            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
-                              <span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):'#b2bec3'}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span>
-                              <span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):'#b2bec3'}}>{ob>0?ef+'%':'pend.'}</span>
-                            </div>
-                          )
-                          :<span style={{color:'#5a7a9a',fontSize:9}}>—</span>;
+                          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
+                          :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
                       })()}
                     </td>
                   )))}
@@ -2172,29 +2079,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
           {semanasDelMes.map((s,i)=>(
-            <button
-              key={i}
-              onClick={()=>setSelWeek(i)}
-              style={{
-                flex:1,
-                padding:"7px",
-                borderRadius:8,
-                border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
-                background:selWeek===i?"#f0edff":"#fff",
-                color:selWeek===i?"#6c5ce7":"#5a7a9a",
-                cursor:"pointer",
-                fontSize:11,
-                fontWeight:700,
-                display:"flex",
-                flexDirection:"column",
-                alignItems:"center",
-                lineHeight:1.1
-              }}
-            >
-              <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
-              <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
-                {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
-              </span>
+            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+              {s.label}
+              <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
             </button>
           ))}
         </div>
@@ -3082,29 +2969,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{display:"flex",gap:5,marginBottom:10}}>
                 <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
                 {semanasDelMes.map((s,i)=>(
-                  <button
-                    key={i}
-                    onClick={() => setSelWeek(i)}
-                    style={{
-                      flex:1,
-                      padding:"5px",
-                      borderRadius:7,
-                      border:`1.5px solid ${selWeek===i ? "#6c5ce7" : "#e2e8f0"}`,
-                      background: selWeek===i ? "#f0edff" : "#fff",
-                      color: selWeek===i ? "#6c5ce7" : "#5a7a9a",
-                      cursor:"pointer",
-                      fontSize:10,
-                      fontWeight:700,
-                      display:"flex",
-                      flexDirection:"column",
-                      alignItems:"center",
-                      lineHeight:1.1
-                    }}
-                  >
-                    <span style={{fontSize:10,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
-                    <span style={{fontSize:6,fontWeight:600,opacity:0.8,lineHeight:1}}>
-                      {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
-                    </span>
+                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px 3px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700,lineHeight:1.3}}>
+                    {s.label}
+                    <div style={{fontSize:7,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:1,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
                   </button>
                 ))}
               </div>
@@ -4263,30 +4130,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       </div>
       <div style={{display:"flex",gap:5,marginBottom:16}}>
         <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
-        {semanasDelMes.map((s,i)=> (
-          <button
-            key={i}
-            onClick={()=>setSelWeek(i)}
-            style={{
-              flex:1,
-              padding:"6px",
-              borderRadius:7,
-              border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,
-              background:selWeek===i?"#f0edff":"#fff",
-              color:selWeek===i?"#6c5ce7":"#5a7a9a",
-              cursor:"pointer",
-              fontSize:11,
-              fontWeight:700,
-              display:"flex",
-              flexDirection:"column",
-              alignItems:"center",
-              lineHeight:1.1
-            }}
-          >
-            <span style={{fontSize:11,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
-            <span style={{fontSize:7,fontWeight:600,opacity:0.8,lineHeight:1}}>
-              {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
-            </span>
+        {semanasDelMes.map((s,i)=>(
+          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px 4px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+            {s.label}
+            <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
           </button>
         ))}
       </div>
@@ -4808,29 +4655,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{display:"flex", gap:5, marginBottom:10}}>
               <button onClick={() => setSelWeek(null)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === null ? "#00b5b4" : "#e2e8f0"}`, background: selWeek === null ? "#e0fafa" : "#fff", color: selWeek === null ? "#00b5b4" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>Mes</button>
               {semanasDelMes.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelWeek(i)}
-                  style={{
-                    flex:1,
-                    padding:"5px",
-                    borderRadius:7,
-                    border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`,
-                    background: selWeek === i ? "#f0edff" : "#fff",
-                    color: selWeek === i ? "#6c5ce7" : "#5a7a9a",
-                    cursor:"pointer",
-                    fontSize:10,
-                    fontWeight:700,
-                    display:"flex",
-                    flexDirection:"column",
-                    alignItems:"center",
-                    lineHeight:1.1
-                  }}
-                >
-                  <span style={{fontSize:10,fontWeight:700,lineHeight:1}}>{s.label.split(" ")[0]}</span>
-                  <span style={{fontSize:6,fontWeight:600,opacity:0.8,lineHeight:1}}>
-                    {`Del ${String(s.start).padStart(2,"0")} al ${String(s.end).padStart(2,"0")}`}
-                  </span>
+                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px 3px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700, lineHeight:1.3}}>
+                  {s.label}
+                  <div style={{fontSize:7, fontWeight:400, color: selWeek===i?"#6c5ce7":"#8aaabb", marginTop:1, whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
                 </button>
               ))}
             </div>
