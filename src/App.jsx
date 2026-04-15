@@ -127,6 +127,7 @@ const ACTIVIDADES_INIT = [
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS_N = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const DIAS_C = ["D","L","M","MI","J","V","S"];
 const FMT = {
   Mayorista:      {c:"#6c5ce7",bg:"#f0edff"},
   Supermayorista: {c:"#0984e3",bg:"#e8f4fd"},
@@ -196,13 +197,28 @@ function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a62
 function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
-  const weeks=[], last=new Date(year,month+1,0).getDate();
-  let wn=1,ws=1;
-  while(ws<=last){
-    const we=Math.min(ws+6,last), days=[];
-    for(let i=ws;i<=we;i++){const d=new Date(year,month,i).getDay();if(d>=1&&d<=5)days.push(i);}
-    if(days.length>0) weeks.push({num:wn,label:"S"+wn,start:ws,end:we,days});
-    wn++;ws+=7;
+  // Semana COMERCIAL retail Latam: Dom → Sáb.
+  // `days` = días Lun–Sáb del mes (sábado incluido: tiendas abren sábado).
+  // Dom excluido de `days` porque personal admin descansa.
+  // `start`/`end` = rango calendario completo de la semana acotado al mes.
+  const weeks = [];
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const dow = new Date(year, month, 1).getDay();
+  let weekStart = 1 - dow;
+  let weekNum = 1;
+  while (weekStart <= lastDay) {
+    const mStart = Math.max(1, weekStart);
+    const mEnd   = Math.min(lastDay, weekStart + 6);
+    const days   = [];
+    for (let d = mStart; d <= mEnd; d++) {
+      const wd = new Date(year, month, d).getDay();
+      if (wd >= 1 && wd <= 6) days.push(d);
+    }
+    if (days.length > 0) {
+      weeks.push({ num: weekNum, label: `S${weekNum}`, start: mStart, end: mEnd, days });
+    }
+    weekNum++;
+    weekStart += 7;
   }
   return weeks;
 }
@@ -532,7 +548,7 @@ function ChecklistApp() {
   },[]); // sin dependencias — siempre usa refs actualizados
 
   const dow = getDow(fecha);
-  const esFS = dow===0||dow===6;
+  const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
@@ -1516,8 +1532,8 @@ function ChecklistApp() {
       {esFS?(
         <div style={{padding:"32px 16px",textAlign:"center"}}>
           <div style={{fontSize:40,marginBottom:12}}>😴</div>
-          <div style={{fontWeight:700,fontSize:16,color:"#1a2f4a",marginBottom:6}}>Fin de semana</div>
-          <div style={{fontSize:13,color:"#8aaabb"}}>Sábado y domingo no tienen actividades programadas</div>
+          <div style={{fontWeight:700,fontSize:16,color:"#1a2f4a",marginBottom:6}}>Domingo</div>
+          <div style={{fontSize:13,color:"#8aaabb"}}>El domingo el personal administrativo descansa. Las tiendas abren el sábado.</div>
         </div>
       ):paso===1?renderPaso1():paso===2?renderPaso2():renderPaso3()}
     </div>
@@ -1537,7 +1553,10 @@ function ChecklistApp() {
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
             {semanasDelMes.map((s,i)=>(
-              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+                {s.label}
+                <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
+              </button>
             ))}
           </div>
         </div>
@@ -1559,9 +1578,16 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {semsVis.map(s=>actsActivas.map(a=>(
-                        <th key={s.label+a.id} style={{padding:"8px 8px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:50,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0}}>{s.label}<br/>{a.e}</th>
-                      )))}
+                      {semsVis.flatMap(s=>s.days.flatMap(d=>{
+                        const wd=new Date(vYear,vMonth,d).getDay();
+                        return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>(
+                          <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:44,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0,lineHeight:1.3}}>
+                            <span style={{color:"#8aaabb",fontWeight:700,fontSize:8,display:"block"}}>{s.label}</span>
+                            <span style={{color:"#1a2f4a",fontWeight:800,fontSize:9,display:"block"}}>{DIAS_C[wd]}</span>
+                            <span style={{fontSize:13,display:"block"}}>{a.e}</span>
+                          </th>
+                        ));
+                      }))}
                       {semsVis.map(s=>(
                         <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55,position:"sticky",top:0}}>
                           {s.label}<br/>EF.%
@@ -2050,7 +2076,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
           {semanasDelMes.map((s,i)=>(
-            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+              {s.label}
+              <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
+            </button>
           ))}
         </div>
 
@@ -2937,7 +2966,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{display:"flex",gap:5,marginBottom:10}}>
                 <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
                 {semanasDelMes.map((s,i)=>(
-                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>{s.label}</button>
+                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px 3px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700,lineHeight:1.3}}>
+                    {s.label}
+                    <div style={{fontSize:7,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:1,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
+                  </button>
                 ))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -4096,7 +4128,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       <div style={{display:"flex",gap:5,marginBottom:16}}>
         <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
         {semanasDelMes.map((s,i)=>(
-          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
+          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px 4px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
+            {s.label}
+            <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
+          </button>
         ))}
       </div>
 
@@ -4617,7 +4652,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{display:"flex", gap:5, marginBottom:10}}>
               <button onClick={() => setSelWeek(null)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === null ? "#00b5b4" : "#e2e8f0"}`, background: selWeek === null ? "#e0fafa" : "#fff", color: selWeek === null ? "#00b5b4" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>Mes</button>
               {semanasDelMes.map((s, i) => (
-                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>{s.label}</button>
+                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px 3px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700, lineHeight:1.3}}>
+                  {s.label}
+                  <div style={{fontSize:7, fontWeight:400, color: selWeek===i?"#6c5ce7":"#8aaabb", marginTop:1, whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
+                </button>
               ))}
             </div>
             <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
