@@ -38,73 +38,77 @@ class AppErrorBoundary extends React.Component {
 }
 
 /* ══ DATOS ══════════════════════════════════════════════ */
+// Fallback local — Firestore es la fuente de verdad (ver useEffect de sync config/app)
 const TIENDAS_INIT = [
-  {id:"t01",n:"Collique",f:"Mayorista",activa:true},
-  {id:"t02",n:"Infantas",f:"Mayorista",activa:true},
-  {id:"t03",n:"Productores",f:"Mayorista",activa:true},
-  {id:"t04",n:"Belaunde",f:"Mayorista",activa:true},
-  {id:"t05",n:"Santa Clara",f:"Supermayorista",activa:true},
-  {id:"t06",n:"San Antonio",f:"Supermayorista",activa:true},
-  {id:"t07",n:"Chorrillos",f:"Supermayorista",activa:true},
-  {id:"t08",n:"Año Nuevo",f:"Supermayorista",activa:true},
-  {id:"t09",n:"Colonial",f:"Supermayorista",activa:true},
-  {id:"t10",n:"Huamantanga",f:"Supermayorista",activa:true},
-  {id:"t11",n:"Filomeno",f:"Supermayorista",activa:true},
-  {id:"t12",n:"Naranjal",f:"Supermayorista",activa:true},
-  {id:"t13",n:"San Diego",f:"Supermayorista",activa:true},
-  {id:"t14",n:"Surco",f:"Supermayorista",activa:true},
-  {id:"t15",n:"Lima VES",f:"Supermayorista",activa:true},
-  {id:"t16",n:"Minka",f:"Supermayorista",activa:true},
-  {id:"t17",n:"Nestor Gambetta",f:"Supermayorista",activa:true},
-  {id:"t18",n:"Tres Regiones",f:"Supermayorista",activa:true},
-  {id:"t19",n:"Bocanegra",f:"Market",activa:true},
-  {id:"t20",n:"Canta Callao",f:"Market",activa:true},
-  {id:"t21",n:"Mi Perú",f:"Market",activa:true},
-  {id:"t22",n:"Santo Domingo",f:"Market",activa:true},
-  {id:"t23",n:"Amaranto",f:"Market",activa:true},
-  {id:"t24",n:"Malvinas",f:"Market",activa:true},
-  {id:"t25",n:"Husares De Junin",f:"Market",activa:true},
-  {id:"t26",n:"Santa Catalina",f:"Market",activa:true},
-  {id:"t27",n:"Canevaro",f:"Market",activa:true},
-  {id:"t28",n:"Alayza",f:"Market",activa:true},
-  {id:"t29",n:"Huandoy",f:"Market",activa:true},
-  {id:"t30",n:"Las Palmeras",f:"Market",activa:true},
-  {id:"t31",n:"Benavides",f:"Market",activa:true},
-  {id:"t32",n:"Clement",f:"Market",activa:true},
-  {id:"t33",n:"Aviación",f:"Market",activa:true},
-  {id:"t34",n:"La Cultura",f:"Market",activa:true},
-  {id:"t35",n:"Chimu",f:"Market",activa:true},
-  {id:"t36",n:"Montenegro",f:"Market",activa:true},
-  {id:"t37",n:"Izaguirre",f:"Market",activa:true},
-  {id:"t38",n:"Riobamba",f:"Market",activa:true},
-  {id:"t39",n:"Escardó",f:"Market",activa:true},
-  {id:"t40",n:"Maranga",f:"Market",activa:true},
-  {id:"t41",n:"Universal",f:"Market",activa:true},
-  {id:"t42",n:"Roosevelt",f:"Market",activa:true},
-  {id:"t43",n:"Higuereta",f:"Market",activa:true},
-  {id:"t44",n:"Mareategui",f:"Market",activa:true},
-  {id:"t45",n:"Salamanca",f:"Market",activa:true},
-  {id:"t46",n:"Olimpo",f:"Market",activa:true},
-  {id:"t47",n:"Nueva Esperanza",f:"Market",activa:true},
-  {id:"t48",n:"Alisos",f:"Market",activa:true},
-  {id:"t49",n:"Merino",f:"Market",activa:true},
-  {id:"t50",n:"Rospigliosi",f:"Market",activa:true},
-  {id:"t51",n:"Loreto",f:"Market",activa:true},
-  {id:"t52",n:"Vara de Oro",f:"Market",activa:true},
-  {id:"t53",n:"Los Olivos",f:"Market",activa:true},
-  {id:"t54",n:"Mariano Pastor",f:"Market",activa:true},
-  {id:"t55",n:"Amancaes 3",f:"Market",activa:true},
-  {id:"t56",n:"Alameda Los Cedros",f:"Market",activa:true},
-  {id:"t57",n:"Bellavista",f:"Market",activa:true},
-  {id:"t58",n:"Mall Comas",f:"Market",activa:true},
-  {id:"t59",n:"A. Los Condores",f:"Market",activa:true},
-  {id:"t60",n:"Mariano Cornejo",f:"Market",activa:true},
-  {id:"t61",n:"Las Guindas",f:"Market",activa:true},
-  {id:"t62",n:"San Luis",f:"Market",activa:true},
-  {id:"t63",n:"Independencia",f:"Market",activa:true},
-  {id:"t64",n:"Guardia Civil",f:"Market",activa:true},
-  {id:"t65",n:"Villaran",f:"Market",activa:true},
+  {id:"t01",n:"Collique",f:"Mayorista",lat:-11.9130710881406,lng:-77.0315240586426,dir:"Av. Andrés Avelino Cáceres N°236, Mz K, Lt.1, 2da. Zona (Mcdo. 12 de Octubre)",dist:"Comas",maps:"https://goo.gl/maps/WMx9abr8jDP7hFmr6",activa:true},
+  {id:"t02",n:"Infantas",f:"Mayorista",lat:-11.9452993788987,lng:-77.0666678245644,dir:"Av.  Av Gerardo Unger 6531(Ref Media  Cuadra Comisaria de Infantas)",dist:"S.M.P.",maps:"https://goo.gl/maps/CEEaDF5Vb8tA6gaz6",activa:true},
+  {id:"t03",n:"Productores",f:"Mayorista",lat:-12.0406048829501,lng:-76.947559418012,dir:"Av. La Cultura s/n Psje. B Puesto 13 Santa Anita - Mercado Productores",dist:"Santa Anita",maps:"https://goo.gl/maps/EzcjFuixKH8UFF229",activa:true},
+  {id:"t04",n:"Belaunde",f:"Mayorista",lat:-11.9394642199328,lng:-77.05063230274,dir:"Av Belaunde Oeste 198",dist:"Comas",maps:"https://goo.gl/maps/gXxPQDmHDeiTeCxU8",activa:true},
+  {id:"t05",n:"Santa Clara",f:"Supermayorista",lat:-12.0179693921418,lng:-76.8835553504947,dir:"Av. Estrella 286 Urb. Santa Clara  Distrito de Ate Vitarte",dist:"Ate Vitarte",maps:"https://g.page/QhatuPlazaSantaClara?share",activa:true},
+  {id:"t06",n:"San Antonio",f:"Supermayorista",lat:-11.862040061358,lng:-77.0096919246391,dir:"Fundación Punchauca Caudivilla Mz “D” Lt - 01 San Antonio Alt. km 22 de la Tupac Amaru",dist:"Carabayllo",maps:"https://goo.gl/maps/eUm25P5MX24Svq8p6",activa:true},
+  {id:"t07",n:"Chorrillos",f:"Supermayorista",lat:-12.16797675312,lng:-77.0239126189426,dir:"Jr. Genaro Numa Llona N° 200 (Ref Alt 2 de Estacion de Bomberos )",dist:"Chorrillos",maps:"https://goo.gl/maps/QUB3Q4uRu3qfSyZM9",activa:true},
+  {id:"t08",n:"Año Nuevo",f:"Supermayorista",lat:-11.9239747733092,lng:-77.0409121709185,dir:"Urb. Villa Collique Zonal 4 Jr. Jupiter Mz 6 Lote 68",dist:"Comas",maps:"https://maps.app.goo.gl/hotaB65hVzXaS78E6",activa:true},
+  {id:"t09",n:"Colonial",f:"Supermayorista",lat:-12.0465295077811,lng:-77.0474716086143,dir:"Av Colonial  679 - Int 103 - Cruce Carcamo (Cercado de Lima)",dist:"Lima Cercado",maps:"https://maps.app.goo.gl/Y116zBpWoAV9AhEK6",activa:true},
+  {id:"t10",n:"Huamantanga",f:"Supermayorista",lat:-11.8642606553917,lng:-77.0740240854907,dir:"Av. Puente Piedra 200(Ref - Frente al Puesto Regular)",dist:"Puente Piedra",maps:"https://goo.gl/maps/CeHBhbQTBW2nyqzU9",activa:true},
+  {id:"t11",n:"Filomeno",f:"Supermayorista",lat:-12.0240887249942,lng:-77.0286662025572,dir:"Urb. Ciudad  y Campo - Av Armando Filomeno 105",dist:"Rimac",maps:"https://goo.gl/maps/BqP9A8KqRkjeXnCY8",activa:true},
+  {id:"t12",n:"Naranjal",f:"Supermayorista",lat:-11.9676870957647,lng:-77.0948968735974,dir:"Av. Pacasmayo Mz. A Lt -01 Ref. (Ovalo de Canta Callao / Av Sol de Naranjal)",dist:"S.M.P.",maps:"https://goo.gl/maps/ErHSirU7eiiRkFH78",activa:true},
+  {id:"t13",n:"San Diego",f:"Supermayorista",lat:-11.9457045229958,lng:-77.0875688429728,dir:"Mza. Ñ1 Lote 3 Urb. San Diego Vipol",dist:"S.M.P.",maps:"https://goo.gl/maps/RZDLeRfs1UNU9wFU8",activa:true},
+  {id:"t14",n:"Surco",f:"Supermayorista",lat:-12.145287970169,lng:-76.9877465027067,dir:"Urb Prolongacion  Benavides - Av Tomas Marsano Mz \"G-4\" Lt 23",dist:"Surco",maps:"https://goo.gl/maps/EEMTkD2mhiFYQALG7",activa:true},
+  {id:"t15",n:"Lima VES",f:"Supermayorista",lat:-12.2306606786337,lng:-76.9091952188438,dir:"Av. Lima Lt \"A - 02\" (Ref Ex Electra) Villa El Salvador",dist:"V.E.S.",maps:"https://goo.gl/maps/F4hWVzVsuy7z2Kup8",activa:true},
+  {id:"t16",n:"Minka",f:"Supermayorista",lat:-12.0479673671,lng:-77.111423924141,dir:"Av. Argentina N°3093 - Pabellón 7 - Int 97",dist:"Callao",maps:"https://goo.gl/maps/V5hVoRQKTatTS2VLA",activa:true},
+  {id:"t17",n:"Nestor Gambetta",f:"Supermayorista",lat:-11.8380137768696,lng:-77.1106039375981,dir:"Via Leocio Prado  Mz G Lt.96 (Ref 2 Cuadras de PRECIO UNO)",dist:"Puente Piedra",maps:"https://goo.gl/maps/UUSR9Y2VNy8odHYm8",activa:true},
+  {id:"t18",n:"Tres Regiones",f:"Supermayorista",lat:-11.8473268750784,lng:-77.0909708230882,dir:"Panamericana norte km. 33.5, Zapallal - Puente Piedra (mercado las tres regiones)",dist:"Puente Piedra",maps:"https://goo.gl/maps/YAVyCgNzwEEJvNRN9",activa:true},
+  {id:"t19",n:"Bocanegra",f:"Market",lat:-12.0066909878997,lng:-77.0993521687059,dir:"Av. Bocanegra Mz, A Lote N° 30, Urb. Albino Herrera, Primera Etapa",dist:"Callao",maps:"https://goo.gl/maps/z2iuTStL7i5uv7ig8",activa:true},
+  {id:"t20",n:"Canta Callao",f:"Market",lat:-11.9979508014858,lng:-77.1139514644159,dir:"Parcela 2-A, Ex Fundo Taboada – Valle de Boca Negra, Local Comercial Nº 110",dist:"Callao",maps:"https://goo.gl/maps/VkpsQ26Jjmbvckoh6",activa:true},
+  {id:"t21",n:"Mi Perú",f:"Market",lat:-11.8540475368831,lng:-77.1251839301726,dir:"Av. Ayacucho  Mz \"A9\" Lt -22 Gr \"A\" - Mi Perú",dist:"Ventanilla",maps:"https://goo.gl/maps/7u4tMquY7RYg4BsFA",activa:true},
+  {id:"t22",n:"Santo Domingo",f:"Market",lat:-11.8870300194622,lng:-77.0355570041254,dir:"Av Mariano Condorcanqui Mz T",dist:"Carabayllo",maps:"https://goo.gl/maps/EjFhHNvZZS8yND9M7",activa:true},
+  {id:"t23",n:"Amaranto",f:"Market",lat:-11.8997588873418,lng:-77.0369269423487,dir:"Jr. Amaranto 108 - 110, Urb. Santa Isabel",dist:"Carabayllo",maps:"https://goo.gl/maps/ytZxPSFqPEfiKd8bA",activa:true},
+  {id:"t24",n:"Malvinas",f:"Market",lat:-12.0440597372605,lng:-77.0499197423462,dir:"Av Argentina cdra 6 Int \"L\" . CC Via Mix",dist:"Lima Cercado",maps:"https://goo.gl/maps/Xy2UwwzUedBynGqu6",activa:true},
+  {id:"t25",n:"Husares De Junin",f:"Market",lat:-12.0770426523306,lng:-77.0514508478503,dir:"Av. Husares De Junin Nro. 366 Int. 1 Fnd. Oyague",dist:"Jesus María",maps:"https://goo.gl/maps/ccvd1ncnuqtXzKqV7",activa:true},
+  {id:"t26",n:"Santa Catalina",f:"Market",lat:-12.089545803654,lng:-77.0197852198942,dir:"Av. Carlos Villaran 500 - C.C. Santa",dist:"La Victoria",maps:"https://goo.gl/maps/GaghBoXhkURDfcfR8",activa:true},
+  {id:"t27",n:"Canevaro",f:"Market",lat:-12.0850888511931,lng:-77.0454268337727,dir:"Av. Canevaro N°1405 (Ref. frente al Parque de bomberos)",dist:"Lince",maps:"https://goo.gl/maps/hp2vVXvyzvgNFcCA6",activa:true},
+  {id:"t28",n:"Alayza",f:"Market",lat:-12.0837799669684,lng:-77.0359517108937,dir:"Av. General Cesar Canevaro Nro. 213 Lima - Lima - Lince",dist:"Lince",maps:"https://goo.gl/maps/CYdkDWM6LYRW6bMq8",activa:true},
+  {id:"t29",n:"Huandoy",f:"Market",lat:-11.9755420632121,lng:-77.0823099152715,dir:"Av Huandoy N° 5032",dist:"Los Olivos",maps:"https://goo.gl/maps/GkbaaSvJoAaRA6F67",activa:true},
+  {id:"t30",n:"Las Palmeras",f:"Market",lat:-11.9732419484427,lng:-77.0722909907347,dir:"Av Las Palmeras 5345",dist:"Los Olivos",maps:"https://goo.gl/maps/j7P16D6Qcw9rGHx78",activa:true},
+  {id:"t31",n:"Benavides",f:"Market",lat:-12.1262277453332,lng:-77.0147340280236,dir:"Av. Alfredo Benavides Nro. 1615 Urb. San Jorge Lima - Lima - Miraflores",dist:"Miraflores",maps:"https://goo.gl/maps/aL4v5TUUuwT8f3Rk9",activa:true},
+  {id:"t32",n:"Clement",f:"Market",lat:-12.0752479997504,lng:-77.0633833684983,dir:"Av. José Leguía y Meléndez Nro. 1040",dist:"Pueblo Libre",maps:"https://goo.gl/maps/kW82Ut3NSVm5opW87",activa:true},
+  {id:"t33",n:"Aviación",f:"Market",lat:-12.1074414800023,lng:-77.0005866261898,dir:"Av. Aviacion N° 3540",dist:"San Borja",maps:"https://g.page/vega-market-aviacion?share",activa:true},
+  {id:"t34",n:"La Cultura",f:"Market",lat:-12.0846341748754,lng:-77.0047722978547,dir:"Av. Aviación N° 2347",dist:"San Borja",maps:"https://goo.gl/maps/6jseYX4BqrCXu3hY8",activa:true},
+  {id:"t35",n:"Chimu",f:"Market",lat:-12.0981034965201,lng:-76.9623006042263,dir:"Av Gran Chimu 1641 Urb. Zarate",dist:"S.J.L.",maps:"https://goo.gl/maps/Fwj6B5aD9TYCMseP8",activa:true},
+  {id:"t36",n:"Montenegro",f:"Market",lat:-11.9362598875811,lng:-76.9719465484801,dir:"Jr. Mar de flores. Oeste 127 MZ Q1 - Lt 2B",dist:"S.J.L.",maps:"https://goo.gl/maps/s2yVQLymmw8bReCg9",activa:true},
+  {id:"t37",n:"Izaguirre",f:"Market",lat:-11.989557202557,lng:-77.0977567584093,dir:"Av Carlos Izaguirre MZ \"A\", Lt 30",dist:"S.M.P.",maps:"https://maps.app.goo.gl/HrSB3aakKn897whe8",activa:true},
+  {id:"t38",n:"Riobamba",f:"Market",lat:-12.0331715698591,lng:-77.0589855334734,dir:"Urb. Perú, Jr. Riobamba 501, San Martín de Porres",dist:"S.M.P.",maps:"https://goo.gl/maps/PZhCDig7d99rRtme6",activa:true},
+  {id:"t39",n:"Escardó",f:"Market",lat:-12.0779047089124,lng:-77.0927689647178,dir:"Av. Rafael Escardo Salazar Nº 454 urbanización Maranga",dist:"San Miguel",maps:"https://goo.gl/maps/Sur3ctj6KP9dCobF7",activa:true},
+  {id:"t40",n:"Maranga",f:"Market",lat:-12.0697705428756,lng:-77.0919306022064,dir:"Av. Los Precursores N° 362-366 - San Miguel",dist:"San Miguel",maps:"https://goo.gl/maps/31WiaYd6BZrxyj5V9",activa:true},
+  {id:"t41",n:"Universal",f:"Market",lat:-12.0436282626762,lng:-76.9794604832883,dir:"Jr. César Vallejo 356- 360 Urb. Universal",dist:"Santa Anita",maps:"https://goo.gl/maps/MLcUYojHz5R5VrTx8",activa:true},
+  {id:"t42",n:"Roosevelt",f:"Market",lat:-12.1467620468921,lng:-77.0124804800025,dir:"Jr. Franklin Roosevelt 812",dist:"Surco",maps:"https://goo.gl/maps/wau8L8pp8KizFXCS8",activa:true},
+  {id:"t43",n:"Higuereta",f:"Market",lat:-12.1294650401685,lng:-77.0009571492134,dir:"Av. Santiago De Surco Nro. 3004 Int. 101 Urb. La Castellana Lima",dist:"Surco",maps:"https://maps.app.goo.gl/4Ks7i6CXbmjsb27h6",activa:true},
+  {id:"t44",n:"Mareategui",f:"Market",lat:-12.1545753990258,lng:-76.9525443717441,dir:"Jose Carlos Mareategui N° 798",dist:"V.M.T.",maps:"https://goo.gl/maps/baJNRwMns6FCkXJy7",activa:true},
+  {id:"t45",n:"Salamanca",f:"Market",lat:-12.0745836007826,lng:-76.9881374448751,dir:"Urb. Salamanca de Monterrico Av. Los Aymaras 349",dist:"Ate Vitarte",maps:"https://goo.gl/maps/4wtQfhdqaPF7cQYGA",activa:true},
+  {id:"t46",n:"Olimpo",f:"Market",lat:-12.0745301492371,lng:-76.9772683225455,dir:"Calle Efestos Mz W Lt 4 Urb Olimpo (Ref frente al Merc Olimpo)",dist:"Ate Vitarte",maps:"https://goo.gl/maps/Fqk1StEsUFMRodJh9",activa:true},
+  {id:"t47",n:"Nueva Esperanza",f:"Market",lat:-12.1673239484862,lng:-76.9204274410753,dir:"Av. 26 de Noviembre N° 1993, Virgen de Lourdes - VMT",dist:"V.M.T.",maps:"https://goo.gl/maps/V15954Ve1mUcvwx5A",activa:true},
+  {id:"t48",n:"Alisos",f:"Market",lat:-11.9832041997733,lng:-77.0789397745201,dir:"Av. Los Alisos Mz. R Lote 45 Urb. Los Jazmines de Naranjal",dist:"Los Olivos",maps:"https://goo.gl/maps/AymktEnhAKKF4xf48",activa:true},
+  {id:"t49",n:"Ignacio Merino",f:"Market",lat:-12.0840366270314,lng:-77.0315598469307,dir:"Av. Ignacio Merino 1999",dist:"Lince",maps:"https://maps.app.goo.gl/TqfoSCZG4EV9niXp9",activa:true},
+  {id:"t50",n:"Rospigliosi",f:"Market",lat:-12.0792756031438,lng:-77.0326054084494,dir:"Av. Ignacio Merino Nro. 1502 esq. con Manuel Segura",dist:"Lince",maps:"https://maps.app.goo.gl/TE6Y6Hc8oGPtGZQ86",activa:true},
+  {id:"t51",n:"Loreto",f:"Market",lat:-12.0544998291611,lng:-77.0490928110227,dir:"Jiron Loreto 478",dist:"Breña",maps:"https://maps.app.goo.gl/zQMbQ2qmR1JH579Q9",activa:true},
+  {id:"t52",n:"Vara de Oro",f:"Market",lat:-12.0251128545406,lng:-76.9967339475352,dir:"Calle Vara de Oro 288 - Urg Zarate Comu 3",dist:"S.J.L.",maps:"https://maps.app.goo.gl/wkrE4H54wD3VH8rm9",activa:true},
+  {id:"t53",n:"Los Olivos",f:"Market",lat:-11.98831205195,lng:-77.0822101252409,dir:"Av. Los Olivos 210",dist:"S.M.P.",maps:"https://maps.app.goo.gl/qhuoGau6dtNbFLgb9",activa:true},
+  {id:"t54",n:"Mariano Pastor",f:"Market",lat:-12.0729274536981,lng:-77.0651821734151,dir:"C. Mariano Pastor Sevilla 194 (Ref 1/2 cuadra Merc Bolivar)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/6MGuZsMU3341X6Lr6",activa:true},
+  {id:"t55",n:"Amancaes 3",f:"Market",lat:-12.0257230071489,lng:-77.0341626057537,dir:"Av. Amancaes 124, Rímac",dist:"Rimac",maps:"https://maps.app.goo.gl/oZcdG7b484FryNwo8",activa:true},
+  {id:"t56",n:"Alameda Los Cedros",f:"Market",lat:-12.2036161155135,lng:-77.0146858000055,dir:"Av. Alameda Los Cedros 214",dist:"Chorrillos",maps:"https://maps.app.goo.gl/R6dSf5vUMvWEaakV8",activa:true},
+  {id:"t57",n:"Bellavista",f:"Market",lat:-12.063814219369,lng:-77.1454623981609,dir:"Jiron. Grau 485",dist:"Bellavista",maps:"https://maps.app.goo.gl/7ujPpHG8RQXqxkENA",activa:true},
+  {id:"t58",n:"Mall Comas",f:"Market",lat:-11.9338398194793,lng:-77.0658375835365,dir:"Av. Los Ángeles 602, Comas 15314",dist:"Comas",maps:"https://maps.app.goo.gl/cLXJ8XsWSzS3bqo57",activa:true},
+  {id:"t59",n:"A. Los Condores",f:"Market",lat:-12.1011618376867,lng:-76.9441832656271,dir:"Alameda los Condores 628",dist:"La Molina",maps:"https://maps.app.goo.gl/dqKnNNLNN4Y7ufgb8",activa:true},
+  {id:"t60",n:"Mariano Cornejo",f:"Market",lat:-12.0677220872957,lng:-77.0651192762642,dir:"Av Mariano Cornejo 1407",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ed992SADFWwLWyBj8",activa:true},
+  {id:"t61",n:"Las Guindas",f:"Market",lat:-12.0315735941664,lng:-76.9904041119922,dir:"Ca. Las Guindas 348 Urb, El Agustino (Ref media cuadra Condominios Alameda El Agustino)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ExAhcKw7mPDXv5VW6",activa:true},
+  {id:"t62",n:"San Luis",f:"Market",lat:-12.0755237709728,lng:-77.0023173003529,dir:"Av. San Juan 771 San Luis",dist:"La Victoria",maps:"https://share.google/36264kwQUUQoIV7nh",activa:true},
+  {id:"t63",n:"Independencia",f:"Market",lat:-11.9925688075581,lng:-77.0574865358829,dir:"Av. Gerardo Unger Nro. 3601 local LC02 Urb. Industrial Panamericana Norte",dist:"Independencia",maps:"https://share.google/nrqEZNgi6dLcVz7fh",activa:true},
+  {id:"t64",n:"Guardia Civil",f:"Market",lat:-12.1680427416882,lng:-76.9921645565965,dir:"Av. Guardia Civil Norte 625, Urb. Los Parrales de Surco",dist:"Surco",maps:"https://maps.app.goo.gl/cJJCVJX3N5xgNqwb8",activa:true},
+  {id:"t65",n:"Villaran",f:"Market",lat:-12.1216165022436,lng:-77.0048891334863,dir:"Av. Manuel Villlaran 708 Urb. Los Sauces Surquillo",dist:"Surquillo",maps:"https://maps.app.goo.gl/TjtyMkpDEMtNRuji6",activa:true},
+  {id:"t66",n:"Micaela Bastidas",f:"Market",lat:-12.0461930116169,lng:-76.9300866037768,dir:"Calle Comercial Mz U Lote 9 (Ref 1/2 cuadra de mercado modelo n°1 micaela bastidas)",dist:"Ate Vitarte",maps:"https://maps.app.goo.gl/UTdCken84EsBDG4B8",activa:false},
 ];
+
+
 
 const RANGOS_DEFAULT = { c100:"09:00", c80:"10:15", c60:"10:30" };
 
@@ -192,43 +196,13 @@ function sc(v){if(v===null||v===undefined)return"#b2bec3";if(v>=95)return"#f6a62
 function sb(v){if(v===null||v===undefined)return"#f4f6f8";if(v>=95)return"#fff8ec";if(v>=80)return"#e8faf5";if(v>=60)return"#e8f4fd";if(v>=40)return"#fff1ee";return"#ffeae6";}
 
 function getWeeksOfMonth(year, month) {
-  // Semana COMERCIAL retail: Dom → Sáb (práctica estándar en retail Latam / Nielsen / SAP).
-  // El fin de semana queda dentro de la misma semana, no partido entre dos.
-  // `days`  = días L–V del mes en esa semana (para cálculos de puntaje y actividades).
-  // `start` = primer día del mes en la semana (puede ser dom, lun… según donde cae el 1ro).
-  // `end`   = último día del mes en la semana (puede ser sáb, vier… según fin de mes).
-  // Para agregar sábado a actividades en el futuro: añadir || wd === 6 en el filtro de days.
-  const weeks = [];
-  const lastDay = new Date(year, month + 1, 0).getDate();
-
-  // Retroceder al domingo de la semana que contiene el día 1 del mes
-  const firstOfMonth = new Date(year, month, 1);
-  const dow = firstOfMonth.getDay(); // 0=dom … 6=sáb
-  // dow ya es el offset desde el domingo (0 = ya es domingo, 1 = retroceder 1 día, etc.)
-  let weekStart = 1 - dow; // puede ser ≤0 si el 1ro no es domingo
-  let weekNum = 1;
-
-  while (weekStart <= lastDay) {
-    const mStart = Math.max(1, weekStart);       // primer día del mes en esta semana
-    const mEnd   = Math.min(lastDay, weekStart + 6); // último día del mes en esta semana
-
-    const days = [];
-    for (let d = mStart; d <= mEnd; d++) {
-      const wd = new Date(year, month, d).getDay();
-      if (wd >= 1 && wd <= 5) days.push(d);     // solo L–V para actividades
-    }
-
-    if (days.length > 0) {
-      weeks.push({
-        num:   weekNum,
-        label: `S${weekNum}`,
-        start: mStart,
-        end:   mEnd,
-        days,
-      });
-      weekNum++;
-    }
-    weekStart += 7;
+  const weeks=[], last=new Date(year,month+1,0).getDate();
+  let wn=1,ws=1;
+  while(ws<=last){
+    const we=Math.min(ws+6,last), days=[];
+    for(let i=ws;i<=we;i++){const d=new Date(year,month,i).getDay();if(d>=1&&d<=5)days.push(i);}
+    if(days.length>0) weeks.push({num:wn,label:"S"+wn,start:ws,end:we,days});
+    wn++;ws+=7;
   }
   return weeks;
 }
@@ -1563,10 +1537,7 @@ function ChecklistApp() {
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
             {semanasDelMes.map((s,i)=>(
-              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
-                {s.label}
-                <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
-              </button>
+              <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
             ))}
           </div>
         </div>
@@ -2079,10 +2050,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
           {semanasDelMes.map((s,i)=>(
-            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
-              {s.label}
-              <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
-            </button>
+            <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
           ))}
         </div>
 
@@ -2969,10 +2937,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <div style={{display:"flex",gap:5,marginBottom:10}}>
                 <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>Mes</button>
                 {semanasDelMes.map((s,i)=>(
-                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px 3px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700,lineHeight:1.3}}>
-                    {s.label}
-                    <div style={{fontSize:7,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:1,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
-                  </button>
+                  <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>{s.label}</button>
                 ))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -4131,10 +4096,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       <div style={{display:"flex",gap:5,marginBottom:16}}>
         <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
         {semanasDelMes.map((s,i)=>(
-          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px 4px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,lineHeight:1.3}}>
-            {s.label}
-            <div style={{fontSize:8,fontWeight:400,color:selWeek===i?"#6c5ce7":"#8aaabb",marginTop:2,whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
-          </button>
+          <button key={i} onClick={()=>setSelWeek(i)} style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${selWeek===i?"#6c5ce7":"#e2e8f0"}`,background:selWeek===i?"#f0edff":"#fff",color:selWeek===i?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{s.label}</button>
         ))}
       </div>
 
@@ -4655,10 +4617,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             <div style={{display:"flex", gap:5, marginBottom:10}}>
               <button onClick={() => setSelWeek(null)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === null ? "#00b5b4" : "#e2e8f0"}`, background: selWeek === null ? "#e0fafa" : "#fff", color: selWeek === null ? "#00b5b4" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>Mes</button>
               {semanasDelMes.map((s, i) => (
-                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px 3px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700, lineHeight:1.3}}>
-                  {s.label}
-                  <div style={{fontSize:7, fontWeight:400, color: selWeek===i?"#6c5ce7":"#8aaabb", marginTop:1, whiteSpace:"nowrap"}}>Del {String(s.start).padStart(2,"0")} al {String(s.end).padStart(2,"0")}</div>
-                </button>
+                <button key={i} onClick={() => setSelWeek(i)} style={{flex:1, padding:"5px", borderRadius:7, border:`1.5px solid ${selWeek === i ? "#6c5ce7" : "#e2e8f0"}`, background: selWeek === i ? "#f0edff" : "#fff", color: selWeek === i ? "#6c5ce7" : "#5a7a9a", cursor:"pointer", fontSize:10, fontWeight:700}}>{s.label}</button>
               ))}
             </div>
             <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
