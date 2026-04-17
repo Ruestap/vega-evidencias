@@ -420,6 +420,29 @@ function ChecklistApp() {
     const iv=setInterval(tick,30000);
     return()=>clearInterval(iv);
   },[showStatusCard]);
+
+  // B15 fix: sincronizar fecha y hora cuando la app vuelve a primer plano
+  // Cubre: pestaña inactiva, dispositivo en suspensión, cambio de día
+  useEffect(()=>{
+    const sync = () => {
+      const hoy = todayStr();
+      setFecha(prev => prev === hoy ? prev : hoy); // solo cambia si el día cambió
+      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+    };
+    // visibilitychange: se dispara cuando la pestaña vuelve a ser visible
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") sync(); });
+    // focus: respaldo para móviles que no disparan visibilitychange correctamente
+    window.addEventListener("focus", sync);
+    // También un interval cada 60s para detectar cambio de día mientras está activa
+    const iv = setInterval(()=>{
+      if(document.visibilityState==="visible") sync();
+    }, 60000);
+    return ()=>{
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("focus", sync);
+      clearInterval(iv);
+    };
+  },[]);
   const statusCardRef = useRef(null);
 
   /* ══ FIREBASE SYNC ══ */
@@ -445,13 +468,24 @@ function ChecklistApp() {
       if(d.rangosDia)   setRangosDia(d.rangosDia);
       if(d.cortesSupervision) setCortesSupervision(d.cortesSupervision);
       // Limpiar exceps: descartar true legacy y arrays vacíos
+      // B16 fix: NO limpiar entradas de la semana en curso o futuras — solo legacy boolean y arrays vacíos
       const exc = d.excepciones || {};
+      const hoyClean = todayStr();
       const cleaned = Object.fromEntries(
-        Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
+        Object.entries(exc).filter(([,v])=>{
+          if(!Array.isArray(v)) return false; // descarta legacy boolean true
+          // Mantener si tiene al menos una entrada presente o futura
+          const tieneVigentes = v.some(e=>{
+            const f = typeof e==="string"?e:e?.fecha;
+            return f && f >= hoyClean;
+          });
+          // Mantener si tiene entradas (aunque sean pasadas) — el admin las gestiona
+          return v.length > 0;
+        })
       );
       setExceps(cleaned);
-      // Si había legacy, guardar versión limpia en Firebase (una sola vez)
-      const hasLegacy = Object.values(exc).some(v=>!Array.isArray(v)||v.length===0);
+      // Si había legacy boolean, guardar versión limpia en Firebase (una sola vez)
+      const hasLegacy = Object.values(exc).some(v=>!Array.isArray(v));
       if(hasLegacy){
         setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
       }
@@ -1608,65 +1642,47 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.map(sem=>actsActivas.map(a=>{
-                            // N/A solo si TODOS los días donde aplica la actividad tienen excepción
-                            const diasActSem=sem.days.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(dStr(vYear,vMonth,d))));
-                            const excepcion=diasActSem.length>0&&diasActSem.every(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
-                            const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
-                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
-                            // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
-                            const hoyC=todayStr();
-                            const diasConAct=ds.filter(d=>d<=hoyC&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
-                            // Solo contar si la actividad tiene historial real
-                            const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
-                            const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
-                            const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
-                            const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
-                            const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
-                            const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
-                            return(
-                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent"}}>
-                                {anulado?(
-                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
-                                ):excepcion?(
-                                  <span
-                                    title={getExcComment(tr.id,a.id,ds[0]||fecha)||"Excepción: tienda no aplica para esta actividad"}
-                                    style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help",position:"relative"}}>
-                                    N/A {getExcComment(tr.id,a.id,ds[0]||fecha)?"💬":""}
-                                    {isAdmin&&(
-                                      <span
-                                        title="Editar comentario de esta exclusión"
-                                        onClick={e=>{
-                                          e.stopPropagation();
-                                          setExcModal({
-                                            tId:tr.id,aId:a.id,tiendaNombre:tr.n,
-                                            estaExcluida:true,
-                                            comentarioActual:getExcComment(tr.id,a.id,ds[0]||fecha),
-                                          });
-                                        }}
-                                        style={{marginLeft:3,cursor:"pointer",opacity:.7,fontSize:8}}>✏️</span>
-                                    )}
-                                  </span>
-                                ):v!==null?(
-                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
-                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
-                                    onMouseUp={()=>clearTimeout(longPressRef.current)}
-                                    onMouseLeave={()=>clearTimeout(longPressRef.current)}
-                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
-                                    onTouchEnd={()=>clearTimeout(longPressRef.current)}
-                                    style={{cursor:"pointer"}}>
-                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</span>
-                                    <div style={{fontSize:8,color:"#8aaabb",marginTop:1}}>{v}%</div>
-                                    {auditorCell&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
-                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
-                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
+                          {semsVis.flatMap(sem=>sem.days.flatMap(d=>{
+                            const wd=new Date(vYear,vMonth,d).getDay();
+                            const ds=dStr(vYear,vMonth,d);
+                            return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>{
+                              const excepcion=isExc(tr.id,a.id,ds);
+                              const rv=getReg(ds,tr.id,a.id);
+                              const pts=puntajeReg(rv,getRangoActivo(a.id,ds));
+                              const auditor=rv?.evidencias?.[0]?.auditor||null;
+                              const anulado=rv?.anulado||false;
+                              const hoyC=todayStr();
+                              const enPasado=ds<=hoyC;
+                              const maxP=actsConRegistroIds.has(a.id)&&enPasado&&!excepcion?10:0;
+                              const docId=rKey(ds,tr.id,a.id).replace(/\|/g,"--");
+                              const docIds=(regs[docId]||regs[rKey(ds,tr.id,a.id)])?[{docId,docData:regs[docId]||regs[rKey(ds,tr.id,a.id)],fecha:ds,actividadId:a.id}]:[];
+                              const menuId=`ctx-${tr.id}-${ds}-${a.id}`;
+                              return(
+                                <td key={sem.label+d+a.id} style={{padding:"4px 5px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent",borderLeft:"1px solid #f5f7fa"}}>
+                                  {anulado?(
+                                    <span style={{padding:"2px 5px",borderRadius:20,fontSize:8,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
+                                  ):excepcion?(
+                                    <span title={getExcComment(tr.id,a.id,ds)||"Excepción"} style={{padding:"2px 5px",borderRadius:20,fontSize:8,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help"}}>
+                                      N/A{getExcComment(tr.id,a.id,ds)?" 💬":""}
+                                      {isAdmin&&<span title="Editar" onClick={e=>{e.stopPropagation();setExcModal({tId:tr.id,aId:a.id,tiendaNombre:tr.n,estaExcluida:true,comentarioActual:getExcComment(tr.id,a.id,ds)});}} style={{marginLeft:2,cursor:"pointer",fontSize:7}}>✏️</span>}
+                                    </span>
+                                  ):pts!==null?(
+                                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,cursor:"pointer"}}
+                                      onMouseDown={()=>{clearTimeout(longPressRef.current);longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700);}}
+                                      onMouseUp={()=>clearTimeout(longPressRef.current)}
+                                      onMouseLeave={()=>clearTimeout(longPressRef.current)}
+                                      onTouchStart={()=>{clearTimeout(longPressRef.current);longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700);}}
+                                      onTouchEnd={()=>clearTimeout(longPressRef.current)}>
+                                      <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:sc(pts/10*100),background:sb(pts/10*100)}}>{pts}/10pts</span>
+                                      <div style={{fontSize:8,color:"#8aaabb"}}>{Math.round(pts/10*100)}%</div>
+                                      {auditor&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:55,borderBottom:"1.5px solid #f6a623"}}>{auditor.split(" ")[0]}</div>}
                                     </div>
-                                  </div>
-                                ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                              </td>
-                            );
+                                  ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                                </td>
+                              );
+                            });
                           }))}
-                          {semsVis.map(sem=>{
+                                                    {semsVis.map(sem=>{
                             const ps=calcSemana(tr.id,sem);
                             const detSem=calcSemanaDetalle(tr.id,sem);
 return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>
