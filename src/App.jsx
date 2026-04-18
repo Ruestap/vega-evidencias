@@ -5097,10 +5097,12 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         }));
         const actsRefCard=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
         // Filtro de actividad — disponible para todos los roles
-        const actsRefFiltradas = statusActFiltro==="Todas"
+        // B17 fix: declarar actsParaStatus sin TDZ — filtro directo sobre actsRefCard
+        const actsParaStatus = statusActFiltro==="Todas"
           ? actsRefCard
-          : actsParaStatus.filter(a=>a.id===statusActFiltro);
-        const actsParaStatus = actsRefFiltradas.length>0 ? actsRefFiltradas : actsRefCard;
+          : (actsRefCard.filter(a=>a.id===statusActFiltro).length>0
+              ? actsRefCard.filter(a=>a.id===statusActFiltro)
+              : actsRefCard);
         // Rangos de corte desde la actividad de referencia (respeta config del Admin)
         const actRefRango = actsParaStatus.length>0 ? getRangoActivo(actsParaStatus[0].id, hoy) : RANGOS_DEFAULT;
         // Cortes de supervisión: configurables por Admin (independientes del puntaje)
