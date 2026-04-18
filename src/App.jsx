@@ -685,6 +685,13 @@ function ChecklistApp() {
     }
   },[]); // sin dependencias — siempre usa refs actualizados
 
+  /* ── Toast helper — debe declararse ANTES de cualquier useCallback que lo use ── */
+  const showToast = msg=>{
+    setToast(msg);
+    if(toastRef.current)clearTimeout(toastRef.current);
+    toastRef.current=setTimeout(()=>setToast(""),2500);
+  };
+
   /* ── GPS ── */
   const obtenerGPS = useCallback(()=>new Promise((res,rej)=>{
     if(!navigator.geolocation){rej("GPS no disponible");return;}
@@ -826,12 +833,6 @@ function ChecklistApp() {
     const interval=setInterval(check,30000); // revisa cada 30 seg
     return()=>clearInterval(interval);
   },[]);
-
-  const showToast = msg=>{
-    setToast(msg);
-    if(toastRef.current)clearTimeout(toastRef.current);
-    toastRef.current=setTimeout(()=>setToast(""),2500);
-  };
 
   /* ── cálculos KPI ── */
   const kpisDia = useMemo(()=>{
@@ -5404,7 +5405,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     </>}
                     {/* Escenario B — pills separados por actividad */}
                     {esParalelo&&actsConRegHoy.map(a=>{
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsConRegHoy.every(aa=>isExc(ti.id,aa.id,hoy)));
                       const regA=tsFmt.filter(ti=>{
                         const reg=getReg(hoy,ti.id,a.id);
                         if(!reg?.evidencias||reg.anulado) return false;
@@ -5460,13 +5461,13 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     </>}
                     {esParalelo&&actsConRegHoy.map(a=>{
                       const rango=getRangoActivo(a.id,hoy);
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsConRegHoy.every(aa=>isExc(ti.id,aa.id,hoy)));
                       const regA=tsFmt.filter(ti=>{
                         const reg=getReg(hoy,ti.id,a.id);
                         if(!reg?.evidencias||reg.anulado) return false;
                         return toMin(primerEnvio(reg.evidencias))>b1Max;
                       }).length;
-                      const pendA=tsFmt.filter(ti=>!actsRef.some(aa=>{const r=getReg(hoy,ti.id,aa.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
+                      const pendA=tsFmt.filter(ti=>!actsConRegHoy.some(aa=>{const r=getReg(hoy,ti.id,aa.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
                       const esAdHoc=a.cat&&a.cat!=="Always On";
                       const ptsMax=toMin(nowTime)<=toMin(rango.c80||"09:00")?"8pts":"6pts";
                       return(
