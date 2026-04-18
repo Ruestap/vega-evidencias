@@ -141,6 +141,8 @@ const PUNTAJES = [
 ];
 
 /* ══ UTILS ══════════════════════════════════════════════ */
+const horaHHMM = (d = new Date()) =>
+  `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 // FIX: Usa fecha LOCAL del dispositivo, no UTC — evita desfase de zona horaria (ej. Peru UTC-5)
 const todayStr = () => {
   const d = new Date();
@@ -356,7 +358,7 @@ function ChecklistApp() {
   const [actSel,  setActSel]  = useState(null);
   const [tSel,    setTSel]    = useState(new Set());
   const [rango,   setRango]   = useState(null);
-  const [horaEx,  setHoraEx]  = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+  const [horaEx,  setHoraEx]  = useState(()=>horaHHMM());
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
   const [fmtFilt,      setFmtFilt]      = useState("Todas");
@@ -410,38 +412,29 @@ function ChecklistApp() {
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
   const [statusCardView, setStatusCardView] = useState("operativo"); // "operativo" | "gerencial"
-  const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+  const [statusNowTime, setStatusNowTime] = useState(()=>horaHHMM());
 
-  // Actualizar la hora de la tarjeta cada 30 segundos mientras esté abierta
   useEffect(()=>{
     if(!showStatusCard) return;
-    const tick=()=>setStatusNowTime(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+    const tick=()=>setStatusNowTime(horaHHMM());
     tick();
     const iv=setInterval(tick,30000);
     return()=>clearInterval(iv);
   },[showStatusCard]);
 
-  // B15 fix: sincronizar fecha y hora cuando la app vuelve a primer plano
-  // Cubre: pestaña inactiva, dispositivo en suspensión, cambio de día
   useEffect(()=>{
-    const sync = () => {
-      const hoy = todayStr();
-      setFecha(prev => prev === hoy ? prev : hoy); // solo cambia si el día cambió
-      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+    const sync=()=>{
+      const hoy=todayStr();
+      const hora=horaHHMM();
+      setFecha(prev=>{ if(prev<hoy) return hoy; return prev; });
+      setHoraEx(hora);
     };
-    // visibilitychange: se dispara cuando la pestaña vuelve a ser visible
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") sync(); });
-    // focus: respaldo para móviles que no disparan visibilitychange correctamente
-    window.addEventListener("focus", sync);
-    // También un interval cada 60s para detectar cambio de día mientras está activa
-    const iv = setInterval(()=>{
-      if(document.visibilityState==="visible") sync();
-    }, 60000);
-    return ()=>{
-      document.removeEventListener("visibilitychange", sync);
-      window.removeEventListener("focus", sync);
-      clearInterval(iv);
-    };
+    sync();
+    const iv=setInterval(sync,60000);
+    const onVisible=()=>{ if(document.visibilityState==="visible") sync(); };
+    document.addEventListener("visibilitychange",onVisible);
+    return()=>{ clearInterval(iv); document.removeEventListener("visibilitychange",onVisible); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   const statusCardRef = useRef(null);
 
@@ -468,24 +461,13 @@ function ChecklistApp() {
       if(d.rangosDia)   setRangosDia(d.rangosDia);
       if(d.cortesSupervision) setCortesSupervision(d.cortesSupervision);
       // Limpiar exceps: descartar true legacy y arrays vacíos
-      // B16 fix: NO limpiar entradas de la semana en curso o futuras — solo legacy boolean y arrays vacíos
       const exc = d.excepciones || {};
-      const hoyClean = todayStr();
       const cleaned = Object.fromEntries(
-        Object.entries(exc).filter(([,v])=>{
-          if(!Array.isArray(v)) return false; // descarta legacy boolean true
-          // Mantener si tiene al menos una entrada presente o futura
-          const tieneVigentes = v.some(e=>{
-            const f = typeof e==="string"?e:e?.fecha;
-            return f && f >= hoyClean;
-          });
-          // Mantener si tiene entradas (aunque sean pasadas) — el admin las gestiona
-          return v.length > 0;
-        })
+        Object.entries(exc).filter(([,v])=>Array.isArray(v)&&v.length>0)
       );
       setExceps(cleaned);
-      // Si había legacy boolean, guardar versión limpia en Firebase (una sola vez)
-      const hasLegacy = Object.values(exc).some(v=>!Array.isArray(v));
+      // Si había legacy, guardar versión limpia en Firebase (una sola vez)
+      const hasLegacy = Object.values(exc).some(v=>!Array.isArray(v)||v.length===0);
       if(hasLegacy){
         setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
       }
@@ -725,11 +707,14 @@ function ChecklistApp() {
       acts.filter(a=>
         a.activa &&
         a.dias.includes(dw) &&
-        !isExc(tId,a.id,ds) &&
-        actsConRegistroIds.has(a.id) // solo actividades con historial real
+        actsConRegistroIds.has(a.id)
       ).forEach(a=>{
-        const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
-        maximos+=10; // día pasado/hoy sin registro = 0pts de 10 posibles
+        const excluida=isExc(tId,a.id,ds);
+        const reg=getReg(ds,tId,a.id);
+        const tieneReg=reg?.evidencias?.length>0&&!reg?.anulado;
+        if(excluida && !tieneReg) return;
+        const p=puntajeReg(reg,getRangoActivo(a.id,ds));
+        maximos+=10;
         if(p!==null){
           obtenidos+=p;
           registros.push({fecha:ds,act:a.n,pts:p,max:10});
@@ -774,9 +759,12 @@ function ChecklistApp() {
     if(fmtFilt!=="Todas"&&ti.f!==fmtFilt)return false;
     if(busq&&!ti.n.toLowerCase().includes(busq.toLowerCase()))return false;
     const excHoy = isExc(ti.id,actSel,fecha);
+    const tieneRegHoy = tRegistradas.has(ti.id);
+    if(excHoy && tieneRegHoy && !verRegistradas) return false;
+    if(excHoy && tieneRegHoy) return true;
     if(excHoy && !verRegistradas) return false;
     if(excHoy) return true;
-    if(tRegistradas.has(ti.id) && !verRegistradas) return false;
+    if(tieneRegHoy && !verRegistradas) return false;
     return true;
   }).sort((a,b)=>a.n.localeCompare(b.n,"es")),[tiAct,fmtFilt,busq,tRegistradas,verRegistradas,isExc,actSel,fecha]);
 
@@ -827,7 +815,7 @@ function ChecklistApp() {
         hora:horaEx,              // hora declarada por el auditor (HH:MM)
         puntaje:pct,
         observacion:obsEx||`Registro en bloque · ${tier.label}`,
-        horaRegistro:now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}), // legible
+        horaRegistro:horaHHMM(now), // legible
         timestamp:hreg,           // ISO para ordenamiento y auditoría
         auditor:uName,
         dni:uDni,
@@ -848,7 +836,7 @@ function ChecklistApp() {
       await Promise.all(promises);
       showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
       setTSel(new Set());setRango(null);
-      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+      setHoraEx(horaHHMM());
       setObsEx("");setPaso(2);setVerRegistradas(false);
     } catch(e) {
       console.error("confirmarRegistro error:", e);
@@ -901,7 +889,7 @@ function ChecklistApp() {
       hora: horaUpd,
       puntaje: pct,
       observacion: `Corrección: ${motivoUpd}`,
-      horaRegistro: now2.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}),
+      horaRegistro: horaHHMM(now2),
       timestamp: now2.toISOString(), // A6 fix: ISO consistente
       auditor: uName,
       esCorreccion: true,
@@ -1642,47 +1630,65 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.flatMap(sem=>sem.days.flatMap(d=>{
-                            const wd=new Date(vYear,vMonth,d).getDay();
-                            const ds=dStr(vYear,vMonth,d);
-                            return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>{
-                              const excepcion=isExc(tr.id,a.id,ds);
-                              const rv=getReg(ds,tr.id,a.id);
-                              const pts=puntajeReg(rv,getRangoActivo(a.id,ds));
-                              const auditor=rv?.evidencias?.[0]?.auditor||null;
-                              const anulado=rv?.anulado||false;
-                              const hoyC=todayStr();
-                              const enPasado=ds<=hoyC;
-                              const maxP=actsConRegistroIds.has(a.id)&&enPasado&&!excepcion?10:0;
-                              const docId=rKey(ds,tr.id,a.id).replace(/\|/g,"--");
-                              const docIds=(regs[docId]||regs[rKey(ds,tr.id,a.id)])?[{docId,docData:regs[docId]||regs[rKey(ds,tr.id,a.id)],fecha:ds,actividadId:a.id}]:[];
-                              const menuId=`ctx-${tr.id}-${ds}-${a.id}`;
-                              return(
-                                <td key={sem.label+d+a.id} style={{padding:"4px 5px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent",borderLeft:"1px solid #f5f7fa"}}>
-                                  {anulado?(
-                                    <span style={{padding:"2px 5px",borderRadius:20,fontSize:8,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
-                                  ):excepcion?(
-                                    <span title={getExcComment(tr.id,a.id,ds)||"Excepción"} style={{padding:"2px 5px",borderRadius:20,fontSize:8,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help"}}>
-                                      N/A{getExcComment(tr.id,a.id,ds)?" 💬":""}
-                                      {isAdmin&&<span title="Editar" onClick={e=>{e.stopPropagation();setExcModal({tId:tr.id,aId:a.id,tiendaNombre:tr.n,estaExcluida:true,comentarioActual:getExcComment(tr.id,a.id,ds)});}} style={{marginLeft:2,cursor:"pointer",fontSize:7}}>✏️</span>}
-                                    </span>
-                                  ):pts!==null?(
-                                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,cursor:"pointer"}}
-                                      onMouseDown={()=>{clearTimeout(longPressRef.current);longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700);}}
-                                      onMouseUp={()=>clearTimeout(longPressRef.current)}
-                                      onMouseLeave={()=>clearTimeout(longPressRef.current)}
-                                      onTouchStart={()=>{clearTimeout(longPressRef.current);longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700);}}
-                                      onTouchEnd={()=>clearTimeout(longPressRef.current)}>
-                                      <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:sc(pts/10*100),background:sb(pts/10*100)}}>{pts}/10pts</span>
-                                      <div style={{fontSize:8,color:"#8aaabb"}}>{Math.round(pts/10*100)}%</div>
-                                      {auditor&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:55,borderBottom:"1.5px solid #f6a623"}}>{auditor.split(" ")[0]}</div>}
+                          {semsVis.map(sem=>actsActivas.map(a=>{
+                            // N/A solo si TODOS los días donde aplica la actividad tienen excepción
+                            const diasActSem=sem.days.filter(d=>acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(dStr(vYear,vMonth,d))));
+                            const excepcion=diasActSem.length>0&&diasActSem.every(d=>isExc(tr.id,a.id,dStr(vYear,vMonth,d)));
+                            const ds=sem.days.map(d=>dStr(vYear,vMonth,d));
+                            const scores=ds.flatMap(d=>{const rv=getReg(d,tr.id,a.id);const p=puntajeReg(rv,getRangoActivo(a.id,d));return p!==null?[p]:[];});
+                            // eficiencia % = pts obtenidos / pts maximos posibles (solo si hay registros)
+                            const hoyC=todayStr();
+                            const diasConAct=ds.filter(d=>d<=hoyC&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d)));
+                            // Solo contar si la actividad tiene historial real
+                            const maxPosible=actsConRegistroIds.has(a.id)?diasConAct.length*10:0;
+                            const v=(!excepcion&&scores.length>0&&maxPosible>0)?Math.round((scores.reduce((x,y)=>x+y,0)/maxPosible)*100):null;
+                            const docIds=ds.flatMap(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");return(regs[docId]||regs[k])?[{docId,docData:regs[docId]||regs[k],fecha:d,actividadId:a.id}]:[];});
+                            const auditorCell=ds.map(d=>{const rv=getReg(d,tr.id,a.id);return rv?.evidencias?.[0]?.auditor||null;}).filter(Boolean)[0]||null;
+                            const anulado=ds.some(d=>{const k=rKey(d,tr.id,a.id);const docId=k.replace(/\|/g,"--");const rv=regs[docId]||regs[k];return rv?.anulado;});
+                            const menuId=`ctx-${tr.id}-${sem.label}-${a.id}`;
+                            return(
+                              <td key={sem.label+a.id} style={{padding:"6px 8px",textAlign:"center",position:"relative",background:excepcion?"#fafafa":"transparent"}}>
+                                {anulado?(
+                                  <span style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775"}}>⚠️ Anu.</span>
+                                ):excepcion?(
+                                  <span
+                                    title={getExcComment(tr.id,a.id,ds[0]||fecha)||"Excepción: tienda no aplica para esta actividad"}
+                                    style={{padding:"2px 6px",borderRadius:20,fontSize:9,fontWeight:700,color:"#854F0B",background:"#FAEEDA",border:"0.5px solid #FAC775",cursor:"help",position:"relative"}}>
+                                    N/A {getExcComment(tr.id,a.id,ds[0]||fecha)?"💬":""}
+                                    {isAdmin&&(
+                                      <span
+                                        title="Editar comentario de esta exclusión"
+                                        onClick={e=>{
+                                          e.stopPropagation();
+                                          setExcModal({
+                                            tId:tr.id,aId:a.id,tiendaNombre:tr.n,
+                                            estaExcluida:true,
+                                            comentarioActual:getExcComment(tr.id,a.id,ds[0]||fecha),
+                                          });
+                                        }}
+                                        style={{marginLeft:3,cursor:"pointer",opacity:.7,fontSize:8}}>✏️</span>
+                                    )}
+                                  </span>
+                                ):v!==null?(
+                                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}
+                                    onMouseDown={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
+                                    onMouseUp={()=>clearTimeout(longPressRef.current)}
+                                    onMouseLeave={()=>clearTimeout(longPressRef.current)}
+                                    onTouchStart={()=>{ clearTimeout(longPressRef.current); longPressRef.current=setTimeout(()=>setCtxMenu({menuId,t:tr,sem,a,docIds}),700); }}
+                                    onTouchEnd={()=>clearTimeout(longPressRef.current)}
+                                    style={{cursor:"pointer"}}>
+                                    <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:sc(v),background:sb(v)}}>{scores.reduce((a,b)=>a+b,0)}/{maxPosible}pts</span>
+                                    <div style={{fontSize:8,color:"#8aaabb",marginTop:1}}>{v}%</div>
+                                    {auditorCell&&<div style={{fontSize:7,color:"#0984e3",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:60}}>{auditorCell.split(" ")[0]}</div>}
+                                    <div style={{height:2,width:"100%",borderRadius:1,background:"#e2e8f0",overflow:"hidden",marginTop:1}}>
+                                      <div style={{height:"100%",width:`${v}%`,background:sc(v),borderRadius:1}}/>
                                     </div>
-                                  ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                                </td>
-                              );
-                            });
+                                  </div>
+                                ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                              </td>
+                            );
                           }))}
-                                                    {semsVis.map(sem=>{
+                          {semsVis.map(sem=>{
                             const ps=calcSemana(tr.id,sem);
                             const detSem=calcSemanaDetalle(tr.id,sem);
 return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>
@@ -4867,97 +4873,96 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       )}
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
-        // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
-        const hoy=fecha; // fecha = estado seleccionado en el header (puede ser distinto a todayStr())
+        const hoy=fecha;
         const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
           {fmt:"Market",       icon:"🛒"},
         ];
+        // ── Todas las actividades del día ──
         const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
-        // actsRef debe declararse ANTES de cualquier uso
+        // ── Actividades con registros reales hoy ──
         const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
           const reg=getReg(hoy,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
         }));
-        const actsRefCard=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
-        // Rangos de corte desde la actividad de referencia (respeta config del Admin)
-        const actRefRango = actsRefCard.length>0 ? getRangoActivo(actsRefCard[0].id, hoy) : RANGOS_DEFAULT;
-        // Cortes de supervisión: configurables por Admin (independientes del puntaje)
-        const bloque1Hasta = cortesSupervision.c1 || "08:30";
-        const bloque2Hasta = cortesSupervision.c2 || "09:30";
-        const bloque2Desde = (()=>{
-          const [h,m] = bloque1Hasta.split(":").map(Number);
-          const next = h*60+m+1;
-          return String(Math.floor(next/60)).padStart(2,"0")+":"+String(next%60).padStart(2,"0");
-        })();
-        // bloque2Hasta viene de cortesSupervision.c2 (definido arriba)
-        const getBloque=(fmtNombre, desdeMin, hastaMin, esCorteFinal=false)=>{
-          const ts=tiAct.filter(ti=>ti.f===fmtNombre);
-          const excluidasList=ts.filter(ti=>actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy)));
-          const disponiblesList=ts.filter(ti=>!(actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy))));
-          const registradas=disponiblesList.filter(ti=>{
-            return actsRefCard.some(a=>{
-              const reg=getReg(hoy,ti.id,a.id);
-              if(!reg||!reg.evidencias||reg.anulado) return false;
-              const hora=primerEnvio(reg.evidencias);
-              if(!hora) return false;
-              const m=toMin(hora);
-              return esCorteFinal ? m>=desdeMin : (m>=desdeMin&&m<=hastaMin);
-            });
-          });
-          let horaMin=null, horaMax=null;
-          disponiblesList.forEach(ti=>{
-            actsRefCard.forEach(a=>{
-              const reg=getReg(hoy,ti.id,a.id);
-              if(!reg||!reg.evidencias||reg.anulado) return;
-              const hora=primerEnvio(reg.evidencias);
-              if(!hora) return;
-              const m=toMin(hora);
-              const enBloque = esCorteFinal ? m>=desdeMin : (m>=desdeMin&&m<=hastaMin);
-              if(enBloque){
-                if(!horaMin||m<toMin(horaMin)) horaMin=hora;
-                if(!horaMax||m>toMin(horaMax)) horaMax=hora;
-              }
-            });
-          });
-          const sinRegistroHoy = esCorteFinal
-            ? disponiblesList.filter(ti=>!actsRefCard.some(a=>{
-                const reg=getReg(hoy,ti.id,a.id);
-                return reg?.evidencias?.length>0&&!reg?.anulado;
-              }))
-            : [];
-          const pendientes = esCorteFinal ? sinRegistroHoy.length : disponiblesList.length-registradas.length;
-          return {total:ts.length,disponibles:disponiblesList.length,registradas:registradas.length,pendientes,excluidas:excluidasList.length,horaMin,horaMax};
-        };
-        const b1Min=toMin("00:00"), b1Max=toMin(bloque1Hasta);
-        const b2Min=toMin(bloque2Desde), b2Max=toMin(bloque2Hasta);
+        // ── Separar por categoría para módulos independientes ──
+        const actsAlwaysOn   = actsConRegHoy.filter(a=>a.cat==="Always On");
+        const actsAdHoc      = actsConRegHoy.filter(a=>a.cat==="Ad-hoc");
+        const actsPromocional= actsConRegHoy.filter(a=>a.cat==="Promocional");
+        // Para el cálculo de totales usamos todas las que tienen registro
+        const actsRef = actsConRegHoy.length>0 ? actsConRegHoy : actsHoy;
+        // Cortes
+        const bloque1Hasta = cortesSupervision.c1||"08:30";
+        const bloque2Hasta = cortesSupervision.c2||"09:30";
+        const b1Max=toMin(bloque1Hasta);
+        const b2Min=b1Max+1;
+        const b2Max=toMin(bloque2Hasta);
+        const b2DesdeStr=(()=>{const [h,m]=bloque1Hasta.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})();
+        const nowTime=statusNowTime;
+        const esBloque2=toMin(nowTime)>b1Max&&actsHoy.length>0;
+
+        // ── Totales globales ──
         const totalTiendas=tiAct.length;
-        // N/A: tiendas excluidas para TODAS las actividades de referencia
-        const totalNA=tiAct.filter(ti=>actsRefCard.length>0&&actsRefCard.every(a=>isExc(ti.id,a.id,hoy))).length;
+        const totalNA=tiAct.filter(ti=>actsRef.length>0&&actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
         const totalDisp=totalTiendas-totalNA;
-        // Registradas: tienen evidencia válida hoy en alguna actividad de referencia
         const totalReg=tiAct.filter(ti=>
-          !actsRefCard.every(a=>isExc(ti.id,a.id,hoy)) &&
-          actsRefCard.some(a=>{
-            const reg=getReg(hoy,ti.id,a.id);
-            return reg?.evidencias?.length>0&&!reg?.anulado;
-          })
+          !actsRef.every(a=>isExc(ti.id,a.id,hoy))&&
+          actsRef.some(a=>{const reg=getReg(hoy,ti.id,a.id);return reg?.evidencias?.length>0&&!reg?.anulado;})
         ).length;
         const totalPend=totalDisp-totalReg;
-        const nowTime=statusNowTime;
-        // Corte 2 solo aparece si: hora actual > cierre Corte 1 Y hay actividades hoy
-        const esBloque2=toMin(nowTime)>b1Max && actsHoy.length>0;
+
+        // ── Helper: stats de un conjunto de actividades por formato y corte ──
+        const statsModulo=(actsM, fmtNombre, hastaMin, desdeMin=0)=>{
+          if(!actsM.length) return null;
+          const ts=tiAct.filter(ti=>ti.f===fmtNombre);
+          const excl=ts.filter(ti=>actsM.every(a=>isExc(ti.id,a.id,hoy)));
+          const disp=ts.filter(ti=>!actsM.every(a=>isExc(ti.id,a.id,hoy)));
+          const reg=disp.filter(ti=>actsM.some(a=>{
+            const r=getReg(hoy,ti.id,a.id);
+            if(!r?.evidencias||r.anulado) return false;
+            const m=toMin(primerEnvio(r.evidencias));
+            return m>=desdeMin&&m<=hastaMin;
+          }));
+          const pend=disp.length-reg.length;
+          return {total:ts.length,disp:disp.length,reg:reg.length,pend,excl:excl.length};
+        };
+
+        // ── Puntaje ponderado por módulo — denominador solo penaliza días con actividad registrada ──
+        // Always On: promedio de pts obtenidos / pts posibles (solo actsAlwaysOn que tuvieron registro)
+        const calcPonderado=(actsM)=>{
+          if(!actsM.length) return null;
+          let obtenidos=0,posibles=0;
+          tiAct.forEach(ti=>{
+            actsM.forEach(a=>{
+              if(isExc(ti.id,a.id,hoy)) return;
+              const reg=getReg(hoy,ti.id,a.id);
+              if(!reg?.evidencias?.length||reg.anulado) return; // no penaliza no-registro
+              const p=puntajeReg(reg,getRangoActivo(a.id,hoy));
+              posibles+=10;
+              if(p!==null) obtenidos+=p;
+            });
+          });
+          if(!posibles) return null;
+          return Math.round((obtenidos/posibles)*100);
+        };
+        const pctAO  = calcPonderado(actsAlwaysOn);
+        const pctAH  = calcPonderado(actsAdHoc);
+        const pctPR  = calcPonderado(actsPromocional);
+        // Puntaje final ponderado = promedio de módulos con datos
+        const modsCon=[pctAO,pctAH,pctPR].filter(p=>p!==null);
+        const pctFinal=modsCon.length?Math.round(modsCon.reduce((a,b)=>a+b,0)/modsCon.length):null;
+
         return(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:70,backdropFilter:"blur(4px)",padding:"clamp(6px,2vw,14px)",paddingTop:"clamp(56px,8vw,72px)",overflowY:"auto"}}
           onClick={()=>setShowStatusCard(false)}>
-          <div ref={statusCardRef} onClick={e=>e.stopPropagation()}
+          <div onClick={e=>e.stopPropagation()}
             style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"#fff",borderRadius:20,padding:"clamp(14px,2.5vw,22px)",width:"100%",maxWidth:680,boxShadow:"0 24px 60px rgba(0,0,0,.3)",marginBottom:16}}>
 
-            {/* Header con toggle de vista — solo Admin ve el toggle */}
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
+            {/* ── Header ── */}
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1,marginTop:0}}>📁</span>
+                <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1}}>📁</span>
                 <div>
                   <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em",lineHeight:1.1}}>ESTADO DE REGISTROS</div>
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
@@ -4981,150 +4986,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               </div>
             </div>
 
-            {/* ── VISTA GERENCIAL ── */}
-            {statusCardView==="gerencial"&&isAdmin&&(()=>{
-              // Actividad con registros hoy
-              const actHoyLabel=actsRefCard.length>0?actsRefCard[0]:null;
-              // KPI 1: cumplimiento hoy = registradas / disponibles
-              const cumplHoy=totalDisp>0?Math.round((totalReg/totalDisp)*100):0;
-              // KPI 2: registradas en Corte 1 (ORO) = registradas con hora <= bloque1Hasta
-              const regC1=tiAct.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))&&actsRefCard.some(a=>{
-                const reg=getReg(hoy,ti.id,a.id);
-                if(!reg?.evidencias?.length||reg?.anulado) return false;
-                return toMin(primerEnvio(reg.evidencias))<=b1Max;
-              })).length;
-              const pctC1=totalDisp>0?Math.round((regC1/totalDisp)*100):0;
-              // KPI 3: tardíos rescatados = registradas en Corte 2
-              const regC2=totalReg-regC1;
-              const pctC2=totalDisp>0?Math.round((regC2/totalDisp)*100):0;
-              // KPI 4: sin registrar
-              const pctSin=totalDisp>0?Math.round(((totalDisp-totalReg)/totalDisp)*100):0;
-              // FIX: localDateAdd evita UTC midnight parse bug en new Date("YYYY-MM-DD")
-              const semAntStr=localDateAdd(hoy, -7);
-              const totalDispSA=tiAct.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))).length;
-              const totalRegSA=tiAct.filter(ti=>
-                !actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))&&
-                actsRefCard.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
-              ).length;
-              const cumplSA=totalDispSA>0?Math.round((totalRegSA/totalDispSA)*100):null;
-              const deltaCumpl=cumplSA!==null?cumplHoy-cumplSA:null;
-              // Cumplimiento y delta por formato
-              const fmtStats=fmts.map(({fmt,icon})=>{
-                const tsFmt=tiAct.filter(ti=>ti.f===fmt);
-                const dispFmt=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))).length;
-                const regFmt=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,hoy))&&actsRefCard.some(a=>{
-                  const r=getReg(hoy,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
-                })).length;
-                const pctFmt=dispFmt>0?Math.round((regFmt/dispFmt)*100):null;
-                // Delta vs semana anterior para este formato
-                const dispFmtSA=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))).length;
-                const regFmtSA=tsFmt.filter(ti=>!actsRefCard.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRefCard.some(a=>{
-                  const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;
-                })).length;
-                const pctFmtSA=dispFmtSA>0?Math.round((regFmtSA/dispFmtSA)*100):null;
-                const delta=pctFmt!==null&&pctFmtSA!==null?pctFmt-pctFmtSA:null;
-                const pendFmt=dispFmt-regFmt;
-                return {fmt,icon,dispFmt,regFmt,pctFmt,delta,pendFmt};
-              });
-              // Formato con mayor riesgo
-              const fmtRiesgo=[...fmtStats].sort((a,b)=>b.pendFmt-a.pendFmt)[0];
-              // FIX: localDateAdd+getDow evita UTC midnight parse bug
-              const DIAS_GER=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-              const diaSemAntG=DIAS_GER[getDow(localDateAdd(hoy,-7))];
-              return(
-              <>
-                {/* Actividad */}
-                {actHoyLabel&&(
-                  <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#e8f4fd",borderRadius:8,padding:"5px 12px",marginBottom:14}}>
-                    <span style={{fontSize:14}}>{actHoyLabel.e}</span>
-                    <span style={{fontSize:12,color:"#0C447C",fontWeight:700}}>{actHoyLabel.n}</span>
-                  </div>
-                )}
-                {/* 4 KPIs */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
-                  {[
-                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl===null?"sin comparativa":deltaCumpl===0?`→ igual que el ${diaSemAntG} pasado`:deltaCumpl>0?`▲ ${deltaCumpl}pts vs ${diaSemAntG} pasado`:`▼ ${Math.abs(deltaCumpl)}pts vs ${diaSemAntG} pasado`},
-                    {label:"Registros en ORO",value:pctC1+"%",color:"#BA7517",sub:`antes de ${bloque1Hasta}`},
-                    {label:"Tardíos rescatados",value:pctC2+"%",color:"#185FA5",sub:`${bloque2Desde} – ${bloque2Hasta}`},
-                    {label:"Sin registrar",value:pctSin+"%",color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ dentro del rango"},
-                  ].map((k,i)=>(
-                    <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
-                      <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
-                      <div style={{fontSize:20,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
-                      <div style={{fontSize:9,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Barras por formato */}
-                <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".05em",marginBottom:10}}>CUMPLIMIENTO POR FORMATO</div>
-                {fmtStats.map(({fmt,icon,pctFmt,delta,pendFmt})=>(
-                  <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#f8fafc",borderRadius:10,border:"0.5px solid #e2e8f0",marginBottom:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
-                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13,minWidth:100,flexShrink:0}}>{fmt}</span>
-                    <div style={{flex:1,background:"#e9eef5",borderRadius:20,height:8,overflow:"hidden",minWidth:60}}>
-                      <div style={{height:"100%",width:(pctFmt||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
-                    </div>
-                    <span style={{fontSize:13,fontWeight:700,color:pctFmt>=80?"#0F6E56":pctFmt>=60?"#BA7517":"#A32D2D",minWidth:36,textAlign:"right",flexShrink:0}}>{pctFmt!==null?pctFmt+"%":"—"}</span>
-                    {delta!==null&&(
-                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,
-                        color:delta>0?"#0F6E56":delta<0?"#A32D2D":"#888780",
-                        background:delta>0?"#E1F5EE":delta<0?"#FCEBEB":"#F1EFE8",
-                        whiteSpace:"nowrap",flexShrink:0}}>
-                        {delta>0?"▲":"▼"} {Math.abs(delta)}pts{delta<-3?" · riesgo":""}
-                      </span>
-                    )}
-                  </div>
-                ))}
-                {/* Alerta de formato */}
-                {fmtRiesgo&&fmtRiesgo.pendFmt>0&&(
-                  <div style={{marginTop:10,padding:"10px 12px",background:"#FAEEDA",borderRadius:10,border:"0.5px solid #FAC775"}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#633806",marginBottom:2}}>⚠️ Alerta de formato</div>
-                    <div style={{fontSize:11,color:"#854F0B",lineHeight:1.5}}>
-                      {fmtRiesgo.fmt} tiene {fmtRiesgo.pendFmt} tienda{fmtRiesgo.pendFmt>1?"s":""} sin registrar
-                      {fmtRiesgo.pendFmt>0&&fmtStats.find(f=>f.fmt===fmtRiesgo.fmt)?.delta<-3?" — tendencia negativa respecto al mismo día de la semana pasada":""}.
-                      {" "}Formato con mayor riesgo del día.
-                    </div>
-                  </div>
-                )}
-              </>
-              );
-            })()}
-
-            {/* ── VISTA OPERATIVA ── */}
-            {statusCardView==="operativo"&&<>
-            {/* ── Actividades con registros hoy — detecta A/B automáticamente ── */}
-            {(()=>{
-              const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-                const reg=getReg(hoy,ti.id,a.id);
-                return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-              }));
-              const esParalelo=actsConRegHoy.length>1; // Escenario B
-              if(actsConRegHoy.length===0) return null;
-              return(
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-                  {actsConRegHoy.map(a=>{
-                    const rango=getRangoActivo(a.id,hoy);
-                    const esAdHoc=a.cat&&a.cat!=="Always On";
-                    return(
-                      <div key={a.id} style={{display:"inline-flex",alignItems:"center",gap:6,
-                        background:esAdHoc?"#EAF3DE":"#E6F1FB",
-                        borderRadius:8,padding:"4px 12px"}}>
-                        <span style={{fontSize:13}}>{a.e}</span>
-                        <span style={{fontSize:12,color:esAdHoc?"#27500A":"#0C447C",fontWeight:700}}>{a.n}</span>
-                        <span style={{fontSize:9,fontWeight:600,padding:"1px 6px",borderRadius:4,
-                          background:esAdHoc?"#C0DD97":"#B5D4F4",
-                          color:esAdHoc?"#27500A":"#0C447C"}}>
-                          {esAdHoc?"Ad-hoc":"Always On"} · hasta {rango.c100||"08:00"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {esParalelo&&<span style={{fontSize:9,color:"#854F0B",fontWeight:600,alignSelf:"center",padding:"2px 6px",background:"#FAEEDA",borderRadius:4}}>vista integrada</span>}
-                </div>
-              );
-            })()}
-
-            {/* Totales */}
+            {/* ── Totales globales ── */}
             <div style={{display:"flex",gap:"clamp(4px,1.5vw,6px)",flexWrap:"wrap",marginBottom:14,padding:"clamp(8px,2vw,12px)",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",alignItems:"center"}}>
               <span style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#5a7a9a",fontWeight:600}}>Total {totalTiendas}</span>
               <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
@@ -5134,121 +4996,221 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {totalNA} excluidas</span>}
             </div>
 
-            {/* Corte 1 — rango dinámico según actividad de referencia */}
+            {/* ── MÓDULOS DE PUNTAJE PONDERADO ── */}
+            {(actsAlwaysOn.length>0||actsAdHoc.length>0||actsPromocional.length>0)&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".05em",marginBottom:8}}>PUNTAJE POR MÓDULO · actividades registradas hoy</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:8}}>
+                {[
+                  {label:"Always On",  acts:actsAlwaysOn,   pct:pctAO,  c:"#0984e3", bg:"#e8f4fd"},
+                  {label:"Ad-hoc",     acts:actsAdHoc,      pct:pctAH,  c:"#6c5ce7", bg:"#f0edff"},
+                  {label:"Promocional",acts:actsPromocional, pct:pctPR,  c:"#00b5b4", bg:"#e0fafa"},
+                ].filter(m=>m.acts.length>0).map(m=>(
+                  <div key={m.label} style={{background:m.bg,borderRadius:10,padding:"10px 12px",border:`1px solid ${m.c}33`}}>
+                    <div style={{fontSize:10,color:m.c,fontWeight:700,marginBottom:2,letterSpacing:".04em"}}>{m.label.toUpperCase()}</div>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
+                      {m.acts.map(a=><span key={a.id} style={{fontSize:11}}>{a.e}</span>)}
+                    </div>
+                    <div style={{fontSize:22,fontWeight:900,color:m.c,lineHeight:1}}>{m.pct!==null?m.pct+"%":"—"}</div>
+                    <div style={{fontSize:9,color:m.c,opacity:.7,marginTop:2}}>{m.acts.length} act. · solo registradas</div>
+                  </div>
+                ))}
+                {pctFinal!==null&&(
+                  <div style={{background:"#1a2f4a",borderRadius:10,padding:"10px 12px",border:"1px solid #0d1f35"}}>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:700,marginBottom:2,letterSpacing:".04em"}}>FINAL PONDERADO</div>
+                    <div style={{fontSize:22,fontWeight:900,color:pctFinal>=80?"#00b894":pctFinal>=60?"#f6a623":"#d63031",lineHeight:1}}>{pctFinal}%</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,.5)",marginTop:2}}>promedio módulos · hoy</div>
+                  </div>
+                )}
+              </div>
+            </div>
+            )}
+
+            {/* ── VISTA GERENCIAL ── */}
+            {statusCardView==="gerencial"&&isAdmin&&(()=>{
+              const cumplHoy=totalDisp>0?Math.round((totalReg/totalDisp)*100):0;
+              const regC1=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{
+                const reg=getReg(hoy,ti.id,a.id);
+                if(!reg?.evidencias?.length||reg?.anulado) return false;
+                return toMin(primerEnvio(reg.evidencias))<=b1Max;
+              })).length;
+              const pctC1=totalDisp>0?Math.round((regC1/totalDisp)*100):0;
+              const regC2=totalReg-regC1;
+              const pctC2=totalDisp>0?Math.round((regC2/totalDisp)*100):0;
+              const pctSin=totalDisp>0?Math.round(((totalDisp-totalReg)/totalDisp)*100):0;
+              const semAntStr=localDateAdd(hoy,-7);
+              const totalDispSA=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+              const totalRegSA=tiAct.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRef.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
+              const cumplSA=totalDispSA>0?Math.round((totalRegSA/totalDispSA)*100):null;
+              const deltaCumpl=cumplSA!==null?cumplHoy-cumplSA:null;
+              const fmtStats=fmts.map(({fmt,icon})=>{
+                const tsFmt=tiAct.filter(ti=>ti.f===fmt);
+                const dispFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))).length;
+                const regFmt=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,hoy))&&actsRef.some(a=>{const r=getReg(hoy,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
+                const pctFmt=dispFmt>0?Math.round((regFmt/dispFmt)*100):null;
+                const dispFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))).length;
+                const regFmtSA=tsFmt.filter(ti=>!actsRef.every(a=>isExc(ti.id,a.id,semAntStr))&&actsRef.some(a=>{const r=getReg(semAntStr,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
+                const pctFmtSA=dispFmtSA>0?Math.round((regFmtSA/dispFmtSA)*100):null;
+                const delta=pctFmt!==null&&pctFmtSA!==null?pctFmt-pctFmtSA:null;
+                return {fmt,icon,dispFmt,regFmt,pctFmt,delta,pendFmt:dispFmt-regFmt};
+              });
+              const fmtRiesgo=[...fmtStats].sort((a,b)=>b.pendFmt-a.pendFmt)[0];
+              const DIAS_GER=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+              const diaSA=DIAS_GER[getDow(localDateAdd(hoy,-7))];
+              return(
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
+                  {[
+                    {label:"Cumplimiento hoy",value:cumplHoy+"%",color:"#0F6E56",sub:deltaCumpl===null?"sin comparativa":deltaCumpl===0?`→ igual ${diaSA} pasado`:deltaCumpl>0?`▲ ${deltaCumpl}pts vs ${diaSA} pasado`:`▼ ${Math.abs(deltaCumpl)}pts vs ${diaSA} pasado`},
+                    {label:"Registros en ORO", value:pctC1+"%",  color:"#BA7517",sub:`antes de ${bloque1Hasta}`},
+                    {label:"Tardíos rescatados",value:pctC2+"%", color:"#185FA5",sub:`${b2DesdeStr} – ${bloque2Hasta}`},
+                    {label:"Sin registrar",    value:pctSin+"%", color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ ok"},
+                  ].map((k,i)=>(
+                    <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
+                      <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
+                      <div style={{fontSize:20,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
+                      <div style={{fontSize:9,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".05em",marginBottom:10}}>CUMPLIMIENTO POR FORMATO</div>
+                {fmtStats.map(({fmt,icon,pctFmt,delta,pendFmt})=>(
+                  <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#f8fafc",borderRadius:10,border:"0.5px solid #e2e8f0",marginBottom:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+                    <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13,minWidth:100,flexShrink:0}}>{fmt}</span>
+                    <div style={{flex:1,background:"#e9eef5",borderRadius:20,height:8,overflow:"hidden",minWidth:60}}>
+                      <div style={{height:"100%",width:(pctFmt||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
+                    </div>
+                    <span style={{fontSize:13,fontWeight:700,color:pctFmt>=80?"#0F6E56":pctFmt>=60?"#BA7517":"#A32D2D",minWidth:36,textAlign:"right",flexShrink:0}}>{pctFmt!==null?pctFmt+"%":"—"}</span>
+                    {delta!==null&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:delta>0?"#0F6E56":delta<0?"#A32D2D":"#888780",background:delta>0?"#E1F5EE":delta<0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>{delta>0?"▲":"▼"} {Math.abs(delta)}pts{delta<-3?" · riesgo":""}</span>}
+                  </div>
+                ))}
+                {fmtRiesgo&&fmtRiesgo.pendFmt>0&&(
+                  <div style={{marginTop:10,padding:"10px 12px",background:"#FAEEDA",borderRadius:10,border:"0.5px solid #FAC775"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#633806",marginBottom:2}}>⚠️ Alerta de formato</div>
+                    <div style={{fontSize:11,color:"#854F0B",lineHeight:1.5}}>{fmtRiesgo.fmt} tiene {fmtRiesgo.pendFmt} tienda{fmtRiesgo.pendFmt>1?"s":""} sin registrar. Formato con mayor riesgo del día.</div>
+                  </div>
+                )}
+              </>
+              );
+            })()}
+
+            {/* ── VISTA OPERATIVA ── */}
+            {statusCardView==="operativo"&&<>
+
+            {/* Pills de actividades con registro hoy — por módulo */}
+            {actsConRegHoy.length>0&&(
+              <div style={{marginBottom:12}}>
+                {[
+                  {label:"Always On",   acts:actsAlwaysOn,    c:"#0C447C", bg:"#E6F1FB"},
+                  {label:"Ad-hoc",      acts:actsAdHoc,       c:"#3C3489", bg:"#EEEDFE"},
+                  {label:"Promocional", acts:actsPromocional,  c:"#085041", bg:"#E1F5EE"},
+                ].filter(m=>m.acts.length>0).map(m=>(
+                  <div key={m.label} style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6,alignItems:"center"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:m.c,background:m.bg,padding:"2px 7px",borderRadius:4,letterSpacing:".04em",flexShrink:0}}>{m.label.toUpperCase()}</span>
+                    {m.acts.map(a=>{
+                      const rango=getRangoActivo(a.id,hoy);
+                      return(
+                        <div key={a.id} style={{display:"inline-flex",alignItems:"center",gap:5,background:m.bg,borderRadius:8,padding:"3px 10px",border:`1px solid ${m.c}22`}}>
+                          <span style={{fontSize:12}}>{a.e}</span>
+                          <span style={{fontSize:11,color:m.c,fontWeight:700}}>{a.n}</span>
+                          <span style={{fontSize:9,color:m.c,opacity:.7}}>hasta {rango.c100||"09:00"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── CORTE 1 ── */}
             <div style={{marginBottom:14}}>
               <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#BA7517",letterSpacing:".06em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
                 <span style={{width:8,height:8,borderRadius:"50%",background:"#BA7517",display:"inline-block",flexShrink:0}}/>
                 CORTE 1 · hasta las {bloque1Hasta} · ORO
               </div>
               {fmts.map(({fmt,icon})=>{
-                const b=getBloque(fmt,b1Min,b1Max);
-                if(b.total===0) return null;
-                // Para escenario B: calcular desglose por actividad
-                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-                  const reg=getReg(hoy,ti.id,a.id);
-                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-                }));
-                const esParalelo=actsConRegHoy.length>1;
+                // Stats por módulo para este formato y corte
+                const sAO=statsModulo(actsAlwaysOn,   fmt, b1Max);
+                const sAH=statsModulo(actsAdHoc,      fmt, b1Max);
+                const sPR=statsModulo(actsPromocional, fmt, b1Max);
+                const sGlobal=statsModulo(actsRef, fmt, b1Max);
+                if(!sGlobal||sGlobal.total===0) return null;
+                const modulos=[
+                  {label:"AO", s:sAO, c:"#0984e3"},
+                  {label:"AH", s:sAH, c:"#6c5ce7"},
+                  {label:"PR", s:sPR, c:"#00b5b4"},
+                ].filter(m=>m.s&&m.s.disp>0);
+                const multiMod=modulos.length>1;
                 return(
-                <div key={fmt+"b1"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
+                  <div key={fmt+"b1"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:"clamp(13px,2vw,16px)",flexShrink:0}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                      <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{b.total}</span>
-                    </div>
-                    <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a",fontWeight:500,whiteSpace:"nowrap"}}>{b.disponibles} disp.</span>
-                    {!esParalelo&&<>
-                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#0F6E56",background:"#E1F5EE",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
-                      {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#0984e3":"#888780",background:b.pendientes>0?"#e8f4fd":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
-                      {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
-                    </>}
-                    {/* Escenario B — pills separados por actividad */}
-                    {esParalelo&&actsConRegHoy.map(a=>{
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
-                      const regA=tsFmt.filter(ti=>{
-                        const reg=getReg(hoy,ti.id,a.id);
-                        if(!reg?.evidencias||reg.anulado) return false;
-                        return toMin(primerEnvio(reg.evidencias))<=b1Max;
-                      }).length;
-                      const pendA=tsFmt.length-regA;
-                      const esAdHoc=a.cat&&a.cat!=="Always On";
-                      return(
-                        <span key={a.id} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,
-                          color:esAdHoc?"#27500A":"#0F6E56",
-                          background:esAdHoc?"#EAF3DE":"#E1F5EE",
-                          whiteSpace:"nowrap",flexShrink:0}}>
-                          {a.e} {String(regA).padStart(2,"0")} reg.{pendA>0?` · ${String(pendA).padStart(2,"0")} pend.`:""}
+                      <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{sGlobal.total}</span>
+                      <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#5a7a9a"}}>{sGlobal.disp} disp.</span>
+                      {!multiMod&&<>
+                        <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#0F6E56",background:"#E1F5EE",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(sGlobal.reg).padStart(2,"0")} reg.</span>
+                        <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:sGlobal.pend>0?"#0984e3":"#888780",background:sGlobal.pend>0?"#e8f4fd":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(sGlobal.pend).padStart(2,"0")} pend.</span>
+                        {sGlobal.excl>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {sGlobal.excl}</span>}
+                      </>}
+                      {multiMod&&modulos.map(m=>(
+                        <span key={m.label} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:m.c,background:m.c+"18",whiteSpace:"nowrap",flexShrink:0}}>
+                          {m.label} {String(m.s.reg).padStart(2,"0")} reg.{m.s.pend>0?` · ${String(m.s.pend).padStart(2,"0")} pend.`:""}
                         </span>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
 
-            {/* Corte 2 — aparece automáticamente después del cierre del Corte 1 */}
+            {/* ── CORTE 2 — aparece automáticamente tras el cierre del Corte 1 ── */}
             {esBloque2&&(
             <div style={{borderTop:"1px dashed #e2e8f0",paddingTop:12}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:6}}>
                 <div style={{fontSize:"clamp(9px,2.5vw,11px)",fontWeight:700,color:"#185FA5",letterSpacing:".06em",display:"flex",alignItems:"center",gap:6}}>
                   <span style={{width:8,height:8,borderRadius:"50%",background:"#185FA5",display:"inline-block",flexShrink:0}}/>
-                  CORTE 2 · {bloque2Desde} a {bloque2Hasta} · PLATA
+                  CORTE 2 · {b2DesdeStr} a {bloque2Hasta} · PLATA
                 </div>
                 <span style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#A32D2D",background:"#FCEBEB",border:"1px solid #F7C1C1",whiteSpace:"nowrap"}}>⚠️ Puntaje reducido</span>
               </div>
               {fmts.map(({fmt,icon})=>{
-                const b=getBloque(fmt,b2Min,b2Max,true);
-                if(b.disponibles===0) return null;
-                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-                  const reg=getReg(hoy,ti.id,a.id);
-                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-                }));
-                const esParalelo=actsConRegHoy.length>1;
+                const sAO=statsModulo(actsAlwaysOn,   fmt, b2Max, b2Min);
+                const sAH=statsModulo(actsAdHoc,      fmt, b2Max, b2Min);
+                const sPR=statsModulo(actsPromocional, fmt, b2Max, b2Min);
+                const sGlobal=statsModulo(actsRef, fmt, b2Max, b2Min);
+                if(!sGlobal||sGlobal.disp===0) return null;
+                const modulos=[
+                  {label:"AO", s:sAO, c:"#185FA5"},
+                  {label:"AH", s:sAH, c:"#534AB7"},
+                  {label:"PR", s:sPR, c:"#0F6E56"},
+                ].filter(m=>m.s&&m.s.disp>0);
+                const multiMod=modulos.length>1;
                 return(
-                <div key={fmt+"b2"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
+                  <div key={fmt+"b2"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:"clamp(13px,2vw,16px)",flexShrink:0}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
-                    </div>
-                    {!esParalelo&&<>
-                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(b.registradas).padStart(2,"0")} reg.</span>
-                      {b.horaMin&&<span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap",flexShrink:0}}>({b.horaMin}{b.horaMax&&b.horaMax!==b.horaMin?` a ${b.horaMax}`:""})</span>}
-                      <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#A32D2D":"#888780",background:b.pendientes>0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
-                      {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
-                    </>}
-                    {esParalelo&&actsConRegHoy.map(a=>{
-                      const rango=getRangoActivo(a.id,hoy);
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsRef.every(aa=>isExc(ti.id,aa.id,hoy)));
-                      const regA=tsFmt.filter(ti=>{
-                        const reg=getReg(hoy,ti.id,a.id);
-                        if(!reg?.evidencias||reg.anulado) return false;
-                        return toMin(primerEnvio(reg.evidencias))>b1Max;
-                      }).length;
-                      const pendA=tsFmt.filter(ti=>!actsRef.some(aa=>{const r=getReg(hoy,ti.id,aa.id);return r?.evidencias?.length>0&&!r?.anulado;})).length;
-                      const esAdHoc=a.cat&&a.cat!=="Always On";
-                      const ptsMax=toMin(nowTime)<=toMin(rango.c80||"09:00")?"8pts":"6pts";
-                      return(
-                        <span key={a.id} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,
-                          color:esAdHoc?"#3B6D11":"#185FA5",
-                          background:esAdHoc?"#EAF3DE":"#E6F1FB",
-                          whiteSpace:"nowrap",flexShrink:0}}>
-                          {a.e} {String(regA).padStart(2,"0")} reg. · {String(pendA).padStart(2,"0")} pend. · {ptsMax} máx.
+                      {!multiMod&&<>
+                        <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#74b9ff",background:"#e8f4fd",whiteSpace:"nowrap",flexShrink:0}}>✅ {String(sGlobal.reg).padStart(2,"0")} reg.</span>
+                        <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:sGlobal.pend>0?"#A32D2D":"#888780",background:sGlobal.pend>0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(sGlobal.pend).padStart(2,"0")} pend.</span>
+                        {sGlobal.excl>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {sGlobal.excl}</span>}
+                      </>}
+                      {multiMod&&modulos.map(m=>(
+                        <span key={m.label} style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:m.c,background:m.c+"18",whiteSpace:"nowrap",flexShrink:0}}>
+                          {m.label} {String(m.s.reg).padStart(2,"0")} reg.{m.s.pend>0?` · ${String(m.s.pend).padStart(2,"0")} pend.`:""}
                         </span>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
             )}
-
-            {/* Footer */}
             </>}
+
+            {/* ── Footer ── */}
             <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
               VEGA · EVIDENCIAS · {hoy}
             </div>
