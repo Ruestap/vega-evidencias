@@ -125,6 +125,76 @@ const ACTIVIDADES_INIT = [
   {id:"a10",n:"Activación Especial", dias:[1,2,3,4,5], e:"⭐",c:"#fdcb6e",cat:"Ad-hoc",   r:null,activa:true},
 ];
 
+
+/* ══ CHECKLIST AUDITORÍA DE CAMPO ══════════════════════════════════════════
+   Escala universal: 0=No ejecutado · 1.5=Por mejorar · 3=Correcto
+   Score módulo = promedio de ítems respondidos (null si ninguno)
+   Score final  = promedio de los 4 módulos con al menos 1 respuesta
+   respuestas[itemId] = { valor: number, obs: string }
+   respuestas[__obs_moduloId] = { obs: string }  ══ */
+const CHECKLIST_MODULOS_INIT = [
+  { id:"m01", label:"Evaluación Personal", escala:[0,1.5,3],
+    escalaTxt:["No ejecutado","Por mejorar","Correcto"], orden:1, activo:true,
+    items:[
+      {id:"m01i01",texto:"Hospitalidad y cordialidad",activo:true,orden:1},
+      {id:"m01i02",texto:"Uniforme completo",          activo:true,orden:2},
+      {id:"m01i03",texto:"Presentación Personal",      activo:true,orden:3},
+    ]},
+  { id:"m02", label:"Pasos de la venta", escala:[0,1.5,3],
+    escalaTxt:["No ejecutado","Por mejorar","Correcto"], orden:2, activo:true,
+    items:[
+      {id:"m02i01",texto:"Saludo inicial al cliente",       activo:true,orden:1},
+      {id:"m02i02",texto:"Conocimiento Always On",          activo:true,orden:2},
+      {id:"m02i03",texto:"Abordaje proactivo",              activo:true,orden:3},
+      {id:"m02i04",texto:"Acompañamiento guiado",           activo:true,orden:4},
+      {id:"m02i05",texto:"Impulso Venta Activa / Vende +",  activo:true,orden:5},
+      {id:"m02i06",texto:"Cierre de venta",                 activo:true,orden:6},
+    ]},
+  { id:"m03", label:"Visibilidad del PDV", escala:[0,1.5,3],
+    escalaTxt:["No ejecutado","Por mejorar","Correcto"], orden:3, activo:true,
+    items:[
+      {id:"m03i01",texto:"Letrero exterior actualizado",           activo:true,orden:1},
+      {id:"m03i02",texto:"Material de campaña instalado",          activo:true,orden:2},
+      {id:"m03i03",texto:"Reel TV / Audio activado",               activo:true,orden:3},
+      {id:"m03i04",texto:"Planograma vigente Foco CAT",            activo:true,orden:4},
+      {id:"m03i05",texto:"Cabeceras / Rompetráficos actualizados", activo:true,orden:5},
+      {id:"m03i06",texto:"Productos ordenados y limpios",          activo:true,orden:6},
+      {id:"m03i07",texto:"Precios visibles y correctos",           activo:true,orden:7},
+      {id:"m03i08",texto:"Rotación adecuada (FIFO)",               activo:true,orden:8},
+      {id:"m03i09",texto:"Góndola bien abastecida",                activo:true,orden:9},
+      {id:"m03i10",texto:"Promociones visibles",                   activo:true,orden:10},
+      {id:"m03i11",texto:"Pasillos y corredores despejados",       activo:true,orden:11},
+      {id:"m03i12",texto:"Portaprecios instalado y actualizado",   activo:true,orden:12},
+      {id:"m03i13",texto:"Exhibidor Vende+ actualizado",           activo:true,orden:13},
+    ]},
+  { id:"m04", label:"Criterios clave (sanidad · orden)", escala:[0,1.5,3],
+    escalaTxt:["No ejecutado","Por mejorar","Correcto"], orden:4, activo:true,
+    items:[
+      {id:"m04i01",texto:"Frutas y verduras en buen estado",       activo:true,orden:1},
+      {id:"m04i02",texto:"Vitrina de comestibles ordenada y limpia",activo:true,orden:2},
+    ]},
+];
+
+function calcScoreModulo(respuestas,modulo){
+  const items=modulo.items.filter(i=>i.activo);
+  const vals=items.map(i=>respuestas?.[i.id]?.valor).filter(v=>v!==null&&v!==undefined);
+  if(!vals.length) return null;
+  return Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*100)/100;
+}
+function calcScoreFinal(respuestas,modulos){
+  const scores=modulos.filter(m=>m.activo).map(m=>calcScoreModulo(respuestas,m)).filter(s=>s!==null);
+  if(!scores.length) return null;
+  return Math.round((scores.reduce((a,b)=>a+b,0)/scores.length)*100)/100;
+}
+function getTierAuditoria(score){
+  if(score===null||score===undefined) return{label:"S/D",c:"#b2bec3",bg:"#f4f6f8",icon:"⬜"};
+  if(score>=2.7) return{label:"Excelente",c:"#00b894",bg:"#e8faf5",icon:"🥇"};
+  if(score>=2.0) return{label:"Bueno",    c:"#0984e3",bg:"#e8f4fd",icon:"🥈"};
+  if(score>=1.5) return{label:"Regular",  c:"#f6a623",bg:"#fff8ec",icon:"⚠️"};
+  if(score>0)    return{label:"Crítico",  c:"#d63031",bg:"#ffeae6",icon:"🔴"};
+  return               {label:"Sin nota", c:"#636e72",bg:"#f4f6f8",icon:"⬛"};
+}
+
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS_N = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_C = ["D","L","M","MI","J","V","S"];
@@ -141,6 +211,7 @@ const PUNTAJES = [
 ];
 
 /* ══ UTILS ══════════════════════════════════════════════ */
+const horaHHMM=(d=new Date())=>`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 // FIX: Usa fecha LOCAL del dispositivo, no UTC — evita desfase de zona horaria (ej. Peru UTC-5)
 const todayStr = () => {
   const d = new Date();
@@ -356,7 +427,7 @@ function ChecklistApp() {
   const [actSel,  setActSel]  = useState(null);
   const [tSel,    setTSel]    = useState(new Set());
   const [rango,   setRango]   = useState(null);
-  const [horaEx,  setHoraEx]  = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+  const [horaEx,  setHoraEx]  = useState(()=>horaHHMM());
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
   const [fmtFilt,      setFmtFilt]      = useState("Todas");
@@ -407,16 +478,28 @@ function ChecklistApp() {
   const [dashHora,  setDashHora]  = useState("Todas");
   /* ── long press excepciones en paso 2 ── */
   const longExcRef = useRef(null);
+  /* ── módulo auditoría de campo ── */
+  const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
+  const [auditorias,        setAuditorias]        = useState({});
+  const [auditPaso,         setAuditPaso]         = useState(0);
+  const [auditTiendaSel,    setAuditTiendaSel]    = useState(null);
+  const [auditRespuestas,   setAuditRespuestas]   = useState({});
+  const [auditModuloActivo, setAuditModuloActivo] = useState(0);
+  const [auditObs,          setAuditObs]          = useState("");
+  const [auditCompromisos,  setAuditCompromisos]  = useState("");
+  const [auditGPS,          setAuditGPS]          = useState(null);
+  const [auditGPSOut,       setAuditGPSOut]       = useState(null);
+  const [auditCheckInTs,    setAuditCheckInTs]    = useState(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
   const [statusCardView, setStatusCardView] = useState("operativo"); // "operativo" | "gerencial"
   const [statusActFiltro, setStatusActFiltro] = useState("Todas"); // filtro actividad en Estado
-  const [statusNowTime, setStatusNowTime] = useState(()=>new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+  const [statusNowTime, setStatusNowTime] = useState(()=>horaHHMM());
 
   // Actualizar la hora de la tarjeta cada 30 segundos mientras esté abierta
   useEffect(()=>{
     if(!showStatusCard) return;
-    const tick=()=>setStatusNowTime(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+    const tick=()=>setStatusNowTime(horaHHMM());
     tick();
     const iv=setInterval(tick,30000);
     return()=>clearInterval(iv);
@@ -428,7 +511,7 @@ function ChecklistApp() {
     const sync = () => {
       const hoy = todayStr();
       setFecha(prev => prev === hoy ? prev : hoy); // solo cambia si el día cambió
-      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+      setHoraEx(horaHHMM());
     };
     // visibilitychange: se dispara cuando la pestaña vuelve a ser visible
     document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") sync(); });
@@ -522,6 +605,26 @@ function ChecklistApp() {
     return ()=>unsub();
   },[]);
 
+  // Sync colección auditorias
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"auditorias"),snap=>{
+      const data={};
+      snap.forEach(d=>{data[d.id]={id:d.id,...d.data()};});
+      setAuditorias(data);
+    });
+    return()=>unsub();
+  },[]);
+
+  // Sync checklist_items desde Firestore (sobreescribe init local si existe)
+  useEffect(()=>{
+    const unsub=onSnapshot(doc(db,"config","checklist"),snap=>{
+      if(!snap.exists()) return;
+      const d=snap.data();
+      if(d.modulos?.length) setChecklistModulos(d.modulos);
+    });
+    return()=>unsub();
+  },[]);
+
   // Guardar o actualizar un usuario en Firestore
   // NOTA ARQUITECTURA: campo "credencial" eliminado — el DNI es LA credencial para todos los roles.
   // Si hay registros legacy con campo "credencial" en Firestore, no causan error (se ignoran).
@@ -581,6 +684,65 @@ function ChecklistApp() {
       }
     }
   },[]); // sin dependencias — siempre usa refs actualizados
+
+  /* ── GPS ── */
+  const obtenerGPS = useCallback(()=>new Promise((res,rej)=>{
+    if(!navigator.geolocation){rej("GPS no disponible");return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),
+      e=>rej(e.message),{timeout:10000,enableHighAccuracy:true}
+    );
+  }),[]);
+
+  /* ── Check-in ── */
+  const auditCheckIn = useCallback(async(tiendaId)=>{
+    let gps=null;
+    try{ gps=await obtenerGPS(); }catch{ gps={lat:null,lng:null,acc:null,sinGPS:true}; }
+    const ts=new Date().toISOString();
+    setAuditGPS({...gps,timestamp:ts});
+    setAuditCheckInTs(ts);
+    setAuditTiendaSel(tiendaId);
+    setAuditRespuestas({});
+    setAuditModuloActivo(0);
+    setAuditObs(""); setAuditCompromisos(""); setAuditGPSOut(null);
+    setAuditPaso(1);
+    showToast(gps.sinGPS?"⚠️ Sin GPS — continuando":"✅ Check-in registrado");
+  },[obtenerGPS,showToast]);
+
+  /* ── Check-out: calcula scores y guarda en Firestore ── */
+  const auditCheckOut = useCallback(async(estado="enviado")=>{
+    const tienda=tiendas.find(t=>t.id===auditTiendaSel);
+    const mods=checklistModulos.filter(m=>m.activo);
+    const scoresPorModulo=mods.map(m=>({
+      moduloId:m.id, moduloLabel:m.label,
+      score:calcScoreModulo(auditRespuestas,m),
+      obsModulo:auditRespuestas[`__obs_${m.id}`]?.obs||"",
+      itemsResp:m.items.filter(i=>i.activo&&auditRespuestas[i.id]?.valor!==undefined).length,
+      itemsTotal:m.items.filter(i=>i.activo).length,
+    }));
+    const scoreFinal=calcScoreFinal(auditRespuestas,mods);
+    let gpsOut=auditGPSOut;
+    if(!gpsOut){try{gpsOut=await obtenerGPS();}catch{gpsOut={lat:null,lng:null};}}
+    const checkInTs=auditCheckInTs||new Date().toISOString();
+    const checkOutTs=new Date().toISOString();
+    const durMin=Math.round((new Date(checkOutTs)-new Date(checkInTs))/60000);
+    const docId=`${auditTiendaSel}--${fecha}--${uDni}--${Date.now()}`;
+    const payload={
+      auditorId:uDni, auditorNombre:uName,
+      tiendaId:auditTiendaSel, tiendaNombre:tienda?.n||auditTiendaSel, tiendaFormato:tienda?.f||"",
+      fecha, checkIn:{timestamp:checkInTs,gps:auditGPS}, checkOut:{timestamp:checkOutTs,gps:gpsOut},
+      duracionMin:durMin, respuestas:auditRespuestas, scoresPorModulo, scoreFinal,
+      observaciones:auditObs, compromisos:auditCompromisos,
+      estado, creadoEn:checkInTs, updatedAt:checkOutTs,
+    };
+    try{
+      await setDoc(doc(db,"auditorias",docId),payload);
+      showToast(estado==="borrador"?"💾 Borrador guardado":`✅ Enviada · Score: ${scoreFinal?.toFixed(2)??"S/D"}`);
+      setAuditPaso(0); setAuditTiendaSel(null); setAuditRespuestas({});
+      setAuditGPS(null); setAuditGPSOut(null); setAuditCheckInTs(null);
+    }catch(e){ console.error("auditCheckOut:",e); showToast("❌ Error al enviar."); }
+  },[auditTiendaSel,auditRespuestas,auditObs,auditCompromisos,auditGPS,auditGPSOut,
+     auditCheckInTs,checklistModulos,tiendas,fecha,uDni,uName,showToast,obtenerGPS]);
 
   const dow = getDow(fecha);
   const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
@@ -861,7 +1023,7 @@ function ChecklistApp() {
         hora:horaEx,              // hora declarada por el auditor (HH:MM)
         puntaje:pct,
         observacion:obsEx||`Registro en bloque · ${tier.label}`,
-        horaRegistro:now.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}), // legible
+        horaRegistro:horaHHMM(now), // legible
         timestamp:hreg,           // ISO para ordenamiento y auditoría
         auditor:uName,
         dni:uDni,
@@ -882,7 +1044,7 @@ function ChecklistApp() {
       await Promise.all(promises);
       showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
       setTSel(new Set());setRango(null);
-      setHoraEx(new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}));
+      setHoraEx(horaHHMM());
       setObsEx("");setPaso(2);setVerRegistradas(false);
     } catch(e) {
       console.error("confirmarRegistro error:", e);
@@ -935,7 +1097,7 @@ function ChecklistApp() {
       hora: horaUpd,
       puntaje: pct,
       observacion: `Corrección: ${motivoUpd}`,
-      horaRegistro: now2.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}),
+      horaRegistro: horaHHMM(now2),
       timestamp: now2.toISOString(), // A6 fix: ISO consistente
       auditor: uName,
       esCorreccion: true,
@@ -4845,9 +5007,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   };
 
   const tabs = isAdmin
-    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:3,label:"⚙️ Config"}]
+    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:3,label:"⚙️ Config"},{i:4,label:"🔍 Auditoría"}]
     : isAuditor
-    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"}]
+    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:4,label:"🔍 Auditoría"}]
     : [{i:1,label:"📊 Reporte"},{i:2,label:"📈 Panel"}];
 
   return (
@@ -4890,6 +5052,28 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {tab===1&&renderReporte()}
       {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
       {tab===3&&isAdmin&&renderConfig()}
+      {tab===4&&isAuditor&&(
+        <PantallaAuditoria
+          paso={auditPaso} tiendas={tiendas} tiendaSelId={auditTiendaSel}
+          modulos={checklistModulos} respuestas={auditRespuestas} moduloActivo={auditModuloActivo}
+          obs={auditObs} compromisos={auditCompromisos} gpsCheckIn={auditGPS}
+          onCheckIn={auditCheckIn}
+          onValor={(itemId,val)=>setAuditRespuestas(prev=>({...prev,[itemId]:{...prev[itemId],valor:val}}))}
+          onObsItem={(itemId,obs)=>setAuditRespuestas(prev=>({...prev,[itemId]:{...prev[itemId],obs}}))}
+          onObsModulo={(mId,obs)=>setAuditRespuestas(prev=>({...prev,[`__obs_${mId}`]:{obs}}))}
+          onSiguienteModulo={()=>{
+            const n=checklistModulos.filter(m=>m.activo).length;
+            if(auditModuloActivo<n-1) setAuditModuloActivo(p=>p+1);
+            else setAuditPaso(2);
+          }}
+          onAnteriorModulo={()=>setAuditModuloActivo(p=>Math.max(0,p-1))}
+          onObs={setAuditObs} onCompromisos={setAuditCompromisos}
+          onCheckOut={()=>auditCheckOut("enviado")}
+          onBorrador={()=>auditCheckOut("borrador")}
+          onCancelar={()=>{setAuditPaso(0);setAuditTiendaSel(null);setAuditRespuestas({});}}
+          uName={uName} uDni={uDni} fecha={fecha}
+        />
+      )}
       {/* TOAST */}
       {toast&&(
         <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#1a2f4a",color:"#fff",padding:"12px 22px",borderRadius:24,fontSize:13,fontWeight:700,zIndex:99,boxShadow:"0 8px 24px rgba(0,0,0,.3)",whiteSpace:"nowrap"}}>
@@ -5509,6 +5693,187 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
     </div>
   );
+}
+
+
+/* ══ MÓDULO AUDITORÍA — componentes ══════════════════════════════════════ */
+function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
+  const [showObs,setShowObs]=useState(false);
+  const colores=["#d63031","#f6a623","#00b894"];
+  return(
+    <div style={{marginBottom:10,borderRadius:10,overflow:"hidden",border:`1px solid ${val!==undefined?"#00b5b4":"#e2e8f0"}`}}>
+      <div style={{padding:"10px 14px",background:"#f8fafc"}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#1a2f4a",marginBottom:8}}>{item.texto}</div>
+        <div style={{display:"flex",gap:6}}>
+          {escala.map((v,idx)=>(
+            <button key={v} onClick={()=>onValor(item.id,v)}
+              style={{flex:1,padding:"9px 4px",borderRadius:8,border:"none",fontWeight:700,fontSize:11,cursor:"pointer",lineHeight:1.3,
+                      background:val===v?colores[idx]:"#e2e8f0",color:val===v?"#fff":"#5a7a9a",transition:"all .12s"}}>
+              <span style={{display:"block",fontSize:13,fontWeight:800}}>{v}</span>
+              <span style={{fontSize:9,fontWeight:400}}>{escalaTxt[idx]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:"6px 14px",background:"#fff",borderTop:`1px solid ${val!==undefined?"#00b5b4":"#e2e8f0"}22`}}>
+        <button onClick={()=>setShowObs(v=>!v)}
+          style={{background:"none",border:"none",cursor:"pointer",fontSize:11,padding:0,color:obsIt?"#0984e3":"#b2bec3",fontWeight:obsIt?700:400}}>
+          {obsIt?`📝 ${obsIt.slice(0,40)}${obsIt.length>40?"…":""}`:"+  Agregar obs / tarea"}
+        </button>
+        {showObs&&<textarea value={obsIt} onChange={e=>onObsItem(item.id,e.target.value)} rows={2}
+          placeholder="Situación o tarea pendiente..." style={{width:"100%",marginTop:6,padding:"8px 10px",borderRadius:8,
+          border:"1px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:11,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>}
+      </div>
+    </div>
+  );
+}
+
+function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
+  const items=modulo.items.filter(i=>i.activo).sort((a,b)=>a.orden-b.orden);
+  const scoreModulo=calcScoreModulo(respuestas,modulo);
+  const tier=getTierAuditoria(scoreModulo);
+  const respondidos=items.filter(i=>respuestas[i.id]?.valor!==undefined).length;
+  const obsModulo=respuestas[`__obs_${modulo.id}`]?.obs||"";
+  return(
+    <div style={{paddingBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:tier.bg,borderRadius:10,border:`1.5px solid ${tier.c}33`,marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>{modulo.label}</div>
+          <div style={{fontSize:11,color:"#8aaabb"}}>{respondidos}/{items.length} ítems · {modulo.escala.join(" / ")}</div>
+        </div>
+        <div style={{textAlign:"center",minWidth:64}}>
+          <div style={{fontSize:22,lineHeight:1}}>{tier.icon}</div>
+          <div style={{fontWeight:900,fontSize:18,color:tier.c,lineHeight:1.1}}>{scoreModulo!==null?scoreModulo.toFixed(2):"—"}</div>
+          <div style={{fontSize:9,color:tier.c,fontWeight:700}}>{tier.label}</div>
+        </div>
+      </div>
+      {items.map(item=>(
+        <ItemAudit key={item.id} item={item} val={respuestas[item.id]?.valor} obsIt={respuestas[item.id]?.obs||""}
+          escala={modulo.escala} escalaTxt={modulo.escalaTxt} onValor={onValor} onObsItem={onObsItem}/>
+      ))}
+      <div style={{marginTop:4,padding:"12px 14px",background:"#f0f4f8",borderRadius:10,border:"1px solid #e2e8f0"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#1a2f4a",marginBottom:6}}>Tareas pendientes — {modulo.label}</div>
+        <textarea value={obsModulo} onChange={e=>onObsModulo(modulo.id,e.target.value)} rows={2}
+          placeholder={`¿Qué debe mejorar antes de la próxima visita?`}
+          style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid #d1dce8",background:"#fff",color:"#1a2f4a",fontSize:11,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+      </div>
+    </div>
+  );
+}
+
+function SeleccionTienda({tiendas,onCheckIn}){
+  const [busqA,setBusqA]=useState("");
+  const tFiltA=tiendas.filter(t=>t.activa&&(busqA===""||t.n.toLowerCase().includes(busqA.toLowerCase())||t.dist?.toLowerCase().includes(busqA.toLowerCase()))).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  return(
+    <div style={{paddingBottom:80}}>
+      <div style={{padding:"16px 16px 0",fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Selecciona la tienda a auditar</div>
+      <div style={{padding:"12px 16px"}}>
+        <input value={busqA} onChange={e=>setBusqA(e.target.value)} placeholder="Buscar tienda o distrito..."
+          style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #00b5b4",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
+      </div>
+      {tFiltA.map(t=>(
+        <div key={t.id} onClick={()=>onCheckIn(t.id)} style={{margin:"0 16px 8px",padding:"12px 14px",background:"#fff",borderRadius:10,border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Vega {t.n}</div>
+            <div style={{fontSize:11,color:"#8aaabb"}}>{t.f} · {t.dist}</div>
+          </div>
+          <span style={{fontSize:18}}>📍</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloActivo,
+  obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,
+  onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha}){
+  const tienda=tiendas.find(t=>t.id===tiendaSelId);
+  const modulosActivos=modulos.filter(m=>m.activo).sort((a,b)=>a.orden-b.orden);
+  const scoreFinal=calcScoreFinal(respuestas,modulosActivos);
+  const tierFinal=getTierAuditoria(scoreFinal);
+
+  if(paso===0) return <SeleccionTienda tiendas={tiendas} onCheckIn={onCheckIn}/>;
+
+  if(paso===1){
+    const modulo=modulosActivos[moduloActivo];
+    const esUltimo=moduloActivo===modulosActivos.length-1;
+    return(
+      <div style={{paddingBottom:100}}>
+        <div style={{padding:"12px 16px",background:"#1a2f4a",color:"#fff"}}>
+          <div style={{fontWeight:800,fontSize:14}}>Vega {tienda?.n}</div>
+          <div style={{fontSize:11,opacity:.7}}>{tienda?.f} · {uName}</div>
+          <div style={{display:"flex",gap:4,marginTop:8}}>
+            {modulosActivos.map((m,idx)=>{
+              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+              return<div key={m.id} style={{flex:1,height:4,borderRadius:2,background:idx<moduloActivo?t.c:idx===moduloActivo?"#00b5b4":"rgba(255,255,255,.2)"}}/>;
+            })}
+          </div>
+          <div style={{fontSize:10,opacity:.6,marginTop:4}}>Módulo {moduloActivo+1}/{modulosActivos.length}: {modulo?.label}</div>
+        </div>
+        {moduloActivo>0&&(
+          <div style={{display:"flex",gap:6,padding:"10px 16px",overflowX:"auto"}}>
+            {modulosActivos.slice(0,moduloActivo).map(m=>{
+              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+              return<div key={m.id} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,background:t.bg,border:`1px solid ${t.c}44`}}>
+                <span style={{fontSize:10,fontWeight:700,color:t.c}}>{m.label.split(" ")[0]}: {s?.toFixed(1)??"—"}</span>
+              </div>;
+            })}
+          </div>
+        )}
+        <div style={{padding:"0 16px"}}>
+          <ModuloAuditoria modulo={modulo} respuestas={respuestas} onValor={onValor} onObsItem={onObsItem} onObsModulo={onObsModulo}/>
+        </div>
+        <div style={{position:"sticky",bottom:0,background:"#fff",padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",gap:10}}>
+          <button onClick={onBorrador} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>💾 Borrador</button>
+          {moduloActivo>0&&<button onClick={onAnteriorModulo} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#1a2f4a",cursor:"pointer",fontSize:12,fontWeight:700}}>← Anterior</button>}
+          <button onClick={esUltimo?()=>onSiguienteModulo():onSiguienteModulo}
+            style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:800}}>
+            {esUltimo?"Continuar → Notas":`Siguiente: ${modulosActivos[moduloActivo+1]?.label?.split(" ")[0]}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if(paso===2){
+    return(
+      <div style={{padding:"16px 16px 100px"}}>
+        <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Observaciones y compromisos</div>
+        <div style={{fontSize:12,color:"#8aaabb",marginBottom:16}}>Vega {tienda?.n}</div>
+        <div style={{marginBottom:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:"12px 14px"}}>
+          <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a",marginBottom:8}}>Resumen por módulo</div>
+          {modulosActivos.map(m=>{
+            const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+            const obsM=respuestas[`__obs_${m.id}`]?.obs||"";
+            return(
+              <div key={m.id} style={{marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{fontSize:11,color:"#5a7a9a",flex:1}}>{m.label}</span>
+                  <span style={{fontWeight:800,fontSize:13,color:t.c,background:t.bg,padding:"2px 10px",borderRadius:20}}>{s!==null?s.toFixed(2):"S/D"}</span>
+                </div>
+                {obsM&&<div style={{fontSize:10,color:"#8aaabb",marginTop:2,paddingLeft:4}}>📌 {obsM.slice(0,80)}{obsM.length>80?"…":""}</div>}
+              </div>
+            );
+          })}
+          <div style={{borderTop:"1px solid #e2e8f0",paddingTop:8,marginTop:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>Score final</span>
+            <span style={{fontWeight:900,fontSize:18,color:tierFinal.c}}>{scoreFinal!==null?scoreFinal.toFixed(2):"S/D"} {tierFinal.icon}</span>
+          </div>
+        </div>
+        <label style={{fontSize:12,fontWeight:700,color:"#1a2f4a",display:"block",marginBottom:6}}>Observaciones generales</label>
+        <textarea value={obs} onChange={e=>onObs(e.target.value)} rows={4} placeholder="Describe lo observado durante la visita..."
+          style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none",resize:"vertical",boxSizing:"border-box",marginBottom:14}}/>
+        <label style={{fontSize:12,fontWeight:700,color:"#1a2f4a",display:"block",marginBottom:6}}>Compromisos acordados</label>
+        <textarea value={compromisos} onChange={e=>onCompromisos(e.target.value)} rows={3} placeholder="¿Qué acordaste con el equipo de la tienda?"
+          style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none",resize:"vertical",boxSizing:"border-box",marginBottom:16}}/>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onBorrador} style={{padding:"12px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>💾 Borrador</button>
+          <button onClick={onCheckOut} style={{flex:1,padding:"14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontSize:14,fontWeight:800}}>Finalizar y enviar →</button>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
 /* ══ EXPORT — envuelto en ErrorBoundary para capturar crashes de render ══ */
