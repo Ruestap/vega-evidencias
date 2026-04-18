@@ -5097,7 +5097,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         }));
         const actsRefCard=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
         // Filtro de actividad — disponible para todos los roles
-        // B17 fix: declarar actsParaStatus sin TDZ — filtro directo sobre actsRefCard
+        // B17 fix: TDZ resuelto — actsParaStatus sin referencia circular
         const actsParaStatus = statusActFiltro==="Todas"
           ? actsRefCard
           : (actsRefCard.filter(a=>a.id===statusActFiltro).length>0
