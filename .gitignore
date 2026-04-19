@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel/
+migrate_tiendas.js
+src/App.jsx.bak
+vega-evidencias@0.0.0
+vite
