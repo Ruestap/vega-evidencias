@@ -791,8 +791,7 @@ function ChecklistApp() {
         bodyLines.push(``);
         bodyLines.push(`Score final: ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"}`);
         if(auditCompromisos){bodyLines.push(``);bodyLines.push(`Compromisos acordados:`);bodyLines.push(auditCompromisos);}
-        const body=bodyLines.join("
-");
+        const body=bodyLines.join("\n");
         setAuditEmailModal({to:toEmails,subject:subj,body});
       }
     }catch(e){ console.error("auditCheckOut:",e); showToast("❌ Error al enviar."); }
