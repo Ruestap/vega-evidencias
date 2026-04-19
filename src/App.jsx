@@ -175,24 +175,39 @@ const CHECKLIST_MODULOS_INIT = [
     ]},
 ];
 
+// Retorna {ob, mx, pct} por sección — ob=pts obtenidos, mx=pts máximos posibles
 function calcScoreModulo(respuestas,modulo){
   const items=modulo.items.filter(i=>i.activo);
-  const vals=items.map(i=>respuestas?.[i.id]?.valor).filter(v=>v!==null&&v!==undefined);
-  if(!vals.length) return null;
-  return Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*100)/100;
+  if(!items.length) return null;
+  const mx=items.length*3;
+  const ob=items.reduce((sum,i)=>{
+    const v=respuestas?.[i.id]?.valor;
+    return sum+(v!==null&&v!==undefined?v:0);
+  },0);
+  const respondidos=items.filter(i=>respuestas?.[i.id]?.valor!==null&&respuestas?.[i.id]?.valor!==undefined);
+  if(!respondidos.length) return null;
+  return {ob:Math.round(ob*100)/100, mx, pct:Math.round((ob/mx)*100)};
 }
+// Score final Opción 2: suma total obtenida / 72 pts totales × 100
 function calcScoreFinal(respuestas,modulos){
-  const scores=modulos.filter(m=>m.activo).map(m=>calcScoreModulo(respuestas,m)).filter(s=>s!==null);
-  if(!scores.length) return null;
-  return Math.round((scores.reduce((a,b)=>a+b,0)/scores.length)*100)/100;
+  const activos=modulos.filter(m=>m.activo);
+  let totalOb=0, totalMx=0, algunoRespondido=false;
+  activos.forEach(m=>{
+    const r=calcScoreModulo(respuestas,m);
+    if(r!==null){algunoRespondido=true;totalOb+=r.ob;totalMx+=r.mx;}
+  });
+  if(!algunoRespondido) return null;
+  if(totalMx===0) return null;
+  return Math.round((totalOb/totalMx)*100*100)/100; // retorna % con 2 decimales
 }
-function getTierAuditoria(score){
-  if(score===null||score===undefined) return{label:"S/D",c:"#b2bec3",bg:"#f4f6f8",icon:"⬜"};
-  if(score>=2.7) return{label:"Excelente",c:"#00b894",bg:"#e8faf5",icon:"🥇"};
-  if(score>=2.0) return{label:"Bueno",    c:"#0984e3",bg:"#e8f4fd",icon:"🥈"};
-  if(score>=1.5) return{label:"Regular",  c:"#f6a623",bg:"#fff8ec",icon:"⚠️"};
-  if(score>0)    return{label:"Crítico",  c:"#d63031",bg:"#ffeae6",icon:"🔴"};
-  return               {label:"Sin nota", c:"#636e72",bg:"#f4f6f8",icon:"⬛"};
+// Tier basado en % final (0-100)
+function getTierAuditoria(pct){
+  if(pct===null||pct===undefined) return{label:"S/D",c:"#b2bec3",bg:"#f4f6f8",icon:"⬜"};
+  if(pct>=90) return{label:"Excelente",c:"#00b894",bg:"#e8faf5",icon:"🥇"};
+  if(pct>=75) return{label:"Bueno",    c:"#0984e3",bg:"#e8f4fd",icon:"🥈"};
+  if(pct>=60) return{label:"Regular",  c:"#f6a623",bg:"#fff8ec",icon:"⚠️"};
+  if(pct>0)   return{label:"Crítico",  c:"#d63031",bg:"#ffeae6",icon:"🔴"};
+  return             {label:"Sin nota", c:"#636e72",bg:"#f4f6f8",icon:"⬛"};
 }
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -481,6 +496,7 @@ function ChecklistApp() {
   /* ── módulo auditoría de campo ── */
   const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
   const [auditorias,        setAuditorias]        = useState({});
+  const [auditExclusiones,  setAuditExclusiones]  = useState({}); // {tId: {motivo,comentario,solicitadoPor,fecha,aprobada}}
   const [auditPaso,         setAuditPaso]         = useState(0);
   const [auditTiendaSel,    setAuditTiendaSel]    = useState(null);
   const [auditRespuestas,   setAuditRespuestas]   = useState({});
@@ -615,6 +631,14 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
+  // Sync exclusiones de auditoría desde Firestore
+  useEffect(()=>{
+    const unsub=onSnapshot(doc(db,"config","auditExclusiones"),snap=>{
+      if(snap.exists()) setAuditExclusiones(snap.data()||{});
+    });
+    return()=>unsub();
+  },[]);
+
   // Sync checklist_items desde Firestore (sobreescribe init local si existe)
   useEffect(()=>{
     const unsub=onSnapshot(doc(db,"config","checklist"),snap=>{
@@ -722,7 +746,7 @@ function ChecklistApp() {
     const mods=checklistModulos.filter(m=>m.activo);
     const scoresPorModulo=mods.map(m=>({
       moduloId:m.id, moduloLabel:m.label,
-      score:calcScoreModulo(auditRespuestas,m),
+      score:calcScoreModulo(auditRespuestas,m), // {ob,mx,pct}
       obsModulo:auditRespuestas[`__obs_${m.id}`]?.obs||"",
       itemsResp:m.items.filter(i=>i.activo&&auditRespuestas[i.id]?.valor!==undefined).length,
       itemsTotal:m.items.filter(i=>i.activo).length,
@@ -744,12 +768,35 @@ function ChecklistApp() {
     };
     try{
       await setDoc(doc(db,"auditorias",docId),payload);
-      showToast(estado==="borrador"?"💾 Borrador guardado":`✅ Enviada · Score: ${scoreFinal?.toFixed(2)??"S/D"}`);
+      showToast(estado==="borrador"?"💾 Borrador guardado":`✅ Enviada · ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"} ${scoreFinal!==null?getTierAuditoria(scoreFinal).icon:""}`);
       setAuditPaso(0); setAuditTiendaSel(null); setAuditRespuestas({});
       setAuditGPS(null); setAuditGPSOut(null); setAuditCheckInTs(null);
     }catch(e){ console.error("auditCheckOut:",e); showToast("❌ Error al enviar."); }
   },[auditTiendaSel,auditRespuestas,auditObs,auditCompromisos,auditGPS,auditGPSOut,
      auditCheckInTs,checklistModulos,tiendas,fecha,uDni,uName,showToast,obtenerGPS]);
+
+  // Solicitar exclusión N/A de auditoría (auditor) — queda pendiente hasta que admin apruebe
+  const solicitarExclusionAudit = useCallback(async(tId, motivo, comentario)=>{
+    const nueva={...auditExclusiones,[tId]:{motivo,comentario,solicitadoPor:uName||uDni,fecha:todayStr(),aprobada:false}};
+    try{
+      await setDoc(doc(db,"config","auditExclusiones"),nueva);
+      showToast("📋 Exclusión enviada al administrador");
+    }catch(e){ showToast("❌ Error al enviar exclusión"); }
+  },[auditExclusiones,uName,uDni,showToast]);
+
+  // Aprobar / rechazar exclusión de auditoría (solo admin)
+  const gestionarExclusionAudit = useCallback(async(tId, aprobar)=>{
+    let nueva;
+    if(aprobar){
+      nueva={...auditExclusiones,[tId]:{...auditExclusiones[tId],aprobada:true,aprobadaPor:uName,fechaAprobacion:todayStr()}};
+    } else {
+      nueva=Object.fromEntries(Object.entries(auditExclusiones).filter(([k])=>k!==tId));
+    }
+    try{
+      await setDoc(doc(db,"config","auditExclusiones"),nueva);
+      showToast(aprobar?"✅ Exclusión aprobada":"🗑️ Exclusión rechazada");
+    }catch(e){ showToast("❌ Error al gestionar exclusión"); }
+  },[auditExclusiones,uName,showToast]);
 
   const dow = getDow(fecha);
   const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
@@ -5073,6 +5120,10 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           onBorrador={()=>auditCheckOut("borrador")}
           onCancelar={()=>{setAuditPaso(0);setAuditTiendaSel(null);setAuditRespuestas({});}}
           uName={uName} uDni={uDni} fecha={fecha}
+          auditExclusiones={auditExclusiones}
+          onSolicitarExclusion={solicitarExclusionAudit}
+          isAdmin={isAdmin}
+          onGestionarExclusion={gestionarExclusionAudit}
         />
       )}
       {/* TOAST */}
@@ -5734,7 +5785,7 @@ function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
 function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
   const items=modulo.items.filter(i=>i.activo).sort((a,b)=>a.orden-b.orden);
   const scoreModulo=calcScoreModulo(respuestas,modulo);
-  const tier=getTierAuditoria(scoreModulo);
+  const tier=getTierAuditoria(scoreModulo?.pct);
   const respondidos=items.filter(i=>respuestas[i.id]?.valor!==undefined).length;
   const obsModulo=respuestas[`__obs_${modulo.id}`]?.obs||"";
   return(
@@ -5746,7 +5797,8 @@ function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
         </div>
         <div style={{textAlign:"center",minWidth:64}}>
           <div style={{fontSize:22,lineHeight:1}}>{tier.icon}</div>
-          <div style={{fontWeight:900,fontSize:18,color:tier.c,lineHeight:1.1}}>{scoreModulo!==null?scoreModulo.toFixed(2):"—"}</div>
+          <div style={{fontWeight:900,fontSize:16,color:tier.c,lineHeight:1.1}}>{scoreModulo?`${scoreModulo.pct}%`:"—"}</div>
+          <div style={{fontSize:9,color:tier.c,opacity:.8}}>{scoreModulo?`${scoreModulo.ob}/${scoreModulo.mx}pts`:""}</div>
           <div style={{fontSize:9,color:tier.c,fontWeight:700}}>{tier.label}</div>
         </div>
       </div>
@@ -5764,38 +5816,142 @@ function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
   );
 }
 
-function SeleccionTienda({tiendas,onCheckIn}){
+function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion}){
   const [busqA,setBusqA]=useState("");
-  const tFiltA=tiendas.filter(t=>t.activa&&(busqA===""||t.n.toLowerCase().includes(busqA.toLowerCase())||t.dist?.toLowerCase().includes(busqA.toLowerCase()))).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  const [fmtA,setFmtA]=useState("Todas");
+  const [naModal,setNaModal]=useState(null); // tId o null
+  const [naMotivo,setNaMotivo]=useState("");
+  const [naComentario,setNaComentario]=useState("");
+  const fmts=["Todas","Mayorista","Supermayorista","Market"];
+  const fmtC={Mayorista:"#6c5ce7",Supermayorista:"#0984e3",Market:"#00b5b4"};
+  const tFiltA=tiendas.filter(t=>{
+    if(!t.activa) return false;
+    if(fmtA!=="Todas"&&t.f!==fmtA) return false;
+    if(busqA&&!t.n.toLowerCase().includes(busqA.toLowerCase())&&!t.dist?.toLowerCase().includes(busqA.toLowerCase())) return false;
+    return true;
+  }).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+
   return(
     <div style={{paddingBottom:80}}>
-      <div style={{padding:"16px 16px 0",fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Selecciona la tienda a auditar</div>
-      <div style={{padding:"12px 16px"}}>
+      <div style={{padding:"14px 16px 4px",fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Selecciona la tienda a auditar</div>
+
+      {/* Filtro por formato */}
+      <div style={{display:"flex",gap:5,padding:"8px 16px",overflowX:"auto"}}>
+        {fmts.map(f=>{
+          const on=fmtA===f;
+          const c=f==="Todas"?"#1a2f4a":fmtC[f];
+          return(
+            <button key={f} onClick={()=>setFmtA(f)}
+              style={{flexShrink:0,padding:"5px 12px",borderRadius:20,border:`1.5px solid ${on?c:"#e2e8f0"}`,
+                background:on?c+"18":"#fff",color:on?c:"#8aaabb",
+                fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {f}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Buscador */}
+      <div style={{padding:"4px 16px 10px"}}>
         <input value={busqA} onChange={e=>setBusqA(e.target.value)} placeholder="Buscar tienda o distrito..."
           style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #00b5b4",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
       </div>
-      {tFiltA.map(t=>(
-        <div key={t.id} onClick={()=>onCheckIn(t.id)} style={{margin:"0 16px 8px",padding:"12px 14px",background:"#fff",borderRadius:10,border:"1px solid #e2e8f0",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Vega {t.n}</div>
-            <div style={{fontSize:11,color:"#8aaabb"}}>{t.f} · {t.dist}</div>
+
+      {/* Lista */}
+      {tFiltA.map(t=>{
+        const excl=auditExclusiones?.[t.id];
+        const esExcluida=excl&&excl.aprobada;
+        const esPendiente=excl&&!excl.aprobada;
+        return(
+          <div key={t.id} style={{margin:"0 16px 8px"}}>
+            <div style={{padding:"11px 14px",background:esExcluida?"#fafafa":esPendiente?"#fffdf6":"#fff",
+              borderRadius:10,border:`1px solid ${esExcluida?"#e2e8f0":esPendiente?"#FAC775":"#e2e8f0"}`,
+              display:"flex",alignItems:"center",gap:10,
+              cursor:esExcluida?"default":"pointer",opacity:esExcluida?0.7:1}}
+              onClick={()=>{ if(!esExcluida) onCheckIn(t.id); }}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Vega {t.n}</div>
+                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{t.f} · {t.dist}</div>
+                {(esExcluida||esPendiente)&&(
+                  <div style={{fontSize:10,color:"#854F0B",marginTop:3}}>
+                    {excl.motivo}{excl.comentario?` · ${excl.comentario}`:""}
+                  </div>
+                )}
+              </div>
+              {esExcluida&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#854F0B",background:"#FAEEDA",flexShrink:0}}>N/A</span>}
+              {esPendiente&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#BA7517",background:"#FAEEDA",border:"1px solid #FAC775",flexShrink:0}}>N/A pend.</span>}
+              {/* Admin: botones gestión */}
+              {isAdmin&&esPendiente&&(
+                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                  <button onClick={e=>{e.stopPropagation();onGestionarExclusion(t.id,true);}}
+                    style={{padding:"3px 8px",borderRadius:8,border:"none",background:"#e8faf5",color:"#00b894",fontSize:10,fontWeight:700,cursor:"pointer"}}>✓ Aprobar</button>
+                  <button onClick={e=>{e.stopPropagation();onGestionarExclusion(t.id,false);}}
+                    style={{padding:"3px 8px",borderRadius:8,border:"none",background:"#fff1f2",color:"#d63031",fontSize:10,fontWeight:700,cursor:"pointer"}}>✕</button>
+                </div>
+              )}
+              {/* Botón N/A para auditor */}
+              {!esExcluida&&!esPendiente&&(
+                <button onClick={e=>{e.stopPropagation();setNaModal(t.id);setNaMotivo("");setNaComentario("");}}
+                  style={{padding:"3px 9px",borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#8aaabb",fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                  N/A
+                </button>
+              )}
+              {!esExcluida&&!esPendiente&&<span style={{fontSize:16,flexShrink:0}}>📍</span>}
+            </div>
           </div>
-          <span style={{fontSize:18}}>📍</span>
+        );
+      })}
+
+      {/* Modal solicitud N/A */}
+      {naModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:80,padding:"0 0 0 0"}}
+          onClick={()=>setNaModal(null)}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:520,boxShadow:"0 -8px 32px rgba(0,0,0,.15)"}}>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Reportar N/A — Vega {tiendas.find(t=>t.id===naModal)?.n}</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>El admin recibirá la solicitud y la aprobará o rechazará. La tienda aparecerá como N/A pendiente mientras tanto.</div>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO *</label>
+            <select value={naMotivo} onChange={e=>setNaMotivo(e.target.value)}
+              style={{width:"100%",padding:"10px 12px",borderRadius:9,border:`1.5px solid ${naMotivo?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}>
+              <option value="">Seleccionar motivo...</option>
+              <option>Tienda cerrada temporalmente</option>
+              <option>En remodelación</option>
+              <option>Sin acceso al local</option>
+              <option>Tienda sin personal disponible</option>
+              <option>Otro (ver comentario)</option>
+            </select>
+            <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>COMENTARIO (opcional)</label>
+            <textarea value={naComentario} onChange={e=>setNaComentario(e.target.value)} rows={2}
+              placeholder="Detalle adicional..."
+              style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:14,resize:"none",boxSizing:"border-box"}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setNaModal(null)}
+                style={{flex:1,padding:12,borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>Cancelar</button>
+              <button disabled={!naMotivo}
+                onClick={()=>{onSolicitarExclusion(naModal,naMotivo,naComentario);setNaModal(null);}}
+                style={{flex:1,padding:12,borderRadius:10,border:"none",background:naMotivo?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:naMotivo?"#fff":"#b2bec3",cursor:naMotivo?"pointer":"not-allowed",fontWeight:700,fontSize:13}}>
+                Reportar al admin
+              </button>
+            </div>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloActivo,
   obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,
-  onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha}){
+  onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha,
+  auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion}){
   const tienda=tiendas.find(t=>t.id===tiendaSelId);
   const modulosActivos=modulos.filter(m=>m.activo).sort((a,b)=>a.orden-b.orden);
   const scoreFinal=calcScoreFinal(respuestas,modulosActivos);
   const tierFinal=getTierAuditoria(scoreFinal);
 
-  if(paso===0) return <SeleccionTienda tiendas={tiendas} onCheckIn={onCheckIn}/>;
+  if(paso===0) return <SeleccionTienda tiendas={tiendas} onCheckIn={onCheckIn}
+    auditExclusiones={auditExclusiones} onSolicitarExclusion={onSolicitarExclusion}
+    isAdmin={isAdmin} onGestionarExclusion={onGestionarExclusion}/>;
 
   if(paso===1){
     const modulo=modulosActivos[moduloActivo];
@@ -5807,7 +5963,7 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
           <div style={{fontSize:11,opacity:.7}}>{tienda?.f} · {uName}</div>
           <div style={{display:"flex",gap:4,marginTop:8}}>
             {modulosActivos.map((m,idx)=>{
-              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s?.pct);
               return<div key={m.id} style={{flex:1,height:4,borderRadius:2,background:idx<moduloActivo?t.c:idx===moduloActivo?"#00b5b4":"rgba(255,255,255,.2)"}}/>;
             })}
           </div>
@@ -5816,9 +5972,9 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
         {moduloActivo>0&&(
           <div style={{display:"flex",gap:6,padding:"10px 16px",overflowX:"auto"}}>
             {modulosActivos.slice(0,moduloActivo).map(m=>{
-              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+              const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s?.pct);
               return<div key={m.id} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,background:t.bg,border:`1px solid ${t.c}44`}}>
-                <span style={{fontSize:10,fontWeight:700,color:t.c}}>{m.label.split(" ")[0]}: {s?.toFixed(1)??"—"}</span>
+                <span style={{fontSize:10,fontWeight:700,color:t.c}}>{m.label.split(" ")[0]}: {s?`${s.ob}/${s.mx} (${s.pct}%)`:'—'}</span>
               </div>;
             })}
           </div>
@@ -5846,21 +6002,26 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
         <div style={{marginBottom:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:"12px 14px"}}>
           <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a",marginBottom:8}}>Resumen por módulo</div>
           {modulosActivos.map(m=>{
-            const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s);
+            const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s?.pct);
             const obsM=respuestas[`__obs_${m.id}`]?.obs||"";
             return(
-              <div key={m.id} style={{marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div key={m.id} style={{marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                   <span style={{fontSize:11,color:"#5a7a9a",flex:1}}>{m.label}</span>
-                  <span style={{fontWeight:800,fontSize:13,color:t.c,background:t.bg,padding:"2px 10px",borderRadius:20}}>{s!==null?s.toFixed(2):"S/D"}</span>
+                  <span style={{fontWeight:800,fontSize:12,color:t.c,background:t.bg,padding:"2px 10px",borderRadius:20}}>
+                    {s?`${s.ob}/${s.mx} pts · ${s.pct}%`:"S/D"} {t.icon}
+                  </span>
                 </div>
+                {s&&<div style={{height:5,background:"#e2e8f0",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:s.pct+"%",background:t.c,borderRadius:3,transition:"width .4s"}}/>
+                </div>}
                 {obsM&&<div style={{fontSize:10,color:"#8aaabb",marginTop:2,paddingLeft:4}}>📌 {obsM.slice(0,80)}{obsM.length>80?"…":""}</div>}
               </div>
             );
           })}
           <div style={{borderTop:"1px solid #e2e8f0",paddingTop:8,marginTop:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>Score final</span>
-            <span style={{fontWeight:900,fontSize:18,color:tierFinal.c}}>{scoreFinal!==null?scoreFinal.toFixed(2):"S/D"} {tierFinal.icon}</span>
+            <span style={{fontWeight:900,fontSize:18,color:tierFinal.c}}>{scoreFinal!==null?`${scoreFinal.toFixed(1)}%`:"S/D"} {tierFinal.icon} {scoreFinal!==null?tierFinal.label:""}</span>
           </div>
         </div>
         <label style={{fontSize:12,fontWeight:700,color:"#1a2f4a",display:"block",marginBottom:6}}>Observaciones generales</label>
