@@ -467,7 +467,7 @@ function ChecklistApp() {
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
-  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});
+  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
@@ -496,7 +496,9 @@ function ChecklistApp() {
   /* ── módulo auditoría de campo ── */
   const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
   const [auditorias,        setAuditorias]        = useState({});
-  const [auditExclusiones,  setAuditExclusiones]  = useState({}); // {tId: {motivo,comentario,solicitadoPor,fecha,aprobada}}
+  const [auditExclusiones,  setAuditExclusiones]  = useState({});
+  const [auditEmailModal,   setAuditEmailModal]   = useState(null); // {to,subject,body} | null
+  const [tiendaEditModal,   setTiendaEditModal]   = useState(null); // tienda obj | null // {tId: {motivo,comentario,solicitadoPor,fecha,aprobada}}
   const [auditPaso,         setAuditPaso]         = useState(0);
   const [auditTiendaSel,    setAuditTiendaSel]    = useState(null);
   const [auditRespuestas,   setAuditRespuestas]   = useState({});
@@ -771,6 +773,28 @@ function ChecklistApp() {
       showToast(estado==="borrador"?"💾 Borrador guardado":`✅ Enviada · ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"} ${scoreFinal!==null?getTierAuditoria(scoreFinal).icon:""}`);
       setAuditPaso(0); setAuditTiendaSel(null); setAuditRespuestas({});
       setAuditGPS(null); setAuditGPSOut(null); setAuditCheckInTs(null);
+      // Generar mailto si es envío final
+      if(estado==="enviado"){
+        const tiendaObj=tiendas.find(t=>t.id===auditTiendaSel);
+        const zonaEmail=tiendaObj?.zonaId?usuarios.find(u=>u.id===tiendaObj.zonaId)?.email:"";
+        const tiendaEmail=tiendaObj?.email||"";
+        const toEmails=[zonaEmail,tiendaEmail].filter(Boolean).join(",");
+        const subj=`Auditoría Vega ${tiendaObj?.n||auditTiendaSel} · ${fecha} · ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"}`;
+        const mods2=checklistModulos.filter(m=>m.activo);
+        let bodyLines=[`Auditoría realizada por: ${uName||uDni}`,`Tienda: Vega ${tiendaObj?.n||auditTiendaSel} · ${fecha}`,``];
+        scoresPorModulo.forEach(sm=>{
+          const pct=sm.score?sm.score.pct:"S/D";
+          const icon=sm.score?.pct>=90?"✓":sm.score?.pct>=75?"✓":"⚠";
+          bodyLines.push(`${sm.moduloLabel}: ${sm.score?`${sm.score.ob}/${sm.score.mx} pts (${pct}%)`:"S/D"} ${icon}`);
+          if(sm.obsModulo) bodyLines.push(`  Obs: ${sm.obsModulo}`);
+        });
+        bodyLines.push(``);
+        bodyLines.push(`Score final: ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"}`);
+        if(auditCompromisos){bodyLines.push(``);bodyLines.push(`Compromisos acordados:`);bodyLines.push(auditCompromisos);}
+        const body=bodyLines.join("
+");
+        setAuditEmailModal({to:toEmails,subject:subj,body});
+      }
     }catch(e){ console.error("auditCheckOut:",e); showToast("❌ Error al enviar."); }
   },[auditTiendaSel,auditRespuestas,auditObs,auditCompromisos,auditGPS,auditGPSOut,
      auditCheckInTs,checklistModulos,tiendas,fecha,uDni,uName,showToast,obtenerGPS]);
@@ -3669,7 +3693,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 {usuarios.filter(u=>u.activo!==false).length} activos · {usuarios.length} totales
               </div>
             </div>
-            <button onClick={()=>{setShowNUsuario(true);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});}}
+            <button onClick={()=>{setShowNUsuario(true);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});}}
               style={{padding:"9px 16px",borderRadius:10,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
               ＋ Nuevo usuario
             </button>
@@ -3709,6 +3733,16 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <label style={S.lbl}>TELÉFONO (opcional)</label>
                   <input type="tel" value={newUsuario.telefono||""} onChange={e=>setNewUsuario(p=>({...p,telefono:e.target.value}))}
                     placeholder="+51 999 999 999" style={S.inp}/>
+                </div>
+                <div>
+                  <label style={S.lbl}>WHATSAPP (con código país)</label>
+                  <input type="tel" value={newUsuario.whatsapp||""} onChange={e=>setNewUsuario(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
+                    placeholder="51987654321" style={S.inp}/>
+                </div>
+                <div>
+                  <label style={S.lbl}>ZONA (jefe zonal)</label>
+                  <input value={newUsuario.zona||""} onChange={e=>setNewUsuario(p=>({...p,zona:e.target.value}))}
+                    placeholder="Ej: Zona Norte, Zona Sur..." style={S.inp}/>
                 </div>
                 <div>
                   <label style={S.lbl}>ÁREA / EQUIPO (opcional)</label>
@@ -3756,6 +3790,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     await setDoc(doc(db,"usuarios",newUsuario.editId),{
                       nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
                       dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
+                      whatsapp:newUsuario.whatsapp||"",zona:newUsuario.zona||"",
                       area:newUsuario.area||"",activo:true,
                     },{merge:true});
                     showToast("✅ Usuario actualizado");
@@ -3766,16 +3801,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     await setDoc(ref,{
                       nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
                       dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
+                      whatsapp:newUsuario.whatsapp||"",zona:newUsuario.zona||"",
                       area:newUsuario.area||"",activo:true,ultimoAcceso:null,
                     });
                     showToast("✅ Usuario registrado · el DNI es su código de acceso");
                   }
                   setShowNUsuario(false);
-                  setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});
+                  setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});
                 }} style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
                   {newUsuario.editId?"Guardar cambios":"Registrar usuario"}
                 </button>
-                <button onClick={()=>{setShowNUsuario(false);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",area:"",dni:"",editId:null});}}
+                <button onClick={()=>{setShowNUsuario(false);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});}}
                   style={{padding:"11px 18px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
               </div>
             </div>
@@ -3831,7 +3867,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </select>
                 {/* Edit */}
                 <button onClick={()=>{
-                  setNewUsuario({nombre:u.nombre,rol:u.rol,email:u.email||"",telefono:u.telefono||"",area:u.area||"",dni:u.dni||"",editId:u.id});
+                  setNewUsuario({nombre:u.nombre,rol:u.rol,email:u.email||"",telefono:u.telefono||"",whatsapp:u.whatsapp||"",zona:u.zona||"",area:u.area||"",dni:u.dni||"",editId:u.id});
                   setShowNUsuario(true);
                 }} style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:14}}>✏️</button>
                 {/* Pausar/Activar */}
@@ -4001,15 +4037,30 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <span style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</span>
                   <span style={{fontSize:11,color:"#8aaabb"}}>{ts.filter(ti=>ti.activa).length} activas</span>
                 </div>
-                {ts.map(ti=>(
-                  <div key={ti.id} style={{...S.card,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",opacity:ti.activa?1:.5}}>
-                    <span style={{fontWeight:600,fontSize:12,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</span>
-                    <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
-                      style={{padding:"4px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                      {ti.activa?"Cerrar":"Activar"}
-                    </button>
+                {ts.map(ti=>{
+                  const zonalU=usuarios.find(u=>u.id===ti.zonaId);
+                  return(
+                  <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.55}}>
+                    <div style={{padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:12,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</div>
+                        <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
+                          {ti.email&&<span>✉ {ti.email}</span>}
+                          {zonalU&&<span>👤 {zonalU.nombre}</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:5,flexShrink:0}}>
+                        <button onClick={()=>setTiendaEditModal({...ti})}
+                          style={{padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>✏️ Editar</button>
+                        <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
+                          style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                          {ti.activa?"Cerrar":"Activar"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -4021,8 +4072,122 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
 
 {cfgTab===3&&(()=>{
+        // ── Historial de auditorías de campo ──
+        const auditList=Object.values(auditorias).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+        const [auditFiltroFmt,setAuditFiltroFmt]=React.useState("Todos");
+        const [auditDetalle,setAuditDetalle]=React.useState(null);
+        const auditFiltrados=auditFiltroFmt==="Todos"?auditList:auditList.filter(a=>tiendas.find(t=>t.id===a.tiendaId)?.f===auditFiltroFmt);
+        const tier=getTierAuditoria;
+        return(
+        <div>
+          {/* Sección historial auditorías */}
+          <div style={{...S.card,padding:"14px",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:8}}>
+              <div>
+                <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}>🔍 Historial de auditorías</div>
+                <div style={{fontSize:11,color:"#8aaabb"}}>{auditList.length} registros totales</div>
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {["Todos","Mayorista","Supermayorista","Market"].map(f=>(
+                  <button key={f} onClick={()=>setAuditFiltroFmt(f)}
+                    style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${auditFiltroFmt===f?"#00b5b4":"#e2e8f0"}`,
+                      background:auditFiltroFmt===f?"#e0fafa":"#fff",color:auditFiltroFmt===f?"#00b5b4":"#5a7a9a",
+                      cursor:"pointer",fontSize:10,fontWeight:700}}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {auditFiltrados.length===0?(
+              <div style={{textAlign:"center",padding:"20px 0",color:"#8aaabb",fontSize:12}}>Sin auditorías registradas aún</div>
+            ):(
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc"}}>
+                      {["Fecha","Tienda","Formato","Auditor","Score","Estado",""].map(h=>(
+                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditFiltrados.slice(0,50).map((a,idx)=>{
+                      const t=tiendas.find(ti=>ti.id===a.tiendaId);
+                      const sc=a.scoreFinal;
+                      const tr=tier(sc);
+                      return(
+                        <tr key={a.id||idx} style={{borderBottom:"1px solid #f5f7fa"}}>
+                          <td style={{padding:"7px 10px",whiteSpace:"nowrap",color:"#5a7a9a"}}>{a.fecha}</td>
+                          <td style={{padding:"7px 10px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap"}}>Vega {t?.n||a.tiendaNombre}</td>
+                          <td style={{padding:"7px 10px",color:"#8aaabb",whiteSpace:"nowrap"}}>{t?.f||a.tiendaFormato||"—"}</td>
+                          <td style={{padding:"7px 10px",whiteSpace:"nowrap"}}>{a.auditorNombre||a.auditorId}</td>
+                          <td style={{padding:"7px 10px",whiteSpace:"nowrap"}}>
+                            <span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:tr.c,background:tr.bg}}>
+                              {sc!==null&&sc!==undefined?sc.toFixed(1)+"%":"S/D"} {tr.icon}
+                            </span>
+                          </td>
+                          <td style={{padding:"7px 10px"}}>
+                            <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                              color:a.estado==="enviado"?"#085041":"#633806",
+                              background:a.estado==="enviado"?"#E1F5EE":"#FAEEDA"}}>
+                              {a.estado==="enviado"?"Enviada":"Borrador"}
+                            </span>
+                          </td>
+                          <td style={{padding:"7px 10px"}}>
+                            <button onClick={()=>setAuditDetalle(auditDetalle?.id===a.id?null:a)}
+                              style={{padding:"3px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                              {auditDetalle?.id===a.id?"▲ Cerrar":"▼ Ver"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {/* Panel detalle */}
+            {auditDetalle&&(
+              <div style={{marginTop:12,padding:"14px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:10}}>
+                  Detalle — Vega {tiendas.find(t=>t.id===auditDetalle.tiendaId)?.n||auditDetalle.tiendaNombre} · {auditDetalle.fecha}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:10}}>
+                  {(auditDetalle.scoresPorModulo||[]).map((sm,i)=>{
+                    const sc2=sm.score;
+                    const tr2=tier(sc2?.pct);
+                    return(
+                      <div key={i} style={{background:"#fff",borderRadius:8,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
+                        <div style={{fontSize:10,color:"#8aaabb",marginBottom:4}}>{sm.moduloLabel}</div>
+                        <div style={{fontSize:15,fontWeight:700,color:tr2.c}}>{sc2?`${sc2.ob}/${sc2.mx}`:"—"}</div>
+                        <div style={{fontSize:10,color:tr2.c}}>{sc2?`${sc2.pct}% · ${tr2.label}`:""}</div>
+                        {sm.obsModulo&&<div style={{fontSize:9,color:"#8aaabb",marginTop:4,lineHeight:1.4}}>📌 {sm.obsModulo}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {auditDetalle.observaciones&&(
+                  <div style={{marginBottom:8}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:3}}>OBSERVACIONES</div>
+                    <div style={{fontSize:11,color:"#1a2f4a",lineHeight:1.5}}>{auditDetalle.observaciones}</div>
+                  </div>
+                )}
+                {auditDetalle.compromisos&&(
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:3}}>COMPROMISOS</div>
+                    <div style={{fontSize:11,color:"#1a2f4a",lineHeight:1.5}}>{auditDetalle.compromisos}</div>
+                  </div>
+                )}
+                {auditDetalle.duracionMin&&(
+                  <div style={{marginTop:8,fontSize:10,color:"#8aaabb"}}>⏱ Duración: {auditDetalle.duracionMin} min · Auditor: {auditDetalle.auditorNombre}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Log de registros de evidencias — a continuación */}
+          {(()=>{
         const allLogs=[];
-        // Detectar duplicados: misma tienda+actividad+fecha con más de 1 evidencia en el array
         const duplicadosDocIds=new Set();
         Object.entries(regs).forEach(([key,reg])=>{
           if(!reg?.evidencias?.length||reg.anulado) return;
@@ -4169,6 +4334,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             ?<div style={{textAlign:"center",padding:"24px",color:"#8aaabb",fontSize:12}}>Sin resultados</div>
             :<LogTable filtered={filtered} regs={regs} db={db} deleteDoc={deleteDoc} doc={doc} setDoc={setDoc} showToast={showToast} sc={sc} sb={sb} FMT={FMT} S={S} isAdmin={isAdmin} selDupsExterno={selDupsExterno} onClearSelDups={()=>setSelDupsExterno([])}/>
           }
+        </div>
+        );
+      })()}
         </div>
         );
       })()}
@@ -5132,6 +5300,96 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           {toast}
         </div>
       )}
+      {/* MODAL EMAIL AUDITORÍA */}
+      {auditEmailModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:90,padding:0}}
+          onClick={()=>setAuditEmailModal(null)}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:560,boxShadow:"0 -8px 32px rgba(0,0,0,.2)",maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{fontWeight:800,fontSize:16,color:"#1a2f4a",marginBottom:4}}>✅ Auditoría enviada</div>
+            <div style={{fontSize:12,color:"#8aaabb",marginBottom:16}}>El reporte está listo para enviar por correo a los responsables de la tienda.</div>
+            {auditEmailModal.to?(
+              <div style={{marginBottom:10,padding:"8px 12px",background:"#e8f4fd",borderRadius:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#0984e3",marginBottom:2}}>DESTINATARIOS</div>
+                <div style={{fontSize:12,color:"#1a2f4a"}}>{auditEmailModal.to}</div>
+              </div>
+            ):(
+              <div style={{marginBottom:10,padding:"8px 12px",background:"#fff8ec",borderRadius:8,border:"1px solid #FAC775"}}>
+                <div style={{fontSize:11,color:"#854F0B"}}>⚠️ La tienda no tiene email ni jefe zonal configurado. Puedes editar la tienda en Config → Tiendas.</div>
+              </div>
+            )}
+            <div style={{marginBottom:10,padding:"8px 12px",background:"#f8fafc",borderRadius:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:2}}>ASUNTO</div>
+              <div style={{fontSize:12,color:"#1a2f4a"}}>{auditEmailModal.subject}</div>
+            </div>
+            <div style={{marginBottom:16,padding:"10px 12px",background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",maxHeight:200,overflowY:"auto"}}>
+              <pre style={{fontSize:11,color:"#1a2f4a",whiteSpace:"pre-wrap",fontFamily:"system-ui,sans-serif",margin:0,lineHeight:1.6}}>{auditEmailModal.body}</pre>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <a href={`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${encodeURIComponent(auditEmailModal.body)}`}
+                style={{flex:1,padding:"13px",borderRadius:12,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",textAlign:"center",fontWeight:800,fontSize:14,textDecoration:"none",display:"block"}}
+                onClick={()=>setAuditEmailModal(null)}>
+                ✉️ Abrir Outlook
+              </a>
+              <button onClick={()=>setAuditEmailModal(null)}
+                style={{padding:"13px 20px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR TIENDA */}
+      {tiendaEditModal&&(()=>{
+        const zonales=usuarios.filter(u=>u.activo!==false);
+        return(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}}
+          onClick={()=>setTiendaEditModal(null)}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:420,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:16}}>✏️ Vega {tiendaEditModal.n}</div>
+            <div style={{marginBottom:12}}>
+              <label style={S.lbl}>EMAIL ENCARGADO</label>
+              <input type="email" value={tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,email:e.target.value}))}
+                placeholder="encargado@corporacionvega.pe" style={S.inp}/>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={S.lbl}>WHATSAPP TIENDA (con código país)</label>
+              <input type="tel" value={tiendaEditModal.whatsapp||""} onChange={e=>setTiendaEditModal(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
+                placeholder="51987654321" style={S.inp}/>
+            </div>
+            <div style={{marginBottom:16}}>
+              <label style={S.lbl}>JEFE ZONAL ASIGNADO</label>
+              <select value={tiendaEditModal.zonaId||""} onChange={e=>setTiendaEditModal(p=>({...p,zonaId:e.target.value}))}
+                style={{...S.inp,padding:"10px 12px"}}>
+                <option value="">— Sin asignar —</option>
+                {zonales.map(u=>(
+                  <option key={u.id} value={u.id}>{u.nombre} ({u.rol}){u.zona?` · ${u.zona}`:""}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{
+                setTiendas(p=>{
+                  const np=p.map(x=>x.id===tiendaEditModal.id?{...x,email:tiendaEditModal.email||"",whatsapp:tiendaEditModal.whatsapp||"",zonaId:tiendaEditModal.zonaId||""}:x);
+                  saveConfig({tiendas:np});return np;
+                });
+                showToast("✅ Tienda actualizada");
+                setTiendaEditModal(null);
+              }} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>
+                Guardar
+              </button>
+              <button onClick={()=>setTiendaEditModal(null)}
+                style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
