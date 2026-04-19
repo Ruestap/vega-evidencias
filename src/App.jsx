@@ -497,8 +497,10 @@ function ChecklistApp() {
   const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
   const [auditorias,        setAuditorias]        = useState({});
   const [auditExclusiones,  setAuditExclusiones]  = useState({});
-  const [auditEmailModal,   setAuditEmailModal]   = useState(null); // {to,subject,body} | null
-  const [tiendaEditModal,   setTiendaEditModal]   = useState(null); // tienda obj | null // {tId: {motivo,comentario,solicitadoPor,fecha,aprobada}}
+  const [auditEmailModal,   setAuditEmailModal]   = useState(null);
+  const [tiendaEditModal,   setTiendaEditModal]   = useState(null);
+  const [auditFiltroFmt,    setAuditFiltroFmt]    = useState("Todos");
+  const [auditDetalle,      setAuditDetalle]      = useState(null);
   const [auditPaso,         setAuditPaso]         = useState(0);
   const [auditTiendaSel,    setAuditTiendaSel]    = useState(null);
   const [auditRespuestas,   setAuditRespuestas]   = useState({});
@@ -4073,8 +4075,6 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 {cfgTab===3&&(()=>{
         // ── Historial de auditorías de campo ──
         const auditList=Object.values(auditorias).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-        const [auditFiltroFmt,setAuditFiltroFmt]=React.useState("Todos");
-        const [auditDetalle,setAuditDetalle]=React.useState(null);
         const auditFiltrados=auditFiltroFmt==="Todos"?auditList:auditList.filter(a=>tiendas.find(t=>t.id===a.tiendaId)?.f===auditFiltroFmt);
         const tier=getTierAuditoria;
         return(
@@ -5325,7 +5325,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <pre style={{fontSize:11,color:"#1a2f4a",whiteSpace:"pre-wrap",fontFamily:"system-ui,sans-serif",margin:0,lineHeight:1.6}}>{auditEmailModal.body}</pre>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <a href={`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${encodeURIComponent(auditEmailModal.body)}`}
+              <a href={`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26")}`}
                 style={{flex:1,padding:"13px",borderRadius:12,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",textAlign:"center",fontWeight:800,fontSize:14,textDecoration:"none",display:"block"}}
                 onClick={()=>setAuditEmailModal(null)}>
                 ✉️ Abrir Outlook
