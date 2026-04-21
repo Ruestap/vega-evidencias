@@ -4075,10 +4075,58 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 {cfgTab===3&&(()=>{
         // ── Historial de auditorías de campo ──
         const auditList=Object.values(auditorias).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+        // ── KPIs Dashboard ──
+        const hoy7=localDateAdd(todayStr(),-7);
+        const auditSemana=auditList.filter(a=>a.fecha>=hoy7&&a.estado==="enviado");
+        const auditEnviadas=auditList.filter(a=>a.estado==="enviado");
+        const scoresProm=auditEnviadas.map(a=>a.scoreFinal).filter(s=>s!==null&&s!==undefined);
+        const promScore=scoresProm.length?Math.round(scoresProm.reduce((a,b)=>a+b,0)/scoresProm.length*10)/10:null;
+        const criticas=auditEnviadas.filter(a=>a.scoreFinal!==null&&a.scoreFinal<60).length;
+        const tiendaAuditadas=new Set(auditSemana.map(a=>a.tiendaId)).size;
+        // Score por sección global
+        const seccionScores={};
+        auditEnviadas.forEach(a=>{(a.scoresPorModulo||[]).forEach(sm=>{
+          if(!sm.score?.pct) return;
+          if(!seccionScores[sm.moduloLabel]){seccionScores[sm.moduloLabel]={sum:0,n:0};}
+          seccionScores[sm.moduloLabel].sum+=sm.score.pct;
+          seccionScores[sm.moduloLabel].n++;
+        });});
+        const seccionesKPI=Object.entries(seccionScores).map(([l,v])=>({label:l,pct:Math.round(v.sum/v.n)})).sort((a,b)=>a.pct-b.pct);
         const auditFiltrados=auditFiltroFmt==="Todos"?auditList:auditList.filter(a=>tiendas.find(t=>t.id===a.tiendaId)?.f===auditFiltroFmt);
         const tier=getTierAuditoria;
         return(
         <div>
+          {/* KPIs Dashboard */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:14}}>
+            {[
+              {label:"Tiendas auditadas",sub:"últimos 7 días",val:tiendaAuditadas,c:"#0984e3"},
+              {label:"Score promedio",sub:"auditorías enviadas",val:promScore!==null?promScore.toFixed(1)+"%":"S/D",c:promScore>=75?"#00b894":promScore>=60?"#f6a623":"#d63031"},
+              {label:"Tiendas críticas",sub:"score < 60%",val:criticas,c:criticas>0?"#d63031":"#00b894"},
+              {label:"Total enviadas",sub:"todas las fechas",val:auditEnviadas.length,c:"#1a2f4a"},
+            ].map((k,i)=>(
+              <div key={i} style={{background:k.c+"12",border:`1px solid ${k.c}33`,borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:10,color:"#5a7a9a",marginBottom:4}}>{k.label}</div>
+                <div style={{fontSize:22,fontWeight:800,color:k.c,lineHeight:1}}>{k.val}</div>
+                <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          {seccionesKPI.length>0&&(
+            <div style={{...S.card,padding:"12px 14px",marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a",marginBottom:10}}>📊 Score promedio por sección</div>
+              {seccionesKPI.map(s=>{const tr=getTierAuditoria(s.pct);return(
+                <div key={s.label} style={{marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:11,color:"#5a7a9a"}}>{s.label}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:tr.c}}>{s.pct}% {tr.icon}</span>
+                  </div>
+                  <div style={{height:5,background:"#e2e8f0",borderRadius:3,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:s.pct+"%",background:tr.c,borderRadius:3}}/>
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
           {/* Sección historial auditorías */}
           <div style={{...S.card,padding:"14px",marginBottom:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:8}}>
@@ -4133,10 +4181,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                             </span>
                           </td>
                           <td style={{padding:"7px 10px"}}>
-                            <button onClick={()=>setAuditDetalle(auditDetalle?.id===a.id?null:a)}
-                              style={{padding:"3px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
-                              {auditDetalle?.id===a.id?"▲ Cerrar":"▼ Ver"}
-                            </button>
+                            <div style={{display:"flex",gap:4}}>
+                              <button onClick={()=>setAuditDetalle(auditDetalle?.id===a.id?null:a)}
+                                style={{padding:"3px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                                {auditDetalle?.id===a.id?"▲":"▼ Ver"}
+                              </button>
+                              {isAdmin&&<button onClick={async()=>{
+                                if(!window.confirm(`¿Eliminar auditoría de Vega ${tiendas.find(t=>t.id===a.tiendaId)?.n||a.tiendaNombre} del ${a.fecha}?`)) return;
+                                try{await deleteDoc(doc(db,"auditorias",a.id));if(auditDetalle?.id===a.id)setAuditDetalle(null);showToast("🗑️ Auditoría eliminada");}
+                                catch(e){showToast("❌ Error al eliminar");}
+                              }} style={{padding:"3px 8px",borderRadius:8,border:"none",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>🗑️</button>}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -5325,11 +5380,23 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               <pre style={{fontSize:11,color:"#1a2f4a",whiteSpace:"pre-wrap",fontFamily:"system-ui,sans-serif",margin:0,lineHeight:1.6}}>{auditEmailModal.body}</pre>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <a href={`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26")}`}
-                style={{flex:1,padding:"13px",borderRadius:12,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",textAlign:"center",fontWeight:800,fontSize:14,textDecoration:"none",display:"block"}}
-                onClick={()=>setAuditEmailModal(null)}>
-                ✉️ Abrir Outlook
-              </a>
+              <button
+                onClick={()=>{
+                  const url=`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26")}`;
+                  window.location.href=url;
+                  setTimeout(()=>setAuditEmailModal(null),500);
+                }}
+                style={{flex:1,padding:"13px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>
+                ✉️ Abrir correo
+              </button>
+              <button
+                onClick={()=>{
+                  const txt=`Para: ${auditEmailModal.to||"(sin destinatario)"}\nAsunto: ${auditEmailModal.subject}\n\n${auditEmailModal.body}`;
+                  navigator.clipboard?.writeText(txt)||window.prompt("Copia el contenido:",txt);
+                }}
+                style={{padding:"13px 14px",borderRadius:12,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+                📋 Copiar
+              </button>
               <button onClick={()=>setAuditEmailModal(null)}
                 style={{padding:"13px 20px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
                 Cerrar
@@ -6308,64 +6375,83 @@ export default function App(props){
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
-  // ARQUITECTURA UNIFICADA: el DNI (8 chars alfanumérico) es LA credencial para todos los roles.
-  // Admin/viewer ingresan su DNI registrado — no un PIN global separado.
-  // pins.admin/viewer se mantienen como fallback de emergencia (acceso sin usuarios registrados).
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
-
   const[pin,setPin]=useState("");
   const[dni,setDni]=useState("");
   const[step,setStep]=useState("inicio");
   const[err,setErr]=useState("");
   const[showPin,setShowPin]=useState(false);
+  const[bloqueo,setBloqueo]=useState(null); // {hasta:timestamp, restante:segundos}
+  const[intentos,setIntentos]=useState(0);
+  const MAX_INTENTOS=3, BLOQUEO_MIN=5;
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
+
+  // Cuenta regresiva de bloqueo
+  useEffect(()=>{
+    if(!bloqueo) return;
+    const iv=setInterval(()=>{
+      const rest=Math.ceil((bloqueo.hasta-Date.now())/1000);
+      if(rest<=0){setBloqueo(null);setIntentos(0);setErr("");}
+      else setBloqueo(b=>({...b,restante:rest}));
+    },1000);
+    return()=>clearInterval(iv);
+  },[bloqueo]);
+
+  const registrarFallo=()=>{
+    const n=intentos+1;
+    setIntentos(n);
+    if(n>=MAX_INTENTOS){
+      const hasta=Date.now()+BLOQUEO_MIN*60*1000;
+      setBloqueo({hasta,restante:BLOQUEO_MIN*60});
+      setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
+      // Guardar en Firestore si está disponible
+      try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{setDoc(doc(db,"auth_attempts","_last"),{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ts:new Date().toISOString()},{merge:true});});});}catch{}
+    } else {
+      setErr(`Código incorrecto · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
+      setTimeout(()=>setErr(""),2000);
+    }
+  };
+
+  const registrarExito=(id,nombre,rol)=>{
+    setIntentos(0);setBloqueo(null);
+    try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{const ref=doc(collection(db,"auth_log"));setDoc(ref,{credencial:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});});});}catch{}
+    onLogin(rol,nombre,id||"");
+  };
 
   // Auditor — busca por dni en la colección usuarios (rol=auditor)
   const tryDni=()=>{
+    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
     const clean=dni.trim();
     if(clean.length<4){setErr("Código debe tener al menos 4 caracteres");return;}
-    // 1. Buscar en usuarios registrados con rol auditor
     const found=usuariosActivos.find(u=>u.rol==="auditor"&&u.dni===clean);
-    if(found){onAcceso?.(found.id);onLogin("auditor",found.nombre,clean);return;}
-    // 2. Fallback legacy: colección auditores antigua
+    if(found){onAcceso?.(found.id);registrarExito(clean,found.nombre,"auditor");return;}
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    if(audsLegacy.length>0){
-      const leg=audsLegacy.find(a=>a.dni===clean);
-      if(leg){onAcceso?.(leg.id);onLogin("auditor",leg.nombre,clean);return;}
-    }
-    // 3. Fallback pins legacy si no hay ningún usuario auditor registrado
+    if(audsLegacy.length>0){const leg=audsLegacy.find(a=>a.dni===clean);if(leg){onAcceso?.(leg.id);registrarExito(clean,leg.nombre,"auditor");return;}}
     const hayAuditores=usuariosActivos.some(u=>u.rol==="auditor");
-    if(!hayAuditores&&clean===pins.auditor){onLogin("auditor","Auditor",clean);return;}
-    setErr(hayAuditores||audsLegacy.length>0
-      ?"Código no encontrado. Verifica con el Admin."
-      :"Sin auditores registrados. Contacta al Admin.");
-    setTimeout(()=>{setErr("");setDni("");},2500);
+    if(!hayAuditores&&clean===pins.auditor){registrarExito(clean,"Auditor","auditor");return;}
+    registrarFallo();
   };
 
-  // Admin — busca por DNI en usuarios con rol admin. pins.admin SIEMPRE disponible como emergencia.
+  // Admin
   const tryPin=()=>{
+    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
     const clean=pin.trim();
     if(!clean){setErr("Ingresa tu código de acceso");return;}
-    // 1. Pin global de emergencia — SIEMPRE funciona independiente de usuarios registrados
-    if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){onLogin("admin","Administrador","");return;}
-    // 2. Buscar en usuarios registrados con rol admin
-    //    Soporta campo "dni" (nuevo) y "credencial" (legacy) para compatibilidad
+    if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){registrarExito("","Administrador","admin");return;}
     const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&(u.dni===clean||u.credencial===clean));
-    if(uAdmin){onAcceso?.(uAdmin.id);onLogin("admin",uAdmin.nombre,clean);return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
+    if(uAdmin){onAcceso?.(uAdmin.id);registrarExito(clean,uAdmin.nombre,"admin");return;}
+    registrarFallo();
   };
 
-  // Viewer — busca por DNI en usuarios con rol viewer. pins.viewer SIEMPRE disponible como emergencia.
+  // Viewer
   const tryViewer=()=>{
+    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
     const clean=pin.trim();
     if(!clean){setErr("Ingresa tu código de acceso");return;}
-    // 1. Pin global de emergencia — SIEMPRE funciona
-    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){onLogin("viewer","Gerencia","");return;}
-    // 2. Buscar en usuarios registrados con rol viewer
-    //    Soporta campo "dni" (nuevo) y "credencial" (legacy) para compatibilidad
+    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){registrarExito("","Gerencia","viewer");return;}
     const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&(u.dni===clean||u.credencial===clean));
-    if(uViewer){onAcceso?.(uViewer.id);onLogin("viewer",uViewer.nombre,clean);return;}
-    setErr("Código incorrecto");setTimeout(()=>{setErr("");setPin("");},1500);
+    if(uViewer){onAcceso?.(uViewer.id);registrarExito(clean,uViewer.nombre,"viewer");return;}
+    registrarFallo();
   };
 
   return(
@@ -6390,7 +6476,20 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
         <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
 
-        {step==="inicio"&&(
+        {/* Pantalla de bloqueo */}
+        {bloqueo&&(
+          <div style={{padding:"20px 16px",background:"#fff1f2",borderRadius:14,border:"2px solid #fecaca",marginBottom:16,textAlign:"center"}}>
+            <div style={{fontSize:28,marginBottom:8}}>🔒</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#dc2626",marginBottom:4}}>Acceso bloqueado</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:12}}>Demasiados intentos fallidos. Espera o contacta al administrador.</div>
+            <div style={{fontSize:32,fontWeight:800,color:"#dc2626",fontFamily:"monospace",letterSpacing:4}}>
+              {Math.floor(bloqueo.restante/60)}:{String(bloqueo.restante%60).padStart(2,"0")}
+            </div>
+            <div style={{fontSize:10,color:"#8aaabb",marginTop:4}}>minutos : segundos</div>
+          </div>
+        )}
+
+        {step==="inicio"&&!bloqueo&&(
           <>
             <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
             <button onClick={()=>{setStep("dni_auditor");setErr("");}}
