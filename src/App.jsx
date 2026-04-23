@@ -501,6 +501,8 @@ function ChecklistApp() {
   const [tiendaEditModal,   setTiendaEditModal]   = useState(null);
   const [auditFiltroFmt,    setAuditFiltroFmt]    = useState("Todos");
   const [auditDetalle,      setAuditDetalle]      = useState(null);
+  const [authLog,           setAuthLog]           = useState([]);
+  const [waModal,           setWaModal]           = useState(null); // {msg} | null
   const [auditPaso,         setAuditPaso]         = useState(0);
   const [auditTiendaSel,    setAuditTiendaSel]    = useState(null);
   const [auditRespuestas,   setAuditRespuestas]   = useState({});
@@ -639,6 +641,17 @@ function ChecklistApp() {
   useEffect(()=>{
     const unsub=onSnapshot(doc(db,"config","auditExclusiones"),snap=>{
       if(snap.exists()) setAuditExclusiones(snap.data()||{});
+    });
+    return()=>unsub();
+  },[]);
+
+  // Sync log de accesos auth_log
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"auth_log"),snap=>{
+      const logs=[];
+      snap.forEach(d=>logs.push({id:d.id,...d.data()}));
+      logs.sort((a,b)=>(b.timestamp||"").localeCompare(a.timestamp||""));
+      setAuthLog(logs.slice(0,50));
     });
     return()=>unsub();
   },[]);
@@ -1696,19 +1709,29 @@ function ChecklistApp() {
           <label style={{...S.lbl,textAlign:"center",justifyContent:"center",marginBottom:12,fontSize:12}}>
             ¿A QUÉ HORA ENVIARON SUS EVIDENCIAS?
           </label>
-          <input
-            type="time"
-            value={horaEx}
-            onChange={e=>setHoraEx(e.target.value)}
-            style={{
-              width:"100%",padding:"16px",borderRadius:14,
-              border:`3px solid ${pv!==null?tier.c:"#c8d8e8"}`,
-              background: pv!==null?tier.bg:"#f8fafc",
-              color:"#1a2f4a",fontSize:28,outline:"none",
-              textAlign:"center",fontWeight:700,
-              transition:"all .2s",boxSizing:"border-box"
-            }}
-          />
+          {/* Picker manual HH:MM — evita bug AM/PM en Chrome/Edge Windows */}
+          {(()=>{
+            const [hh,mm]=horaEx?horaEx.split(":").map(Number):[new Date().getHours(),new Date().getMinutes()];
+            const h12=hh===0?12:hh>12?hh-12:hh;
+            const ampm=hh<12?"AM":"PM";
+            const setTime=(newHH,newMM)=>setHoraEx(`${String(newHH).padStart(2,"0")}:${String(newMM).padStart(2,"0")}`);
+            const selSt={padding:"10px 6px",borderRadius:10,border:`2px solid ${pv!==null?tier.c:"#c8d8e8"}`,background:pv!==null?tier.bg:"#f8fafc",color:"#1a2f4a",fontSize:24,fontWeight:700,textAlign:"center",outline:"none",cursor:"pointer",WebkitAppearance:"none",appearance:"none"};
+            return(
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <select value={h12} onChange={e=>{const v=parseInt(e.target.value);const newHH=ampm==="AM"?(v===12?0:v):(v===12?12:v+12);setTime(newHH,mm);}} style={{...selSt,width:72}}>
+                  {[12,1,2,3,4,5,6,7,8,9,10,11].map(h=><option key={h} value={h}>{String(h).padStart(2,"0")}</option>)}
+                </select>
+                <span style={{fontSize:28,fontWeight:800,color:"#1a2f4a"}}>:</span>
+                <select value={mm} onChange={e=>{setTime(hh,parseInt(e.target.value));}} style={{...selSt,width:72}}>
+                  {Array.from({length:60},(_,i)=>i).map(m=><option key={m} value={m}>{String(m).padStart(2,"0")}</option>)}
+                </select>
+                <select value={ampm} onChange={e=>{const v=e.target.value;const newHH=v==="AM"?(hh===12?0:hh>12?hh-12:hh):(hh===0?12:hh<12?hh+12:hh);setTime(newHH,mm);}} style={{...selSt,width:72,fontSize:16}}>
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            );
+          })()}
           {/* resultado del puntaje — aparece automáticamente */}
           {pv!==null?(
             <div style={{marginTop:14,padding:"14px",borderRadius:12,background:tier.bg,border:"1.5px solid "+tier.c+"44"}}>
@@ -3844,14 +3867,19 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </div>
                 {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     {u.nombre}
                     {u.activo===false&&<span style={{fontSize:9,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PAUSADO</span>}
+                    {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&(
+                      <span style={{fontSize:9,color:"#854F0B",background:"#FAEEDA",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🔒 BLOQUEADO</span>
+                    )}
                   </div>
                   <div style={{fontSize:10,color:"#8aaabb",marginTop:2,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
                     <span style={{fontFamily:"monospace"}}>DNI: ••••{(u.dni||"").slice(-3)}</span>
                     {u.email&&<span style={{color:"#0984e3"}}>{u.email}</span>}
                     {u.area&&<span style={{background:"#f0edff",color:"#6c5ce7",padding:"1px 7px",borderRadius:10,fontWeight:700}}>{u.area}</span>}
+                    {u.zona&&<span style={{background:"#e0fafa",color:"#0d7a79",padding:"1px 7px",borderRadius:10,fontWeight:700}}>📍 {u.zona}</span>}
+                    {u.whatsapp&&<span style={{color:"#00b894"}}>WA: {u.whatsapp}</span>}
                     {u.telefono&&<span>{u.telefono}</span>}
                     {u.ultimoAcceso&&<span>· Último: {new Date(u.ultimoAcceso).toLocaleDateString("es-PE")}</span>}
                   </div>
@@ -3878,6 +3906,22 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 }} style={{padding:"6px 12px",borderRadius:9,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   {u.activo===false?"Activar":"Pausar"}
                 </button>
+                {/* Desbloquear si está bloqueado */}
+                {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&(
+                  <button onClick={async()=>{
+                    await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:null,intentosFallidos:0},{merge:true});
+                    showToast("🔓 Usuario desbloqueado");
+                  }} style={{padding:"6px 10px",borderRadius:9,border:"1px solid #FAC775",background:"#FAEEDA",color:"#633806",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
+                    🔓 Desbloquear
+                  </button>
+                )}
+                {/* WhatsApp alerta rápida */}
+                {u.whatsapp&&(
+                  <button onClick={()=>{
+                    const msg=`Hola ${u.nombre}, te escribimos desde Vega Evidencias. Se detectó un intento de acceso no autorizado a tu cuenta el ${new Date().toLocaleDateString("es-PE")} a las ${horaHHMM()}. Por favor verifica. Si no fuiste tú, contacta al administrador inmediatamente.`;
+                    setWaModal({msg,numero:u.whatsapp,nombre:u.nombre});
+                  }} style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #25D366",background:"#e8faf5",color:"#085041",cursor:"pointer",fontSize:13}}>💬</button>
+                )}
                 {/* Eliminar */}
                 <button onClick={()=>{if(window.confirm(`¿Eliminar a ${u.nombre}? Esta acción no se puede deshacer.`)) deleteUsuario(u.id);}}
                   style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:14}}>🗑️</button>
@@ -4208,13 +4252,17 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:10}}>
                   {(auditDetalle.scoresPorModulo||[]).map((sm,i)=>{
-                    const sc2=sm.score;
-                    const tr2=tier(sc2?.pct);
+                    // Compatibilidad: score puede ser número (formato antiguo) u objeto {ob,mx,pct}
+                    const sc=sm.score;
+                    const pct=sc===null||sc===undefined?null:typeof sc==="object"?sc.pct:Math.round((sc/3)*100);
+                    const ob=typeof sc==="object"?sc.ob:sc;
+                    const mx=typeof sc==="object"?sc.mx:3;
+                    const tr2=getTierAuditoria(pct);
                     return(
                       <div key={i} style={{background:"#fff",borderRadius:8,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
                         <div style={{fontSize:10,color:"#8aaabb",marginBottom:4}}>{sm.moduloLabel}</div>
-                        <div style={{fontSize:15,fontWeight:700,color:tr2.c}}>{sc2?`${sc2.ob}/${sc2.mx}`:"—"}</div>
-                        <div style={{fontSize:10,color:tr2.c}}>{sc2?`${sc2.pct}% · ${tr2.label}`:""}</div>
+                        <div style={{fontSize:15,fontWeight:700,color:tr2.c}}>{pct!==null?`${pct}%`:"S/D"}</div>
+                        <div style={{fontSize:10,color:tr2.c}}>{ob!==null&&ob!==undefined?`${ob}/${mx} pts · ${tr2.label}`:""}</div>
                         {sm.obsModulo&&<div style={{fontSize:9,color:"#8aaabb",marginTop:4,lineHeight:1.4}}>📌 {sm.obsModulo}</div>}
                       </div>
                     );
@@ -4238,6 +4286,45 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               </div>
             )}
           </div>
+
+          {/* Log de accesos — auth_log */}
+          {isAdmin&&authLog.length>0&&(
+            <div style={{...S.card,padding:"14px",marginBottom:14}}>
+              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:10}}>🔐 Log de accesos</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc"}}>
+                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
+                        <th key={h} style={{padding:"6px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {authLog.slice(0,20).map((l,i)=>(
+                      <tr key={i} style={{borderBottom:"1px solid #f5f7fa"}}>
+                        <td style={{padding:"6px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
+                        <td style={{padding:"6px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.credencial||"-"}</td>
+                        <td style={{padding:"6px 10px"}}>
+                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                            color:l.rol==="admin"?"#633806":l.rol==="viewer"?"#0C447C":"#085041",
+                            background:l.rol==="admin"?"#FAEEDA":l.rol==="viewer"?"#E6F1FB":"#E1F5EE"}}>
+                            {l.rol||"-"}
+                          </span>
+                        </td>
+                        <td style={{padding:"6px 10px",color:"#8aaabb"}}>{l.dispositivo||"-"}</td>
+                        <td style={{padding:"6px 10px"}}>
+                          <span style={{fontSize:9,fontWeight:700,color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB",padding:"2px 7px",borderRadius:20}}>
+                            {l.exitoso?"✓ OK":"✗ Fallido"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Log de registros de evidencias — a continuación */}
           {(()=>{
@@ -5323,6 +5410,61 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
       {tab===3&&isAdmin&&renderConfig()}
       {tab===4&&isAuditor&&(
+        <>
+        {/* Dashboard personal auditor — visible cuando no está en una auditoría activa */}
+        {auditPaso===0&&(()=>{
+          const misAuditorias=Object.values(auditorias).filter(a=>a.auditorId===uDni&&a.estado==="enviado");
+          const hoy7=localDateAdd(todayStr(),-7);
+          const esSemana=a=>a.fecha>=hoy7;
+          const misSemana=misAuditorias.filter(esSemana);
+          const scores=misAuditorias.map(a=>a.scoreFinal).filter(s=>s!==null&&s!==undefined);
+          const miProm=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
+          // Ranking vs otros auditores
+          const porAuditor={};
+          Object.values(auditorias).filter(a=>a.estado==="enviado"&&a.scoreFinal!==null).forEach(a=>{
+            if(!porAuditor[a.auditorId]){porAuditor[a.auditorId]={n:0,sum:0,nombre:a.auditorNombre||a.auditorId};}
+            porAuditor[a.auditorId].n++;
+            porAuditor[a.auditorId].sum+=a.scoreFinal;
+          });
+          const ranking=Object.entries(porAuditor).map(([id,v])=>({id,nombre:v.nombre,prom:v.sum/v.n,n:v.n})).sort((a,b)=>b.prom-a.prom);
+          const miPos=ranking.findIndex(r=>r.id===uDni)+1;
+          return(
+          <div style={{padding:"14px 16px",paddingBottom:80}}>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Mi desempeño</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
+              {[
+                {label:"Visitas esta semana",val:misSemana.length,c:"#0984e3"},
+                {label:"Mi score promedio",val:miProm!==null?miProm.toFixed(1)+"%":"S/D",c:miProm>=75?"#00b894":miProm>=60?"#f6a623":"#d63031"},
+                {label:"Total visitas",val:misAuditorias.length,c:"#1a2f4a"},
+                {label:"Mi ranking",val:miPos>0?`#${miPos} de ${ranking.length}`:"-",c:"#6c5ce7"},
+              ].map((k,i)=>(
+                <div key={i} style={{background:k.c+"12",border:`1px solid ${k.c}33`,borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{fontSize:10,color:"#5a7a9a",marginBottom:4}}>{k.label}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:k.c,lineHeight:1}}>{k.val}</div>
+                </div>
+              ))}
+            </div>
+            {misSemana.length>0&&(
+              <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"12px 14px",marginBottom:14}}>
+                <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a",marginBottom:8}}>Mis últimas visitas</div>
+                {misSemana.slice(0,5).map((a,i)=>{const tr=getTierAuditoria(a.scoreFinal);return(
+                  <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:i<misSemana.length-1?"1px solid #f5f7fa":"none"}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Vega {tiendas.find(t=>t.id===a.tiendaId)?.n||a.tiendaNombre}</div>
+                      <div style={{fontSize:10,color:"#8aaabb"}}>{a.fecha} · {a.duracionMin?a.duracionMin+" min":""}</div>
+                    </div>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:tr.c,background:tr.bg}}>{a.scoreFinal?.toFixed(1)}% {tr.icon}</span>
+                  </div>
+                );})}
+              </div>
+            )}
+            <button onClick={()=>setAuditPaso(0)}
+              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+              🔍 Iniciar nueva auditoría
+            </button>
+          </div>
+          );
+        })()}
         <PantallaAuditoria
           paso={auditPaso} tiendas={tiendas} tiendaSelId={auditTiendaSel}
           modulos={checklistModulos} respuestas={auditRespuestas} moduloActivo={auditModuloActivo}
@@ -5347,6 +5489,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
           isAdmin={isAdmin}
           onGestionarExclusion={gestionarExclusionAudit}
         />
+        </>
       )}
       {/* TOAST */}
       {toast&&(
@@ -5456,6 +5599,28 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         );
       })()}
 
+      {/* MODAL WHATSAPP */}
+      {waModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:90}} onClick={()=>setWaModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:520,boxShadow:"0 -8px 32px rgba(0,0,0,.2)"}}>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>💬 Mensaje para {waModal.nombre}</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>Número: +{waModal.numero}</div>
+            <textarea readOnly value={waModal.msg} rows={5}
+              style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:12,resize:"none",boxSizing:"border-box",marginBottom:14}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{navigator.clipboard?.writeText(waModal.msg);showToast("📋 Mensaje copiado");}}
+                style={{flex:1,padding:"12px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                📋 Copiar mensaje
+              </button>
+              <a href={`https://wa.me/${waModal.numero}?text=${encodeURIComponent(waModal.msg)}`} target="_blank" rel="noreferrer"
+                onClick={()=>setWaModal(null)}
+                style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"#25D366",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13,textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                Abrir WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
