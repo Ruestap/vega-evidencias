@@ -1483,7 +1483,7 @@ function ChecklistApp() {
 
   if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
     onAcceso={(id)=>registrarAcceso(id)}
-    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?2:0);}}/>;
+    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?1:0);setModulo(0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -5445,10 +5445,25 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
 
           <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
-        <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center"}}>
-          {tabs.map(tb=><button key={tb.i} onClick={()=>setTab(tb.i)} style={S.tabB(tab===tb.i)}>{tb.label}</button>)}
-          {isAuditor&&<button onClick={()=>setShowStatusCard(true)} style={{marginLeft:"auto",padding:"6px 12px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,borderBottom:"3px solid transparent",color:"#00b5b4",background:"transparent",whiteSpace:"nowrap",flexShrink:0}}>📊 Estado</button>}
+        {/* ── Módulos primer nivel ── */}
+        <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center",borderBottom:"2px solid rgba(255,255,255,.08)"}}>
+          {MODULOS.map(m=>(
+            <button key={m.id} onClick={()=>{setModulo(m.id);if(m.id===0)setTab(isViewer?1:0);else if(m.id===1)setTab(4);else setTab(3);}}
+              style={{padding:"8px 14px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                borderBottom:`3px solid ${modulo===m.id?"#00b5b4":"transparent"}`,
+                color:modulo===m.id?"#00b5b4":"rgba(255,255,255,.6)",
+                background:"transparent",whiteSpace:"nowrap",flexShrink:0}}>
+              {m.label}
+            </button>
+          ))}
+          {isAuditor&&<button onClick={()=>setShowStatusCard(true)} style={{marginLeft:"auto",padding:"6px 12px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,borderBottom:"3px solid transparent",color:"#fdcb6e",background:"transparent",whiteSpace:"nowrap",flexShrink:0}}>📊 Estado</button>}
         </div>
+        {/* ── Sub-tabs segundo nivel ── */}
+        {tabs.length>1&&(
+          <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center",background:"rgba(0,0,0,.15)"}}>
+            {tabs.map(tb=><button key={tb.i} onClick={()=>setTab(tb.i)} style={{...S.tabB(tab===tb.i),fontSize:11,padding:"5px 12px"}}>{tb.label}</button>)}
+          </div>
+        )}
       </div>
       {/* CONTENIDO */}
       {tab===0&&isAuditor&&renderRegistro()}
