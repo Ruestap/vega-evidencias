@@ -429,6 +429,7 @@ function ChecklistApp() {
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
+  const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
   const [fecha,   setFecha]   = useState(todayStr());
   const [vYear,   setVYear]   = useState(now.getFullYear());
   const [vMonth,  setVMonth]  = useState(now.getMonth());
@@ -2024,7 +2025,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
   allDaysMes.forEach(d=>{
     if(d>hoyM) return;
     const dw=getDow(d);
-    actsActivas.filter(a=>a.dias.includes(dw)).forEach(()=>{ mxTeorico+=10; });
+    // Only Always On activities count toward theoretical max (Ad-hoc only when they have real records)
+    actsActivas.filter(a=>a.dias.includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
   });
   const pctBase=mxTeorico>0&&detMes?Math.round((detMes.maximos/mxTeorico)*100):null;
   return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>
@@ -3976,11 +3978,11 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 <input value={newA.e} onChange={e=>setNewA(p=>({...p,e:e.target.value}))} style={{width:50,padding:"10px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:18,textAlign:"center",outline:"none"}}/>
                 <input value={newA.n} onChange={e=>setNewA(p=>({...p,n:e.target.value}))} placeholder="Nombre" style={{...S.inp,flex:1}}/>
               </div>
-              <div style={{display:"flex",gap:5,marginBottom:10}}>
-                {[1,2,3,4,5].map(d=>(
-                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d]}))}
-                    style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?"#f0edff":"#fff",color:newA.dias.includes(d)?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                    {["L","M","X","J","V"][d-1]}
+              <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
+                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d].sort((a,b)=>a===0?7:a) }))}
+                    style={{flex:1,minWidth:32,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#f0edff":"#fff",color:newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                    {lbl}{(d===6||d===0)?" ✨":""}
                   </button>
                 ))}
               </div>
@@ -4000,7 +4002,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:a.activa?a.c:"#94a3b8"}}>{a.n}</div>
                   <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>
-                    {a.dias.map(d=>["L","M","X","J","V"][d-1]).join("·")} · {a.cat}
+                    {a.dias.map(d=>({0:"D",1:"L",2:"M",3:"X",4:"J",5:"V",6:"S"})[d]||"?").join("·")} · {a.cat}
                     {a.r&&<span style={{color:"#f6a623",marginLeft:4}}>⏱️ rangos custom</span>}
                   </div>
                 </div>
@@ -4025,11 +4027,11 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     <input value={a.e} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,e:e.target.value}:x))} style={{width:44,padding:"8px",borderRadius:8,border:"1px solid #c8d8e8",fontSize:16,textAlign:"center",outline:"none"}}/>
                     <input value={a.n} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,n:e.target.value}:x))} style={{...S.inp,flex:1,fontSize:13}}/>
                   </div>
-                  <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {[1,2,3,4,5].map(d=>(
+                  <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
+                    {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
                       <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
-                        style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?"#e8f4fd":"#fff",color:a.dias.includes(d)?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                        {["L","M","X","J","V"][d-1]}
+                        style={{flex:1,minWidth:30,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#e8f4fd":"#fff",color:a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                        {lbl}{(d===6||d===0)?" ✨":""}
                       </button>
                     ))}
                   </div>
@@ -5395,11 +5397,23 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
     );
   };
 
-  const tabs = isAdmin
-    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:3,label:"⚙️ Config"},{i:4,label:"🔍 Auditoría"}]
+  // ── Módulos principales (pestañas de primer nivel)
+  const MODULOS = [
+    {id:0, label:"📋 Evidencias", roles:["admin","auditor","viewer"]},
+    {id:1, label:"🔍 Auditoría",  roles:["admin","auditor"]},
+    {id:2, label:"⚙️ Config",     roles:["admin"]},
+  ].filter(m=>m.roles.includes(role||""));
+
+  // Sub-tabs por módulo
+  const SUB_EVIDENCIAS = isViewer
+    ? [{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
     : isAuditor
-    ? [{i:0,label:"📋 Registro"},{i:1,label:"📊 Reporte"},{i:2,label:"📈 Dashboard"},{i:4,label:"🔍 Auditoría"}]
-    : [{i:1,label:"📊 Reporte"},{i:2,label:"📈 Panel"}];
+    ? [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
+    : [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}];
+
+  const tabs = modulo===0 ? SUB_EVIDENCIAS
+    : modulo===1 ? [{i:4,label:"Registro Auditoría"}]
+    : [{i:3,label:"Configuración"}];
 
   return (
     <div style={S.wrap}>
