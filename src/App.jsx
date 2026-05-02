@@ -968,9 +968,26 @@ function ChecklistApp() {
   // calcEficiencia — motor base. Acepta filtro opcional de categoría.
   // Denominador dinámico: solo cuenta días donde la actividad tiene
   // al menos 1 registro en el período para CUALQUIER tienda (actsConRegistroIds).
+  // FIX Ad-hoc: actividades no-AlwaysOn solo suman al denominador en días concretos
+  // donde hay al menos 1 registro real (evita inflar denominador en semanas sin historial).
   const calcEficiencia = useCallback((tId, days, catFilter=null)=>{
     let obtenidos=0, maximos=0, registros=[];
     const hoy=todayStr();
+    // Precalcular días con registro real por actividad Ad-hoc (para no inflar denominador)
+    const adHocDiasConReg = {};
+    days.forEach(ds=>{
+      if(ds>hoy) return;
+      acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
+        const tieneReg=tiAct.some(ti=>{
+          const r=getReg(ds,ti.id,a.id);
+          return r?.evidencias?.length>0&&!r?.anulado;
+        });
+        if(tieneReg){
+          if(!adHocDiasConReg[a.id]) adHocDiasConReg[a.id]=new Set();
+          adHocDiasConReg[a.id].add(ds);
+        }
+      });
+    });
     days.forEach(ds=>{
       if(ds>hoy) return;
       const dw=getDow(ds);
@@ -979,7 +996,9 @@ function ChecklistApp() {
         a.dias.includes(dw) &&
         !isExc(tId,a.id,ds) &&
         actsConRegistroIds.has(a.id) && // solo actividades operativamente activas
-        (catFilter===null || a.cat===catFilter)
+        (catFilter===null || a.cat===catFilter) &&
+        // Ad-hoc: solo contar este día si hay registro real de alguna tienda en ese día
+        (a.cat==="Always On" || (adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
       ).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
         maximos+=10;
@@ -988,20 +1007,30 @@ function ChecklistApp() {
     });
     if(maximos===0) return null;
     return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
+  },[acts,tiAct,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
 
   // calcEficienciaModular — devuelve score por módulo + score final ponderado
   // por cantidad de actividades registradas en cada módulo.
+  // FIX Ad-hoc: misma guarda de días con registro real que calcEficiencia.
   const calcEficienciaModular = useCallback((tId, days)=>{
     const hoy=todayStr();
     const mods = {AO:{ob:0,mx:0,n:0}, AH:{ob:0,mx:0,n:0}, PR:{ob:0,mx:0,n:0}};
     const catKey = {"Always On":"AO","Ad-hoc":"AH","Promocional":"PR"};
+    const adHocDiasConReg = {};
+    days.forEach(ds=>{
+      if(ds>hoy) return;
+      acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
+        const tieneReg=tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
+        if(tieneReg){if(!adHocDiasConReg[a.id]) adHocDiasConReg[a.id]=new Set();adHocDiasConReg[a.id].add(ds);}
+      });
+    });
     days.forEach(ds=>{
       if(ds>hoy) return;
       const dw=getDow(ds);
       acts.filter(a=>
         a.activa && a.dias.includes(dw) &&
-        !isExc(tId,a.id,ds) && actsConRegistroIds.has(a.id)
+        !isExc(tId,a.id,ds) && actsConRegistroIds.has(a.id) &&
+        (a.cat==="Always On"||(adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
       ).forEach(a=>{
         const mk=catKey[a.cat]||"AH";
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
@@ -1020,7 +1049,7 @@ function ChecklistApp() {
     });
     const finalPct=totalN>0?Math.round(weightedSum/totalN):null;
     return {modulos:modResults, pct:finalPct, totalN};
-  },[acts,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
+  },[acts,tiAct,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -2048,7 +2077,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                         const wd=new Date(vYear,vMonth,d).getDay();
                         const ds=dStr(vYear,vMonth,d);
                         const hoyT=todayStr();
-                        return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>{
+                        // Ad-hoc guard: check if any store has a real record on this day
+                        const actsConRegEnDia=(a)=>a.cat==="Always On"||tsFmt.some(tr=>{const r=getReg(ds,tr.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
+                        return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)&&actsConRegEnDia(a)).map(a=>{
                           let ob=0,mx=0;
                           tsFmt.forEach(tr=>{
                             if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
@@ -2131,7 +2162,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                         const ds=s.days.map(d=>dStr(vYear,vMonth,d));
                         const hoyT=todayStr();
                         tiAct.forEach(tr=>{
-                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)).forEach(d=>{
+                          // Ad-hoc guard: only count day if any store has a real record that day
+                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;}))).forEach(d=>{
                             mx+=10;
                             const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
                             if(p!==null) ob+=p;
@@ -5922,12 +5954,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               {fmts.map(({fmt,icon})=>{
                 const b=getBloque(fmt,b1Min,b1Max);
                 if(b.total===0) return null;
-                // Para escenario B: calcular desglose por actividad
-                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-                  const reg=getReg(hoy,ti.id,a.id);
-                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-                }));
-                const esParalelo=actsConRegHoy.length>1;
+                // Para escenario B: usar actsParaStatus (respeta filtro de actividad seleccionado)
+                const esParalelo=actsParaStatus.length>1;
                 return(
                 <div key={fmt+"b1"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
@@ -5944,8 +5972,8 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
                     </>}
                     {/* Escenario B — pills separados por actividad */}
-                    {esParalelo&&actsConRegHoy.map(a=>{
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsConRegHoy.every(aa=>isExc(ti.id,aa.id,hoy)));
+                    {esParalelo&&actsParaStatus.map(a=>{
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsParaStatus.every(aa=>isExc(ti.id,aa.id,hoy)));
                       const regA=tsFmt.filter(ti=>{
                         const reg=getReg(hoy,ti.id,a.id);
                         if(!reg?.evidencias||reg.anulado) return false;
@@ -5981,11 +6009,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
               {fmts.map(({fmt,icon})=>{
                 const b=getBloque(fmt,b2Min,b2Max,true);
                 if(b.disponibles===0) return null;
-                const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
-                  const reg=getReg(hoy,ti.id,a.id);
-                  return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
-                }));
-                const esParalelo=actsConRegHoy.length>1;
+                const esParalelo=actsParaStatus.length>1;
                 return(
                 <div key={fmt+"b2"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
@@ -5999,9 +6023,9 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:b.pendientes>0?"#A32D2D":"#888780",background:b.pendientes>0?"#FCEBEB":"#F1EFE8",whiteSpace:"nowrap",flexShrink:0}}>⏰ {String(b.pendientes).padStart(2,"0")} pend.</span>
                       {b.excluidas>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(9px,1.6vw,11px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap",flexShrink:0}}>⛔ {b.excluidas}</span>}
                     </>}
-                    {esParalelo&&actsConRegHoy.map(a=>{
+                    {esParalelo&&actsParaStatus.map(a=>{
                       const rango=getRangoActivo(a.id,hoy);
-                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsConRegHoy.every(aa=>isExc(ti.id,aa.id,hoy)));
+                      const tsFmt=tiAct.filter(ti=>ti.f===fmt&&!actsParaStatus.every(aa=>isExc(ti.id,aa.id,hoy)));
                       const regA=tsFmt.filter(ti=>{
                         const reg=getReg(hoy,ti.id,a.id);
                         if(!reg?.evidencias||reg.anulado) return false;
