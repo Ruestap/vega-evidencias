@@ -1934,21 +1934,21 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {semsVis.flatMap(s=>s.days.flatMap(d=>{
-                        const wd=new Date(vYear,vMonth,d).getDay();
-                        return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>(
-                          <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:44,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0,lineHeight:1.3}}>
-                            <span style={{color:"#8aaabb",fontWeight:700,fontSize:8,display:"block"}}>{s.label}</span>
-                            <span style={{color:"#1a2f4a",fontWeight:800,fontSize:9,display:"block"}}>{DIAS_C[wd]}</span>
-                            <span style={{fontSize:13,display:"block"}}>{a.e}</span>
-                          </th>
-                        ));
-                      }))}
-                      {semsVis.map(s=>(
-                        <th key={"p"+s.label} style={{padding:"8px 8px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:55,position:"sticky",top:0}}>
+                      {semsVis.flatMap(s=>[
+                        ...s.days.flatMap(d=>{
+                          const wd=new Date(vYear,vMonth,d).getDay();
+                          return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>(
+                            <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:44,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0,lineHeight:1.3}}>
+                              <span style={{color:"#8aaabb",fontWeight:700,fontSize:8,display:"block"}}>{s.label}</span>
+                              <span style={{color:"#1a2f4a",fontWeight:800,fontSize:9,display:"block"}}>{DIAS_C[wd]}</span>
+                              <span style={{fontSize:13,display:"block"}}>{a.e}</span>
+                            </th>
+                          ));
+                        }),
+                        <th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:52,position:"sticky",top:0,borderLeft:"2px solid #e2e8f0"}}>
                           {s.label}<br/>EF.%
                         </th>
-                      ))}
+                      ])}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:50,position:"sticky",top:0}}>C1/C2</th>
@@ -1964,7 +1964,8 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.flatMap(sem=>sem.days.flatMap(d=>{
+                          {semsVis.flatMap(sem=>[
+                            ...sem.days.flatMap(d=>{
                             const wd=new Date(vYear,vMonth,d).getDay();
                             const ds=dStr(vYear,vMonth,d);
                             return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>{
@@ -2003,19 +2004,21 @@ function ChecklistApp() {
                                 </td>
                               );
                             });
-                          }))}
-                                                    {semsVis.map(sem=>{
-                            const ps=calcSemana(tr.id,sem);
-                            const detSem=calcSemanaDetalle(tr.id,sem);
-return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#f8fafc"}}>
-  {ps!==null
-    ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-        <span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>
-        <span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span>
-      </div>
-    :<span style={{color:"#d1d5db"}}>—</span>}
-</td>;
-                          })}
+                            }),
+                            // EF% column after this week's days
+                            (()=>{
+                              const ps=calcSemana(tr.id,sem);
+                              const detSem=calcSemanaDetalle(tr.id,sem);
+                              return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#f8fafc",borderLeft:"2px solid #e2e8f0"}}>
+                                {ps!==null
+                                  ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                                      <span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>
+                                      <span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span>
+                                    </div>
+                                  :<span style={{color:"#d1d5db"}}>—</span>}
+                              </td>;
+                            })()
+                          ])}
                           {selWeek===null&&(()=>{
   const detMes=calcMesDetalle(tr.id);
   // Calcular máximo teórico (si no hubiera N/A) para mostrar contexto
@@ -2075,37 +2078,38 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
-                      {semsVis.flatMap(sem=>sem.days.flatMap(d=>{
-                        const wd=new Date(vYear,vMonth,d).getDay();
-                        const ds=dStr(vYear,vMonth,d);
-                        const hoyT=todayStr();
-                        // Ad-hoc guard: check if any store has a real record on this day
-                        const actsConRegEnDia=(a)=>a.cat==="Always On"||tsFmt.some(tr=>{const r=getReg(ds,tr.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
-                        return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)&&actsConRegEnDia(a)).map(a=>{
-                          let ob=0,mx=0;
-                          tsFmt.forEach(tr=>{
-                            if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
-                            mx+=10;
-                            const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
-                            if(p!==null) ob+=p;
+                      {semsVis.flatMap(sem=>[
+                        ...sem.days.flatMap(d=>{
+                          const wd=new Date(vYear,vMonth,d).getDay();
+                          const ds=dStr(vYear,vMonth,d);
+                          const hoyT=todayStr();
+                          const actsConRegEnDia=(a)=>a.cat==="Always On"||tsFmt.some(tr=>{const r=getReg(ds,tr.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
+                          return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)&&actsConRegEnDia(a)).map(a=>{
+                            let ob=0,mx=0;
+                            tsFmt.forEach(tr=>{
+                              if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
+                              mx+=10;
+                              const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
+                              if(p!==null) ob+=p;
+                            });
+                            const ef=mx>0?Math.round((ob/mx)*100):null;
+                            return <td key={sem.label+d+a.id} style={{padding:"5px 6px",textAlign:"center",borderLeft:"1px solid #e9eef5"}}>
+                              {mx>0?(ob>0
+                                ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400,color:"#8aaabb"}}>{ef}%</span></span>
+                                :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}<br/>pend.</span>
+                              ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                            </td>;
                           });
+                        }),
+                        (()=>{
+                          let ob=0,mx=0;
+                          tsFmt.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                           const ef=mx>0?Math.round((ob/mx)*100):null;
-                          return <td key={sem.label+d+a.id} style={{padding:"5px 6px",textAlign:"center",borderLeft:"1px solid #e9eef5"}}>
-                            {mx>0?(ob>0
-                              ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400,color:"#8aaabb"}}>{ef}%</span></span>
-                              :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}<br/>pend.</span>
-                            ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
+                          return <td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>
+                            {ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}
                           </td>;
-                        });
-                      }))}
-                      {semsVis.map(sem=>{
-                        let ob=0,mx=0;
-                        tsFmt.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
-                        const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return <td key={"tot"+sem.label} style={{padding:"6px 8px",textAlign:"center",background:"#e8edf2"}}>
-                          {ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}
-                        </td>;
-                      })}
+                        })()
+                      ])}
                       {selWeek===null&&(()=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{ const ef=calcMesDetalle(tr.id); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
@@ -2156,36 +2160,34 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
                     🏁 TOTAL GENERAL
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
-                  {/* celdas vacías para alinear con columnas actividad×semana */}
-                  {semsVis.flatMap(s=>actsActivas.map(a=>(
-                    <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
-                      {(()=>{
-                        let ob=0,mx=0;
-                        const ds=s.days.map(d=>dStr(vYear,vMonth,d));
-                        const hoyT=todayStr();
-                        tiAct.forEach(tr=>{
-                          // Ad-hoc guard: only count day if any store has a real record that day
-                          ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;}))).forEach(d=>{
-                            mx+=10;
-                            const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
-                            if(p!==null) ob+=p;
+                  {/* Interleave: días de cada semana + EF% al final de esa semana */}
+                  {semsVis.flatMap((s,si)=>[
+                    ...actsActivas.filter(a=>s.days.some(d=>a.dias.includes(new Date(vYear,vMonth,d).getDay()))).map(a=>(
+                      <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
+                        {(()=>{
+                          let ob=0,mx=0;
+                          const ds=s.days.map(d=>dStr(vYear,vMonth,d));
+                          const hoyT=todayStr();
+                          tiAct.forEach(tr=>{
+                            ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;}))).forEach(d=>{
+                              mx+=10;
+                              const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
+                              if(p!==null) ob+=p;
+                            });
                           });
-                        });
-                        const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return mx>0
-                          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
-                          :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
-                      })()}
-                    </td>
-                  )))}
-                  {/* totales EF.% por semana */}
-                  {totSems.map((ts,i)=>(
-                    <td key={"gs"+i} style={{padding:"6px 10px",textAlign:"center",background:"#0d1f35"}}>
-                      {ts.ef!==null
-                        ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(ts.ef)}}>{ts.ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{ts.ob}/{ts.mx}pts</span></div>
+                          const ef=mx>0?Math.round((ob/mx)*100):null;
+                          return mx>0
+                            ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
+                            :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
+                        })()}
+                      </td>
+                    )),
+                    <td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>
+                      {totSems[si]?.ef!==null
+                        ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>
                         :<span style={{color:"#5a7a9a"}}>—</span>}
                     </td>
-                  ))}
+                  ])}
                   {/* total mes */}
                   {selWeek===null&&(
                     <td style={{padding:"8px 10px",textAlign:"center",background:totEf?sb(totEf):"#0d1f35"}}>
@@ -2365,7 +2367,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       .bar{height:8px;border-radius:4px;display:inline-block;}
       .footer{margin-top:24px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:9px;color:#8aaabb;display:flex;justify-content:space-between;}
       </style></head><body>
-      <h1>VEGA · EVIDENCIAS — ${MESES[vMonth].toUpperCase()} ${vYear}</h1>
+      <h1>EstrategiaTrade — ${MESES[vMonth].toUpperCase()} ${vYear}</h1>
       <div style="font-size:10px;color:#5a7a9a;margin-bottom:16px;">Generado: ${new Date().toLocaleDateString("es-PE")} · Por: ${uName} · Filtro: ${dashFmt==="Todas"?"Todas las tiendas":dashFmt}</div>
       <div class="grid">
         <div class="kpi"><div class="kpi-v" style="color:${sc(SG)}">${SG}%</div><div class="kpi-l">Score Global</div></div>
@@ -2389,7 +2391,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
         <table><thead><tr><th>Franja</th><th>Registros</th><th>%</th></tr></thead><tbody>
         ${horasDist.map(h=>`<tr><td>${h.l}</td><td>${h.n}</td><td style="color:${h.c};font-weight:700">${Math.round(h.n/totalEvs*100)}%</td></tr>`).join("")}
         </tbody></table></div>
-      <div class="footer"><span>VEGA · EVIDENCIAS · Control de Implementación</span><span>Confidencial · ${new Date().toLocaleDateString("es-PE")}</span></div>
+      <div class="footer"><span>EstrategiaTrade · Control de Implementación</span><span>Confidencial · ${new Date().toLocaleDateString("es-PE")}</span></div>
       </body></html>`);
       w.document.close();
       w.print();
@@ -5422,10 +5424,14 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
       {/* HEADER */}
       <div style={S.hdr}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#00b5b4,#0984e3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🏪</div>
-          <div style={{flex:1}}>
-            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>VEGA · EVIDENCIAS</div>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>CONTROL DE IMPLEMENTACIÓN</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛒</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>
+                <span style={{color:"#fff"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
+              </div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>Control de Implementaciones</div>
+            </div>
           </div>
           <input type="date" value={fecha}
             onChange={e=>{
@@ -6082,7 +6088,7 @@ return <td key={"p"+sem.label} style={{padding:"6px 8px",textAlign:"center",back
             {/* Footer */}
             </>}
             <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
-              VEGA · EVIDENCIAS · {hoy}
+              EstrategiaTrade · {hoy}
             </div>
           </div>
         </div>
@@ -6691,8 +6697,8 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>VEGA · EVIDENCIAS</div>
-        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>CONTROL DE IMPLEMENTACIÓN DIARIA</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>EstrategiaTrade</div>
+        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones DIARIA</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
