@@ -1899,6 +1899,19 @@ function ChecklistApp() {
   const renderReporte = ()=>{
     const actsActivas=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)); // solo cols con historial en el mes
     const semsVis=selWeek!==null?[semanasDelMes[selWeek]]:semanasDelMes;
+    // colsKey: para cada semana×día, la lista EXACTA de actividades a mostrar como columna.
+    // Actividades Always-On: aparecen en todos sus días.
+    // Actividades Ad-hoc: solo aparecen en días donde alguna tienda tiene registro real.
+    const getColsForDay=(sem,d)=>{
+      const ds=dStr(vYear,vMonth,d);
+      const wd=new Date(vYear,vMonth,d).getDay();
+      return actsActivas.filter(a=>
+        a.activa&&a.dias.includes(wd)&&(
+          a.cat==="Always On"||
+          tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
+        )
+      );
+    };
     return(
       <div style={{padding:"16px"}}>
         {/* nav mes */}
@@ -1937,7 +1950,9 @@ function ChecklistApp() {
                       {semsVis.flatMap(s=>[
                         ...s.days.flatMap(d=>{
                           const wd=new Date(vYear,vMonth,d).getDay();
-                          return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>(
+                          const cols=getColsForDay(s,d);
+                          if(cols.length===0) return []; // skip days with no activities — no placeholder needed, EF col is the separator
+                          return cols.map(a=>(
                             <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:44,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0,lineHeight:1.3}}>
                               <span style={{color:"#8aaabb",fontWeight:700,fontSize:8,display:"block"}}>{s.label}</span>
                               <span style={{color:"#1a2f4a",fontWeight:800,fontSize:9,display:"block"}}>{DIAS_C[wd]}</span>
@@ -1945,7 +1960,7 @@ function ChecklistApp() {
                             </th>
                           ));
                         }),
-                        <th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f0f4f8",minWidth:52,position:"sticky",top:0,borderLeft:"2px solid #e2e8f0"}}>
+                        <th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
                           {s.label}<br/>EF.%
                         </th>
                       ])}
@@ -1968,7 +1983,7 @@ function ChecklistApp() {
                             ...sem.days.flatMap(d=>{
                             const wd=new Date(vYear,vMonth,d).getDay();
                             const ds=dStr(vYear,vMonth,d);
-                            return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)).map(a=>{
+                            return getColsForDay(sem,d).map(a=>{
                               const excepcion=isExc(tr.id,a.id,ds);
                               const rv=getReg(ds,tr.id,a.id);
                               const pts=puntajeReg(rv,getRangoActivo(a.id,ds));
@@ -2009,7 +2024,7 @@ function ChecklistApp() {
                             (()=>{
                               const ps=calcSemana(tr.id,sem);
                               const detSem=calcSemanaDetalle(tr.id,sem);
-                              return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#f8fafc",borderLeft:"2px solid #e2e8f0"}}>
+                              return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
                                 {ps!==null
                                   ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
                                       <span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>
@@ -2083,14 +2098,10 @@ function ChecklistApp() {
                           const wd=new Date(vYear,vMonth,d).getDay();
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
-                          const actsConRegEnDia=(a)=>a.cat==="Always On"||tsFmt.some(tr=>{const r=getReg(ds,tr.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
-                          return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)&&actsConRegEnDia(a)).map(a=>{
-                            const esAlwaysOn=a.cat==="Always On";
+                          return getColsForDay(sem,d).map(a=>{
                             let ob=0,mx=0;
                             tsFmt.forEach(tr=>{
                               if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
-                              // Ad-hoc/Promo: solo cuenta tiendas que tienen registro ese día
-                              if(!esAlwaysOn){const r=getReg(ds,tr.id,a.id);if(!r?.evidencias?.length||r?.anulado) return;}
                               mx+=10;
                               const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
                               if(p!==null) ob+=p;
@@ -2157,34 +2168,61 @@ function ChecklistApp() {
         <div style={{...S.card,marginBottom:16,overflow:"hidden",border:"2px solid #1a2f4a"}}>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead>
+                <tr style={{background:"#0d1f35"}}>
+                  <th style={{padding:"8px 14px",textAlign:"left",color:"rgba(255,255,255,.4)",fontWeight:700,fontSize:9,minWidth:140,position:"sticky",left:0,background:"#0d1f35",zIndex:3}}>TIENDA</th>
+                  {semsVis.flatMap((s,si)=>[
+                    ...s.days.flatMap(d=>{
+                      const wd=new Date(vYear,vMonth,d).getDay();
+                      const cols=getColsForDay(s,d);
+                      if(cols.length===0) return [];
+                      return cols.map(a=>(
+                        <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,minWidth:44,whiteSpace:"nowrap",lineHeight:1.3}}>
+                          <span style={{color:"rgba(255,255,255,.3)",fontSize:8,display:"block"}}>{s.label}</span>
+                          <span style={{color:"rgba(255,255,255,.6)",fontSize:9,display:"block"}}>{DIAS_C[wd]}</span>
+                          <span style={{fontSize:12,display:"block"}}>{a.e}</span>
+                        </th>
+                      ));
+                    }),
+                    <th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>
+                      {s.label}<br/>EF.%
+                    </th>
+                  ])}
+                  {selWeek===null&&<th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>MES</th>}
+                  <th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>EF</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr style={{background:"#1a2f4a"}}>
                   <td style={{padding:"10px 14px",fontWeight:800,fontSize:11,color:"#fff",position:"sticky",left:0,background:"#1a2f4a",zIndex:2,whiteSpace:"nowrap",minWidth:140}}>
                     🏁 TOTAL GENERAL
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
-                  {/* Interleave: días de cada semana + EF% al final de esa semana */}
+                  {/* Interleave: misma estructura día×actividad que las tablas de formato */}
                   {semsVis.flatMap((s,si)=>[
-                    ...actsActivas.filter(a=>s.days.some(d=>a.dias.includes(new Date(vYear,vMonth,d).getDay()))).map(a=>(
-                      <td key={s.label+a.id} style={{padding:"6px 8px",textAlign:"center"}}>
-                        {(()=>{
-                          let ob=0,mx=0;
-                          const ds=s.days.map(d=>dStr(vYear,vMonth,d));
-                          const hoyT=todayStr();
-                          tiAct.forEach(tr=>{
-                            ds.filter(d=>d<=hoyT&&acts.find(a2=>a2.id===a.id)?.dias.includes(getDow(d))&&!isExc(tr.id,a.id,d)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;}))).forEach(d=>{
-                              mx+=10;
-                              const p=puntajeReg(getReg(d,tr.id,a.id),getRangoActivo(a.id,d));
-                              if(p!==null) ob+=p;
-                            });
-                          });
-                          const ef=mx>0?Math.round((ob/mx)*100):null;
-                          return mx>0
-                            ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
-                            :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>;
-                        })()}
-                      </td>
-                    )),
+                    ...s.days.flatMap(d=>{
+                      const hoyT=todayStr();
+                      const ds=dStr(vYear,vMonth,d);
+                      const cols=getColsForDay(s,d);
+                      if(cols.length===0) return [];
+                      return cols.map(a=>{
+                        let ob=0,mx=0;
+                        tiAct.forEach(tr=>{
+                          if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
+                          mx+=10;
+                          const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
+                          if(p!==null) ob+=p;
+                        });
+                        const ef=mx>0?Math.round((ob/mx)*100):null;
+                        return (
+                          <td key={s.label+d+a.id} style={{padding:"6px 6px",textAlign:"center",borderLeft:"1px solid rgba(255,255,255,.06)"}}>
+                            {mx>0
+                              ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:9,fontWeight:700,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?`${ob}/${mx}`:`${mx}pts`}</span><span style={{fontSize:8,fontWeight:400,color:ob>0?sc(ef):"#b2bec3"}}>{ob>0?ef+"%":"pend."}</span></div>
+                              :<span style={{color:"#5a7a9a",fontSize:9}}>—</span>}
+                          </td>
+                        );
+                      });
+                    }),
                     <td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>
                       {totSems[si]?.ef!==null
                         ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>
@@ -5420,61 +5458,95 @@ function ChecklistApp() {
     : modulo===1 ? [{i:4,label:"Registro Auditoría"}]
     : [{i:3,label:"Configuración"}];
 
+  // Sidebar menu items
+  const SIDEBAR_ITEMS = [
+    {id:"inicio",  label:"Inicio",        icon:"🏠", mod:0, tab:isViewer?1:0},
+    {id:"reporte", label:"Reportes",      icon:"📊", mod:0, tab:1},
+    {id:"dash",    label:"Dashboard",     icon:"📈", mod:0, tab:2},
+    ...(isAuditor?[{id:"audit",label:"Auditoría",icon:"🔍",mod:1,tab:4}]:[]),
+    ...(isAdmin?[{id:"config",label:"Configuración",icon:"⚙️",mod:2,tab:3}]:[]),
+  ];
+  const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo&&it.tab===tab)?.id||SIDEBAR_ITEMS[0]?.id;
+
+  const pageTitle = modulo===0&&tab===0?"Registro de Evidencias"
+    :modulo===0&&tab===1?"Reporte de Evidencias"
+    :modulo===0&&tab===2?"Dashboard"
+    :modulo===1?"Auditoría"
+    :"Configuración";
+
   return (
-    <div style={S.wrap}>
+    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:480px){.vr-2col{grid-template-columns:1fr!important;}.vr-4kpi{grid-template-columns:repeat(2,1fr)!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;}`}</style>
-      {/* HEADER */}
-      <div style={S.hdr}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛒</div>
-            <div style={{flex:1}}>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff"}}>
-                <span style={{color:"#fff"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+
+      {/* ══ SIDEBAR ══ */}
+      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+        {/* Logo */}
+        <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
+            <div>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.1}}>
+                <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.4)",letterSpacing:".06em"}}>Control de Implementaciones</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
             </div>
           </div>
-          <input type="date" value={fecha}
-            onChange={e=>{
-              const d=e.target.value;
-              // Auditor: solo puede registrar hoy (no fechas pasadas ni futuras)
-              if(!isAdmin&&d!==todayStr()) return;
-              setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);
-            }}
-            disabled={isViewer}
-            title={isViewer?"El visor no puede cambiar la fecha":isAdmin?"Cambiar fecha (Admin)":"Cambiar fecha para consultar históricos"}
-            style={{padding:"5px 9px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none",opacity:isViewer?0.5:1}}/>
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.1)"}}>
-            <span style={{fontSize:12}}>{isAdmin?"👑":isAuditor?"📋":"👁️"}</span>
-            <span style={{fontSize:11,color:"#fff",fontWeight:700}}>{uName}</span>
-          </div>
-          {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>📄 PDF</button>}
-
-          <button onClick={()=>{setRole(null);setUName("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:10,fontWeight:700}}>↩</button>
         </div>
-        {/* ── Módulos primer nivel ── */}
-        <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center",borderBottom:"2px solid rgba(255,255,255,.08)"}}>
-          {MODULOS.map(m=>(
-            <button key={m.id} onClick={()=>{setModulo(m.id);if(m.id===0)setTab(isViewer?1:0);else if(m.id===1)setTab(4);else setTab(3);}}
-              style={{padding:"8px 14px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
-                borderBottom:`3px solid ${modulo===m.id?"#00b5b4":"transparent"}`,
-                color:modulo===m.id?"#00b5b4":"rgba(255,255,255,.6)",
-                background:"transparent",whiteSpace:"nowrap",flexShrink:0}}>
-              {m.label}
+        {/* Nav */}
+        <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
+          {SIDEBAR_ITEMS.map(it=>(
+            <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
+              style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"none",cursor:"pointer",marginBottom:2,textAlign:"left",
+                background:sidebarActive===it.id?"#2F6BFF":"transparent",
+                color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
+                fontWeight:sidebarActive===it.id?700:500,fontSize:13,transition:"background .15s"}}>
+              <span style={{fontSize:16,flexShrink:0}}>{it.icon}</span>
+              {it.label}
             </button>
           ))}
-          {isAuditor&&<button onClick={()=>setShowStatusCard(true)} style={{marginLeft:"auto",padding:"6px 12px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,borderBottom:"3px solid transparent",color:"#fdcb6e",background:"transparent",whiteSpace:"nowrap",flexShrink:0}}>📊 Estado</button>}
+        </nav>
+        {/* Footer del sidebar */}
+        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+      </div>
+
+      {/* ══ MAIN AREA ══ */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+        {/* ── TOPBAR ── */}
+        <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>Control de Implementaciones</div>
+          <input type="date" value={fecha}
+            onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
+            disabled={isViewer}
+            style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
+          {isAuditor&&<button onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}>📊 Estado</button>}
+          {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}>📄 PDF</button>}
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
+            <div style={{lineHeight:1.2}}>
+              <div style={{fontSize:11,color:"#fff",fontWeight:600}}>{uName}</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>{isAdmin?"Administrador":isAuditor?"Auditor":"Visitante"}</div>
+            </div>
+            <button onClick={()=>{setRole(null);setUName("");}} title="Cerrar sesión" style={{background:"none",border:"none",color:"rgba(255,255,255,.4)",cursor:"pointer",fontSize:14,padding:2}}>↩</button>
+          </div>
         </div>
-        {/* ── Sub-tabs segundo nivel ── */}
-        {tabs.length>1&&(
-          <div style={{display:"flex",gap:0,overflowX:"auto",alignItems:"center",background:"rgba(0,0,0,.15)"}}>
-            {tabs.map(tb=><button key={tb.i} onClick={()=>setTab(tb.i)} style={{...S.tabB(tab===tb.i),fontSize:11,padding:"5px 12px"}}>{tb.label}</button>)}
+
+        {/* ── TABS (Evidencias / Auditoría sub) dentro del módulo 0 ── */}
+        {modulo===0&&(
+          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",display:"flex",gap:0,flexShrink:0}}>
+            {SUB_EVIDENCIAS.map(tb=>(
+              <button key={tb.i} onClick={()=>setTab(tb.i)}
+                style={{padding:"12px 16px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
+                  color:tab===tb.i?"#2F6BFF":"#64748B",fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                {tb.i===0?"📋":tb.i===1?"📊":"📈"} {tb.label}
+              </button>
+            ))}
           </div>
         )}
-      </div>
-      {/* CONTENIDO */}
+
+        {/* ── CONTENIDO ── */}
+        <div style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
       {tab===0&&isAuditor&&renderRegistro()}
       {tab===1&&renderReporte()}
       {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
