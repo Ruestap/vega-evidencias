@@ -2085,9 +2085,12 @@ function ChecklistApp() {
                           const hoyT=todayStr();
                           const actsConRegEnDia=(a)=>a.cat==="Always On"||tsFmt.some(tr=>{const r=getReg(ds,tr.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
                           return actsActivas.filter(a=>a.activa&&a.dias.includes(wd)&&actsConRegEnDia(a)).map(a=>{
+                            const esAlwaysOn=a.cat==="Always On";
                             let ob=0,mx=0;
                             tsFmt.forEach(tr=>{
                               if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
+                              // Ad-hoc/Promo: solo cuenta tiendas que tienen registro ese día
+                              if(!esAlwaysOn){const r=getReg(ds,tr.id,a.id);if(!r?.evidencias?.length||r?.anulado) return;}
                               mx+=10;
                               const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
                               if(p!==null) ob+=p;
