@@ -1947,11 +1947,10 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {semsVis.flatMap(s=>[
-                        ...s.days.flatMap(d=>{
+                      {semsVis.flatMap(s=>
+                        s.days.flatMap(d=>{
                           const wd=new Date(vYear,vMonth,d).getDay();
                           const cols=getColsForDay(s,d);
-                          if(cols.length===0) return []; // skip days with no activities — no placeholder needed, EF col is the separator
                           return cols.map(a=>(
                             <th key={s.label+d+a.id} style={{padding:"4px 6px",textAlign:"center",color:a.c,fontWeight:700,fontSize:9,borderBottom:"1px solid #e9eef5",minWidth:44,whiteSpace:"nowrap",background:"#f8fafc",position:"sticky",top:0,lineHeight:1.3}}>
                               <span style={{color:"#8aaabb",fontWeight:700,fontSize:8,display:"block"}}>{s.label}</span>
@@ -1959,11 +1958,10 @@ function ChecklistApp() {
                               <span style={{fontSize:13,display:"block"}}>{a.e}</span>
                             </th>
                           ));
-                        }),
-                        <th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
+                        }).concat([<th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
                           {s.label}<br/>EF.%
-                        </th>
-                      ])}
+                        </th>])
+                      )}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:50,position:"sticky",top:0}}>C1/C2</th>
@@ -1979,8 +1977,8 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.flatMap(sem=>[
-                            ...sem.days.flatMap(d=>{
+                          {semsVis.flatMap(sem=>
+                            sem.days.flatMap(d=>{
                             const wd=new Date(vYear,vMonth,d).getDay();
                             const ds=dStr(vYear,vMonth,d);
                             return getColsForDay(sem,d).map(a=>{
@@ -2019,9 +2017,7 @@ function ChecklistApp() {
                                 </td>
                               );
                             });
-                            }),
-                            // EF% column after this week's days
-                            (()=>{
+                            }).concat([(()=>{
                               const ps=calcSemana(tr.id,sem);
                               const detSem=calcSemanaDetalle(tr.id,sem);
                               return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
@@ -2032,8 +2028,8 @@ function ChecklistApp() {
                                     </div>
                                   :<span style={{color:"#d1d5db"}}>—</span>}
                               </td>;
-                            })()
-                          ])}
+                            })()])
+                          )}
                           {selWeek===null&&(()=>{
   const detMes=calcMesDetalle(tr.id);
   // Calcular máximo teórico (si no hubiera N/A) para mostrar contexto
@@ -2093,8 +2089,8 @@ function ChecklistApp() {
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
-                      {semsVis.flatMap(sem=>[
-                        ...sem.days.flatMap(d=>{
+                      {semsVis.flatMap(sem=>
+                        sem.days.flatMap(d=>{
                           const wd=new Date(vYear,vMonth,d).getDay();
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
@@ -2114,16 +2110,15 @@ function ChecklistApp() {
                               ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                             </td>;
                           });
-                        }),
-                        (()=>{
+                        }).concat([(()=>{
                           let ob=0,mx=0;
                           tsFmt.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                           const ef=mx>0?Math.round((ob/mx)*100):null;
                           return <td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>
                             {ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}
                           </td>;
-                        })()
-                      ])}
+                        })()])
+                      )}
                       {selWeek===null&&(()=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{ const ef=calcMesDetalle(tr.id); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
@@ -2171,8 +2166,8 @@ function ChecklistApp() {
               <thead>
                 <tr style={{background:"#0d1f35"}}>
                   <th style={{padding:"8px 14px",textAlign:"left",color:"rgba(255,255,255,.4)",fontWeight:700,fontSize:9,minWidth:140,position:"sticky",left:0,background:"#0d1f35",zIndex:3}}>TIENDA</th>
-                  {semsVis.flatMap((s,si)=>[
-                    ...s.days.flatMap(d=>{
+                  {semsVis.flatMap((s,si)=>
+                    s.days.flatMap(d=>{
                       const wd=new Date(vYear,vMonth,d).getDay();
                       const cols=getColsForDay(s,d);
                       if(cols.length===0) return [];
@@ -2183,11 +2178,10 @@ function ChecklistApp() {
                           <span style={{fontSize:12,display:"block"}}>{a.e}</span>
                         </th>
                       ));
-                    }),
-                    <th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>
+                    }).concat([<th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>
                       {s.label}<br/>EF.%
-                    </th>
-                  ])}
+                    </th>])
+                  )}
                   {selWeek===null&&<th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>MES</th>}
                   <th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>EF</th>
                 </tr>
@@ -2199,8 +2193,8 @@ function ChecklistApp() {
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
                   {/* Interleave: misma estructura día×actividad que las tablas de formato */}
-                  {semsVis.flatMap((s,si)=>[
-                    ...s.days.flatMap(d=>{
+                  {semsVis.flatMap((s,si)=>
+                    s.days.flatMap(d=>{
                       const hoyT=todayStr();
                       const ds=dStr(vYear,vMonth,d);
                       const cols=getColsForDay(s,d);
@@ -2222,13 +2216,12 @@ function ChecklistApp() {
                           </td>
                         );
                       });
-                    }),
-                    <td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>
+                    }).concat([<td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>
                       {totSems[si]?.ef!==null
                         ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>
                         :<span style={{color:"#5a7a9a"}}>—</span>}
-                    </td>
-                  ])}
+                    </td>])
+                  )}
                   {/* total mes */}
                   {selWeek===null&&(
                     <td style={{padding:"8px 10px",textAlign:"center",background:totEf?sb(totEf):"#0d1f35"}}>
