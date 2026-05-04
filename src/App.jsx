@@ -6374,7 +6374,6 @@ function ChecklistApp() {
   );
 }
 
-
 /* ══ MÓDULO AUDITORÍA — componentes ══════════════════════════════════════ */
 function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
   const [showObs,setShowObs]=useState(false);
