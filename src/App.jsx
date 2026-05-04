@@ -5703,19 +5703,19 @@ function ChecklistApp() {
             style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:420,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:16}}>✏️ Vega {tiendaEditModal.n}</div>
             <div style={{marginBottom:12}}>
-              <label style={S.lbl}>EMAIL ENCARGADO</label>
+              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>EMAIL ENCARGADO</label>
               <input type="email" value={tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,email:e.target.value}))}
-                placeholder="encargado@corporacionvega.pe" style={S.inp}/>
+                placeholder="encargado@corporacionvega.pe" style={{width:"100%",padding:"11px 13px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={S.lbl}>WHATSAPP TIENDA (con código país)</label>
+              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>WHATSAPP TIENDA (con código país)</label>
               <input type="tel" value={tiendaEditModal.whatsapp||""} onChange={e=>setTiendaEditModal(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
-                placeholder="51987654321" style={S.inp}/>
+                placeholder="51987654321" style={{width:"100%",padding:"11px 13px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
             </div>
             <div style={{marginBottom:16}}>
-              <label style={S.lbl}>JEFE ZONAL ASIGNADO</label>
+              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>JEFE ZONAL ASIGNADO</label>
               <select value={tiendaEditModal.zonaId||""} onChange={e=>setTiendaEditModal(p=>({...p,zonaId:e.target.value}))}
-                style={{...S.inp,padding:"10px 12px"}}>
+                style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}>
                 <option value="">— Sin asignar —</option>
                 {zonales.map(u=>(
                   <option key={u.id} value={u.id}>{u.nombre} ({u.rol}){u.zona?` · ${u.zona}`:""}</option>
