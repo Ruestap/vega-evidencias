@@ -2095,9 +2095,11 @@ function ChecklistApp() {
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
                           return getColsForDay(sem,d).map(a=>{
+                            const esAO=a.cat==="Always On";
                             let ob=0,mx=0;
                             tsFmt.forEach(tr=>{
                               if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
+                              if(!esAO){const r=getReg(ds,tr.id,a.id);if(!r?.evidencias?.length||r?.anulado) return;}
                               mx+=10;
                               const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
                               if(p!==null) ob+=p;
@@ -6865,7 +6867,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
+            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"🛡️"}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
