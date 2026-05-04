@@ -2264,7 +2264,10 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,day);
           if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&
+            // Ad-hoc/Promocional: solo cuenta si hay registro real de ALGUNA tienda ese día exacto
+            (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
+          ).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -2292,7 +2295,9 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
-        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&
+          (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
+        ).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -4726,7 +4731,9 @@ function ChecklistApp() {
           if(ds > todayStr()) return;
           const dw = getDow(ds);
           // Filtrar actividades por día de la semana y sin excepción
-          actsBase.filter(a => a.dias.includes(dw) && !isExc(tId, a.id, ds) && actsConRegistroIds.has(a.id)).forEach(a => {
+          actsBase.filter(a => a.dias.includes(dw) && !isExc(tId, a.id, ds) && actsConRegistroIds.has(a.id) &&
+            (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
+          ).forEach(a => {
             maximos += 10;
             const reg = getReg(ds, tId, a.id);
             const p = puntajeReg(reg, getRangoActivo(a.id, ds));
