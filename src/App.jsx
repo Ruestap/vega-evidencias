@@ -1958,9 +1958,7 @@ function ChecklistApp() {
                               <span style={{fontSize:13,display:"block"}}>{a.e}</span>
                             </th>
                           ));
-                        }).concat([<th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
-                          {s.label}<br/>EF.%
-                        </th>])
+                        }).concat([<th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{s.label}{" EF.%"}</th>])
                       )}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
@@ -2017,18 +2015,7 @@ function ChecklistApp() {
                                 </td>
                               );
                             });
-                            }).concat([(()=>{
-                              const ps=calcSemana(tr.id,sem);
-                              const detSem=calcSemanaDetalle(tr.id,sem);
-                              return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>
-                                {ps!==null
-                                  ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                                      <span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span>
-                                      <span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span>
-                                    </div>
-                                  :<span style={{color:"#d1d5db"}}>—</span>}
-                              </td>;
-                            })()])
+                            }).concat([(()=>{const ps=calcSemana(tr.id,sem);const detSem=calcSemanaDetalle(tr.id,sem);return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{ps!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span></div>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})()])
                           )}
                           {selWeek===null&&(()=>{
   const detMes=calcMesDetalle(tr.id);
@@ -2095,11 +2082,9 @@ function ChecklistApp() {
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
                           return getColsForDay(sem,d).map(a=>{
-                            const esAO=a.cat==="Always On";
                             let ob=0,mx=0;
                             tsFmt.forEach(tr=>{
                               if(ds>hoyT||isExc(tr.id,a.id,ds)) return;
-                              if(!esAO){const r=getReg(ds,tr.id,a.id);if(!r?.evidencias?.length||r?.anulado) return;}
                               mx+=10;
                               const p=puntajeReg(getReg(ds,tr.id,a.id),getRangoActivo(a.id,ds));
                               if(p!==null) ob+=p;
@@ -2112,14 +2097,7 @@ function ChecklistApp() {
                               ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
                             </td>;
                           });
-                        }).concat([(()=>{
-                          let ob=0,mx=0;
-                          tsFmt.forEach(tr=>{ const ef=calcSemanaDetalle(tr.id,sem); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
-                          const ef=mx>0?Math.round((ob/mx)*100):null;
-                          return <td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>
-                            {ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}
-                          </td>;
-                        })()])
+                        }).concat([(()=>{let ob=0,mx=0;tsFmt.forEach(tr=>{const ef=calcSemanaDetalle(tr.id,sem);if(ef){ob+=ef.obtenidos;mx+=ef.maximos;}});const ef=mx>0?Math.round((ob/mx)*100):null;return <td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>{ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})()])
                       )}
                       {selWeek===null&&(()=>{
                         let ob=0,mx=0;
@@ -2180,9 +2158,7 @@ function ChecklistApp() {
                           <span style={{fontSize:12,display:"block"}}>{a.e}</span>
                         </th>
                       ));
-                    }).concat([<th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>
-                      {s.label}<br/>EF.%
-                    </th>])
+                    }).concat([<th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>{s.label}{" EF.%"}</th>])
                   )}
                   {selWeek===null&&<th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>MES</th>}
                   <th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>EF</th>
@@ -2218,11 +2194,7 @@ function ChecklistApp() {
                           </td>
                         );
                       });
-                    }).concat([<td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>
-                      {totSems[si]?.ef!==null
-                        ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>
-                        :<span style={{color:"#5a7a9a"}}>—</span>}
-                    </td>])
+                    }).concat([<td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>{totSems[si]?.ef!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>:<span style={{color:"#5a7a9a"}}>—</span>}</td>])
                   )}
                   {/* total mes */}
                   {selWeek===null&&(
@@ -2266,10 +2238,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,day);
           if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&
-            // Ad-hoc/Promocional: solo cuenta si hay registro real de ALGUNA tienda ese día exacto
-            (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
-          ).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -2297,9 +2266,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
-        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&
-          (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
-        ).forEach(a=>{
+        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -4733,9 +4700,7 @@ function ChecklistApp() {
           if(ds > todayStr()) return;
           const dw = getDow(ds);
           // Filtrar actividades por día de la semana y sin excepción
-          actsBase.filter(a => a.dias.includes(dw) && !isExc(tId, a.id, ds) && actsConRegistroIds.has(a.id) &&
-            (a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))
-          ).forEach(a => {
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos += 10;
             const reg = getReg(ds, tId, a.id);
             const p = puntajeReg(reg, getRangoActivo(a.id, ds));
@@ -5703,19 +5668,19 @@ function ChecklistApp() {
             style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:420,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:16}}>✏️ Vega {tiendaEditModal.n}</div>
             <div style={{marginBottom:12}}>
-              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>EMAIL ENCARGADO</label>
+              <label style={S.lbl}>EMAIL ENCARGADO</label>
               <input type="email" value={tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,email:e.target.value}))}
-                placeholder="encargado@corporacionvega.pe" style={{width:"100%",padding:"11px 13px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
+                placeholder="encargado@corporacionvega.pe" style={S.inp}/>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>WHATSAPP TIENDA (con código país)</label>
+              <label style={S.lbl}>WHATSAPP TIENDA (con código país)</label>
               <input type="tel" value={tiendaEditModal.whatsapp||""} onChange={e=>setTiendaEditModal(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
-                placeholder="51987654321" style={{width:"100%",padding:"11px 13px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}/>
+                placeholder="51987654321" style={S.inp}/>
             </div>
             <div style={{marginBottom:16}}>
-              <label style={{display:"block",fontSize:10,fontWeight:700,color:"#5a7a9a",marginBottom:5,letterSpacing:".04em"}}>JEFE ZONAL ASIGNADO</label>
+              <label style={S.lbl}>JEFE ZONAL ASIGNADO</label>
               <select value={tiendaEditModal.zonaId||""} onChange={e=>setTiendaEditModal(p=>({...p,zonaId:e.target.value}))}
-                style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",outline:"none",fontSize:13,boxSizing:"border-box"}}>
+                style={{...S.inp,padding:"10px 12px"}}>
                 <option value="">— Sin asignar —</option>
                 {zonales.map(u=>(
                   <option key={u.id} value={u.id}>{u.nombre} ({u.rol}){u.zona?` · ${u.zona}`:""}</option>
@@ -6867,7 +6832,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"🛡️"}</div>
+            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
