@@ -6720,8 +6720,8 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:"28px 36px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
-        <div style={{width:72,height:72,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"-4px auto 14px"}}>
+      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:36,boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
+        <div style={{width:72,height:72,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
           <svg width="44" height="44" viewBox="0 0 64 64" fill="none">
             {/* Clipboard */}
             <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
@@ -6736,8 +6736,8 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",lineHeight:1.25,paddingBottom:2,marginBottom:4,overflow:"visible"}}>EstrategiaTrade</div>
-        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones y Auditoria</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>EstrategiaTrade</div>
+        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones DIARIA</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
