@@ -220,6 +220,31 @@ const FMT = {
 };
 
 const BRAND_FONT = "'Michroma','DM Sans',system-ui,sans-serif";
+
+const AdminAccessIcon = ({ size=54 } = {}) => (
+  <div style={{
+    width:size,
+    height:size,
+    borderRadius:Math.round(size*.25),
+    background:"#EAF7FF",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0
+  }}>
+    <svg width={Math.round(size*.72)} height={Math.round(size*.72)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="10" y="8" width="38" height="44" rx="6" fill="#DDF3FF"/>
+      <rect x="15" y="13" width="28" height="34" rx="4" fill="#BFE4FF"/>
+      <circle cx="25" cy="24" r="7" fill="#F2A1A7"/>
+      <path d="M15 43c2-9 8-14 16-14s14 5 16 14" fill="#8E86D8" opacity=".95"/>
+      <rect x="33" y="17" width="10" height="3" rx="1.5" fill="#5D5A93"/>
+      <rect x="33" y="25" width="10" height="3" rx="1.5" fill="#5D5A93"/>
+      <rect x="33" y="33" width="10" height="3" rx="1.5" fill="#5D5A93"/>
+      <circle cx="47" cy="46" r="13" fill="#52BD72"/>
+      <path d="M40.5 46.2l4 4.1 8.2-9" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </div>
+);
 const PUNTAJES = [
   {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
   {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
@@ -3895,7 +3920,7 @@ function ChecklistApp() {
               </div>
             );
             const ROL_CFG={
-              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"👑"},
+              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"admin-card"},
               auditor:{label:"Auditor",c:"#00b5b4",bg:"#e0fafa",icon:"🪪"},
               viewer: {label:"Visor",c:"#74b9ff",bg:"#e8f4fd",icon:"👁️"},
             };
@@ -3933,7 +3958,7 @@ function ChecklistApp() {
                   await setDoc(doc(db,"usuarios",u.id),{rol:newRol},{merge:true});
                   showToast(`✅ Rol actualizado a ${newRol}`);
                 }} style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${rc.c}55`,background:rc.bg,color:rc.c,fontSize:11,fontWeight:700,cursor:"pointer",outline:"none"}}>
-                  <option value="admin">👑 Admin</option>
+                  <option value="admin">Admin</option>
                   <option value="auditor">🪪 Auditor</option>
                   <option value="viewer">👁️ Visor</option>
                 </select>
@@ -5457,7 +5482,7 @@ function ChecklistApp() {
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
             <div>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:400,fontSize:13,color:"#fff",lineHeight:1.45,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:16,color:"#fff",lineHeight:1.45,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
               <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
@@ -6736,7 +6761,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:BRAND_FONT,fontSize:19,fontWeight:400,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
+        <div style={{fontFamily:BRAND_FONT,fontSize:23,fontWeight:700,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
           <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
         <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:24,padding:"0 6px"}}>Control de Implementaciones y Auditoria</div>
@@ -6831,7 +6856,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
+            <div style={{display:"flex",justifyContent:"center",alignItems:"center",marginBottom:10}}>{step==="pin_viewer"?<span style={{fontSize:32}}>👁️</span>:<AdminAccessIcon size={54}/>}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
