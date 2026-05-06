@@ -2098,7 +2098,7 @@ function ChecklistApp() {
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{ const ef=calcMesDetalle(tr.id); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return <td style={{padding:"6px 8px",textAlign:"center",background:ef?sb(ef):"#f0f4f8"}}>{ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}% {ob}/{mx}</span></span>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:ef?sb(ef):"#f0f4f8"}}>{ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}{"% "}{ob}{"/"}{mx}</span>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
                       })()}
                       {(()=>{
                         // Medalla resumen del formato en el período visible
@@ -4201,7 +4201,7 @@ function ChecklistApp() {
                 <div key={s.label} style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                     <span style={{fontSize:11,color:"#5a7a9a"}}>{s.label}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:tr.c}}>{s.pct}% {tr.icon}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:tr.c}}>{s.pct}{"% "}{tr.icon}</span>
                   </div>
                   <div style={{height:5,background:"#e2e8f0",borderRadius:3,overflow:"hidden"}}>
                     <div style={{height:"100%",width:s.pct+"%",background:tr.c,borderRadius:3}}/>
@@ -5557,7 +5557,7 @@ function ChecklistApp() {
                       <div style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Vega {tiendas.find(t=>t.id===a.tiendaId)?.n||a.tiendaNombre}</div>
                       <div style={{fontSize:10,color:"#8aaabb"}}>{a.fecha} · {a.duracionMin?a.duracionMin+" min":""}</div>
                     </div>
-                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:tr.c,background:tr.bg}}>{a.scoreFinal?.toFixed(1)}% {tr.icon}</span>
+                    <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:tr.c,background:tr.bg}}>{a.scoreFinal?.toFixed(1)}{"% "}{tr.icon}</span>
                   </div>
                 );})}
               </div>
