@@ -6734,7 +6734,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.5,marginBottom:8,overflow:"visible",whiteSpace:"nowrap",textAlign:"center"}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.55,paddingBottom:10,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center"}}>
           <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
         <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:24,padding:"0 6px"}}>Control de Implementaciones y Auditoria</div>
