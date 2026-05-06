@@ -5467,19 +5467,19 @@ function ChecklistApp() {
   return (
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;} .et-mobile-brand{display:flex!important;}} .et-mobile-brand{display:none;} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
+      <div className="et-sidebar" style={{width:235,minWidth:235,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
         {/* Logo */}
         <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,maxWidth:"100%"}}>
-            <EstrategiaTradeIcon size={44} radius={12}/>
-            <div style={{minWidth:0,flex:1,maxWidth:"calc(100% - 54px)"}}>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.15,paddingBottom:4,overflow:"visible",whiteSpace:"nowrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,maxWidth:"100%"}}>
+            <EstrategiaTradeIcon size={38} radius={10}/>
+            <div style={{minWidth:0,flex:1}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff",lineHeight:1.1,whiteSpace:"nowrap",overflow:"visible"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.62)",letterSpacing:"0",lineHeight:1.2,whiteSpace:"normal",wordBreak:"break-word",maxWidth:"100%"}}>Control de Implementaciones y Auditoria</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.62)",lineHeight:1.2,whiteSpace:"nowrap",marginTop:2}}>Control de Implementaciones y Auditoría</div>
             </div>
           </div>
         </div>
@@ -5502,6 +5502,11 @@ function ChecklistApp() {
 
       {/* ══ MAIN AREA ══ */}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        {/* Mobile brand bar */}
+        <div className="et-mobile-brand" style={{background:"#0F172A",padding:"10px 16px",alignItems:"center",gap:8,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          <EstrategiaTradeIcon size={32} radius={8}/>
+          <div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff"}}><span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span></div><div style={{fontSize:9,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap"}}>{"Control de Implementaciones y Auditoría"}</div></div>
+        </div>
 
         {/* ── TOPBAR ── */}
         <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
