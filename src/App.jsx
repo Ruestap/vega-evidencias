@@ -6750,8 +6750,8 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
       <div style={{width:"90%",maxWidth:378,background:"#fff",borderRadius:20,padding:"30px 34px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
         <div style={{display:"flex",justifyContent:"center",margin:"-4px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.28,marginBottom:16,overflow:"visible",textAlign:"center",whiteSpace:"nowrap",width:"100%",display:"block"}}>
-          <span style={{display:"inline-block",color:"#1a2f4a",paddingBottom:5}}>Estrategia</span><span style={{display:"inline-block",color:"#e74c3c",paddingBottom:5}}>Trade</span>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.5,marginBottom:12,overflow:"visible",textAlign:"center",whiteSpace:"nowrap",width:"100%",paddingBottom:4}}>
+          <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
         <div style={{fontSize:14,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:8,marginBottom:26,padding:"0 10px"}}>Control de Implementaciones y Auditoría</div>
 
