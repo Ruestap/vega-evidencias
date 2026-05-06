@@ -5467,21 +5467,19 @@ function ChecklistApp() {
   return (
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;} .et-mobile-brand{display:flex!important;}} .et-mobile-brand{display:none;} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:235,minWidth:235,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
+      <div className="et-sidebar" style={{width:240,minWidth:240,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
         {/* Logo */}
-        <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,maxWidth:"100%"}}>
-            <EstrategiaTradeIcon size={38} radius={10}/>
-            <div style={{minWidth:0,flex:1}}>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:15,color:"#fff",lineHeight:1.1,whiteSpace:"nowrap",overflow:"visible"}}>
-                <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
-              </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.62)",lineHeight:1.2,whiteSpace:"nowrap",marginTop:2}}>Control de Implementaciones y Auditoría</div>
+        <div style={{padding:"16px 14px 12px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:5}}>
+            <EstrategiaTradeIcon size={36} radius={9}/>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#fff",lineHeight:1,letterSpacing:"-.2px",whiteSpace:"nowrap"}}>
+              <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
             </div>
           </div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.5)",lineHeight:1.2,paddingLeft:1,whiteSpace:"nowrap"}}>Control de Implementaciones y Auditoría</div>
         </div>
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
@@ -5502,11 +5500,6 @@ function ChecklistApp() {
 
       {/* ══ MAIN AREA ══ */}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        {/* Mobile brand bar */}
-        <div className="et-mobile-brand" style={{background:"#0F172A",padding:"10px 16px",alignItems:"center",gap:8,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-          <EstrategiaTradeIcon size={32} radius={8}/>
-          <div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff"}}><span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span></div><div style={{fontSize:9,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap"}}>{"Control de Implementaciones y Auditoría"}</div></div>
-        </div>
 
         {/* ── TOPBAR ── */}
         <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
@@ -6751,14 +6744,14 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   return(
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"12px 16px"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:420,background:"#fff",borderRadius:20,padding:"30px 34px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
-        <div style={{display:"flex",justifyContent:"center",margin:"-4px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.28,marginBottom:16,overflow:"visible",textAlign:"center",whiteSpace:"nowrap"}}>
+      <div style={{width:"100%",maxWidth:400,background:"#fff",borderRadius:20,padding:"24px 28px 28px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-4px auto 12px"}}><EstrategiaTradeIcon size={68} radius={16}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,lineHeight:1.2,marginBottom:10,overflow:"visible",textAlign:"center",whiteSpace:"nowrap"}}>
           <span style={{display:"inline-block",color:"#1a2f4a",paddingBottom:5}}>Estrategia</span><span style={{display:"inline-block",color:"#e74c3c",paddingBottom:5}}>Trade</span>
         </div>
-        <div style={{fontSize:12,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:8,marginBottom:26,padding:"0 10px"}}>Control de Implementaciones y Auditoria</div>
+        <div style={{fontSize:12,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:4,marginBottom:18,padding:"0 10px"}}>Control de Implementaciones y Auditoría</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
