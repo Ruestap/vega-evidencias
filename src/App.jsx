@@ -5467,19 +5467,21 @@ function ChecklistApp() {
   return (
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:768px){.et-sidebar{display:none!important;}} @media(min-width:769px){.et-mobile-brand{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:240,minWidth:240,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
+      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflowX:"visible",overflowY:"auto"}}>
         {/* Logo */}
-        <div style={{padding:"16px 14px 12px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:5}}>
-            <EstrategiaTradeIcon size={36} radius={9}/>
-            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#fff",lineHeight:1,letterSpacing:"-.2px",whiteSpace:"nowrap"}}>
+        <div style={{padding:"16px 14px 14px",borderBottom:"1px solid rgba(255,255,255,.07)",flexShrink:0}}>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+            <EstrategiaTradeIcon size={42} radius={11}/>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16,color:"#fff",lineHeight:1,letterSpacing:"-.3px",whiteSpace:"nowrap"}}>
               <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
             </div>
+            <div style={{fontSize:9.5,color:"rgba(255,255,255,.5)",marginTop:4,lineHeight:1.3,whiteSpace:"nowrap"}}>Control de Implementaciones y Auditoría</div>
           </div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.5)",lineHeight:1.2,paddingLeft:1,whiteSpace:"nowrap"}}>Control de Implementaciones y Auditoría</div>
         </div>
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
@@ -6744,14 +6746,14 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   return(
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"12px 16px"}}>
+    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:400,background:"#fff",borderRadius:20,padding:"24px 28px 28px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
-        <div style={{display:"flex",justifyContent:"center",margin:"-4px auto 12px"}}><EstrategiaTradeIcon size={68} radius={16}/></div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,lineHeight:1.2,marginBottom:10,overflow:"visible",textAlign:"center",whiteSpace:"nowrap"}}>
+      <div style={{width:"100%",maxWidth:420,background:"#fff",borderRadius:20,padding:"30px 34px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible",width:"calc(100% - 0px)"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-4px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.28,marginBottom:16,overflow:"visible",textAlign:"center",whiteSpace:"nowrap",width:"100%",display:"block"}}>
           <span style={{display:"inline-block",color:"#1a2f4a",paddingBottom:5}}>Estrategia</span><span style={{display:"inline-block",color:"#e74c3c",paddingBottom:5}}>Trade</span>
         </div>
-        <div style={{fontSize:12,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:4,marginBottom:18,padding:"0 10px"}}>Control de Implementaciones y Auditoría</div>
+        <div style={{fontSize:12,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:8,marginBottom:26,padding:"0 10px"}}>Control de Implementaciones y Auditoria</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
