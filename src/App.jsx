@@ -5470,16 +5470,16 @@ function ChecklistApp() {
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
         {/* Logo */}
         <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,maxWidth:"100%"}}>
             <EstrategiaTradeIcon size={44} radius={12}/>
-            <div>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.35,paddingBottom:3,overflow:"visible"}}>
+            <div style={{minWidth:0,flex:1,maxWidth:"calc(100% - 54px)"}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.15,paddingBottom:4,overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.48)",letterSpacing:".01em",lineHeight:1.25}}>Control de Implementaciones y Auditoria</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.62)",letterSpacing:"0",lineHeight:1.2,whiteSpace:"normal",wordBreak:"break-word",maxWidth:"100%"}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
         </div>
@@ -6748,10 +6748,12 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:"28px 36px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
-        <div style={{display:"flex",justifyContent:"center",margin:"-8px auto 16px"}}><EstrategiaTradeIcon size={78} radius={20}/></div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",lineHeight:1.5,paddingBottom:8,marginBottom:0,overflow:"visible",display:"block"}}>EstrategiaTrade</div>
-        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones y Auditoria</div>
+      <div style={{width:"100%",maxWidth:420,background:"#fff",borderRadius:20,padding:"32px 36px 40px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-6px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.1,paddingBottom:6,marginBottom:10,overflow:"visible",display:"flex",justifyContent:"center",alignItems:"flex-end",gap:0,whiteSpace:"nowrap"}}>
+          <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
+        </div>
+        <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:28,padding:"0 10px"}}>Control de Implementaciones y Auditoria</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
