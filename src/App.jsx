@@ -5476,16 +5476,16 @@ function ChecklistApp() {
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
         {/* Logo */}
-        <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
-            <div>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:16,color:"#fff",lineHeight:1.45,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+        <div style={{padding:"20px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+            <EstrategiaTradeIcon size={54} radius={14}/>
+            <div style={{minWidth:0,paddingTop:2}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:18,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.62)",lineHeight:1.15,marginTop:2}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
         </div>
@@ -5493,17 +5493,17 @@ function ChecklistApp() {
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
             <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
-              style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"none",cursor:"pointer",marginBottom:2,textAlign:"left",
+              style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
                 fontWeight:sidebarActive===it.id?700:500,fontSize:13,transition:"background .15s"}}>
-              <span style={{fontSize:16,flexShrink:0}}>{it.icon}</span>
+              <span style={{fontSize:18,flexShrink:0}}>{it.icon}</span>
               {it.label}
             </button>
           ))}
         </nav>
         {/* Footer del sidebar */}
-        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+        <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
       </div>
 
       {/* ══ MAIN AREA ══ */}
@@ -5511,7 +5511,7 @@ function ChecklistApp() {
 
         {/* ── TOPBAR ── */}
         <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>Control de Implementaciones</div>
+          <div style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
