@@ -1947,8 +1947,8 @@ function ChecklistApp() {
                     <tr style={{background:"#f8fafc",position:"sticky",top:0,zIndex:4}}>
                       <th style={{padding:"8px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:10,borderBottom:"1px solid #e9eef5",minWidth:140,whiteSpace:"nowrap",position:"sticky",left:0,background:"#f8fafc",zIndex:3,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TIENDA</th>
 
-                      {semsVis.flatMap(s=>
-                        s.days.flatMap(d=>{
+                      {semsVis.flatMap(s=>{
+                        const arr=s.days.flatMap(d=>{
                           const wd=new Date(vYear,vMonth,d).getDay();
                           const cols=getColsForDay(s,d);
                           return cols.map(a=>(
@@ -1958,8 +1958,10 @@ function ChecklistApp() {
                               <span style={{fontSize:13,display:"block"}}>{a.e}</span>
                             </th>
                           ));
-                        }).concat([<th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{s.label}{" EF.%"}</th>])
-                      )}
+                        });
+                        arr.push(<th key={"ef"+s.label} style={{padding:"8px 6px",textAlign:"center",color:"#1a2f4a",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#e8edf2",minWidth:60,position:"sticky",top:0,borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{s.label}{" EF.%"}</th>);
+                        return arr;
+                      })}
                       {selWeek===null&&<th style={{padding:"8px 8px",textAlign:"center",color:"#fff",fontWeight:800,fontSize:10,borderBottom:"1px solid #e9eef5",background:fc.c,minWidth:55,position:"sticky",top:0}}>MES</th>}
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:55,position:"sticky",top:0}}>EF</th>
                       <th style={{padding:"8px 8px",textAlign:"center",fontWeight:800,fontSize:9,borderBottom:"1px solid #e9eef5",background:"#f8fafc",minWidth:50,position:"sticky",top:0}}>C1/C2</th>
@@ -1975,8 +1977,8 @@ function ChecklistApp() {
                         <tr key={tr.id} style={{borderBottom:"1px solid #f5f7fa"}}>
                           <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11,position:"sticky",left:0,background:"#fff",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>Vega {tr.n}</td>
 
-                          {semsVis.flatMap(sem=>
-                            sem.days.flatMap(d=>{
+                          {semsVis.flatMap(sem=>{
+                            const semArr=sem.days.flatMap(d=>{
                             const wd=new Date(vYear,vMonth,d).getDay();
                             const ds=dStr(vYear,vMonth,d);
                             return getColsForDay(sem,d).map(a=>{
@@ -2015,8 +2017,11 @@ function ChecklistApp() {
                                 </td>
                               );
                             });
-                            }).concat([(()=>{const ps=calcSemana(tr.id,sem);const detSem=calcSemanaDetalle(tr.id,sem);return <td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{ps!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span></div>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})()])
-                          )}
+                            });
+                            const ps=calcSemana(tr.id,sem);const detSem=calcSemanaDetalle(tr.id,sem);
+                            semArr.push(<td key={"ef"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #c8d8e8",borderRight:"2px solid #c8d8e8"}}>{ps!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{padding:"2px 6px",borderRadius:20,fontSize:10,fontWeight:800,color:sc(ps),background:sb(ps)}}>{ps}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detSem?.obtenidos}/{detSem?.maximos}pts</span></div>:<span style={{color:"#d1d5db"}}>—</span>}</td>);
+                            return semArr;
+                          })}
                           {selWeek===null&&(()=>{
   const detMes=calcMesDetalle(tr.id);
   // Calcular máximo teórico (si no hubiera N/A) para mostrar contexto
@@ -2030,15 +2035,7 @@ function ChecklistApp() {
     actsActivas.filter(a=>a.dias.includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
   });
   const pctBase=mxTeorico>0&&detMes?Math.round((detMes.maximos/mxTeorico)*100):null;
-  return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>
-    {pMes!==null
-      ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-          <span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span>
-          <span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>
-          {pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>⚠️ N/A parcial</span>}
-        </div>
-      :<span style={{color:"#b2bec3"}}>—</span>}
-  </td>;
+  return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>{pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>{"⚠️ N/A parcial"}</span>}</div>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
 })()}
                           <td style={{padding:"6px 8px",textAlign:"center"}}><span style={{fontSize:13}}>{tier.icon}</span><div style={{fontSize:8,fontWeight:700,color:tier.c}}>{tier.label}</div></td>
                           {/* Columna C1/C2 — distribución de cortes para esta tienda */}
@@ -2076,8 +2073,8 @@ function ChecklistApp() {
                   <tfoot>
                     <tr style={{background:"#f0f4f8",borderTop:"2px solid #e2e8f0"}}>
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
-                      {semsVis.flatMap(sem=>
-                        sem.days.flatMap(d=>{
+                      {semsVis.flatMap(sem=>{
+                        const tfArr=sem.days.flatMap(d=>{
                           const wd=new Date(vYear,vMonth,d).getDay();
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
@@ -2090,22 +2087,18 @@ function ChecklistApp() {
                               if(p!==null) ob+=p;
                             });
                             const ef=mx>0?Math.round((ob/mx)*100):null;
-                            return <td key={sem.label+d+a.id} style={{padding:"5px 6px",textAlign:"center",borderLeft:"1px solid #e9eef5"}}>
-                              {mx>0?(ob>0
-                                ?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400,color:"#8aaabb"}}>{ef}%</span></span>
-                                :<span style={{fontSize:8,color:"#b2bec3"}}>{mx}<br/>pend.</span>
-                              ):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                            </td>;
+                            return <td key={sem.label+d+a.id} style={{padding:"5px 6px",textAlign:"center",borderLeft:"1px solid #e9eef5"}}>{mx>0?(ob>0?<span style={{fontSize:9,fontWeight:800,color:sc(ef)}}>{ob}/{mx}<br/><span style={{fontSize:8,fontWeight:400,color:"#8aaabb"}}>{ef}%</span></span>:<span style={{fontSize:8,color:"#b2bec3"}}>{mx}<br/>{"pend."}</span>):<span style={{color:"#d1d5db",fontSize:9}}>—</span>}</td>;
                           });
-                        }).concat([(()=>{let ob=0,mx=0;tsFmt.forEach(tr=>{const ef=calcSemanaDetalle(tr.id,sem);if(ef){ob+=ef.obtenidos;mx+=ef.maximos;}});const ef=mx>0?Math.round((ob/mx)*100):null;return <td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>{ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}</td>;})()])
-                      )}
+                        });
+                        let _ob=0,_mx=0;tsFmt.forEach(tr=>{const ef=calcSemanaDetalle(tr.id,sem);if(ef){_ob+=ef.obtenidos;_mx+=ef.maximos;}});const _ef=_mx>0?Math.round((_ob/_mx)*100):null;
+                        tfArr.push(<td key={"tot"+sem.label} style={{padding:"6px 6px",textAlign:"center",background:"#e8edf2",borderLeft:"2px solid #e2e8f0"}}>{_ef!==null?<span style={{fontSize:10,fontWeight:800,color:sc(_ef)}}>{_ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{_ob}/{_mx}pts</span></span>:<span style={{color:"#d1d5db"}}>—</span>}</td>);
+                        return tfArr;
+                      })}
                       {selWeek===null&&(()=>{
                         let ob=0,mx=0;
                         tsFmt.forEach(tr=>{ const ef=calcMesDetalle(tr.id); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
-                        return <td style={{padding:"6px 8px",textAlign:"center",background:ef?sb(ef):"#f0f4f8"}}>
-                          {ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}</span></span>:<span style={{color:"#b2bec3"}}>—</span>}
-                        </td>;
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:ef?sb(ef):"#f0f4f8"}}>{ef!==null?<span style={{fontWeight:800,fontSize:11,color:sc(ef)}}>{ef}%<br/><span style={{fontSize:8,fontWeight:400}}>{ob}/{mx}</span></span>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
                       })()}
                       {(()=>{
                         // Medalla resumen del formato en el período visible
@@ -2114,9 +2107,7 @@ function ChecklistApp() {
                         tsFmt.forEach(tr=>{ const ef=calcEficiencia(tr.id,allDays); if(ef){ob+=ef.obtenidos;mx+=ef.maximos;} });
                         const ef=mx>0?Math.round((ob/mx)*100):null;
                         const tierFmt=getTier(ef);
-                        return <td style={{padding:"6px 8px",textAlign:"center",background:tierFmt.bg}}>
-                          {ef!==null?<><span style={{fontSize:14}}>{tierFmt.icon}</span><div style={{fontSize:8,fontWeight:800,color:tierFmt.c}}>{tierFmt.label}</div></>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}
-                        </td>;
+                        return <td style={{padding:"6px 8px",textAlign:"center",background:tierFmt.bg}}>{ef!==null?<><span style={{fontSize:14}}>{tierFmt.icon}</span><div style={{fontSize:8,fontWeight:800,color:tierFmt.c}}>{tierFmt.label}</div></>:<span style={{color:"#d1d5db",fontSize:9}}>—</span>}</td>;
                       })()}
                     </tr>
                   </tfoot>
@@ -2146,8 +2137,8 @@ function ChecklistApp() {
               <thead>
                 <tr style={{background:"#0d1f35"}}>
                   <th style={{padding:"8px 14px",textAlign:"left",color:"rgba(255,255,255,.4)",fontWeight:700,fontSize:9,minWidth:140,position:"sticky",left:0,background:"#0d1f35",zIndex:3}}>TIENDA</th>
-                  {semsVis.flatMap((s,si)=>
-                    s.days.flatMap(d=>{
+                  {semsVis.flatMap((s,si)=>{
+                    const tgArr=s.days.flatMap(d=>{
                       const wd=new Date(vYear,vMonth,d).getDay();
                       const cols=getColsForDay(s,d);
                       if(cols.length===0) return [];
@@ -2158,8 +2149,10 @@ function ChecklistApp() {
                           <span style={{fontSize:12,display:"block"}}>{a.e}</span>
                         </th>
                       ));
-                    }).concat([<th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>{s.label}{" EF.%"}</th>])
-                  )}
+                    });
+                    tgArr.push(<th key={"gef"+si} style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:52,borderLeft:"2px solid rgba(255,255,255,.08)",borderRight:"2px solid rgba(255,255,255,.08)"}}>{s.label}{" EF.%"}</th>);
+                    return tgArr;
+                  })}
                   {selWeek===null&&<th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>MES</th>}
                   <th style={{padding:"6px",textAlign:"center",color:"rgba(255,255,255,.5)",fontWeight:800,fontSize:9,minWidth:55}}>EF</th>
                 </tr>
@@ -2171,8 +2164,8 @@ function ChecklistApp() {
                     <div style={{fontSize:9,color:"#8aaabb",fontWeight:400,marginTop:1}}>{tiAct.length} tiendas · {MESES[vMonth]} {vYear}</div>
                   </td>
                   {/* Interleave: misma estructura día×actividad que las tablas de formato */}
-                  {semsVis.flatMap((s,si)=>
-                    s.days.flatMap(d=>{
+                  {semsVis.flatMap((s,si)=>{
+                    const tgBArr=s.days.flatMap(d=>{
                       const hoyT=todayStr();
                       const ds=dStr(vYear,vMonth,d);
                       const cols=getColsForDay(s,d);
@@ -2194,8 +2187,10 @@ function ChecklistApp() {
                           </td>
                         );
                       });
-                    }).concat([<td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>{totSems[si]?.ef!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>:<span style={{color:"#5a7a9a"}}>—</span>}</td>])
-                  )}
+                    });
+                    tgBArr.push(<td key={"gs"+si} style={{padding:"6px 8px",textAlign:"center",background:"#0d1f35",borderLeft:"2px solid rgba(255,255,255,.1)"}}>{totSems[si]?.ef!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontSize:11,fontWeight:800,color:sc(totSems[si].ef)}}>{totSems[si].ef}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{totSems[si].ob}/{totSems[si].mx}pts</span></div>:<span style={{color:"#5a7a9a"}}>—</span>}</td>);
+                    return tgBArr;
+                  })}
                   {/* total mes */}
                   {selWeek===null&&(
                     <td style={{padding:"8px 10px",textAlign:"center",background:totEf?sb(totEf):"#0d1f35"}}>
