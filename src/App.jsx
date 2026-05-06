@@ -6746,16 +6746,14 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   return(
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#17365d,#0c2141)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"28px 24px"}}>
+    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:760,background:"#fff",borderRadius:34,padding:"42px 58px 54px",boxShadow:"0 28px 72px rgba(0,0,0,.28)",textAlign:"center",overflow:"visible"}}>
-        <div style={{display:"flex",justifyContent:"center",margin:"0 auto 30px"}}><EstrategiaTradeIcon size={128} radius={28}/></div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,lineHeight:1.08,marginBottom:18,overflow:"visible",display:"flex",justifyContent:"center",alignItems:"flex-end",gap:0,whiteSpace:"nowrap"}}>
-          <span style={{color:"#162949"}}>Estrategia</span><span style={{color:"#e45843"}}>Trade</span>
+      <div style={{width:"100%",maxWidth:420,background:"#fff",borderRadius:20,padding:"32px 36px 40px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-6px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.2,paddingBottom:10,marginBottom:12,overflow:"visible",display:"flex",justifyContent:"center",alignItems:"flex-end",gap:0,whiteSpace:"nowrap"}}>
+          <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
-        <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:"#f4f5f7",padding:"18px 28px",borderRadius:2,marginBottom:18,minWidth:"min(100%, 520px)"}}>
-          <div style={{fontSize:11,color:"#6f8098",letterSpacing:".01em",lineHeight:1.35}}>Control de Implementaciones y Auditoria</div>
-        </div>
+        <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginTop:6,marginBottom:30,padding:"0 10px"}}>Control de Implementaciones y Auditoria</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
@@ -6772,18 +6770,18 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
         {step==="inicio"&&!bloqueo&&(
           <>
-            <p style={{margin:"0 0 28px",fontSize:14,color:"#53729b",fontWeight:500}}>Selecciona tu tipo de acceso</p>
+            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
             <button onClick={()=>{setStep("dni_auditor");setErr("");}}
-              style={{width:"100%",padding:"20px 24px",borderRadius:18,border:"2px solid #10b8b6",background:"#dff5f5",color:"#0d7a79",cursor:"pointer",marginBottom:14,display:"flex",alignItems:"center",gap:18,textAlign:"left"}}>
-              <div style={{width:56,height:56,borderRadius:14,background:"#f2e5d8",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:24,flexShrink:0}}>🪪</span></div>
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <span style={{fontSize:24,flexShrink:0}}>🪪</span>
               <div>
-                <div style={{fontSize:15,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
-                <div style={{fontSize:11,color:"#0d7a79",opacity:.9}}>Ingresa tu DNI / CE / RUC registrado</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
+                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI / CE / RUC registrado</div>
               </div>
             </button>
             <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
-              style={{width:"100%",padding:"20px 24px",borderRadius:18,border:"2px solid #f1a11d",background:"#faf5ea",color:"#854F0B",cursor:"pointer",marginBottom:14,display:"flex",alignItems:"center",gap:18,textAlign:"left"}}>
-              <div style={{width:56,height:56,borderRadius:16,background:"#dbe9f9",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <div style={{width:48,height:48,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
                   <rect x="8" y="14" width="40" height="28" rx="5" fill="#74b9ff"/>
                   <rect x="12" y="20" width="12" height="14" rx="6" fill="#e8f4fd"/>
@@ -6794,13 +6792,13 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
                 </svg>
               </div>
               <div>
-                <div style={{fontSize:15,fontWeight:800,color:"#854F0B"}}>Administrador</div>
-                <div style={{fontSize:11,color:"#854F0B",opacity:.9}}>Ingresa tu DNI / código registrado</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
+                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Ingresa tu DNI / código registrado</div>
               </div>
             </button>
             <button onClick={()=>{setStep("pin_viewer");setErr("");setPin("");}}
-              style={{width:"100%",padding:"20px 24px",borderRadius:18,border:"2px solid #74b0ff",background:"#edf5ff",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:18,textAlign:"left"}}>
-              <div style={{width:56,height:56,borderRadius:16,background:"#dfeaf8",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+              <div style={{width:48,height:48,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
                   <rect x="8" y="16" width="48" height="28" rx="4" fill="#74b9ff"/>
                   <rect x="12" y="20" width="40" height="20" rx="2" fill="#e8f4fd"/>
@@ -6814,8 +6812,8 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
                 </svg>
               </div>
               <div>
-                <div style={{fontSize:15,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
-                <div style={{fontSize:11,color:"#0652dd",opacity:.9}}>Ingresa tu DNI / código registrado</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
+                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Ingresa tu DNI / código registrado</div>
               </div>
             </button>
           </>
