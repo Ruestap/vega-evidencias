@@ -221,6 +221,33 @@ const FMT = {
 
 const BRAND_FONT = "'Michroma','DM Sans',system-ui,sans-serif";
 
+const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
+  <div style={{
+    width:size,
+    height:size,
+    borderRadius:radius,
+    background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0,
+    boxShadow:"0 10px 22px rgba(0,0,0,.18)"
+  }}>
+    <svg width={Math.round(size*.62)} height={Math.round(size*.62)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
+      <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
+      <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
+      <circle cx="44" cy="44" r="14" fill="#37474F"/>
+      <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
+      <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
+      <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
+    </svg>
+  </div>
+);
+
+
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
     width:size,
