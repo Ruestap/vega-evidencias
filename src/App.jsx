@@ -218,6 +218,34 @@ const FMT = {
   Supermayorista: {c:"#0984e3",bg:"#e8f4fd"},
   Market:         {c:"#00b5b4",bg:"#e0fafa"},
 };
+
+
+const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
+  <div style={{
+    width:size,
+    height:size,
+    borderRadius:radius,
+    background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0,
+    boxShadow:"0 10px 22px rgba(0,0,0,.18)"
+  }}>
+    <svg width={Math.round(size*.62)} height={Math.round(size*.62)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
+      <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
+      <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
+      <circle cx="44" cy="44" r="14" fill="#37474F"/>
+      <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
+      <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
+      <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
+    </svg>
+  </div>
+);
+
 const PUNTAJES = [
   {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
   {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
@@ -5446,12 +5474,12 @@ function ChecklistApp() {
         {/* Logo */}
         <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
+            <EstrategiaTradeIcon size={44} radius={12}/>
             <div>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.1}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.35,paddingBottom:3,overflow:"visible"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.48)",letterSpacing:".01em",lineHeight:1.25}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
         </div>
@@ -5477,7 +5505,7 @@ function ChecklistApp() {
 
         {/* ── TOPBAR ── */}
         <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>Control de Implementaciones</div>
+          <div style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
@@ -6720,24 +6748,10 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:36,boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
-        <div style={{width:72,height:72,borderRadius:18,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
-          <svg width="44" height="44" viewBox="0 0 64 64" fill="none">
-            {/* Clipboard */}
-            <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
-            <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
-            <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
-            <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
-            <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
-            {/* Magnifier */}
-            <circle cx="44" cy="44" r="14" fill="#37474F"/>
-            <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
-            <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
-            <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
-          </svg>
-        </div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>EstrategiaTrade</div>
-        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones DIARIA</div>
+      <div style={{width:"100%",maxWidth:380,background:"#fff",borderRadius:20,padding:"28px 36px 36px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-8px auto 16px"}}><EstrategiaTradeIcon size={78} radius={20}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#1a2f4a",lineHeight:1.5,paddingBottom:8,marginBottom:0,overflow:"visible",display:"block"}}>EstrategiaTrade</div>
+        <div style={{fontSize:10,color:"#8aaabb",letterSpacing:".08em",marginBottom:28}}>Control de Implementaciones y Auditoria</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
