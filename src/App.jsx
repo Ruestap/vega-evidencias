@@ -5500,7 +5500,7 @@ function ChecklistApp() {
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-desktop-spacer{display:none!important;}} @media(pointer:coarse){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-desktop-spacer{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-logo{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} @media(max-width:360px){.et-topbar-logo-sub{display:none!important;}}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
       <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
@@ -5538,22 +5538,23 @@ function ChecklistApp() {
 
         {/* ── TOPBAR ── */}
         <div className="et-topbar" style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <div className="et-topbar-logo" style={{alignItems:"center",gap:7,flex:1,minWidth:0,display:"none"}}>
-            <EstrategiaTradeIcon size={32} radius={8}/>
+          <div className="et-topbar-logo" style={{alignItems:"center",gap:7,flexShrink:0,display:"none"}}>
+            <EstrategiaTradeIcon size={28} radius={7}/>
             <div style={{minWidth:0}}>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:13,color:"#fff",whiteSpace:"nowrap",lineHeight:1.1}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:12,color:"#fff",whiteSpace:"nowrap",lineHeight:1.1}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div className="et-topbar-logo-sub" style={{fontSize:8,color:"rgba(255,255,255,.4)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Implementaciones y Auditoría</div>
+              <div className="et-topbar-logo-sub" style={{fontSize:8,color:"rgba(255,255,255,.4)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
+          <div className="et-topbar-logo-spacer" style={{flex:1,display:"none"}} aria-hidden="true"/>
           <div className="et-topbar-desktop-spacer" style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
             style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
-          {isAuditor&&<button onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}>📊 Estado</button>}
-          {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}>📄 PDF</button>}
+          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}>📊 Estado</button>}
+          {isAdmin&&<button className="et-topbar-pdf" onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}>📄 PDF</button>}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
             <div className="et-topbar-user-name" style={{lineHeight:1.2}}>
@@ -6402,6 +6403,16 @@ function ChecklistApp() {
             </button>
           );
         })}
+        {isAuditor&&<button onClick={()=>setShowStatusCard(true)}
+          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",color:"rgba(253,203,110,.85)",padding:"4px 0"}}>
+          <span style={{fontSize:20}}>📊</span>
+          <span style={{fontSize:9,fontWeight:500,whiteSpace:"nowrap"}}>Estado</span>
+        </button>}
+        {isAdmin&&<button onClick={()=>exportPDFRef.current?.()}
+          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",color:"rgba(255,255,255,.5)",padding:"4px 0"}}>
+          <span style={{fontSize:20}}>📄</span>
+          <span style={{fontSize:9,fontWeight:500,whiteSpace:"nowrap"}}>PDF</span>
+        </button>}
       </nav>
 
     </div>
