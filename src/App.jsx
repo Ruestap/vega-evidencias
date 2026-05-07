@@ -220,58 +220,6 @@ const FMT = {
 };
 
 const BRAND_FONT = "'Michroma','DM Sans',system-ui,sans-serif";
-
-const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
-  <div style={{
-    width:size,
-    height:size,
-    borderRadius:radius,
-    background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",
-    display:"flex",
-    alignItems:"center",
-    justifyContent:"center",
-    flexShrink:0,
-    boxShadow:"0 10px 22px rgba(0,0,0,.18)"
-  }}>
-    <svg width={Math.round(size*.62)} height={Math.round(size*.62)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
-      <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
-      <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
-      <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
-      <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
-      <circle cx="44" cy="44" r="14" fill="#37474F"/>
-      <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
-      <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
-      <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
-    </svg>
-  </div>
-);
-
-
-const AdminAccessIcon = ({ size=54 } = {}) => (
-  <div style={{
-    width:size,
-    height:size,
-    borderRadius:Math.round(size*.25),
-    background:"#EAF7FF",
-    display:"flex",
-    alignItems:"center",
-    justifyContent:"center",
-    flexShrink:0
-  }}>
-    <svg width={Math.round(size*.72)} height={Math.round(size*.72)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <rect x="10" y="8" width="38" height="44" rx="6" fill="#DDF3FF"/>
-      <rect x="15" y="13" width="28" height="34" rx="4" fill="#BFE4FF"/>
-      <circle cx="25" cy="24" r="7" fill="#F2A1A7"/>
-      <path d="M15 43c2-9 8-14 16-14s14 5 16 14" fill="#8E86D8" opacity=".95"/>
-      <rect x="33" y="17" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <rect x="33" y="25" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <rect x="33" y="33" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <circle cx="47" cy="46" r="13" fill="#52BD72"/>
-      <path d="M40.5 46.2l4 4.1 8.2-9" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  </div>
-);
 const PUNTAJES = [
   {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
   {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
@@ -3947,7 +3895,7 @@ function ChecklistApp() {
               </div>
             );
             const ROL_CFG={
-              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"admin-card"},
+              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"👑"},
               auditor:{label:"Auditor",c:"#00b5b4",bg:"#e0fafa",icon:"🪪"},
               viewer: {label:"Visor",c:"#74b9ff",bg:"#e8f4fd",icon:"👁️"},
             };
@@ -3985,7 +3933,7 @@ function ChecklistApp() {
                   await setDoc(doc(db,"usuarios",u.id),{rol:newRol},{merge:true});
                   showToast(`✅ Rol actualizado a ${newRol}`);
                 }} style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${rc.c}55`,background:rc.bg,color:rc.c,fontSize:11,fontWeight:700,cursor:"pointer",outline:"none"}}>
-                  <option value="admin">Admin</option>
+                  <option value="admin">👑 Admin</option>
                   <option value="auditor">🪪 Auditor</option>
                   <option value="viewer">👁️ Visor</option>
                 </select>
@@ -5503,16 +5451,16 @@ function ChecklistApp() {
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
         {/* Logo */}
-        <div style={{padding:"20px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-            <EstrategiaTradeIcon size={54} radius={14}/>
-            <div style={{minWidth:0,paddingTop:2}}>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:18,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+        <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
+            <div>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:400,fontSize:13,color:"#fff",lineHeight:1.45,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.62)",lineHeight:1.15,marginTop:2}}>Control de Implementaciones y Auditoria</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
             </div>
           </div>
         </div>
@@ -5520,17 +5468,17 @@ function ChecklistApp() {
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
             <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
-              style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
+              style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"none",cursor:"pointer",marginBottom:2,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
                 fontWeight:sidebarActive===it.id?700:500,fontSize:13,transition:"background .15s"}}>
-              <span style={{fontSize:18,flexShrink:0}}>{it.icon}</span>
+              <span style={{fontSize:16,flexShrink:0}}>{it.icon}</span>
               {it.label}
             </button>
           ))}
         </nav>
         {/* Footer del sidebar */}
-        <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
       </div>
 
       {/* ══ MAIN AREA ══ */}
@@ -5538,7 +5486,7 @@ function ChecklistApp() {
 
         {/* ── TOPBAR ── */}
         <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <div style={{flex:1}} aria-hidden="true"/>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>Control de Implementaciones</div>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
@@ -6788,7 +6736,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:BRAND_FONT,fontSize:23,fontWeight:700,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
+        <div style={{fontFamily:BRAND_FONT,fontSize:19,fontWeight:400,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
           <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
         <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:24,padding:"0 6px"}}>Control de Implementaciones y Auditoria</div>
@@ -6883,7 +6831,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{display:"flex",justifyContent:"center",alignItems:"center",marginBottom:10}}>{step==="pin_viewer"?<span style={{fontSize:32}}>👁️</span>:<AdminAccessIcon size={54}/>}</div>
+            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
