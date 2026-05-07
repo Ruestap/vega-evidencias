@@ -5500,7 +5500,7 @@ function ChecklistApp() {
   return (
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar-title{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} @media(max-width:640px){.et-bottom-nav{display:flex!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
       <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
@@ -5569,7 +5569,7 @@ function ChecklistApp() {
         )}
 
         {/* ── CONTENIDO ── */}
-        <div style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
+        <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
       {tab===0&&isAuditor&&renderRegistro()}
       {tab===1&&renderReporte()}
       {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
@@ -5595,7 +5595,7 @@ function ChecklistApp() {
           const miPos=ranking.findIndex(r=>r.id===uDni)+1;
           return(
           <div style={{padding:"14px 16px",paddingBottom:80}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Mi desempeño</div>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Panel de Avances</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
               {[
                 {label:"Visitas esta semana",val:misSemana.length,c:"#0984e3"},
@@ -5623,10 +5623,7 @@ function ChecklistApp() {
                 );})}
               </div>
             )}
-            <button onClick={()=>setAuditPaso(0)}
-              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
-              🔍 Iniciar nueva auditoría
-            </button>
+
           </div>
           );
         })()}
@@ -6383,6 +6380,20 @@ function ChecklistApp() {
         </div>
       )}
 
+      {/* ══ BOTTOM NAV — solo mobile ══ */}
+      <nav className="et-bottom-nav" style={{position:"fixed",bottom:0,left:0,right:0,height:60,background:"#0F172A",borderTop:"1px solid rgba(255,255,255,.1)",zIndex:30,alignItems:"stretch",justifyContent:"space-around"}}>
+        {SIDEBAR_ITEMS.map(it=>{
+          const active=sidebarActive===it.id;
+          return(
+            <button key={it.id} onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
+              style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",
+                color:active?"#2F6BFF":"rgba(255,255,255,.5)",padding:"4px 0"}}>
+              <span style={{fontSize:20}}>{it.icon}</span>
+              <span style={{fontSize:9,fontWeight:active?700:500,whiteSpace:"nowrap"}}>{it.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
     </div>
   );
