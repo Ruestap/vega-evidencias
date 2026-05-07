@@ -5500,7 +5500,7 @@ function ChecklistApp() {
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:920px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar-title{display:none!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} @media(max-width:920px){.et-bottom-nav{display:flex!important;}} .et-app-root,.et-sidebar{height:100vh;height:100dvh;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:920px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar{height:48px!important;padding:0 10px!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} @media(max-width:920px){.et-bottom-nav{display:flex!important;}} .et-app-root,.et-sidebar{height:100vh;height:100dvh;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
       <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
@@ -5594,7 +5594,7 @@ function ChecklistApp() {
           const ranking=Object.entries(porAuditor).map(([id,v])=>({id,nombre:v.nombre,prom:v.sum/v.n,n:v.n})).sort((a,b)=>b.prom-a.prom);
           const miPos=ranking.findIndex(r=>r.id===uDni)+1;
           return(
-          <div style={{padding:"14px 16px",paddingBottom:80}}>
+          <div style={{padding:"14px 16px",paddingBottom:8}}>
             <div style={{fontWeight:800,fontSize:18,color:"#1a2f4a",marginBottom:14}}>Panel de Avances</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
               {[
