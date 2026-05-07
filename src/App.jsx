@@ -219,7 +219,50 @@ const FMT = {
   Market:         {c:"#00b5b4",bg:"#e0fafa"},
 };
 
+
 const BRAND_FONT = "'Michroma','DM Sans',system-ui,sans-serif";
+
+const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
+  <div style={{
+    width:size,
+    height:size,
+    borderRadius:radius,
+    background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0,
+    boxShadow:"0 10px 22px rgba(0,0,0,.18)"
+  }}>
+    <svg width={Math.round(size*.62)} height={Math.round(size*.62)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
+      <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
+      <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
+      <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
+      <circle cx="44" cy="44" r="14" fill="#37474F"/>
+      <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
+      <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
+      <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
+    </svg>
+  </div>
+);
+
+const AdminAccessIcon = ({ size=48 } = {}) => (
+  <div style={{width:size,height:size,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+    <svg width={Math.round(size*.74)} height={Math.round(size*.74)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="9" y="10" width="38" height="44" rx="6" fill="#dff1ff" stroke="#b8ddf7" strokeWidth="2"/>
+      <circle cx="23" cy="27" r="8" fill="#ffb6a3"/>
+      <path d="M13 48c2-9 18-9 20 0" fill="#8067b6"/>
+      <rect x="34" y="20" width="17" height="4" rx="2" fill="#7254b8"/>
+      <rect x="34" y="30" width="14" height="4" rx="2" fill="#7254b8"/>
+      <rect x="34" y="40" width="10" height="4" rx="2" fill="#7254b8"/>
+      <circle cx="48" cy="48" r="12" fill="#45bd6f"/>
+      <path d="M42 48.5l4 4 8-9" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </div>
+);
+
 const PUNTAJES = [
   {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
   {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
@@ -2358,9 +2401,8 @@ function ChecklistApp() {
       }
       try {
       w.document.write(`<html><head><title>VEGA Evidencias - ${MESES[vMonth]} ${vYear}</title>
-      <style>@import url('https://fonts.googleapis.com/css2?family=Michroma&display=swap');
-      body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
-      h1{font-family:'Michroma',Arial,sans-serif;font-weight:400;font-size:16px;line-height:1.6;border-bottom:2px solid #1a2f4a;padding-bottom:8px;margin-bottom:16px;}
+      <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a2f4a;font-size:12px;}
+      h1{font-size:18px;border-bottom:2px solid #1a2f4a;padding-bottom:8px;margin-bottom:16px;}
       .grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
       .kpi{background:#f8fafc;border-radius:8px;padding:12px;text-align:center;border:1px solid #e2e8f0;}
       .kpi-v{font-size:24px;font-weight:700;}
@@ -2372,7 +2414,6 @@ function ChecklistApp() {
       td{padding:6px 8px;border-bottom:1px solid #f5f7fa;}
       .bar{height:8px;border-radius:4px;display:inline-block;}
       .footer{margin-top:24px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:9px;color:#8aaabb;display:flex;justify-content:space-between;}
-      .brand-pdf{font-family:'Michroma',Arial,sans-serif;font-weight:400;letter-spacing:.02em;}
       </style></head><body>
       <h1>EstrategiaTrade — ${MESES[vMonth].toUpperCase()} ${vYear}</h1>
       <div style="font-size:10px;color:#5a7a9a;margin-bottom:16px;">Generado: ${new Date().toLocaleDateString("es-PE")} · Por: ${uName} · Filtro: ${dashFmt==="Todas"?"Todas las tiendas":dashFmt}</div>
@@ -2398,7 +2439,7 @@ function ChecklistApp() {
         <table><thead><tr><th>Franja</th><th>Registros</th><th>%</th></tr></thead><tbody>
         ${horasDist.map(h=>`<tr><td>${h.l}</td><td>${h.n}</td><td style="color:${h.c};font-weight:700">${Math.round(h.n/totalEvs*100)}%</td></tr>`).join("")}
         </tbody></table></div>
-      <div class="footer"><span class="brand-pdf">EstrategiaTrade · Control de Implementación</span><span>Confidencial · ${new Date().toLocaleDateString("es-PE")}</span></div>
+      <div class="footer"><span>EstrategiaTrade · Control de Implementación</span><span>Confidencial · ${new Date().toLocaleDateString("es-PE")}</span></div>
       </body></html>`);
       w.document.close();
       w.print();
@@ -3895,7 +3936,7 @@ function ChecklistApp() {
               </div>
             );
             const ROL_CFG={
-              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"👑"},
+              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"🪪"},
               auditor:{label:"Auditor",c:"#00b5b4",bg:"#e0fafa",icon:"🪪"},
               viewer: {label:"Visor",c:"#74b9ff",bg:"#e8f4fd",icon:"👁️"},
             };
@@ -3933,7 +3974,7 @@ function ChecklistApp() {
                   await setDoc(doc(db,"usuarios",u.id),{rol:newRol},{merge:true});
                   showToast(`✅ Rol actualizado a ${newRol}`);
                 }} style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${rc.c}55`,background:rc.bg,color:rc.c,fontSize:11,fontWeight:700,cursor:"pointer",outline:"none"}}>
-                  <option value="admin">👑 Admin</option>
+                  <option value="admin">🪪 Admin</option>
                   <option value="auditor">🪪 Auditor</option>
                   <option value="viewer">👁️ Visor</option>
                 </select>
@@ -5440,27 +5481,22 @@ function ChecklistApp() {
     :modulo===1?"Auditoría"
     :"Configuración";
 
-  const excComentario = excModal?._comentario??excModal?.comentarioActual??"";
-  const excApplyAll = excModal?._applyAll??false;
-  const excSemActiva = excModal ? semanasDelMes.find(s=>s.days.some(d=>dStr(vYear,vMonth,d)===fecha)) : null;
-  const excFechasPreview = excSemActiva ? excSemActiva.days.map(d=>dStr(vYear,vMonth,d)) : [fecha];
-
   return (
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:640px){.et-sidebar{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} @media(max-width:640px){.et-topbar{gap:6px!important;padding:0 10px!important;}.et-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;}.et-tabs button{flex-shrink:0;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:220,minWidth:220,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0,overflow:"hidden"}}>
         {/* Logo */}
         <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#e74c3c,#c0392b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🛒</div>
-            <div>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:400,fontSize:13,color:"#fff",lineHeight:1.45,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,maxWidth:"100%"}}>
+            <EstrategiaTradeIcon size={44} radius={12}/>
+            <div style={{minWidth:0,flex:1,maxWidth:"calc(100% - 54px)"}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:14,color:"#fff",lineHeight:1.15,paddingBottom:4,overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.3)",letterSpacing:".04em"}}>Control de Implementaciones</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.62)",letterSpacing:"0",lineHeight:1.2,whiteSpace:"normal",wordBreak:"break-word",maxWidth:"100%"}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
         </div>
@@ -5485,8 +5521,8 @@ function ChecklistApp() {
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
         {/* ── TOPBAR ── */}
-        <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>Control de Implementaciones</div>
+        <div className="et-topbar" style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+          <div style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
@@ -5505,7 +5541,7 @@ function ChecklistApp() {
 
         {/* ── TABS (Evidencias / Auditoría sub) dentro del módulo 0 ── */}
         {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",display:"flex",gap:0,flexShrink:0}}>
+          <div className="et-tabs" style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",display:"flex",gap:0,flexShrink:0}}>
             {SUB_EVIDENCIAS.map(tb=>(
               <button key={tb.i} onClick={()=>setTab(tb.i)}
                 style={{padding:"12px 16px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
@@ -5543,7 +5579,7 @@ function ChecklistApp() {
           const miPos=ranking.findIndex(r=>r.id===uDni)+1;
           return(
           <div style={{padding:"14px 16px",paddingBottom:80}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Mi desempeño</div>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Panel de avances</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
               {[
                 {label:"Visitas esta semana",val:misSemana.length,c:"#0984e3"},
@@ -5571,10 +5607,7 @@ function ChecklistApp() {
                 );})}
               </div>
             )}
-            <button onClick={()=>setAuditPaso(0)}
-              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
-              🔍 Iniciar nueva auditoría
-            </button>
+
           </div>
           );
         })()}
@@ -6133,7 +6166,7 @@ function ChecklistApp() {
 
             {/* Footer */}
             </>}
-            <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:400,letterSpacing:".02em",fontFamily:BRAND_FONT,lineHeight:1.5}}>
+            <div style={{marginTop:14,fontSize:"clamp(8px,2.2vw,10px)",color:"#b2bec3",textAlign:"center",borderTop:"1px solid #f0f4f8",paddingTop:10,fontWeight:500,letterSpacing:".04em"}}>
               EstrategiaTrade · {hoy}
             </div>
           </div>
@@ -6163,9 +6196,6 @@ function ChecklistApp() {
           </div>
         </div>
       )}
-
-        </div>
-      </div>
 
       {/* MODAL ANULAR */}
       {anularModal&&(
@@ -6233,7 +6263,16 @@ function ChecklistApp() {
           Permite ingresar el comentario que aparecerá como tooltip en las celdas N/A del reporte.
           Checkbox "Aplicar a toda la semana" crea la exclusión en cada fecha L-V del período activo.
       */}
-      {excModal&&(
+      {excModal&&(()=>{
+        const [excComentario, setExcComentario] = [excModal._comentario||"", (v)=>setExcModal(m=>({...m,_comentario:v}))];
+        const [excApplyAll,   setExcApplyAll]   = [excModal._applyAll||false, (v)=>setExcModal(m=>({...m,_applyAll:v}))];
+        const comentario = excModal._comentario??excModal.comentarioActual??"";
+        const applyAll   = excModal._applyAll??false;
+        const semActiva  = semanasDelMes.find(s=>s.days.some(d=>dStr(vYear,vMonth,d)===fecha));
+        const fechasPreview = semActiva
+          ? semActiva.days.map(d=>dStr(vYear,vMonth,d))
+          : [fecha];
+        return(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:65,backdropFilter:"blur(6px)"}}>
           <div style={{background:"#fff",borderRadius:20,padding:28,width:"92%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
             {/* Header */}
@@ -6265,31 +6304,31 @@ function ChecklistApp() {
             </label>
             <textarea
               autoFocus
-              value={excComentario}
+              value={comentario}
               onChange={e=>setExcModal(m=>({...m,_comentario:e.target.value}))}
               placeholder="Ej: Tienda en remodelación, sin operación esta semana..."
               rows={3}
-              style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1.5px solid ${excComentario?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
+              style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1.5px solid ${comentario?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
             />
-            <div style={{fontSize:9,color:"#b2bec3",marginTop:3,marginBottom:14}}>{excComentario.length}/200 caracteres · opcional pero recomendado</div>
+            <div style={{fontSize:9,color:"#b2bec3",marginTop:3,marginBottom:14}}>{comentario.length}/200 caracteres · opcional pero recomendado</div>
 
             {/* Checkbox aplicar a toda la semana — solo si es nueva exclusión */}
-            {!excModal.estaExcluida&&excSemActiva&&(
+            {!excModal.estaExcluida&&semActiva&&(
               <div style={{marginBottom:18}}>
-                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",padding:"11px 13px",background:excApplyAll?"#e0fafa":"#f8fafc",borderRadius:10,border:`1.5px solid ${excApplyAll?"#00b5b4":"#e2e8f0"}`,transition:"all .15s"}}>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",padding:"11px 13px",background:applyAll?"#e0fafa":"#f8fafc",borderRadius:10,border:`1.5px solid ${applyAll?"#00b5b4":"#e2e8f0"}`,transition:"all .15s"}}>
                   <input
                     type="checkbox"
-                    checked={excApplyAll}
+                    checked={applyAll}
                     onChange={e=>setExcModal(m=>({...m,_applyAll:e.target.checked}))}
                     style={{width:16,height:16,marginTop:1,cursor:"pointer",accentColor:"#00b5b4",flexShrink:0}}
                   />
                   <div>
-                    <div style={{fontSize:12,fontWeight:700,color:excApplyAll?"#0d7a79":"#1a2f4a"}}>
-                      Aplicar a todas las fechas de {excSemActiva.label}
+                    <div style={{fontSize:12,fontWeight:700,color:applyAll?"#0d7a79":"#1a2f4a"}}>
+                      Aplicar a todas las fechas de {semActiva.label}
                     </div>
                     <div style={{fontSize:10,color:"#8aaabb",marginTop:2,lineHeight:1.5}}>
-                      Excluirá {excFechasPreview.length} días:&nbsp;
-                      <span style={{fontFamily:"monospace",color:"#5a7a9a"}}>{excFechasPreview.join(" · ")}</span>
+                      Excluirá {fechasPreview.length} días:&nbsp;
+                      <span style={{fontFamily:"monospace",color:"#5a7a9a"}}>{fechasPreview.join(" · ")}</span>
                     </div>
                   </div>
                 </label>
@@ -6312,26 +6351,29 @@ function ChecklistApp() {
                     const entries = Array.isArray(cur)
                       ? cur.map(e=>typeof e==="string"?{fecha:e,comentario:""}:e)
                       : [];
-                    const updated = entries.map(e=>e.fecha===fecha?{...e,comentario:excComentario.trim()}:e);
+                    const updated = entries.map(e=>e.fecha===fecha?{...e,comentario:comentario.trim()}:e);
                     const newExceps = {...exceps,[key]:updated};
                     setExceps(newExceps);
                     try{ await saveConfig({excepciones:newExceps}); showToast("💬 Comentario actualizado"); }
                     catch(e){ showToast("❌ Error al guardar comentario"); }
                   } else {
                     // Modo nuevo: llamar toggleExcepcion con comentario y applyAll
-                    await toggleExcepcion(excModal.tId, excModal.aId, excComentario.trim(), excApplyAll);
+                    await toggleExcepcion(excModal.tId, excModal.aId, comentario.trim(), applyAll);
                   }
                   setExcModal(null);
                 }}
                 style={{flex:2,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>
-                {excModal.estaExcluida?"Guardar comentario":excApplyAll?"⚠️ Excluir toda la semana":"⚠️ Confirmar exclusión"}
+                {excModal.estaExcluida?"Guardar comentario":applyAll?"⚠️ Excluir toda la semana":"⚠️ Confirmar exclusión"}
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
 
+        </div>
+      </div>
     </div>
   );
 }
@@ -6720,26 +6762,12 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"90%",maxWidth:342,background:"#fff",borderRadius:20,padding:"32px 32px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
-        <div style={{width:65,height:65,borderRadius:16,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 22px rgba(0,0,0,.14)"}}>
-          <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-            {/* Clipboard */}
-            <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
-            <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
-            <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
-            <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
-            <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
-            {/* Magnifier */}
-            <circle cx="44" cy="44" r="14" fill="#37474F"/>
-            <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
-            <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
-            <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
-          </svg>
-        </div>
-        <div style={{fontFamily:BRAND_FONT,fontSize:19,fontWeight:400,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
+      <div style={{width:"100%",maxWidth:420,background:"#fff",borderRadius:20,padding:"32px 36px 40px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
+        <div style={{display:"flex",justifyContent:"center",margin:"-6px auto 18px"}}><EstrategiaTradeIcon size={82} radius={20}/></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,lineHeight:1.1,paddingBottom:6,marginBottom:10,overflow:"visible",display:"flex",justifyContent:"center",alignItems:"flex-end",gap:0,whiteSpace:"nowrap"}}>
           <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
-        <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:24,padding:"0 6px"}}>Control de Implementaciones y Auditoria</div>
+        <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:28,padding:"0 10px"}}>Control de Implementaciones y Auditoria</div>
 
         {/* Pantalla de bloqueo */}
         {bloqueo&&(
@@ -6767,16 +6795,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
             </button>
             <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
               style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <div style={{width:48,height:48,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
-                  <rect x="8" y="14" width="40" height="28" rx="5" fill="#74b9ff"/>
-                  <rect x="12" y="20" width="12" height="14" rx="6" fill="#e8f4fd"/>
-                  <rect x="28" y="22" width="16" height="3" rx="1.5" fill="white"/>
-                  <rect x="28" y="28" width="11" height="3" rx="1.5" fill="white"/>
-                  <circle cx="46" cy="42" r="10" fill="#00b894"/>
-                  <path d="M40 42l4 4 7-7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+              <AdminAccessIcon size={48}/>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
                 <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Ingresa tu DNI / código registrado</div>
@@ -6831,7 +6850,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
         {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
         {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
           <>
-            <div style={{fontSize:32,marginBottom:10}}>{step==="pin_viewer"?"👁️":"👑"}</div>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:10}}>{step==="pin_viewer"?<span style={{fontSize:32}}>👁️</span>:<AdminAccessIcon size={54}/>}</div>
             <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
               {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
             </p>
