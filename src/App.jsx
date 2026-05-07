@@ -1960,8 +1960,10 @@ function ChecklistApp() {
       const ds=dStr(vYear,vMonth,d);
       const wd=new Date(vYear,vMonth,d).getDay();
       return actsActivas.filter(a=>
-        a.activa&&a.dias.includes(wd)&&(
-          a.cat==="Always On"||
+        a.activa&&(
+          // Día asignado: Always On aparece siempre en sus días
+          (a.dias.includes(wd)&&a.cat==="Always On")||
+          // Cualquier actividad (Always On o no) aparece si tiene registro real ese día
           tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
         )
       );
@@ -5806,7 +5808,7 @@ function ChecklistApp() {
         // actsRef debe declararse ANTES de cualquier uso
         const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
           const reg=getReg(hoy,ti.id,a.id);
-          return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+          return reg?.evidencias?.length>0&&!reg?.anulado;
         }));
         const actsRefCard=actsConRegHoy;
         // Filtro de actividad — disponible para todos los roles
@@ -5894,7 +5896,7 @@ function ChecklistApp() {
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                 <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1,marginTop:0}}>📁</span>
                 <div>
-                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em",lineHeight:1.1}}>ESTADO DE REGISTROS</div>
+                  <div style={{fontFamily:BRAND_FONT,fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em",lineHeight:1.1}}>ESTADO DE REGISTROS</div>
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
                 </div>
               </div>
@@ -6056,7 +6058,7 @@ function ChecklistApp() {
             {(()=>{
               const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
                 const reg=getReg(hoy,ti.id,a.id);
-                return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
+                return reg?.evidencias?.length>0&&!reg?.anulado;
               }));
               const esParalelo=actsConRegHoy.length>1; // Escenario B
               if(actsConRegHoy.length===0) return null;
