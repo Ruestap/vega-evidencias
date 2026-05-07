@@ -5498,12 +5498,12 @@ function ChecklistApp() {
   const excFechasPreview = excSemActiva ? excSemActiva.days.map(d=>dStr(vYear,vMonth,d)) : [fecha];
 
   return (
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
+    <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:920px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar-title{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} @media(max-width:920px){.et-bottom-nav{display:flex!important;}}`}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:920px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:68px!important;} .et-topbar-title{display:none!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} @media(max-width:920px){.et-bottom-nav{display:flex!important;}} .et-app-root,.et-sidebar{height:100vh;height:100dvh;}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:360,minWidth:360,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
         {/* Logo */}
         <div style={{padding:"20px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
@@ -5537,7 +5537,7 @@ function ChecklistApp() {
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
         {/* ── TOPBAR ── */}
-        <div style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+        <div className="et-topbar" style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
           <div style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
@@ -5547,7 +5547,7 @@ function ChecklistApp() {
           {isAdmin&&<button onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}>📄 PDF</button>}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
-            <div style={{lineHeight:1.2}}>
+            <div className="et-topbar-user-name" style={{lineHeight:1.2}}>
               <div style={{fontSize:11,color:"#fff",fontWeight:600}}>{uName}</div>
               <div style={{fontSize:9,color:"rgba(255,255,255,.4)"}}>{isAdmin?"Administrador":isAuditor?"Auditor":"Visitante"}</div>
             </div>
@@ -5595,7 +5595,7 @@ function ChecklistApp() {
           const miPos=ranking.findIndex(r=>r.id===uDni)+1;
           return(
           <div style={{padding:"14px 16px",paddingBottom:80}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:14}}>Panel de Avances</div>
+            <div style={{fontWeight:800,fontSize:18,color:"#1a2f4a",marginBottom:14}}>Panel de Avances</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:14}}>
               {[
                 {label:"Visitas esta semana",val:misSemana.length,c:"#0984e3"},
@@ -6483,7 +6483,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
 
   return(
     <div style={{paddingBottom:80}}>
-      <div style={{padding:"14px 16px 4px",fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Selecciona la tienda a auditar</div>
+      <div style={{padding:"10px 16px 4px",fontWeight:800,fontSize:18,color:"#1a2f4a"}}>Seleccione Tienda a Auditar</div>
 
       {/* Filtro por formato */}
       <div style={{display:"flex",gap:5,padding:"8px 16px",overflowX:"auto"}}>
