@@ -5796,7 +5796,7 @@ function ChecklistApp() {
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
-        const hoy=fecha; // fecha = estado seleccionado en el header (puede ser distinto a todayStr())
+        const hoy=todayStr(); // Estado siempre muestra el día real, no el selector del header
         const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
