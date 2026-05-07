@@ -5808,7 +5808,7 @@ function ChecklistApp() {
           const reg=getReg(hoy,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado&&reg?.fecha===hoy;
         }));
-        const actsRefCard=actsConRegHoy.length>0?actsConRegHoy:actsHoy;
+        const actsRefCard=actsConRegHoy;
         // Filtro de actividad — disponible para todos los roles
         // B17 fix: TDZ resuelto — actsParaStatus sin referencia circular
         const actsParaStatus = statusActFiltro==="Todas"
@@ -5932,8 +5932,17 @@ function ChecklistApp() {
               </div>
             )}
 
+            {/* ── SIN REGISTROS AÚN ── */}
+            {actsRefCard.length===0&&(
+              <div style={{textAlign:"center",padding:"28px 16px",background:"#fff8e1",borderRadius:12,border:"1px solid #fde68a",margin:"8px 0"}}>
+                <div style={{fontSize:32,marginBottom:8}}>⏳</div>
+                <div style={{fontWeight:700,fontSize:14,color:"#92400e",marginBottom:4}}>Sin registros aún hoy</div>
+                <div style={{fontSize:12,color:"#a16207"}}>Las actividades aparecerán aquí cuando se realice el primer registro del día</div>
+              </div>
+            )}
+
             {/* ── VISTA GERENCIAL ── */}
-            {statusCardView==="gerencial"&&isAdmin&&(()=>{
+            {actsRefCard.length>0&&statusCardView==="gerencial"&&isAdmin&&(()=>{
               // Actividad con registros hoy
               const actHoyLabel=actsParaStatus.length>0?actsParaStatus[0]:null;
               // KPI 1: cumplimiento hoy = registradas / disponibles
@@ -6042,7 +6051,7 @@ function ChecklistApp() {
             })()}
 
             {/* ── VISTA OPERATIVA ── */}
-            {statusCardView==="operativo"&&<>
+            {actsRefCard.length>0&&statusCardView==="operativo"&&<>
             {/* ── Actividades con registros hoy — detecta A/B automáticamente ── */}
             {(()=>{
               const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
