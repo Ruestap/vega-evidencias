@@ -587,32 +587,24 @@ function ChecklistApp() {
   useEffect(()=>{
     const sync = () => {
       const hoy = todayStr();
-      setFecha(prev => {
-        if(prev === hoy) return prev;
-        setActSel(null);
-        setPaso(1);
-        setTSel(new Set());
-        setRango(null);
-        setRangoExt(null);
-        setVerRegistradas(false);
-        return hoy;
-      });
+      setFecha(prev => prev === hoy ? prev : hoy); // solo cambia si el día cambió
       setHoraEx(horaHHMM());
     };
-    const onVisibility = () => { if(document.visibilityState === "visible") sync(); };
-    document.addEventListener("visibilitychange", onVisibility);
+    // visibilitychange: se dispara cuando la pestaña vuelve a ser visible
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") sync(); });
+    // focus: respaldo para móviles que no disparan visibilitychange correctamente
     window.addEventListener("focus", sync);
+    // También un interval cada 60s para detectar cambio de día mientras está activa
     const iv = setInterval(()=>{
-      if(document.visibilityState === "visible") sync();
+      if(document.visibilityState==="visible") sync();
     }, 60000);
     return ()=>{
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("focus", sync);
       clearInterval(iv);
     };
   },[]);
   const statusCardRef = useRef(null);
-  const autoRepairAORef = useRef(new Set());
 
   /* ══ FIREBASE SYNC ══ */
   useEffect(()=>{
@@ -904,16 +896,6 @@ function ChecklistApp() {
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
-  const getUniqueAlwaysOnForFecha = useCallback((fechaStr)=>{
-    const dw = getDow(fechaStr);
-    const candidatas = acts.filter(a=>a.activa && a.cat === "Always On" && a.dias.includes(dw));
-    return candidatas.length === 1 ? candidatas[0] : null;
-  },[acts]);
-  const actividadValidaParaFecha = useCallback((actId, fechaStr)=>{
-    const a = acts.find(x=>x.id===actId);
-    if(!a) return false;
-    return a.activa && a.dias.includes(getDow(fechaStr));
-  },[acts]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
     const override = rangosDia?.[actId]?.[fechaStr];
     if(override) return override;
@@ -947,75 +929,6 @@ function ChecklistApp() {
     // Usa regsIndex para O(1) lookup — ya memoizado por useMemo([regs])
     return regsIndex?.[docId]||regsIndex?.[k]||regs[docId]||regs[k]||null;
   },[regs,regsIndex]);
-
-  // Auto-reparación segura: corrige registros Always On guardados con actividad de otro día.
-  // Ej.: jueves guardado como Miérc. de Tic Tac → Jueves Verse Bien. No toca Ad-hoc/Promocional.
-  useEffect(()=>{
-    if(role !== "admin" || !acts.length || !Object.keys(regs).length) return;
-    const pendientes = [];
-    Object.entries(regs).forEach(([docId,reg])=>{
-      if(!reg?.evidencias?.length || reg.anulado || !reg.fecha || !reg.tiendaId || !reg.actividadId) return;
-      if(autoRepairAORef.current.has(docId)) return;
-      const actActual = acts.find(a=>a.id===reg.actividadId);
-      if(!actActual || actActual.cat !== "Always On") return;
-      if(actActual.dias.includes(getDow(reg.fecha))) return;
-      const actCorrecta = getUniqueAlwaysOnForFecha(reg.fecha);
-      if(!actCorrecta || actCorrecta.id === actActual.id) return;
-      pendientes.push({docId,reg,actActual,actCorrecta});
-    });
-    if(!pendientes.length) return;
-
-    let cancelado = false;
-    (async()=>{
-      let reparados = 0;
-      for(const item of pendientes){
-        if(cancelado) return;
-        const {docId,reg,actActual,actCorrecta} = item;
-        autoRepairAORef.current.add(docId);
-        const targetDocId = rKey(reg.fecha,reg.tiendaId,actCorrecta.id).replace(/\|/g,"--");
-        if(targetDocId === docId) continue;
-        const target = regs[targetDocId] || {};
-        const mergedEvs = [...(target.evidencias||[]), ...(reg.evidencias||[])]
-          .filter(Boolean)
-          .map(ev=>({
-            ...ev,
-            observacion: ev.observacion || `Auto-corrección de ${actActual.n} a ${actCorrecta.n}`
-          }))
-          .sort((a,b)=>(a.hora||"").localeCompare(b.hora||""));
-        const dedup = [];
-        const seen = new Set();
-        mergedEvs.forEach(ev=>{
-          const k = `${ev.id||""}|${ev.hora||""}|${ev.timestamp||""}|${ev.auditor||""}`;
-          if(seen.has(k)) return;
-          seen.add(k);
-          dedup.push(ev);
-        });
-        await setDoc(doc(db,"registros",targetDocId),{
-          ...target,
-          evidencias: dedup,
-          fecha: reg.fecha,
-          tiendaId: reg.tiendaId,
-          actividadId: actCorrecta.id,
-          autocorreccionActividad:{
-            desde: actActual.id,
-            desdeNombre: actActual.n,
-            hacia: actCorrecta.id,
-            haciaNombre: actCorrecta.n,
-            corregidoEn: new Date().toISOString(),
-          },
-          updatedAt: new Date().toISOString(),
-        });
-        await deleteDoc(doc(db,"registros",docId));
-        reparados++;
-      }
-      if(reparados>0) showToast(`🛠️ ${reparados} registro(s) Always On corregido(s) por día`);
-    })().catch(e=>{
-      console.error("autoRepair Always On error:",e);
-      showToast("⚠️ No se pudo auto-corregir registros Always On");
-    });
-    return()=>{ cancelado = true; };
-  },[role,acts,regs,getUniqueAlwaysOnForFecha,showToast]);
-
   const isExc = useCallback((tId,aId,fechaCheck)=>{
     const v = exceps[tId+"|"+aId];
     if(!v) return false;
@@ -1236,23 +1149,6 @@ function ChecklistApp() {
   /* ── confirmar registros en bloque ── */
   const confirmarRegistro = async ()=>{
     if(!horaEx||tSel.size===0||!actSel)return;
-    // Bloqueo duro: la actividad seleccionada debe corresponder al día de la fecha.
-    // Evita arrastres de pestaña/caché: miércoles no puede guardarse en jueves.
-    if(!actividadValidaParaFecha(actSel, fecha)) {
-      const sugerida = getUniqueAlwaysOnForFecha(fecha);
-      if(sugerida){
-        setActSel(sugerida.id);
-        setTSel(new Set());
-        setPaso(2);
-        showToast(`⚠️ Actividad corregida a ${sugerida.n}. Vuelve a seleccionar tiendas.`);
-      } else {
-        setActSel(null);
-        setTSel(new Set());
-        setPaso(1);
-        showToast("⚠️ La actividad no corresponde a la fecha seleccionada.");
-      }
-      return;
-    }
     // Bug 8 fix: auditores solo pueden registrar en la fecha actual
     if(!isAdmin && fecha !== todayStr()) {
       showToast("⚠️ Solo puedes registrar en la fecha de hoy. Contacta al Admin para corregir registros.");
@@ -3897,16 +3793,16 @@ function ChecklistApp() {
   };
 
   /* ══ TAB CONFIG ══ */
-  const renderConfig = ()=>(
+  const renderConfig = ({hideTabs=false}={})=>(
     <div style={{padding:"16px"}}>
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
+      {!hideTabs&&<div style={{display:"flex",gap:8,marginBottom:16}}>
         {["Usuarios","Actividades","Tiendas","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
           </button>
         ))}
-      </div>
+      </div>}
 
       {cfgTab===0&&(
         <div>
@@ -5564,39 +5460,35 @@ function ChecklistApp() {
     );
   };
 
-  // ── Módulos principales (pestañas de primer nivel)
-  const MODULOS = [
-    {id:0, label:"📋 Evidencias", roles:["admin","auditor","viewer"]},
-    {id:1, label:"🔍 Auditoría",  roles:["admin","auditor"]},
-    {id:2, label:"⚙️ Config",     roles:["admin"]},
+  // ── Navegación visual escalable por módulos
+  // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
+  // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
+  const HOME_MAIN_TABS = [
+    {id:"actividades",label:"📋 Actividades",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"auditoria", label:"🛡️ Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
-  // Sub-tabs por módulo
   const SUB_EVIDENCIAS = isViewer
     ? [{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
-    : isAuditor
-    ? [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
     : [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}];
 
-  const tabs = modulo===0 ? SUB_EVIDENCIAS
-    : modulo===1 ? [{i:4,label:"Registro Auditoría"}]
-    : [{i:3,label:"Configuración"}];
+  const SUB_AUDITORIA = [
+    {i:4,label:"Registro"},
+    {i:5,label:"Reporte"},
+    {i:6,label:"Dashboard"},
+  ];
+
+  const homeMainActive = tab>=4 ? "auditoria" : "actividades";
+  const homeSubTabs = homeMainActive==="auditoria" ? SUB_AUDITORIA : SUB_EVIDENCIAS;
 
   // Sidebar menu items
   const SIDEBAR_ITEMS = [
     {id:"inicio",  label:"Inicio",        icon:"🏠", mod:0, tab:isViewer?1:0},
-    {id:"reporte", label:"Reportes",      icon:"📊", mod:0, tab:1},
-    {id:"dash",    label:"Dashboard",     icon:"📈", mod:0, tab:2},
-    ...(isAuditor?[{id:"audit",label:"Auditoría",icon:"🔍",mod:1,tab:4}]:[]),
-    ...(isAdmin?[{id:"config",label:"Configuración",icon:"⚙️",mod:2,tab:3}]:[]),
+    ...(isAdmin?[{id:"tiendas",label:"Tiendas",icon:"🏪",mod:1,tab:3,cfgTab:2}]:[]),
+    ...(isAdmin?[{id:"usuarios",label:"Usuarios",icon:"👥",mod:2,tab:3,cfgTab:0}]:[]),
+    ...(isAdmin?[{id:"config",label:"Configuración",icon:"⚙️",mod:3,tab:3}]:[]),
   ];
-  const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo&&it.tab===tab)?.id||SIDEBAR_ITEMS[0]?.id;
-
-  const pageTitle = modulo===0&&tab===0?"Registro de Evidencias"
-    :modulo===0&&tab===1?"Reporte de Evidencias"
-    :modulo===0&&tab===2?"Dashboard"
-    :modulo===1?"Auditoría"
-    :"Configuración";
+  const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo)?.id||SIDEBAR_ITEMS[0]?.id;
 
   const excComentario = excModal?._comentario??excModal?.comentarioActual??"";
   const excApplyAll = excModal?._applyAll??false;
@@ -5625,7 +5517,7 @@ function ChecklistApp() {
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
-            <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
+            <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
               style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
@@ -5671,26 +5563,41 @@ function ChecklistApp() {
           </div>
         </div>
 
-        {/* ── TABS (Evidencias / Auditoría sub) dentro del módulo 0 ── */}
+        {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",display:"flex",gap:0,flexShrink:0}}>
-            {SUB_EVIDENCIAS.map(tb=>(
-              <button key={tb.i} onClick={()=>setTab(tb.i)}
-                style={{padding:"12px 16px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
-                  color:tab===tb.i?"#2F6BFF":"#64748B",fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                {tb.i===0?"📋":tb.i===1?"📊":"📈"} {tb.label}
-              </button>
-            ))}
+          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",flexShrink:0}}>
+            <div style={{display:"flex",gap:8,paddingTop:12,overflowX:"auto"}}>
+              {HOME_MAIN_TABS.map(m=>(
+                <button key={m.id} onClick={()=>setTab(m.defaultTab)}
+                  style={{minWidth:180,padding:"14px 18px",borderRadius:"12px 12px 0 0",border:"1px solid #E2E8F0",borderBottom:`3px solid ${homeMainActive===m.id?"#2F6BFF":"transparent"}`,background:homeMainActive===m.id?"#fff":"#F8FAFC",
+                    color:homeMainActive===m.id?"#2F6BFF":"#64748B",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:0,overflowX:"auto"}}>
+              {homeSubTabs.map(tb=>(
+                <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
+                  style={{padding:"12px 18px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
+                    color:tab===tb.i?"#2F6BFF":"#64748B",fontWeight:tab===tb.i?800:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                  {tb.i===0||tb.i===4?"📋":tb.i===1||tb.i===5?"📊":"📈"} {tb.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* ── CONTENIDO ── */}
         <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
-      {tab===0&&isAuditor&&renderRegistro()}
-      {tab===1&&renderReporte()}
-      {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
-      {tab===3&&isAdmin&&renderConfig()}
-      {tab===4&&isAuditor&&(
+      {modulo===0&&tab===0&&isAuditor&&renderRegistro()}
+      {modulo===0&&tab===1&&renderReporte()}
+      {modulo===0&&tab===2&&(isViewer?renderViewerDash():renderDashboard())}
+      {modulo===1&&isAdmin&&renderConfig({hideTabs:true})}
+      {modulo===2&&isAdmin&&renderConfig({hideTabs:true})}
+      {modulo===3&&isAdmin&&renderConfig()}
+      {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
+      {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
+      {modulo===0&&tab===4&&isAuditor&&(
         <>
         {/* Dashboard personal auditor — visible cuando no está en una auditoría activa */}
         {auditPaso===0&&(()=>{
@@ -6510,7 +6417,7 @@ function ChecklistApp() {
         {SIDEBAR_ITEMS.map(it=>{
           const active=sidebarActive===it.id;
           return(
-            <button key={it.id} onClick={()=>{setModulo(it.mod);setTab(it.tab);}}
+            <button key={it.id} onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
               style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",
                 color:active?"#2F6BFF":"rgba(255,255,255,.5)",padding:"4px 0"}}>
               <span style={{fontSize:20}}>{it.icon}</span>
