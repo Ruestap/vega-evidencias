@@ -545,6 +545,8 @@ function ChecklistApp() {
   const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
   const [cfgTab,  setCfgTab]  = useState(0);
+  const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva en módulo Tiendas
+  const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
   const [logFmt,  setLogFmt]  = useState("Todos");
   const [logAct,  setLogAct]  = useState("Todas");
   const [logAud,  setLogAud]  = useState("Todos");
@@ -4182,72 +4184,160 @@ function ChecklistApp() {
         </div>
       )}
 
-      {cfgTab===2&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div>
-              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Tiendas</div>
-              <div style={{fontSize:11,color:"#8aaabb"}}>{tiendas.filter(ti=>ti.activa).length} activas · {tiendas.filter(ti=>!ti.activa).length} inactivas</div>
-            </div>
-            <button onClick={()=>setShowNT(!showNT)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#00b5b4",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nueva</button>
-          </div>
-          {showNT&&(
-            <div style={{...S.card,padding:"14px",marginBottom:14}}>
-              <div style={{marginBottom:8}}><label style={S.lbl}>NOMBRE (sin "Vega")</label><input value={newT.n} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="Ej: La Victoria" style={S.inp}/></div>
-              <div style={{marginBottom:10}}>
-                <label style={S.lbl}>FORMATO</label>
-                <div style={{display:"flex",gap:6}}>
-                  {["Mayorista","Supermayorista","Market"].map(f=>{const fc=FMT[f];return(
-                    <button key={f} onClick={()=>setNewT(p=>({...p,f}))} style={{flex:1,padding:"9px",borderRadius:9,border:`1.5px solid ${newT.f===f?fc.c:"#e2e8f0"}`,background:newT.f===f?fc.bg:"#fff",color:newT.f===f?fc.c:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{f.slice(0,5)}</button>
-                  );})}
-                </div>
+      {cfgTab===2&&(()=>{
+        /* ── íconos SVG inline consistentes para formatos de tienda ── */
+        const IcoMayorista=({size=20,color="currentColor"})=>(
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+            <line x1="12" y1="12" x2="12" y2="16"/>
+            <line x1="10" y1="14" x2="14" y2="14"/>
+          </svg>
+        );
+        const IcoSupermayorista=({size=20,color="currentColor"})=>(
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+        );
+        const IcoMarket=({size=20,color="currentColor"})=>(
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9,22 9,12 15,12 15,22"/>
+          </svg>
+        );
+        const FMT_ICO={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket};
+        const FMT_LABELS={Mayorista:"Mayorista",Supermayorista:"Supermayorista",Market:"Market"};
+        /* estados viven en el componente principal: tpTab/setTpTab, fmtTab/setFmtTab */
+
+        const PILL_ON ={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.25)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+        const PILL_OFF={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+
+        return(
+          <div>
+            {/* ── pestañas principales Tiendas / Nueva ── */}
+            <div style={{background:"#F5F7FB",padding:"12px 0 0",marginBottom:0}}>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>setTpTab("lista")} style={tpTab==="lista"?PILL_ON:PILL_OFF}>
+                  <IcoMarket size={18} color={tpTab==="lista"?"#fff":"#6B7280"}/>
+                  Tiendas
+                </button>
+                <button onClick={()=>setTpTab("nueva")} style={tpTab==="nueva"?PILL_ON:PILL_OFF}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="nueva"?"#fff":"#6B7280"} strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                  </svg>
+                  Nueva
+                </button>
               </div>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>{if(!newT.n.trim())return;const nt={id:"t"+Date.now(),n:newT.n.trim(),f:newT.f,activa:true};setTiendas(p=>{const np=[...p,nt];saveConfig({tiendas:np});return np;});setNewT({n:"",f:"Market"});setShowNT(false);}}
-                  style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#00b5b4",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Agregar</button>
-                <button onClick={()=>setShowNT(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
-              </div>
-            </div>
-          )}
-          {["Mayorista","Supermayorista","Market"].map(fmt=>{
-            const fc=FMT[fmt];
-            const ts=tiendas.filter(ti=>ti.f===fmt);
-            return(
-              <div key={fmt} style={{marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                  <div style={{width:4,height:16,borderRadius:2,background:fc.c}}/>
-                  <span style={{fontWeight:800,fontSize:12,color:fc.c}}>{fmt.toUpperCase()}</span>
-                  <span style={{fontSize:11,color:"#8aaabb"}}>{ts.filter(ti=>ti.activa).length} activas</span>
+
+              {/* ── subpestañas formato (solo en pestaña lista) ── */}
+              {tpTab==="lista"&&(
+                <div style={{display:"flex",gap:0,background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0"}}>
+                  {["Mayorista","Supermayorista","Market"].map(fmt=>{
+                    const IcoFmt=FMT_ICO[fmt];
+                    const fc=FMT[fmt];
+                    const active=fmtTab===fmt;
+                    return(
+                      <button key={fmt} onClick={()=>setFmtTab(fmt)}
+                        style={{padding:"9px 16px",border:"none",borderRadius:"8px 8px 0 0",
+                          borderBottom:`3px solid ${active?fc.c:"transparent"}`,
+                          background:active?fc.bg+"80":"transparent",
+                          color:active?fc.c:"#64748B",
+                          fontWeight:active?700:500,fontSize:13,cursor:"pointer",
+                          display:"flex",alignItems:"center",gap:6,transition:"all .15s",whiteSpace:"nowrap"}}>
+                        <IcoFmt size={16} color={active?fc.c:"#94A3B8"}/>
+                        {FMT_LABELS[fmt]}
+                      </button>
+                    );
+                  })}
                 </div>
-                {ts.map(ti=>{
-                  const zonalU=usuarios.find(u=>u.id===ti.zonaId);
-                  return(
-                  <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.55}}>
-                    <div style={{padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:12,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</div>
-                        <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
-                          {ti.email&&<span>✉ {ti.email}</span>}
-                          {zonalU&&<span>👤 {zonalU.nombre}</span>}
+              )}
+            </div>
+
+            {/* ── contenido pestaña LISTA ── */}
+            {tpTab==="lista"&&(()=>{
+              const fc=FMT[fmtTab];
+              const ts=tiendas.filter(ti=>ti.f===fmtTab);
+              const nAct=ts.filter(ti=>ti.activa).length;
+              const nInact=ts.filter(ti=>!ti.activa).length;
+              return(
+                <div style={{background:"#fff",borderRadius:"0 0 10px 10px",padding:"14px",border:"1px solid #E2E8F0",borderTop:"none"}}>
+                  <div style={{fontSize:11,color:"#8aaabb",marginBottom:10}}>
+                    {nAct} activas · {nInact} inactivas
+                  </div>
+                  {ts.map(ti=>{
+                    const zonalU=usuarios.find(u=>u.id===ti.zonaId);
+                    return(
+                      <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.6}}>
+                        <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:700,fontSize:13,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</div>
+                            <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
+                              {ti.email&&<span>✉ {ti.email}</span>}
+                              {zonalU&&<span>👤 {zonalU.nombre}</span>}
+                            </div>
+                          </div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            <button onClick={()=>setTiendaEditModal({...ti})}
+                              style={{padding:"5px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              Editar
+                            </button>
+                            <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
+                              style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                              {ti.activa?"Cerrar":"Activar"}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div style={{display:"flex",gap:5,flexShrink:0}}>
-                        <button onClick={()=>setTiendaEditModal({...ti})}
-                          style={{padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>✏️ Editar</button>
-                        <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
-                          style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:10,fontWeight:700}}>
-                          {ti.activa?"Cerrar":"Activar"}
+                    );
+                  })}
+                  {ts.length===0&&<div style={{textAlign:"center",padding:"24px",fontSize:12,color:"#b2bec3"}}>Sin tiendas en este formato</div>}
+                </div>
+              );
+            })()}
+
+            {/* ── contenido pestaña NUEVA ── */}
+            {tpTab==="nueva"&&(
+              <div style={{background:"#fff",borderRadius:"0 10px 10px 10px",padding:"20px",border:"1px solid #E2E8F0",borderTop:"none",marginTop:0}}>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".06em",marginBottom:8}}>NOMBRE (sin "Vega")</label>
+                  <input value={newT.n} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="Ej: La Victoria"
+                    style={{width:"100%",padding:"13px 16px",borderRadius:12,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".06em",marginBottom:8}}>FORMATO</label>
+                  <div style={{display:"flex",gap:8}}>
+                    {["Mayorista","Supermayorista","Market"].map(f=>{
+                      const fc=FMT[f];
+                      const IcoFmt=FMT_ICO[f];
+                      const on=newT.f===f;
+                      return(
+                        <button key={f} onClick={()=>setNewT(p=>({...p,f}))}
+                          style={{flex:1,padding:"12px 8px",borderRadius:12,border:`1.5px solid ${on?fc.c:"#e2e8f0"}`,background:on?fc.bg:"#fff",color:on?fc.c:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all .15s"}}>
+                          <IcoFmt size={22} color={on?fc.c:"#94A3B8"}/>
+                          {f==="Supermayorista"?"Super":f}
                         </button>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                  );
-                })}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{if(!newT.n.trim())return;const nt={id:"t"+Date.now(),n:newT.n.trim(),f:newT.f,activa:true};setTiendas(p=>{const np=[...p,nt];saveConfig({tiendas:np});return np;});setNewT({n:"",f:"Market"});setTpTab("lista");setFmtTab(newT.f);}}
+                    style={{flex:1,padding:"13px",borderRadius:12,border:"none",background:"#00b5b4",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:14}}>
+                    Agregar
+                  </button>
+                  <button onClick={()=>{setTpTab("lista");setNewT({n:"",f:"Market"});}}
+                    style={{padding:"13px 20px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
+                    Cancelar
+                  </button>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
 
 
 
