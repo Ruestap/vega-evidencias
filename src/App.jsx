@@ -4185,28 +4185,94 @@ function ChecklistApp() {
       )}
 
       {cfgTab===2&&(()=>{
-        /* ── íconos SVG inline consistentes para formatos de tienda ── */
+        /* ── íconos SVG vectoriales fieles a las imágenes de referencia ── */
+
+        /* Mayorista → carrito logístico con cajas apiladas (imagen 2) */
         const IcoMayorista=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="7" width="20" height="14" rx="2"/>
-            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-            <line x1="12" y1="12" x2="12" y2="16"/>
-            <line x1="10" y1="14" x2="14" y2="14"/>
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* plataforma base */}
+            <rect x="2" y="17" width="20" height="2.5" rx="0.5"/>
+            {/* ruedas */}
+            <circle cx="5.5" cy="21.5" r="1.2"/>
+            <circle cx="18.5" cy="21.5" r="1.2"/>
+            {/* mango vertical */}
+            <line x1="3.5" y1="17" x2="3.5" y2="8"/>
+            <line x1="3.5" y1="8" x2="6" y2="8"/>
+            {/* caja inferior izq */}
+            <rect x="5" y="12" width="5" height="5" rx="0.4"/>
+            <path d="M6.5 12v1.5h2V12"/>
+            {/* caja inferior centro */}
+            <rect x="10" y="12" width="5" height="5" rx="0.4"/>
+            <path d="M11.5 12v1.5h2V12"/>
+            {/* caja inferior der */}
+            <rect x="15" y="12" width="5" height="5" rx="0.4"/>
+            <path d="M16.5 12v1.5h2V12"/>
+            {/* caja superior centro */}
+            <rect x="8.5" y="7" width="7" height="5" rx="0.4"/>
+            <path d="M10.5 7v1.5h3V7"/>
           </svg>
         );
+
+        /* Supermayorista → carrito de supermercado con productos (imagen 1) */
         const IcoSupermayorista=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 01-8 0"/>
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* mango/barra superior */}
+            <line x1="1" y1="2" x2="4" y2="2"/>
+            <line x1="4" y1="2" x2="5" y2="5"/>
+            {/* borde carrito */}
+            <path d="M5 5h14l-2 9H7L5 5z"/>
+            {/* productos dentro: 3 cajas */}
+            <rect x="7" y="5" width="3" height="3" rx="0.5"/>
+            <rect x="11" y="5" width="2.5" height="3" rx="0.5"/>
+            <rect x="14.5" y="5" width="2.5" height="3" rx="0.5"/>
+            {/* líneas internas del carrito */}
+            <line x1="9" y1="9.5" x2="8.5" y2="13.5"/>
+            <line x1="12" y1="9.5" x2="12" y2="13.5"/>
+            <line x1="15" y1="9.5" x2="15.5" y2="13.5"/>
+            {/* ruedas */}
+            <circle cx="9" cy="17" r="1.5"/>
+            <circle cx="17" cy="17" r="1.5"/>
           </svg>
         );
+
+        /* Market → canasta de mercado con productos (imagen 3) */
         const IcoMarket=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-            <polyline points="9,22 9,12 15,12 15,22"/>
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* canasta cuerpo */}
+            <path d="M3 10h18l-2 10H5L3 10z"/>
+            {/* borde superior de la canasta */}
+            <rect x="3" y="9" width="18" height="2" rx="0.4"/>
+            {/* ranuras de la canasta */}
+            <rect x="7" y="13" width="2.5" height="4" rx="0.4"/>
+            <rect x="10.75" y="13" width="2.5" height="4" rx="0.4"/>
+            <rect x="14.5" y="13" width="2.5" height="4" rx="0.4"/>
+            {/* productos encima */}
+            <line x1="7" y1="9" x2="5.5" y2="5"/>
+            <line x1="12" y1="9" x2="12" y2="4.5"/>
+            <line x1="17" y1="9" x2="18.5" y2="5"/>
+            <circle cx="12" cy="4" r="1"/>
           </svg>
         );
+
+        /* IcoTiendaLocal → local comercial para pestaña principal (imagen 4) */
+        const IcoTiendaLocal=({size=18,color="currentColor"})=>(
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* fachada */}
+            <rect x="2" y="7" width="20" height="15" rx="1"/>
+            {/* toldo/marquesina */}
+            <rect x="1" y="5" width="22" height="3" rx="0.5"/>
+            <line x1="1" y1="7" x2="23" y2="7"/>
+            {/* letrero con carrito */}
+            <rect x="7" y="2" width="10" height="4" rx="1"/>
+            {/* puerta */}
+            <rect x="9.5" y="14" width="5" height="8" rx="0.5"/>
+            {/* ventana izquierda */}
+            <rect x="3" y="11" width="5" height="5" rx="0.5"/>
+            {/* ventana derecha */}
+            <rect x="16" y="11" width="5" height="5" rx="0.5"/>
+          </svg>
+        );
+
         const FMT_ICO={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket};
         const FMT_LABELS={Mayorista:"Mayorista",Supermayorista:"Supermayorista",Market:"Market"};
         /* estados viven en el componente principal: tpTab/setTpTab, fmtTab/setFmtTab */
@@ -4220,7 +4286,7 @@ function ChecklistApp() {
             <div style={{background:"#F5F7FB",padding:"12px 0 0",marginBottom:0}}>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 <button onClick={()=>setTpTab("lista")} style={tpTab==="lista"?PILL_ON:PILL_OFF}>
-                  <IcoMarket size={18} color={tpTab==="lista"?"#fff":"#6B7280"}/>
+                  <IcoTiendaLocal size={18} color={tpTab==="lista"?"#fff":"#6B7280"}/>
                   Tiendas
                 </button>
                 <button onClick={()=>setTpTab("nueva")} style={tpTab==="nueva"?PILL_ON:PILL_OFF}>
