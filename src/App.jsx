@@ -5611,13 +5611,13 @@ function ChecklistApp() {
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(()=>{
           const TabIcoEvidencias=({active})=>(
-            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
-              <rect x="2" y="1" width="11" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6" fill="none"/>
-              <line x1="4.5" y1="5.5" x2="10.5" y2="5.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
-              <line x1="4.5" y1="8.5" x2="10.5" y2="8.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
-              <line x1="4.5" y1="11.5" x2="8" y2="11.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
-              <circle cx="15" cy="15" r="4.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.4" fill="none"/>
-              <polyline points="13.2,15 14.3,16.2 17,13.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="1" width="12" height="16" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6" fill="none"/>
+              <line x1="4.5" y1="5.5" x2="11.5" y2="5.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+              <line x1="4.5" y1="8.5" x2="11.5" y2="8.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+              <line x1="4.5" y1="11.5" x2="8.5" y2="11.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+              <circle cx="16" cy="16" r="4" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill="none"/>
+              <line x1="19" y1="19" x2="22" y2="22" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" strokeLinecap="round"/>
             </svg>
           );
           const TabIcoAuditoria=({active})=>(
@@ -5630,8 +5630,8 @@ function ChecklistApp() {
                 strokeLinecap="round" strokeLinejoin="round" fill="none"/>
             </svg>
           );
-          const TAB_PILL_ACTIVE={padding:"10px 18px",borderRadius:10,border:"none",cursor:"pointer",background:"#5880EF",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 10px rgba(88,128,239,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
-          const TAB_PILL_INACTIVE={padding:"10px 18px",borderRadius:10,border:"1px solid #E2E8F0",cursor:"pointer",background:"#F8FAFC",color:"#64748B",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const TAB_PILL_ACTIVE={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const TAB_PILL_INACTIVE={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
           return(
           <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
@@ -5649,9 +5649,9 @@ function ChecklistApp() {
               {homeSubTabs.map(tb=>(
                 <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
                   style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
-                    borderBottom:`3px solid ${tab===tb.i?"#5880EF":"transparent"}`,
-                    background:tab===tb.i?"#EEF3FF":"transparent",
-                    color:tab===tb.i?"#5880EF":"#64748B",
+                    borderBottom:`3px solid ${tab===tb.i?"#5B6CF7":"transparent"}`,
+                    background:tab===tb.i?"#EEEFFE":"transparent",
+                    color:tab===tb.i?"#5B6CF7":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
                   {tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
