@@ -5610,56 +5610,53 @@ function ChecklistApp() {
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(
-          <div style={{background:"#F5F7FB",padding:"16px 20px 0",flexShrink:0}}>
-            {/* ── Módulos principales — tarjetas grandes ── */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
+            {/* ── Pestañas principales — pills compactos ── */}
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
               {HOME_MAIN_TABS.map(m=>{
                 const active=homeMainActive===m.id;
                 const isEv=m.id==="actividades";
                 return(
                   <button key={m.id} onClick={()=>setTab(m.defaultTab)}
-                    style={{padding:"28px 20px",borderRadius:16,border:"none",cursor:"pointer",textAlign:"center",
-                      background:active?"#2F6BFF":isEv?"#F1F5F9":"#E8EFF8",
-                      color:active?"#fff":isEv?"#64748B":"#475569",
-                      boxShadow:active?"0 4px 16px rgba(47,107,255,.25)":"none",
-                      display:"flex",flexDirection:"column",alignItems:"center",gap:10,transition:"all .2s"}}>
+                    style={{padding:"10px 18px",borderRadius:10,border:"none",cursor:"pointer",
+                      background:active?"#2F6BFF":"#fff",
+                      color:active?"#fff":"#64748B",
+                      fontWeight:700,fontSize:14,
+                      boxShadow:active?"0 2px 10px rgba(47,107,255,.25)":"0 1px 3px rgba(0,0,0,.06)",
+                      display:"flex",alignItems:"center",gap:8,transition:"all .15s"}}>
                     {isEv?(
-                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect x="6" y="4" width="20" height="26" rx="3" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" fill="none"/>
-                        <line x1="10" y1="10" x2="22" y2="10" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
-                        <line x1="10" y1="14" x2="22" y2="14" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
-                        <line x1="10" y1="18" x2="16" y2="18" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
-                        <circle cx="26" cy="26" r="7" fill={active?"rgba(255,255,255,.25)":"#E2E8F0"}/>
-                        <polyline points="23,26 25,28 29,24" stroke={active?"#fff":"#64748B"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="2" y="1" width="11" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill="none"/>
+                        <line x1="4.5" y1="5" x2="10.5" y2="5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+                        <line x1="4.5" y1="7.5" x2="10.5" y2="7.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+                        <line x1="4.5" y1="10" x2="8" y2="10" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+                        <circle cx="14" cy="14" r="4" fill={active?"rgba(255,255,255,.25)":"#E2E8F0"}/>
+                        <polyline points="12.2,14 13.2,15 15.8,12.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                       </svg>
                     ):(
-                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <path d="M18 5L30 11V20C30 26 24.6 31.5 18 33C11.4 31.5 6 26 6 20V11L18 5Z" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" fill={active?"rgba(255,255,255,.15)":"none"}/>
-                        <polyline points="13,18 16,21 23,14" stroke={active?"#fff":"#64748B"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M9 2L16 5.5V10C16 13.5 12.8 16.8 9 17.5C5.2 16.8 2 13.5 2 10V5.5L9 2Z" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill={active?"rgba(255,255,255,.15)":"none"}/>
+                        <polyline points="6.5,9.5 8,11 11.5,7.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                       </svg>
                     )}
-                    <span style={{fontWeight:800,fontSize:16}}>{m.label}</span>
+                    {m.label}
                   </button>
                 );
               })}
             </div>
             {/* ── Subpestañas ── */}
-            <div style={{display:"flex",gap:10,background:"#fff",borderRadius:"12px 12px 0 0",padding:"10px 12px 0",boxShadow:"0 -1px 0 #E2E8F0"}}>
+            <div style={{display:"flex",gap:6,background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0"}}>
               {homeSubTabs.map(tb=>(
                 <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
-                  style={{padding:"10px 20px",border:"none",borderRadius:"8px 8px 0 0",
+                  style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
                     borderBottom:`3px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,
                     background:tab===tb.i?"#EEF3FF":"transparent",
                     color:tab===tb.i?"#2F6BFF":"#64748B",
-                    fontWeight:tab===tb.i?800:500,fontSize:14,cursor:"pointer",
+                    fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                  {tb.i===0||tb.i===4?(
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" fill="none"/><line x1="4" y1="5" x2="11" y2="5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="4" y1="7.5" x2="11" y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="4" y1="10" x2="8" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                  ):tb.i===1||tb.i===5?(
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="8" width="3" height="6" rx="1" fill="currentColor"/><rect x="6" y="5" width="3" height="9" rx="1" fill="currentColor"/><rect x="11" y="2" width="3" height="12" rx="1" fill="currentColor"/></svg>
-                  ):(
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><polyline points="1,11 5,7 8,9 14,3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
-                  )}
+                  {tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                  :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
+                  :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                   {tb.label}
                 </button>
               ))}
