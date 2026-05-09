@@ -287,6 +287,68 @@ const IcoClose = () => (
   </svg>
 );
 
+/* ══ ICONOS SVG DE FORMATO — globales (usados en Tiendas, Viewer, StatusCard) ══ */
+const IcoMayorista=({size=20,color="currentColor"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="17" width="20" height="2.5" rx="0.5"/>
+    <circle cx="5.5" cy="21.5" r="1.2"/>
+    <circle cx="18.5" cy="21.5" r="1.2"/>
+    <line x1="3.5" y1="17" x2="3.5" y2="8"/>
+    <line x1="3.5" y1="8" x2="6" y2="8"/>
+    <rect x="5" y="12" width="5" height="5" rx="0.4"/>
+    <path d="M6.5 12v1.5h2V12"/>
+    <rect x="10" y="12" width="5" height="5" rx="0.4"/>
+    <path d="M11.5 12v1.5h2V12"/>
+    <rect x="15" y="12" width="5" height="5" rx="0.4"/>
+    <path d="M16.5 12v1.5h2V12"/>
+    <rect x="8.5" y="7" width="7" height="5" rx="0.4"/>
+    <path d="M10.5 7v1.5h3V7"/>
+  </svg>
+);
+const IcoSupermayorista=({size=20,color="currentColor"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="1" y1="2" x2="4" y2="2"/>
+    <line x1="4" y1="2" x2="5" y2="5"/>
+    <path d="M5 5h14l-2 9H7L5 5z"/>
+    <rect x="7" y="5" width="3" height="3" rx="0.5"/>
+    <rect x="11" y="5" width="2.5" height="3" rx="0.5"/>
+    <rect x="14.5" y="5" width="2.5" height="3" rx="0.5"/>
+    <line x1="9" y1="9.5" x2="8.5" y2="13.5"/>
+    <line x1="12" y1="9.5" x2="12" y2="13.5"/>
+    <line x1="15" y1="9.5" x2="15.5" y2="13.5"/>
+    <circle cx="9" cy="17" r="1.5"/>
+    <circle cx="17" cy="17" r="1.5"/>
+  </svg>
+);
+const IcoMarket=({size=20,color="currentColor"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 10h18l-2 10H5L3 10z"/>
+    <rect x="3" y="9" width="18" height="2" rx="0.4"/>
+    <rect x="7" y="13" width="2.5" height="4" rx="0.4"/>
+    <rect x="10.75" y="13" width="2.5" height="4" rx="0.4"/>
+    <rect x="14.5" y="13" width="2.5" height="4" rx="0.4"/>
+    <line x1="7" y1="9" x2="5.5" y2="5"/>
+    <line x1="12" y1="9" x2="12" y2="4.5"/>
+    <line x1="17" y1="9" x2="18.5" y2="5"/>
+    <circle cx="12" cy="4" r="1"/>
+  </svg>
+);
+const IcoTiendaLocal=({size=18,color="currentColor"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="7" width="20" height="15" rx="1"/>
+    <rect x="1" y="5" width="22" height="3" rx="0.5"/>
+    <line x1="1" y1="7" x2="23" y2="7"/>
+    <rect x="7" y="2" width="10" height="4" rx="1"/>
+    <rect x="9.5" y="14" width="5" height="8" rx="0.5"/>
+    <rect x="3" y="11" width="5" height="5" rx="0.5"/>
+    <rect x="16" y="11" width="5" height="5" rx="0.5"/>
+  </svg>
+);
+const FmtIcon=({fmt,size=18,color})=>{
+  const Ico={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket}[fmt];
+  return Ico?<Ico size={size} color={color||FMT[fmt]?.c||"currentColor"}/>:null;
+};
+
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
     width:size,
@@ -3366,7 +3428,7 @@ function ChecklistApp() {
             gTotal+=fTotal;gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gBronce+=fBronce;gFuera+=fFuera;gPend+=fPend;gExc+=fExc;
             return {fmt,nd:fTotal,fDisp,fOro,fPlata,fBronce,fFuera,fPend,fExc,
               fOroMin,fOroMax,fPlataMin,fPlataMax,
-              fc:FMT[fmt],icon:fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"};
+              fc:FMT[fmt],icon:<FmtIcon fmt={fmt} size={18}/>};
           }).filter(Boolean).filter(r=>r.fDisp>0);
 
           if(gDisp===0) return null;
@@ -3503,7 +3565,7 @@ function ChecklistApp() {
                 {fmtRows.filter(r=>r.fOro>0).map(({fmt,icon,fc,nd,fDisp,fOro,fPend,fExc,fOroMin,fOroMax})=>(
                   <div key={fmt+"oro"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
                       <span style={{fontSize:11,color:"#8aaabb",fontWeight:700}}>{nd} total · {fDisp} disp.</span>
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#0F6E56",background:"#E1F5EE",whiteSpace:"nowrap"}}>✅ {String(fOro).padStart(2,"0")} reg.</span>
@@ -3527,7 +3589,7 @@ function ChecklistApp() {
                 {fmtRows.filter(r=>r.fPlata>0).map(({fmt,icon,nd,fDisp,fPlata,fPend,fExc,fPlataMin,fPlataMax})=>(
                   <div key={fmt+"plata"} style={{marginBottom:8,padding:"8px 12px",background:"#EDF4FF",borderRadius:10,border:"0.5px solid #B5D4F4"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#185FA5",background:"#e8f4fd",whiteSpace:"nowrap"}}>✅ {String(fPlata).padStart(2,"0")} reg.</span>
                       {fPlataMin!=="99:99"&&<span style={{fontSize:11,color:"#8aaabb",fontWeight:500,whiteSpace:"nowrap"}}>({fPlataMin}{fPlataMax!==fPlataMin?` a ${fPlataMax}`:""})</span>}
@@ -3549,7 +3611,7 @@ function ChecklistApp() {
                 {fmtRows.filter(r=>r.fBronce>0).map(({fmt,icon,fBronce})=>(
                   <div key={fmt+"bronce"} style={{marginBottom:8,padding:"8px 12px",background:"#f0edff",borderRadius:10,border:"0.5px solid #a29bfe"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#534AB7",background:"#f0edff",border:"1px solid #a29bfe",whiteSpace:"nowrap"}}>🥉 {String(fBronce).padStart(2,"0")} reg.</span>
                     </div>
@@ -3568,7 +3630,7 @@ function ChecklistApp() {
                 {fmtRows.filter(r=>r.fFuera>0).map(({fmt,icon,fFuera})=>(
                   <div key={fmt+"fuera"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13}}>{fmt}</span>
                       <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:"#dc2626",background:"#fff1f2",whiteSpace:"nowrap"}}>🔴 {String(fFuera).padStart(2,"0")} fuera</span>
                     </div>
@@ -4185,94 +4247,7 @@ function ChecklistApp() {
       )}
 
       {cfgTab===2&&(()=>{
-        /* ── íconos SVG vectoriales fieles a las imágenes de referencia ── */
-
-        /* Mayorista → carrito logístico con cajas apiladas (imagen 2) */
-        const IcoMayorista=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {/* plataforma base */}
-            <rect x="2" y="17" width="20" height="2.5" rx="0.5"/>
-            {/* ruedas */}
-            <circle cx="5.5" cy="21.5" r="1.2"/>
-            <circle cx="18.5" cy="21.5" r="1.2"/>
-            {/* mango vertical */}
-            <line x1="3.5" y1="17" x2="3.5" y2="8"/>
-            <line x1="3.5" y1="8" x2="6" y2="8"/>
-            {/* caja inferior izq */}
-            <rect x="5" y="12" width="5" height="5" rx="0.4"/>
-            <path d="M6.5 12v1.5h2V12"/>
-            {/* caja inferior centro */}
-            <rect x="10" y="12" width="5" height="5" rx="0.4"/>
-            <path d="M11.5 12v1.5h2V12"/>
-            {/* caja inferior der */}
-            <rect x="15" y="12" width="5" height="5" rx="0.4"/>
-            <path d="M16.5 12v1.5h2V12"/>
-            {/* caja superior centro */}
-            <rect x="8.5" y="7" width="7" height="5" rx="0.4"/>
-            <path d="M10.5 7v1.5h3V7"/>
-          </svg>
-        );
-
-        /* Supermayorista → carrito de supermercado con productos (imagen 1) */
-        const IcoSupermayorista=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {/* mango/barra superior */}
-            <line x1="1" y1="2" x2="4" y2="2"/>
-            <line x1="4" y1="2" x2="5" y2="5"/>
-            {/* borde carrito */}
-            <path d="M5 5h14l-2 9H7L5 5z"/>
-            {/* productos dentro: 3 cajas */}
-            <rect x="7" y="5" width="3" height="3" rx="0.5"/>
-            <rect x="11" y="5" width="2.5" height="3" rx="0.5"/>
-            <rect x="14.5" y="5" width="2.5" height="3" rx="0.5"/>
-            {/* líneas internas del carrito */}
-            <line x1="9" y1="9.5" x2="8.5" y2="13.5"/>
-            <line x1="12" y1="9.5" x2="12" y2="13.5"/>
-            <line x1="15" y1="9.5" x2="15.5" y2="13.5"/>
-            {/* ruedas */}
-            <circle cx="9" cy="17" r="1.5"/>
-            <circle cx="17" cy="17" r="1.5"/>
-          </svg>
-        );
-
-        /* Market → canasta de mercado con productos (imagen 3) */
-        const IcoMarket=({size=20,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {/* canasta cuerpo */}
-            <path d="M3 10h18l-2 10H5L3 10z"/>
-            {/* borde superior de la canasta */}
-            <rect x="3" y="9" width="18" height="2" rx="0.4"/>
-            {/* ranuras de la canasta */}
-            <rect x="7" y="13" width="2.5" height="4" rx="0.4"/>
-            <rect x="10.75" y="13" width="2.5" height="4" rx="0.4"/>
-            <rect x="14.5" y="13" width="2.5" height="4" rx="0.4"/>
-            {/* productos encima */}
-            <line x1="7" y1="9" x2="5.5" y2="5"/>
-            <line x1="12" y1="9" x2="12" y2="4.5"/>
-            <line x1="17" y1="9" x2="18.5" y2="5"/>
-            <circle cx="12" cy="4" r="1"/>
-          </svg>
-        );
-
-        /* IcoTiendaLocal → local comercial para pestaña principal (imagen 4) */
-        const IcoTiendaLocal=({size=18,color="currentColor"})=>(
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {/* fachada */}
-            <rect x="2" y="7" width="20" height="15" rx="1"/>
-            {/* toldo/marquesina */}
-            <rect x="1" y="5" width="22" height="3" rx="0.5"/>
-            <line x1="1" y1="7" x2="23" y2="7"/>
-            {/* letrero con carrito */}
-            <rect x="7" y="2" width="10" height="4" rx="1"/>
-            {/* puerta */}
-            <rect x="9.5" y="14" width="5" height="8" rx="0.5"/>
-            {/* ventana izquierda */}
-            <rect x="3" y="11" width="5" height="5" rx="0.5"/>
-            {/* ventana derecha */}
-            <rect x="16" y="11" width="5" height="5" rx="0.5"/>
-          </svg>
-        );
-
+        /* íconos de formato — globales: IcoMayorista, IcoSupermayorista, IcoMarket, IcoTiendaLocal, FmtIcon */
         const FMT_ICO={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket};
         const FMT_LABELS={Mayorista:"Mayorista",Supermayorista:"Supermayorista",Market:"Market"};
         /* estados viven en el componente principal: tpTab/setTpTab, fmtTab/setFmtTab */
@@ -5148,7 +5123,7 @@ function ChecklistApp() {
                 onMouseLeave={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display="none";}}
                 onTouchStart={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,cursor:"default"}}>
-                  <span style={{fontSize:13,flexShrink:0}}>{fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒"}</span>
+                  <span style={{flexShrink:0,display:"flex",alignItems:"center"}}><FmtIcon fmt={fmt} size={16}/></span>
                   <span style={{fontSize:11,fontWeight:700,color:"#1a2f4a",minWidth:80,flexShrink:0}}>{fmt}</span>
                   <div style={{flex:1,background:"#f0f4f8",borderRadius:20,height:7,overflow:"hidden"}}>
                     <div style={{height:"100%",width:(pct||0)+"%",background:sc(pct||0),borderRadius:20,transition:"width .4s"}}/>
@@ -5339,14 +5314,14 @@ function ChecklistApp() {
           const ff=[...fM.values()].filter(v=>v===0).length;
           const fNR=nd-nr;
           const fcfg=FMT[fmt];
-          const fmtIcon=fmt==="Mayorista"?"🏭":fmt==="Supermayorista"?"🏬":"🛒";
+          const fmtIcon=<FmtIcon fmt={fmt} size={16}/>;
           return{fmt,fmtIcon,fcfg,nd,nr,fo,fp,ff,fNR};
         }).filter(f=>f.nd>0);
 
         return(
         <div style={{borderRadius:14,overflow:"hidden",marginBottom:10,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
           <div style={{background:"#0d4f6e",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🏪</div>
+            <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IcoTiendaLocal size={16} color="rgba(255,255,255,.85)"/></div>
             <div style={{flex:1}}>
               <div style={{fontWeight:800,fontSize:12,color:"#fff",letterSpacing:".06em"}}>REGISTROS POR FRANJA · {periodoFHV.toUpperCase()}</div>
               <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:1}}>Tiendas únicas · mejor franja registrada en el período</div>
@@ -5385,7 +5360,7 @@ function ChecklistApp() {
             {/* Por formato */}
             {fmtFHV.map(({fmt,fmtIcon,fcfg,nd,nr,fo,fp,ff,fNR})=>(
               <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#f8fafc",borderRadius:9,marginBottom:6,border:`1px solid ${fcfg.c}22`}}>
-                <span style={{fontSize:13,flexShrink:0}}>{fmtIcon}</span>
+                <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{fmtIcon}</span>
                 <div style={{minWidth:88,flexShrink:0}}>
                   <div style={{fontSize:11,fontWeight:700,color:fcfg.c}}>{fmt}</div>
                   <div style={{fontSize:9,color:"#8aaabb"}}>{nd} total · {nr} reg.</div>
@@ -6045,9 +6020,9 @@ function ChecklistApp() {
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
         const hoy=fecha; // Muestra la fecha seleccionada en el header, no siempre hoy
         const fmts=[
-          {fmt:"Mayorista",    icon:"🏭"},
-          {fmt:"Supermayorista",icon:"🏬"},
-          {fmt:"Market",       icon:"🛒"},
+          {fmt:"Mayorista",    icon:<FmtIcon fmt="Mayorista" size={16}/>},
+          {fmt:"Supermayorista",icon:<FmtIcon fmt="Supermayorista" size={16}/>},
+          {fmt:"Market",       icon:<FmtIcon fmt="Market" size={16}/>},
         ];
         const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
         // actsRef debe declararse ANTES de cualquier uso
@@ -6266,7 +6241,7 @@ function ChecklistApp() {
                 <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".05em",marginBottom:10}}>CUMPLIMIENTO POR FORMATO</div>
                 {fmtStats.map(({fmt,icon,pctFmt,delta,pendFmt})=>(
                   <div key={fmt} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#f8fafc",borderRadius:10,border:"0.5px solid #e2e8f0",marginBottom:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+                    <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{icon}</span>
                     <span style={{fontWeight:700,color:"#1a2f4a",fontSize:13,minWidth:100,flexShrink:0}}>{fmt}</span>
                     <div style={{flex:1,background:"#e9eef5",borderRadius:20,height:8,overflow:"hidden",minWidth:60}}>
                       <div style={{height:"100%",width:(pctFmt||0)+"%",background:"#BA7517",borderRadius:20,transition:"width .4s"}}/>
@@ -6356,7 +6331,7 @@ function ChecklistApp() {
                 <div key={fmt+"b1"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8EC",borderRadius:10,border:"0.5px solid #FAC775"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
+                      <span style={{display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
                       <span style={{fontSize:"clamp(9px,1.5vw,11px)",color:"#8aaabb",fontWeight:700}}>{b.total}</span>
                     </div>
@@ -6410,7 +6385,7 @@ function ChecklistApp() {
                 <div key={fmt+"b2"} style={{marginBottom:8,padding:"8px 12px",background:"#FFF8F8",borderRadius:10,border:"0.5px solid #F7C1C1"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                      <span style={{fontSize:"clamp(13px,2vw,16px)"}}>{icon}</span>
+                      <span style={{display:"flex",alignItems:"center"}}>{icon}</span>
                       <span style={{fontWeight:700,color:"#1a2f4a",fontSize:"clamp(11px,2vw,13px)",whiteSpace:"nowrap"}}>{fmt}</span>
                     </div>
                     {!esParalelo&&<>
