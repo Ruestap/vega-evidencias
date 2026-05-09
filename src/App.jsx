@@ -276,40 +276,6 @@ const IcoConfig = () => (
     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
   </svg>
 );
-
-const IcoEvidenciasTab = () => (
-  <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="6" y="4" width="15" height="21" rx="2.4"/>
-    <path d="M10 9h7M10 14h6M10 19h4"/>
-    <rect x="11" y="8" width="15" height="20" rx="2.4"/>
-    <path d="M15 13h6M15 18h5"/>
-    <path d="m15.5 23.5 2.2 2.2 4.1-5"/>
-    <circle cx="23.5" cy="22.5" r="4.6"/>
-    <path d="m27 26 3 3"/>
-  </svg>
-);
-const IcoAuditoriaTab = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
-    <path d="m9 12 2 2 4-5"/>
-  </svg>
-);
-const IcoRegistroTab = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M9 4h6"/><path d="M9 2h6v4H9z"/><path d="M6 5h12v17H6z"/><path d="M9 11h6M9 15h6M9 19h4"/>
-  </svg>
-);
-const IcoReporteTab = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/>
-  </svg>
-);
-const IcoDashboardTab = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M4 19 9 12l4 4 7-10"/><path d="M4 5v14h16"/>
-  </svg>
-);
-
 const IcoHamburger = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
     <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -320,6 +286,44 @@ const IcoClose = () => (
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 );
+
+const EvidencePromoIcon = ({size=54}={}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M8 5.5h10.8L24 10.7V24.5A2.5 2.5 0 0121.5 27h-13A2.5 2.5 0 016 24.5V8A2.5 2.5 0 018.5 5.5z"/>
+    <path d="M18.5 5.8v5.4H24"/>
+    <path d="M10.5 13.5h6.2M10.5 18h4.8M10.5 22.5h3.8"/>
+    <circle cx="22.5" cy="22.2" r="4.2"/>
+    <path d="M25.5 25.2l2.4 2.4"/>
+  </svg>
+);
+const AuditShieldIcon = ({size=54}={}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M16 4.5l10 4.2v7.4c0 6.4-4.1 10.2-10 12-5.9-1.8-10-5.6-10-12V8.7l10-4.2z"/>
+    <path d="M11.5 16.4l3.1 3.1 6.4-7"/>
+  </svg>
+);
+const RegistryTabIcon = ({size=36}={}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 5.5h10M12.5 4h7A2.5 2.5 0 0122 6.5V8H10V6.5A2.5 2.5 0 0112.5 4z"/>
+    <rect x="7" y="7.5" width="18" height="20" rx="2.7"/>
+    <path d="M11.5 14h9M11.5 19h9M11.5 24h5.8"/>
+  </svg>
+);
+const ReportTabIcon = ({size=36}={}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 26.5h21"/>
+    <path d="M10 24V11M16 24V7M22 24V15"/>
+    <path d="M26 24v2.5"/>
+  </svg>
+);
+const DashboardTabIcon = ({size=36}={}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 26.5h21"/>
+    <path d="M8 24l5.2-6.2 4.1 3.7L25.5 10"/>
+    <path d="M8 8v18"/>
+  </svg>
+);
+
 
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
@@ -5536,20 +5540,20 @@ function ChecklistApp() {
 
   // ── Navegación visual escalable por módulos
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
-  // tab dentro de Inicio: 0/1/2=Evidencias, 4/5/6=Auditoría
+  // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",icon:<IcoEvidenciasTab/>,defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
-    {id:"auditoria", label:"Auditoría", icon:<IcoAuditoriaTab/>, defaultTab:4,roles:["admin","auditor"]},
+    {id:"actividades",label:"Evidencias",icon:<EvidencePromoIcon/>,defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"auditoria", label:"Auditoría", icon:<AuditShieldIcon/>, defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
-    ? [{i:1,label:"Reporte",icon:<IcoReporteTab/>},{i:2,label:"Dashboard",icon:<IcoDashboardTab/>}]
-    : [{i:0,label:"Registro",icon:<IcoRegistroTab/>},{i:1,label:"Reporte",icon:<IcoReporteTab/>},{i:2,label:"Dashboard",icon:<IcoDashboardTab/>}];
+    ? [{i:1,label:"Reporte",icon:<ReportTabIcon/>},{i:2,label:"Dashboard",icon:<DashboardTabIcon/>}]
+    : [{i:0,label:"Registro",icon:<RegistryTabIcon/>},{i:1,label:"Reporte",icon:<ReportTabIcon/>},{i:2,label:"Dashboard",icon:<DashboardTabIcon/>}];
 
   const SUB_AUDITORIA = [
-    {i:4,label:"Registro",icon:<IcoRegistroTab/>},
-    {i:5,label:"Reporte",icon:<IcoReporteTab/>},
-    {i:6,label:"Dashboard",icon:<IcoDashboardTab/>},
+    {i:4,label:"Registro",icon:<RegistryTabIcon/>},
+    {i:5,label:"Reporte",icon:<ReportTabIcon/>},
+    {i:6,label:"Dashboard",icon:<DashboardTabIcon/>},
   ];
 
   const homeMainActive = tab>=4 ? "auditoria" : "actividades";
@@ -5644,32 +5648,30 @@ function ChecklistApp() {
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"12px 20px",flexShrink:0}}>
-            <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8}}>
+          <div style={{background:"#fff",borderBottom:"1px solid #E4EAF2",padding:"0 38px 20px",flexShrink:0}}>
+            <div style={{display:"flex",gap:24,overflowX:"auto",padding:"0 0 26px",scrollbarWidth:"none"}}>
               {HOME_MAIN_TABS.map(m=>{
                 const active=homeMainActive===m.id;
-                return (
-                  <button key={m.id} onClick={()=>setTab(m.defaultTab)}
-                    style={{minWidth:170,padding:"12px 18px",borderRadius:12,border:"none",background:active?"#5B8DEF":"#F1F5F9",
-                      color:active?"#fff":"#66758A",fontWeight:800,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",gap:9,justifyContent:"center",boxShadow:active?"0 8px 18px rgba(91,141,239,.24)":"none",transition:"all .15s"}}>
-                    <span style={{display:"flex",alignItems:"center",color:"currentColor",flexShrink:0}}>{m.icon}</span>
-                    <span>{m.label}</span>
-                  </button>
-                );
-              })}
+                return(
+                <button key={m.id} onClick={()=>setTab(m.defaultTab)}
+                  style={{minWidth:424,height:162,padding:"0 34px",borderRadius:"30px 30px 0 0",border:`2px solid ${active?"#5B8DEE":"#DDE6F0"}`,borderBottomColor:active?"#5B8DEE":"#DDE6F0",background:active?"#5B8DEE":"#F3F6F9",
+                    color:active?"#fff":"#687887",fontWeight:900,fontSize:43,cursor:"pointer",display:"flex",alignItems:"center",gap:22,justifyContent:"center",lineHeight:1,boxShadow:active?"inset 0 -1px 0 rgba(0,0,0,.06)":"inset 0 1px 0 rgba(255,255,255,.85)"}}>
+                  <span style={{display:"flex",alignItems:"center",justifyContent:"center",color:active?"#fff":"#718295",flexShrink:0}}>{m.icon}</span>
+                  <span>{m.label}</span>
+                </button>
+              );})}
             </div>
-            <div style={{display:"flex",gap:10,overflowX:"auto"}}>
+            <div style={{display:"flex",gap:24,overflowX:"auto",scrollbarWidth:"none"}}>
               {homeSubTabs.map(tb=>{
                 const active=tab===tb.i;
-                return (
-                  <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
-                    style={{padding:"10px 16px",border:"none",borderRadius:10,background:active?"#5B8DEF":"#F1F5F9",
-                      color:active?"#fff":"#66758A",fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .15s"}}>
-                    <span style={{display:"flex",alignItems:"center",color:"currentColor",flexShrink:0}}>{tb.icon}</span>
-                    <span>{tb.label}</span>
-                  </button>
-                );
-              })}
+                return(
+                <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
+                  style={{minWidth:274,height:94,padding:"0 26px",borderRadius:22,border:`2px solid ${active?"#5B8DEE":"#EEF2F6"}`,background:active?"#5B8DEE":"#F3F6F9",
+                    color:active?"#fff":"#687887",fontWeight:900,fontSize:30,cursor:"pointer",display:"flex",alignItems:"center",gap:18,justifyContent:"center",lineHeight:1}}>
+                  <span style={{display:"flex",alignItems:"center",color:active?"#fff":"#718295",flexShrink:0}}>{tb.icon}</span>
+                  <span>{tb.label}</span>
+                </button>
+              );})}
             </div>
           </div>
         )}
