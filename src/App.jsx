@@ -248,37 +248,44 @@ const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
 );
 
 
-
-const NavSvgIcon = ({ name, size=22, active=false } = {}) => {
-  const color = active ? "#ffffff" : "#94A3B8";
-  const stroke = color;
-  const common = { width:size, height:size, viewBox:"0 0 24 24", fill:"none", xmlns:"http://www.w3.org/2000/svg", "aria-hidden":"true" };
-  const strokeProps = { stroke, strokeWidth:2, strokeLinecap:"round", strokeLinejoin:"round" };
-  const icons = {
-    home: (
-      <svg {...common}><path {...strokeProps} d="M3 10.5 12 3l9 7.5"/><path {...strokeProps} d="M5 10v10h5v-6h4v6h5V10"/></svg>
-    ),
-    reports: (
-      <svg {...common}><path {...strokeProps} d="M4 19V5"/><path {...strokeProps} d="M4 19h16"/><rect x="7" y="11" width="3" height="5" rx="1" fill={color}/><rect x="12" y="7" width="3" height="9" rx="1" fill={color}/><rect x="17" y="4" width="3" height="12" rx="1" fill={color}/></svg>
-    ),
-    dashboard: (
-      <svg {...common}><rect {...strokeProps} x="4" y="4" width="7" height="7" rx="2"/><rect {...strokeProps} x="13" y="4" width="7" height="7" rx="2"/><rect {...strokeProps} x="4" y="13" width="7" height="7" rx="2"/><path {...strokeProps} d="M14 18l2 2 4-5"/></svg>
-    ),
-    audit: (
-      <svg {...common}><path {...strokeProps} d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z"/><path {...strokeProps} d="m9 12 2 2 4-5"/></svg>
-    ),
-    store: (
-      <svg {...common}><path {...strokeProps} d="M4 10h16"/><path {...strokeProps} d="M5 10l1-5h12l1 5"/><path {...strokeProps} d="M6 10v10h12V10"/><path {...strokeProps} d="M9 20v-6h6v6"/></svg>
-    ),
-    users: (
-      <svg {...common}><path {...strokeProps} d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle {...strokeProps} cx="9.5" cy="7" r="4"/><path {...strokeProps} d="M22 21v-2a4 4 0 0 0-3-3.9"/><path {...strokeProps} d="M16 3.2a4 4 0 0 1 0 7.6"/></svg>
-    ),
-    settings: (
-      <svg {...common}><path {...strokeProps} d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path {...strokeProps} d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
-    ),
-  };
-  return icons[name] || icons.home;
-};
+/* ── Sidebar nav SVG icons ── */
+const IcoInicio = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+    <path d="M9 21V12h6v9"/>
+  </svg>
+);
+const IcoTiendas = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9l1-5h16l1 5"/>
+    <path d="M3 9h18v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/>
+    <path d="M9 21V13h6v8"/>
+    <path d="M3 9a3 3 0 006 0M9 9a3 3 0 006 0M15 9a3 3 0 006 0"/>
+  </svg>
+);
+const IcoUsuarios = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/>
+    <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/>
+  </svg>
+);
+const IcoConfig = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+  </svg>
+);
+const IcoHamburger = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+);
+const IcoClose = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
 
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
@@ -601,6 +608,7 @@ function ChecklistApp() {
   const [auditCheckInTs,    setAuditCheckInTs]    = useState(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
   const [statusCardView, setStatusCardView] = useState("operativo"); // "operativo" | "gerencial"
   const [statusActFiltro, setStatusActFiltro] = useState("Todas"); // filtro actividad en Estado
   const [statusNowTime, setStatusNowTime] = useState(()=>horaHHMM());
@@ -3825,16 +3833,16 @@ function ChecklistApp() {
   };
 
   /* ══ TAB CONFIG ══ */
-  const renderConfig = ()=>(
+  const renderConfig = ({hideTabs=false}={})=>(
     <div style={{padding:"16px"}}>
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
+      {!hideTabs&&<div style={{display:"flex",gap:8,marginBottom:16}}>
         {["Usuarios","Actividades","Tiendas","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
           <button key={i} onClick={()=>setCfgTab(i)}
             style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
             {l}
           </button>
         ))}
-      </div>
+      </div>}
 
       {cfgTab===0&&(
         <div>
@@ -5492,45 +5500,35 @@ function ChecklistApp() {
     );
   };
 
-  // ── Módulos principales (pestañas de primer nivel)
-  const MODULOS = [
-    {id:0, label:"📋 Evidencias", roles:["admin","auditor","viewer"]},
-    {id:1, label:"🔍 Auditoría",  roles:["admin","auditor"]},
-    {id:2, label:"⚙️ Config",     roles:["admin"]},
+  // ── Navegación visual escalable por módulos
+  // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
+  // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
+  const HOME_MAIN_TABS = [
+    {id:"actividades",label:"Evidencias Promocionales",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
-  // Sub-tabs por módulo
   const SUB_EVIDENCIAS = isViewer
     ? [{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
-    : isAuditor
-    ? [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
     : [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}];
 
-  const tabs = modulo===0 ? SUB_EVIDENCIAS
-    : modulo===1 ? [{i:4,label:"Registro Auditoría"}]
-    : [{i:3,label:"Configuración"}];
-
-  // Sidebar menu items — menú principal compacto y escalable
-  const SIDEBAR_ITEMS = [
-    {id:"inicio",  label:"Inicio",        icon:"home",     mod:0, tab:isViewer?1:0},
-    ...(isAdmin?[
-      {id:"tiendas", label:"Tiendas",       icon:"store",    mod:2, tab:3, cfgTab:2},
-      {id:"usuarios",label:"Usuarios",      icon:"users",    mod:2, tab:3, cfgTab:0},
-      {id:"config",  label:"Configuración", icon:"settings", mod:2, tab:3, cfgTab:1},
-    ]:[]),
-    ...(!isAdmin&&isAuditor?[{id:"audit",label:"Auditoría",icon:"audit",mod:1,tab:4}]:[]),
+  const SUB_AUDITORIA = [
+    {i:4,label:"Registro"},
+    {i:5,label:"Reporte"},
+    {i:6,label:"Dashboard"},
   ];
-  const sidebarActive = modulo===2&&tab===3&&cfgTab===2 ? "tiendas"
-    : modulo===2&&tab===3&&cfgTab===0 ? "usuarios"
-    : modulo===2&&tab===3 ? "config"
-    : modulo===1 ? "audit"
-    : "inicio";
 
-  const pageTitle = modulo===0&&tab===0?"Registro de Evidencias"
-    :modulo===0&&tab===1?"Reporte de Evidencias"
-    :modulo===0&&tab===2?"Dashboard"
-    :modulo===1?"Auditoría"
-    :"Configuración";
+  const homeMainActive = tab>=4 ? "auditoria" : "actividades";
+  const homeSubTabs = homeMainActive==="auditoria" ? SUB_AUDITORIA : SUB_EVIDENCIAS;
+
+  // Sidebar menu items
+  const SIDEBAR_ITEMS = [
+    {id:"inicio",  label:"Inicio",        icon:<IcoInicio/>,  mod:0, tab:isViewer?1:0},
+    ...(isAdmin?[{id:"tiendas",label:"Tiendas",icon:<IcoTiendas/>,mod:1,tab:3,cfgTab:2}]:[]),
+    ...(isAdmin?[{id:"usuarios",label:"Usuarios",icon:<IcoUsuarios/>,mod:2,tab:3,cfgTab:0}]:[]),
+    ...(isAdmin?[{id:"config",label:"Configuración",icon:<IcoConfig/>,mod:3,tab:3}]:[]),
+  ];
+  const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo)?.id||SIDEBAR_ITEMS[0]?.id;
 
   const excComentario = excModal?._comentario??excModal?.comentarioActual??"";
   const excApplyAll = excModal?._applyAll??false;
@@ -5540,75 +5538,37 @@ function ChecklistApp() {
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`
-        *{box-sizing:border-box;}
-        :root{--et-sidebar-width:240px;--et-sidebar-collapsed:72px;}
-        .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-        .vr-table table{min-width:480px;}
-        button,select,input[type=date]{touch-action:manipulation;min-height:36px;}
-        .vr-pill{white-space:nowrap;flex-shrink:0;}
-        .et-sidebar{width:var(--et-sidebar-width)!important;min-width:var(--et-sidebar-width)!important;transition:width .18s ease,min-width .18s ease;}
-        .et-nav-item:hover{background:#1E293B!important;color:#fff!important;}
-        .et-nav-label,.et-sidebar-logo-text,.et-sidebar-footer{transition:opacity .16s ease;}
-        .et-bottom-nav{display:none;}
-        .et-topbar-logo{display:none;}
-        .et-topbar-logo-spacer{display:none;}
-        .et-app-root,.et-sidebar{height:100vh;height:100dvh;}
-        @media(min-width:768px) and (max-width:1199px){
-          .et-sidebar{width:var(--et-sidebar-collapsed)!important;min-width:var(--et-sidebar-collapsed)!important;}
-          .et-sidebar-brand{justify-content:center!important;padding:14px 0 12px!important;}
-          .et-sidebar-logo-text,.et-nav-label,.et-sidebar-footer{display:none!important;}
-          .et-sidebar-nav{padding:12px 8px!important;}
-          .et-nav-item{justify-content:center!important;padding:13px 0!important;gap:0!important;border-radius:14px!important;}
-        }
-        @media(max-width:767px){
-          .et-sidebar{display:none!important;}
-          .et-main-content{padding-bottom:68px!important;}
-          .et-topbar{height:48px!important;padding:0 10px!important;}
-          .et-bottom-nav{display:flex!important;}
-          .et-topbar-logo{display:flex!important;}
-          .et-topbar-logo-spacer{display:block!important;}
-          .et-topbar-desktop-spacer{display:none!important;}
-          .et-topbar-estado{display:none!important;}
-          .et-topbar-pdf{display:none!important;}
-          .et-topbar-user-name{display:none!important;}
-        }
-        @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}
-      `}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className="et-sidebar" style={{background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0,boxShadow:"8px 0 22px rgba(15,23,42,.08)"}}>
+      <div className="et-sidebar" style={{width:240,minWidth:240,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0,transition:"width .2s"}}>
         {/* Logo */}
-        <div className="et-sidebar-brand" style={{padding:"18px 14px 12px",borderBottom:"1px solid rgba(255,255,255,.07)",display:"flex",alignItems:"center"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+        <div style={{padding:"20px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
             <EstrategiaTradeIcon size={54} radius={14}/>
-            <div className="et-sidebar-logo-text" style={{minWidth:0,paddingTop:1}}>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:16,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+            <div className="et-sidebar-logo-text" style={{minWidth:0,paddingTop:2}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:18,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.56)",lineHeight:1.2,marginTop:3}}>Control de Implementaciones y Auditoria</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.62)",lineHeight:1.15,marginTop:2}}>Control de Implementaciones y Auditoria</div>
             </div>
           </div>
         </div>
         {/* Nav */}
-        <nav className="et-sidebar-nav" style={{flex:1,padding:"14px 10px",overflowY:"auto"}}>
-          {SIDEBAR_ITEMS.map(it=>{
-            const active=sidebarActive===it.id;
-            return(
-              <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
-                title={it.label}
-                style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:13,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
-                  background:active?"linear-gradient(135deg,#2F6BFF,#2563EB)":"transparent",
-                  color:active?"#fff":"#CBD5E1",
-                  fontWeight:active?800:600,fontSize:14,letterSpacing:"-.01em",transition:"background .15s,color .15s,transform .15s",boxShadow:active?"0 10px 24px rgba(47,107,255,.22)":"none"}}>
-                <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:24,height:24,flexShrink:0}}><NavSvgIcon name={it.icon} active={active}/></span>
-                <span className="et-nav-label" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
-              </button>
-            );
-          })}
+        <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
+          {SIDEBAR_ITEMS.map(it=>(
+            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
+              style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
+                background:sidebarActive===it.id?"#2F6BFF":"transparent",
+                color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
+                fontWeight:sidebarActive===it.id?700:500,fontSize:13,transition:"background .15s"}}>
+              <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{it.icon}</span>
+              <span className="et-sidebar-label">{it.label}</span>
+            </button>
+          ))}
         </nav>
         {/* Footer del sidebar */}
-        <div className="et-sidebar-footer" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.32)",fontWeight:600}}>Versión 1.0.0</div>
+        <div className="et-sidebar-label" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
       </div>
 
       {/* ══ MAIN AREA ══ */}
@@ -5616,6 +5576,11 @@ function ChecklistApp() {
 
         {/* ── TOPBAR ── */}
         <div className="et-topbar" style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+          {/* Hamburger — mobile only */}
+          <button className="et-topbar-hamburger" onClick={()=>setDrawerOpen(true)}
+            style={{display:"none",alignItems:"center",justifyContent:"center",background:"none",border:"none",color:"rgba(255,255,255,.8)",cursor:"pointer",padding:"4px",flexShrink:0}}>
+            <IcoHamburger/>
+          </button>
           <div className="et-topbar-logo" style={{alignItems:"center",gap:7,flexShrink:0,display:"none"}}>
             <EstrategiaTradeIcon size={28} radius={7}/>
             <div style={{minWidth:0}}>
@@ -5643,26 +5608,41 @@ function ChecklistApp() {
           </div>
         </div>
 
-        {/* ── TABS (Evidencias / Auditoría sub) dentro del módulo 0 ── */}
+        {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",display:"flex",gap:0,flexShrink:0}}>
-            {SUB_EVIDENCIAS.map(tb=>(
-              <button key={tb.i} onClick={()=>setTab(tb.i)}
-                style={{padding:"12px 16px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
-                  color:tab===tb.i?"#2F6BFF":"#64748B",fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                {tb.i===0?"📋":tb.i===1?"📊":"📈"} {tb.label}
-              </button>
-            ))}
+          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"0 20px",flexShrink:0}}>
+            <div style={{display:"flex",gap:8,paddingTop:12,overflowX:"auto"}}>
+              {HOME_MAIN_TABS.map(m=>(
+                <button key={m.id} onClick={()=>setTab(m.defaultTab)}
+                  style={{minWidth:180,padding:"14px 18px",borderRadius:"12px 12px 0 0",border:"1px solid #E2E8F0",borderBottom:`3px solid ${homeMainActive===m.id?"#2F6BFF":"transparent"}`,background:homeMainActive===m.id?"#fff":"#F8FAFC",
+                    color:homeMainActive===m.id?"#2F6BFF":"#64748B",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:0,overflowX:"auto"}}>
+              {homeSubTabs.map(tb=>(
+                <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
+                  style={{padding:"12px 18px",border:"none",borderBottom:`2px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,background:"transparent",
+                    color:tab===tb.i?"#2F6BFF":"#64748B",fontWeight:tab===tb.i?800:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                  {tb.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* ── CONTENIDO ── */}
         <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
-      {tab===0&&isAuditor&&renderRegistro()}
-      {tab===1&&renderReporte()}
-      {tab===2&&(isViewer?renderViewerDash():renderDashboard())}
-      {tab===3&&isAdmin&&renderConfig()}
-      {tab===4&&isAuditor&&(
+      {modulo===0&&tab===0&&isAuditor&&renderRegistro()}
+      {modulo===0&&tab===1&&renderReporte()}
+      {modulo===0&&tab===2&&(isViewer?renderViewerDash():renderDashboard())}
+      {modulo===1&&isAdmin&&renderConfig({hideTabs:true})}
+      {modulo===2&&isAdmin&&renderConfig({hideTabs:true})}
+      {modulo===3&&isAdmin&&renderConfig()}
+      {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
+      {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
+      {modulo===0&&tab===4&&isAuditor&&(
         <>
         {/* Dashboard personal auditor — visible cuando no está en una auditoría activa */}
         {auditPaso===0&&(()=>{
@@ -6477,30 +6457,53 @@ function ChecklistApp() {
         </div>
       )}
 
-      {/* ══ BOTTOM NAV — solo mobile ══ */}
-      <nav className="et-bottom-nav" style={{position:"fixed",bottom:0,left:0,right:0,height:60,background:"#0F172A",borderTop:"1px solid rgba(255,255,255,.1)",zIndex:30,alignItems:"stretch",justifyContent:"space-around"}}>
-        {SIDEBAR_ITEMS.map(it=>{
-          const active=sidebarActive===it.id;
-          return(
-            <button key={it.id} onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
-              style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",
-                color:active?"#2F6BFF":"rgba(255,255,255,.5)",padding:"4px 0"}}>
-              <span style={{display:"flex",alignItems:"center",justifyContent:"center"}}><NavSvgIcon name={it.icon} size={20} active={active}/></span>
-              <span style={{fontSize:9,fontWeight:active?700:500,whiteSpace:"nowrap"}}>{it.label}</span>
-            </button>
-          );
-        })}
-        {isAuditor&&<button onClick={()=>setShowStatusCard(true)}
-          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",color:"rgba(253,203,110,.85)",padding:"4px 0"}}>
-          <span style={{fontSize:20}}>📊</span>
-          <span style={{fontSize:9,fontWeight:500,whiteSpace:"nowrap"}}>Estado</span>
-        </button>}
-        {isAdmin&&<button onClick={()=>exportPDFRef.current?.()}
-          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",color:"rgba(255,255,255,.5)",padding:"4px 0"}}>
-          <span style={{fontSize:20}}>📄</span>
-          <span style={{fontSize:9,fontWeight:500,whiteSpace:"nowrap"}}>PDF</span>
-        </button>}
-      </nav>
+      {/* ══ MOBILE DRAWER ══ */}
+      {drawerOpen&&(
+        <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
+          {/* Backdrop */}
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(2px)"}} onClick={()=>setDrawerOpen(false)}/>
+          {/* Drawer panel */}
+          <div style={{position:"relative",width:260,background:"#0F172A",display:"flex",flexDirection:"column",height:"100%",boxShadow:"4px 0 32px rgba(0,0,0,.4)",animation:"slideInLeft .2s ease"}}>
+            <style>{`@keyframes slideInLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
+            {/* Header */}
+            <div style={{padding:"16px 16px 10px",borderBottom:"1px solid rgba(255,255,255,.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <EstrategiaTradeIcon size={40} radius={10}/>
+                <div>
+                  <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:15,color:"#fff",lineHeight:1.1}}>
+                    <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
+                  </div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,.5)"}}>Control de Implementaciones</div>
+                </div>
+              </div>
+              <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",cursor:"pointer",padding:4}}>
+                <IcoClose/>
+              </button>
+            </div>
+            {/* Nav */}
+            <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
+              {SIDEBAR_ITEMS.map(it=>(
+                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);setDrawerOpen(false);}}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
+                    background:sidebarActive===it.id?"#2F6BFF":"transparent",
+                    color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
+                    fontWeight:sidebarActive===it.id?700:500,fontSize:14,transition:"background .15s"}}>
+                  <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{it.icon}</span>
+                  {it.label}
+                </button>
+              ))}
+              {isAuditor&&<button onClick={()=>{setShowStatusCard(true);setDrawerOpen(false);}}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",background:"transparent",color:"rgba(253,203,110,.85)",fontWeight:500,fontSize:14}}>
+                <span style={{display:"flex",alignItems:"center"}}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </span>
+                Estado
+              </button>}
+            </nav>
+            <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
