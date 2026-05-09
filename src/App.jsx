@@ -5504,7 +5504,7 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias Promocionales",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
