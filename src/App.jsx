@@ -287,44 +287,6 @@ const IcoClose = () => (
   </svg>
 );
 
-const EvidencePromoIcon = ({size=54}={}) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M8 5.5h10.8L24 10.7V24.5A2.5 2.5 0 0121.5 27h-13A2.5 2.5 0 016 24.5V8A2.5 2.5 0 018.5 5.5z"/>
-    <path d="M18.5 5.8v5.4H24"/>
-    <path d="M10.5 13.5h6.2M10.5 18h4.8M10.5 22.5h3.8"/>
-    <circle cx="22.5" cy="22.2" r="4.2"/>
-    <path d="M25.5 25.2l2.4 2.4"/>
-  </svg>
-);
-const AuditShieldIcon = ({size=54}={}) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M16 4.5l10 4.2v7.4c0 6.4-4.1 10.2-10 12-5.9-1.8-10-5.6-10-12V8.7l10-4.2z"/>
-    <path d="M11.5 16.4l3.1 3.1 6.4-7"/>
-  </svg>
-);
-const RegistryTabIcon = ({size=36}={}) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M11 5.5h10M12.5 4h7A2.5 2.5 0 0122 6.5V8H10V6.5A2.5 2.5 0 0112.5 4z"/>
-    <rect x="7" y="7.5" width="18" height="20" rx="2.7"/>
-    <path d="M11.5 14h9M11.5 19h9M11.5 24h5.8"/>
-  </svg>
-);
-const ReportTabIcon = ({size=36}={}) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M6 26.5h21"/>
-    <path d="M10 24V11M16 24V7M22 24V15"/>
-    <path d="M26 24v2.5"/>
-  </svg>
-);
-const DashboardTabIcon = ({size=36}={}) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M6 26.5h21"/>
-    <path d="M8 24l5.2-6.2 4.1 3.7L25.5 10"/>
-    <path d="M8 8v18"/>
-  </svg>
-);
-
-
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
     width:size,
@@ -5542,18 +5504,18 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",icon:<EvidencePromoIcon/>,defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
-    {id:"auditoria", label:"Auditoría", icon:<AuditShieldIcon/>, defaultTab:4,roles:["admin","auditor"]},
+    {id:"actividades",label:"Evidencias Promocionales",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
-    ? [{i:1,label:"Reporte",icon:<ReportTabIcon/>},{i:2,label:"Dashboard",icon:<DashboardTabIcon/>}]
-    : [{i:0,label:"Registro",icon:<RegistryTabIcon/>},{i:1,label:"Reporte",icon:<ReportTabIcon/>},{i:2,label:"Dashboard",icon:<DashboardTabIcon/>}];
+    ? [{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
+    : [{i:0,label:"Registro"},{i:1,label:"Reporte"},{i:2,label:"Dashboard"}];
 
   const SUB_AUDITORIA = [
-    {i:4,label:"Registro",icon:<RegistryTabIcon/>},
-    {i:5,label:"Reporte",icon:<ReportTabIcon/>},
-    {i:6,label:"Dashboard",icon:<DashboardTabIcon/>},
+    {i:4,label:"Registro"},
+    {i:5,label:"Reporte"},
+    {i:6,label:"Dashboard"},
   ];
 
   const homeMainActive = tab>=4 ? "auditoria" : "actividades";
@@ -5648,30 +5610,59 @@ function ChecklistApp() {
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E4EAF2",padding:"0 38px 20px",flexShrink:0}}>
-            <div style={{display:"flex",gap:24,overflowX:"auto",padding:"0 0 26px",scrollbarWidth:"none"}}>
+          <div style={{background:"#F5F7FB",padding:"16px 20px 0",flexShrink:0}}>
+            {/* ── Módulos principales — tarjetas grandes ── */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
               {HOME_MAIN_TABS.map(m=>{
                 const active=homeMainActive===m.id;
+                const isEv=m.id==="actividades";
                 return(
-                <button key={m.id} onClick={()=>setTab(m.defaultTab)}
-                  style={{minWidth:424,height:162,padding:"0 34px",borderRadius:"30px 30px 0 0",border:`2px solid ${active?"#5B8DEE":"#DDE6F0"}`,borderBottomColor:active?"#5B8DEE":"#DDE6F0",background:active?"#5B8DEE":"#F3F6F9",
-                    color:active?"#fff":"#687887",fontWeight:900,fontSize:43,cursor:"pointer",display:"flex",alignItems:"center",gap:22,justifyContent:"center",lineHeight:1,boxShadow:active?"inset 0 -1px 0 rgba(0,0,0,.06)":"inset 0 1px 0 rgba(255,255,255,.85)"}}>
-                  <span style={{display:"flex",alignItems:"center",justifyContent:"center",color:active?"#fff":"#718295",flexShrink:0}}>{m.icon}</span>
-                  <span>{m.label}</span>
-                </button>
-              );})}
+                  <button key={m.id} onClick={()=>setTab(m.defaultTab)}
+                    style={{padding:"28px 20px",borderRadius:16,border:"none",cursor:"pointer",textAlign:"center",
+                      background:active?"#2F6BFF":isEv?"#F1F5F9":"#E8EFF8",
+                      color:active?"#fff":isEv?"#64748B":"#475569",
+                      boxShadow:active?"0 4px 16px rgba(47,107,255,.25)":"none",
+                      display:"flex",flexDirection:"column",alignItems:"center",gap:10,transition:"all .2s"}}>
+                    {isEv?(
+                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                        <rect x="6" y="4" width="20" height="26" rx="3" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" fill="none"/>
+                        <line x1="10" y1="10" x2="22" y2="10" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
+                        <line x1="10" y1="14" x2="22" y2="14" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
+                        <line x1="10" y1="18" x2="16" y2="18" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
+                        <circle cx="26" cy="26" r="7" fill={active?"rgba(255,255,255,.25)":"#E2E8F0"}/>
+                        <polyline points="23,26 25,28 29,24" stroke={active?"#fff":"#64748B"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      </svg>
+                    ):(
+                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                        <path d="M18 5L30 11V20C30 26 24.6 31.5 18 33C11.4 31.5 6 26 6 20V11L18 5Z" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" fill={active?"rgba(255,255,255,.15)":"none"}/>
+                        <polyline points="13,18 16,21 23,14" stroke={active?"#fff":"#64748B"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      </svg>
+                    )}
+                    <span style={{fontWeight:800,fontSize:16}}>{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div style={{display:"flex",gap:24,overflowX:"auto",scrollbarWidth:"none"}}>
-              {homeSubTabs.map(tb=>{
-                const active=tab===tb.i;
-                return(
+            {/* ── Subpestañas ── */}
+            <div style={{display:"flex",gap:10,background:"#fff",borderRadius:"12px 12px 0 0",padding:"10px 12px 0",boxShadow:"0 -1px 0 #E2E8F0"}}>
+              {homeSubTabs.map(tb=>(
                 <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
-                  style={{minWidth:274,height:94,padding:"0 26px",borderRadius:22,border:`2px solid ${active?"#5B8DEE":"#EEF2F6"}`,background:active?"#5B8DEE":"#F3F6F9",
-                    color:active?"#fff":"#687887",fontWeight:900,fontSize:30,cursor:"pointer",display:"flex",alignItems:"center",gap:18,justifyContent:"center",lineHeight:1}}>
-                  <span style={{display:"flex",alignItems:"center",color:active?"#fff":"#718295",flexShrink:0}}>{tb.icon}</span>
-                  <span>{tb.label}</span>
+                  style={{padding:"10px 20px",border:"none",borderRadius:"8px 8px 0 0",
+                    borderBottom:`3px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,
+                    background:tab===tb.i?"#EEF3FF":"transparent",
+                    color:tab===tb.i?"#2F6BFF":"#64748B",
+                    fontWeight:tab===tb.i?800:500,fontSize:14,cursor:"pointer",
+                    display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
+                  {tb.i===0||tb.i===4?(
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" fill="none"/><line x1="4" y1="5" x2="11" y2="5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="4" y1="7.5" x2="11" y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="4" y1="10" x2="8" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  ):tb.i===1||tb.i===5?(
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="8" width="3" height="6" rx="1" fill="currentColor"/><rect x="6" y="5" width="3" height="9" rx="1" fill="currentColor"/><rect x="11" y="2" width="3" height="12" rx="1" fill="currentColor"/></svg>
+                  ):(
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><polyline points="1,11 5,7 8,9 14,3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+                  )}
+                  {tb.label}
                 </button>
-              );})}
+              ))}
             </div>
           </div>
         )}
