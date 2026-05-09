@@ -4261,7 +4261,7 @@ function ChecklistApp() {
             <div style={{background:"#F5F7FB",padding:"12px 0 0",marginBottom:0}}>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 <button onClick={()=>setTpTab("lista")} style={tpTab==="lista"?PILL_ON:PILL_OFF}>
-                  <IcoTiendaLocal size={18} color={tpTab==="lista"?"#fff":"#6B7280"}/>
+                  <IcoTiendas/>
                   Tiendas
                 </button>
                 <button onClick={()=>setTpTab("nueva")} style={tpTab==="nueva"?PILL_ON:PILL_OFF}>
@@ -6114,7 +6114,7 @@ function ChecklistApp() {
             {/* Header con toggle de vista — solo Admin ve el toggle */}
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1,marginTop:0}}>📁</span>
+                <span style={{display:"flex",alignItems:"center",marginTop:2,flexShrink:0}}><IcoTiendas/></span>
                 <div>
                   <div style={{fontFamily:BRAND_FONT,fontWeight:800,fontSize:"clamp(11px,2vw,14px)",color:"#1a2f4a",letterSpacing:".02em",lineHeight:1.1}}>Estado de Registros</div>
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
