@@ -5609,48 +5609,49 @@ function ChecklistApp() {
         </div>
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
-        {modulo===0&&(
+        {modulo===0&&(()=>{
+          const TabIcoEvidencias=({active})=>(
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <rect x="3" y="2" width="11" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6" fill="none"/>
+              <line x1="5.5" y1="6" x2="11.5" y2="6" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="5.5" y1="9" x2="11.5" y2="9" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="5.5" y1="12" x2="9" y2="12" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <circle cx="15.5" cy="15.5" r="4" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" fill="none"/>
+              <polyline points="13.8,15.5 14.9,16.6 17.5,13.8" stroke={active?"#fff":"#64748B"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          );
+          const TabIcoAuditoria=({active})=>(
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2.5L17 5.8V10.5C17 14.3 13.9 17.7 10 18.5C6.1 17.7 3 14.3 3 10.5V5.8L10 2.5Z"
+                stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6"
+                fill={active?"rgba(255,255,255,.15)":"none"}/>
+              <polyline points="7,10.5 9,12.5 13.5,8"
+                stroke={active?"#fff":"#64748B"} strokeWidth="1.6"
+                strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          );
+          const TAB_PILL_ACTIVE={padding:"10px 18px",borderRadius:10,border:"none",cursor:"pointer",background:"#5880EF",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 10px rgba(88,128,239,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const TAB_PILL_INACTIVE={padding:"10px 18px",borderRadius:10,border:"1px solid #E2E8F0",cursor:"pointer",background:"#F8FAFC",color:"#64748B",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          return(
           <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
-            {/* Pestañas principales — pills */}
             <div style={{display:"flex",gap:8,marginBottom:10}}>
               {HOME_MAIN_TABS.map(m=>{
                 const active=homeMainActive===m.id;
-                const isEv=m.id==="actividades";
                 return(
-                  <button key={m.id} onClick={()=>setTab(m.defaultTab)}
-                    style={{padding:"10px 18px",borderRadius:10,border:"none",cursor:"pointer",
-                      background:active?"#2F6BFF":"#fff",color:active?"#fff":"#64748B",
-                      fontWeight:700,fontSize:14,
-                      boxShadow:active?"0 2px 10px rgba(47,107,255,.25)":"0 1px 3px rgba(0,0,0,.06)",
-                      display:"flex",alignItems:"center",gap:8,transition:"all .15s"}}>
-                    {isEv?(
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <rect x="2" y="1" width="11" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill="none"/>
-                        <line x1="4.5" y1="5" x2="10.5" y2="5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-                        <line x1="4.5" y1="7.5" x2="10.5" y2="7.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-                        <line x1="4.5" y1="10" x2="8" y2="10" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-                        <circle cx="14" cy="14" r="4" fill={active?"rgba(255,255,255,.25)":"#E2E8F0"}/>
-                        <polyline points="12.2,14 13.2,15 15.8,12.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                      </svg>
-                    ):(
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M9 2L16 5.5V10C16 13.5 12.8 16.8 9 17.5C5.2 16.8 2 13.5 2 10V5.5L9 2Z" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill={active?"rgba(255,255,255,.15)":"none"}/>
-                        <polyline points="6.5,9.5 8,11 11.5,7.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                      </svg>
-                    )}
+                  <button key={m.id} onClick={()=>setTab(m.defaultTab)} style={active?TAB_PILL_ACTIVE:TAB_PILL_INACTIVE}>
+                    {m.id==="actividades"?<TabIcoEvidencias active={active}/>:<TabIcoAuditoria active={active}/>}
                     {m.label}
                   </button>
                 );
               })}
             </div>
-            {/* Subpestañas */}
             <div style={{display:"flex",gap:6,background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0"}}>
               {homeSubTabs.map(tb=>(
                 <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
                   style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
-                    borderBottom:`3px solid ${tab===tb.i?"#2F6BFF":"transparent"}`,
+                    borderBottom:`3px solid ${tab===tb.i?"#5880EF":"transparent"}`,
                     background:tab===tb.i?"#EEF3FF":"transparent",
-                    color:tab===tb.i?"#2F6BFF":"#64748B",
+                    color:tab===tb.i?"#5880EF":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
                   {tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
@@ -5661,7 +5662,8 @@ function ChecklistApp() {
               ))}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── CONTENIDO ── */}
         <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
