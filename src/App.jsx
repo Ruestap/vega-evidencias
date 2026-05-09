@@ -248,6 +248,45 @@ const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
 );
 
 
+/* ── Sidebar nav SVG icons ── */
+const IcoInicio = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+    <path d="M9 21V12h6v9"/>
+  </svg>
+);
+const IcoTiendas = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9l1-5h16l1 5"/>
+    <path d="M3 9h18v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/>
+    <path d="M9 21V13h6v8"/>
+    <path d="M3 9a3 3 0 006 0M9 9a3 3 0 006 0M15 9a3 3 0 006 0"/>
+  </svg>
+);
+const IcoUsuarios = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/>
+    <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/>
+  </svg>
+);
+const IcoConfig = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+  </svg>
+);
+const IcoHamburger = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+);
+const IcoClose = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
     width:size,
@@ -483,8 +522,7 @@ function ChecklistApp() {
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
-  const [modulo,  setModulo]  = useState(0); // 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
   const [fecha,   setFecha]   = useState(todayStr());
   const [vYear,   setVYear]   = useState(now.getFullYear());
   const [vMonth,  setVMonth]  = useState(now.getMonth());
@@ -570,6 +608,7 @@ function ChecklistApp() {
   const [auditCheckInTs,    setAuditCheckInTs]    = useState(null);
   /* ── tarjeta de estado ── */
   const [showStatusCard, setShowStatusCard] = useState(false);
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
   const [statusCardView, setStatusCardView] = useState("operativo"); // "operativo" | "gerencial"
   const [statusActFiltro, setStatusActFiltro] = useState("Todas"); // filtro actividad en Estado
   const [statusNowTime, setStatusNowTime] = useState(()=>horaHHMM());
@@ -5463,9 +5502,9 @@ function ChecklistApp() {
 
   // ── Navegación visual escalable por módulos
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
-  // tab dentro de Inicio: 0/1/2=Evidencias Promocionales, 4/5/6=Auditoría
+  // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"evidencias",label:"Evidencias Promocionales",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"actividades",label:"Evidencias Promocionales",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
@@ -5479,32 +5518,17 @@ function ChecklistApp() {
     {i:6,label:"Dashboard"},
   ];
 
-  const homeMainActive = tab>=4 ? "auditoria" : "evidencias";
+  const homeMainActive = tab>=4 ? "auditoria" : "actividades";
   const homeSubTabs = homeMainActive==="auditoria" ? SUB_AUDITORIA : SUB_EVIDENCIAS;
-
-  const MenuIcon = ({kind, active=false, size=22}) => {
-    const color = active ? "#fff" : "rgba(255,255,255,.62)";
-    const stroke = {stroke:color,strokeWidth:2.2,strokeLinecap:"round",strokeLinejoin:"round",fill:"none"};
-    if(kind==="inicio") return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path {...stroke} d="M3 11.5 12 4l9 7.5"/><path {...stroke} d="M5.5 10.5V20h5v-5.5h3V20h5v-9.5"/></svg>;
-    if(kind==="tiendas") return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path {...stroke} d="M4 10h16l-1.2-5.5H5.2L4 10Z"/><path {...stroke} d="M5.5 10v10h13V10"/><path {...stroke} d="M8 20v-6h8v6"/><path {...stroke} d="M3.5 10c.2 1.3 1.2 2.2 2.5 2.2s2.3-.9 2.5-2.2c.2 1.3 1.2 2.2 2.5 2.2s2.3-.9 2.5-2.2c.2 1.3 1.2 2.2 2.5 2.2s2.3-.9 2.5-2.2"/></svg>;
-    if(kind==="usuarios") return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><circle {...stroke} cx="9" cy="8" r="3.2"/><path {...stroke} d="M3.5 20c.8-4 3-6 5.5-6s4.7 2 5.5 6"/><circle {...stroke} cx="17" cy="9" r="2.4"/><path {...stroke} d="M15.5 14.5c2.3.4 4 2.2 4.8 5.5"/></svg>;
-    return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path {...stroke} d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path {...stroke} d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.8 1.8 0 0 0-2 .1 8.5 8.5 0 0 1-1.6.7 1.8 1.8 0 0 0-1.2 1.5V23H9.2v-.4A1.8 1.8 0 0 0 8 21.1a8.5 8.5 0 0 1-1.6-.7 1.8 1.8 0 0 0-2-.1l-.2.1-2-3.4.1-.1a1.7 1.7 0 0 0 .3-1.9 8 8 0 0 1 0-2 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.8 1.8 0 0 0 2-.1A8.5 8.5 0 0 1 8 6.9a1.8 1.8 0 0 0 1.2-1.5V5h3.6v.4A1.8 1.8 0 0 0 14 6.9a8.5 8.5 0 0 1 1.6.7 1.8 1.8 0 0 0 2 .1l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9 8 8 0 0 1 0 2Z"/></svg>;
-  };
 
   // Sidebar menu items
   const SIDEBAR_ITEMS = [
-    {id:"inicio",  label:"Inicio",        icon:"inicio", mod:0, tab:isViewer?1:0},
-    ...(isAdmin?[{id:"tiendas",label:"Tiendas",icon:"tiendas",mod:1,tab:3,cfgTab:2}]:[]),
-    ...(isAdmin?[{id:"usuarios",label:"Usuarios",icon:"usuarios",mod:2,tab:3,cfgTab:0}]:[]),
-    ...(isAdmin?[{id:"config",label:"Configuración",icon:"config",mod:3,tab:3}]:[]),
+    {id:"inicio",  label:"Inicio",        icon:<IcoInicio/>,  mod:0, tab:isViewer?1:0},
+    ...(isAdmin?[{id:"tiendas",label:"Tiendas",icon:<IcoTiendas/>,mod:1,tab:3,cfgTab:2}]:[]),
+    ...(isAdmin?[{id:"usuarios",label:"Usuarios",icon:<IcoUsuarios/>,mod:2,tab:3,cfgTab:0}]:[]),
+    ...(isAdmin?[{id:"config",label:"Configuración",icon:<IcoConfig/>,mod:3,tab:3}]:[]),
   ];
   const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo)?.id||SIDEBAR_ITEMS[0]?.id;
-  const goToSidebarItem = (it) => {
-    setModulo(it.mod);
-    setTab(it.tab);
-    if(it.cfgTab!==undefined) setCfgTab(it.cfgTab);
-    setMobileDrawerOpen(false);
-  };
 
   const excComentario = excModal?._comentario??excModal?.comentarioActual??"";
   const excApplyAll = excModal?._applyAll??false;
@@ -5514,50 +5538,16 @@ function ChecklistApp() {
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`
-        *{box-sizing:border-box;}
-        .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-        .vr-table table{min-width:480px;}
-        button,select,input[type=date]{touch-action:manipulation;min-height:36px;}
-        .vr-pill{white-space:nowrap;flex-shrink:0;}
-        .et-nav-item:hover{background:#1E293B!important;}
-        .et-bottom-nav{display:none!important;}
-        .et-mobile-menu-btn{display:none;}
-        .et-topbar-logo{display:none;}
-        .et-topbar-logo-spacer{display:none;}
-        .et-app-root,.et-sidebar{height:100vh;height:100dvh;}
-        @media(min-width:769px) and (max-width:1024px){
-          .et-sidebar{width:72px!important;min-width:72px!important;}
-          .et-sidebar-logo-wrap{padding:14px 9px 8px!important;}
-          .et-sidebar-logo-text,.et-sidebar-footer,.et-nav-label{display:none!important;}
-          .et-sidebar nav{padding:12px 8px!important;}
-          .et-nav-item{justify-content:center!important;padding:14px 0!important;gap:0!important;}
-        }
-        @media(max-width:768px){
-          .et-mobile-menu-btn{display:flex!important;}
-          .et-sidebar{position:fixed!important;left:0!important;top:0!important;bottom:0!important;width:260px!important;min-width:260px!important;transform:translateX(-102%);transition:transform .2s ease;z-index:80!important;box-shadow:20px 0 50px rgba(15,23,42,.35);}
-          .et-sidebar.et-mobile-open{transform:translateX(0);}
-          .et-mobile-drawer-overlay{display:block!important;}
-          .et-main-content{padding-bottom:0!important;}
-          .et-topbar{height:50px!important;padding:0 10px!important;gap:8px!important;}
-          .et-topbar-logo{display:flex!important;}
-          .et-topbar-logo-spacer{display:block!important;}
-          .et-topbar-desktop-spacer{display:none!important;}
-          .et-topbar-estado{display:none!important;}
-          .et-topbar-pdf{display:none!important;}
-          .et-topbar-user-name{display:none!important;}
-        }
-        @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}
-      `}</style>
+      <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
-      <div className={`et-sidebar ${mobileDrawerOpen?"et-mobile-open":""}`} style={{width:240,minWidth:240,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div className="et-sidebar" style={{width:240,minWidth:240,background:"#0F172A",display:"flex",flexDirection:"column",position:"sticky",top:0,zIndex:20,flexShrink:0,transition:"width .2s"}}>
         {/* Logo */}
-        <div className="et-sidebar-logo-wrap" style={{padding:"18px 14px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
+        <div style={{padding:"20px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-            <EstrategiaTradeIcon size={50} radius={13}/>
+            <EstrategiaTradeIcon size={54} radius={14}/>
             <div className="et-sidebar-logo-text" style={{minWidth:0,paddingTop:2}}>
-              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:16,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
+              <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:18,color:"#fff",lineHeight:1.12,letterSpacing:"-.03em",overflow:"visible",whiteSpace:"nowrap"}}>
                 <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
               </div>
               <div style={{fontSize:11,color:"rgba(255,255,255,.62)",lineHeight:1.15,marginTop:2}}>Control de Implementaciones y Auditoria</div>
@@ -5567,35 +5557,29 @@ function ChecklistApp() {
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
-            <button key={it.id} className="et-nav-item" onClick={()=>goToSidebarItem(it)}
+            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
               style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
                 fontWeight:sidebarActive===it.id?700:500,fontSize:13,transition:"background .15s"}}>
-              <span style={{width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><MenuIcon kind={it.icon} active={sidebarActive===it.id}/></span>
-              <span className="et-nav-label">{it.label}</span>
+              <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{it.icon}</span>
+              <span className="et-sidebar-label">{it.label}</span>
             </button>
           ))}
         </nav>
         {/* Footer del sidebar */}
-        <div className="et-sidebar-footer" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+        <div className="et-sidebar-label" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
       </div>
-
-
-
-      {mobileDrawerOpen&&(
-        <button className="et-mobile-drawer-overlay" aria-label="Cerrar menú" onClick={()=>setMobileDrawerOpen(false)}
-          style={{display:"none",position:"fixed",inset:0,background:"rgba(15,23,42,.48)",border:"none",zIndex:70,cursor:"pointer"}} />
-      )}
 
       {/* ══ MAIN AREA ══ */}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
         {/* ── TOPBAR ── */}
         <div className="et-topbar" style={{background:"#0F172A",padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:56,flexShrink:0,borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-          <button className="et-mobile-menu-btn" onClick={()=>setMobileDrawerOpen(true)} aria-label="Abrir menú"
-            style={{width:38,height:38,borderRadius:10,border:"1px solid rgba(255,255,255,.14)",background:"rgba(255,255,255,.08)",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/></svg>
+          {/* Hamburger — mobile only */}
+          <button className="et-topbar-hamburger" onClick={()=>setDrawerOpen(true)}
+            style={{display:"none",alignItems:"center",justifyContent:"center",background:"none",border:"none",color:"rgba(255,255,255,.8)",cursor:"pointer",padding:"4px",flexShrink:0}}>
+            <IcoHamburger/>
           </button>
           <div className="et-topbar-logo" style={{alignItems:"center",gap:7,flexShrink:0,display:"none"}}>
             <EstrategiaTradeIcon size={28} radius={7}/>
@@ -6473,7 +6457,53 @@ function ChecklistApp() {
         </div>
       )}
 
-      {/* Navegación móvil por hamburguesa + drawer lateral */}
+      {/* ══ MOBILE DRAWER ══ */}
+      {drawerOpen&&(
+        <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
+          {/* Backdrop */}
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(2px)"}} onClick={()=>setDrawerOpen(false)}/>
+          {/* Drawer panel */}
+          <div style={{position:"relative",width:260,background:"#0F172A",display:"flex",flexDirection:"column",height:"100%",boxShadow:"4px 0 32px rgba(0,0,0,.4)",animation:"slideInLeft .2s ease"}}>
+            <style>{`@keyframes slideInLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
+            {/* Header */}
+            <div style={{padding:"16px 16px 10px",borderBottom:"1px solid rgba(255,255,255,.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <EstrategiaTradeIcon size={40} radius={10}/>
+                <div>
+                  <div style={{fontFamily:BRAND_FONT,fontWeight:700,fontSize:15,color:"#fff",lineHeight:1.1}}>
+                    <span>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
+                  </div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,.5)"}}>Control de Implementaciones</div>
+                </div>
+              </div>
+              <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",cursor:"pointer",padding:4}}>
+                <IcoClose/>
+              </button>
+            </div>
+            {/* Nav */}
+            <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
+              {SIDEBAR_ITEMS.map(it=>(
+                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);setDrawerOpen(false);}}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
+                    background:sidebarActive===it.id?"#2F6BFF":"transparent",
+                    color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
+                    fontWeight:sidebarActive===it.id?700:500,fontSize:14,transition:"background .15s"}}>
+                  <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{it.icon}</span>
+                  {it.label}
+                </button>
+              ))}
+              {isAuditor&&<button onClick={()=>{setShowStatusCard(true);setDrawerOpen(false);}}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",background:"transparent",color:"rgba(253,203,110,.85)",fontWeight:500,fontSize:14}}>
+                <span style={{display:"flex",alignItems:"center"}}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </span>
+                Estado
+              </button>}
+            </nav>
+            <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
