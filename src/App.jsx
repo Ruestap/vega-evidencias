@@ -287,64 +287,6 @@ const IcoClose = () => (
   </svg>
 );
 
-/* ── Tab pill style constants — reusable for ALL modules ── */
-const TAB_PILL_ACT = "#5880EF";
-const TAB_PILL = {
-  padding:"9px 16px", borderRadius:10, border:"1.5px solid #E2E8F0",
-  background:"#F8FAFC", color:"#64748B", fontWeight:600, fontSize:13,
-  cursor:"pointer", display:"flex", alignItems:"center", gap:8,
-  fontFamily:"'DM Sans',system-ui,sans-serif", transition:"all .15s",
-  lineHeight:1, whiteSpace:"nowrap"
-};
-const TAB_PILL_ACTIVE = {
-  ...TAB_PILL, background:TAB_PILL_ACT, color:"#fff", borderColor:TAB_PILL_ACT, fontWeight:700
-};
-const SUBTAB_PILL = {
-  padding:"7px 14px", borderRadius:8, border:"1.5px solid #E2E8F0",
-  background:"transparent", color:"#64748B", fontWeight:500, fontSize:12,
-  cursor:"pointer", fontFamily:"'DM Sans',system-ui,sans-serif",
-  transition:"all .15s", whiteSpace:"nowrap"
-};
-const SUBTAB_PILL_ACTIVE = {
-  ...SUBTAB_PILL, background:TAB_PILL_ACT, color:"#fff", borderColor:TAB_PILL_ACT, fontWeight:700
-};
-
-/* ── Tab SVG icons — accept active prop ── */
-const TabIcoEvidencias = ({active=false}={}) => active ? (
-  <svg width="17" height="17" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <rect x="5" y="4" width="16" height="21" rx="2.5" fill="rgba(255,255,255,.3)"/>
-    <rect x="9" y="3" width="8" height="4" rx="1.5" fill="rgba(255,255,255,.55)"/>
-    <rect x="8" y="11" width="9" height="1.8" rx=".9" fill="#fff"/>
-    <rect x="8" y="15" width="7" height="1.8" rx=".9" fill="#fff"/>
-    <circle cx="22" cy="22" r="7" fill="rgba(255,255,255,.18)" stroke="#fff" strokeWidth="1.5"/>
-    <circle cx="22" cy="22" r="4" fill="none" stroke="#fff" strokeWidth="1.3"/>
-    <line x1="26" y1="26" x2="29" y2="29" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M20.3 22l1.4 1.4 2.3-2.3" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-) : (
-  <svg width="17" height="17" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <rect x="5" y="4" width="16" height="21" rx="2.5" fill="#CBD5E1"/>
-    <rect x="9" y="3" width="8" height="4" rx="1.5" fill="#94A3B8"/>
-    <rect x="8" y="11" width="9" height="1.8" rx=".9" fill="#94A3B8"/>
-    <rect x="8" y="15" width="7" height="1.8" rx=".9" fill="#94A3B8"/>
-    <circle cx="22" cy="22" r="7" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1.5"/>
-    <circle cx="22" cy="22" r="4" fill="none" stroke="#94A3B8" strokeWidth="1.3"/>
-    <line x1="26" y1="26" x2="29" y2="29" stroke="#94A3B8" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M20.3 22l1.4 1.4 2.3-2.3" stroke="#94A3B8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const TabIcoAuditoria = ({active=false}={}) => active ? (
-  <svg width="17" height="17" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path d="M16 3L5 8v7c0 6.5 4.6 12.6 11 14.2C22.4 27.6 27 21.5 27 15V8L16 3z" fill="rgba(255,255,255,.22)" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round"/>
-    <path d="M11 16l3.5 3.5L21 12" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-) : (
-  <svg width="17" height="17" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path d="M16 3L5 8v7c0 6.5 4.6 12.6 11 14.2C22.4 27.6 27 21.5 27 15V8L16 3z" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="1.5" strokeLinejoin="round"/>
-    <path d="M11 16l3.5 3.5L21 12" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
 const AdminAccessIcon = ({ size=54 } = {}) => (
   <div style={{
     width:size,
@@ -5562,8 +5504,8 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",icon:TabIcoEvidencias,defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
-    {id:"auditoria", label:"Auditoría",  icon:TabIcoAuditoria, defaultTab:4,roles:["admin","auditor"]},
+    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
@@ -5667,31 +5609,61 @@ function ChecklistApp() {
         </div>
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
-        {modulo===0&&(
-          <div style={{background:"#fff",borderBottom:"1px solid #E2E8F0",padding:"14px 20px 0",flexShrink:0}}>
-            <div style={{display:"flex",gap:8,marginBottom:12,overflowX:"auto"}}>
+        {modulo===0&&(()=>{
+          const TabIcoEvidencias=({active})=>(
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+              <rect x="2" y="1" width="11" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6" fill="none"/>
+              <line x1="4.5" y1="5.5" x2="10.5" y2="5.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="4.5" y1="8.5" x2="10.5" y2="8.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="4.5" y1="11.5" x2="8" y2="11.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.3" strokeLinecap="round"/>
+              <circle cx="15" cy="15" r="4.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.4" fill="none"/>
+              <polyline points="13.2,15 14.3,16.2 17,13.5" stroke={active?"#fff":"#64748B"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          );
+          const TabIcoAuditoria=({active})=>(
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2.5L17 5.8V10.5C17 14.3 13.9 17.7 10 18.5C6.1 17.7 3 14.3 3 10.5V5.8L10 2.5Z"
+                stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6"
+                fill={active?"rgba(255,255,255,.15)":"none"}/>
+              <polyline points="7,10.5 9,12.5 13.5,8"
+                stroke={active?"#fff":"#64748B"} strokeWidth="1.6"
+                strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          );
+          const TAB_PILL_ACTIVE={padding:"10px 18px",borderRadius:10,border:"none",cursor:"pointer",background:"#5880EF",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 10px rgba(88,128,239,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const TAB_PILL_INACTIVE={padding:"10px 18px",borderRadius:10,border:"1px solid #E2E8F0",cursor:"pointer",background:"#F8FAFC",color:"#64748B",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          return(
+          <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
               {HOME_MAIN_TABS.map(m=>{
-                const isAct=homeMainActive===m.id;
-                const IcoComp=m.icon;
+                const active=homeMainActive===m.id;
                 return(
-                  <button key={m.id} onClick={()=>setTab(m.defaultTab)}
-                    style={isAct?TAB_PILL_ACTIVE:TAB_PILL}>
-                    <IcoComp active={isAct}/>
+                  <button key={m.id} onClick={()=>setTab(m.defaultTab)} style={active?TAB_PILL_ACTIVE:TAB_PILL_INACTIVE}>
+                    {m.id==="actividades"?<TabIcoEvidencias active={active}/>:<TabIcoAuditoria active={active}/>}
                     {m.label}
                   </button>
                 );
               })}
             </div>
-            <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
+            <div style={{display:"flex",gap:6,background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0"}}>
               {homeSubTabs.map(tb=>(
                 <button key={tb.i} onClick={()=>{setTab(tb.i); if(tb.i===5||tb.i===6)setCfgTab(3);}}
-                  style={tab===tb.i?SUBTAB_PILL_ACTIVE:SUBTAB_PILL}>
+                  style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
+                    borderBottom:`3px solid ${tab===tb.i?"#5880EF":"transparent"}`,
+                    background:tab===tb.i?"#EEF3FF":"transparent",
+                    color:tab===tb.i?"#5880EF":"#64748B",
+                    fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
+                    display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
+                  {tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                  :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
+                  :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                   {tb.label}
                 </button>
               ))}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ── CONTENIDO ── */}
         <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
@@ -5915,7 +5887,7 @@ function ChecklistApp() {
       {pinMod&&<PinModal pins={pins} onSave={p=>{setPins(p);saveConfig({pins:p});setPinMod(false);}} onClose={()=>setPinMod(false)}/>}
       {showStatusCard&&(()=>{
         // Issue 4 fix: usar la fecha seleccionada por el auditor, no siempre "hoy"
-        const hoy=todayStr(); // Estado siempre muestra el día real, no el selector del header
+        const hoy=fecha; // Muestra la fecha seleccionada en el header, no siempre hoy
         const fmts=[
           {fmt:"Mayorista",    icon:"🏭"},
           {fmt:"Supermayorista",icon:"🏬"},
@@ -6013,7 +5985,7 @@ function ChecklistApp() {
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                 <span style={{fontSize:"clamp(14px,2.5vw,18px)",lineHeight:1.1,marginTop:0}}>📁</span>
                 <div>
-                  <div style={{fontFamily:BRAND_FONT,fontWeight:800,fontSize:"clamp(14px,2.5vw,18px)",color:"#1a2f4a",letterSpacing:".03em",lineHeight:1.1}}>ESTADO DE REGISTROS</div>
+                  <div style={{fontFamily:BRAND_FONT,fontWeight:800,fontSize:"clamp(11px,2vw,14px)",color:"#1a2f4a",letterSpacing:".02em",lineHeight:1.1}}>Estado de Registros</div>
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
                 </div>
               </div>
@@ -6055,8 +6027,8 @@ function ChecklistApp() {
             {actsRefCard.length===0&&(
               <div style={{textAlign:"center",padding:"28px 16px",background:"#fff8e1",borderRadius:12,border:"1px solid #fde68a",margin:"8px 0"}}>
                 <div style={{fontSize:32,marginBottom:8}}>⏳</div>
-                <div style={{fontWeight:700,fontSize:14,color:"#92400e",marginBottom:4}}>Sin registros aún hoy</div>
-                <div style={{fontSize:12,color:"#a16207"}}>Las actividades aparecerán aquí cuando se realice el primer registro del día</div>
+                <div style={{fontWeight:700,fontSize:14,color:"#92400e",marginBottom:4}}>Sin registros para {hoy===todayStr()?"hoy":hoy}</div>
+                <div style={{fontSize:12,color:"#a16207"}}>{hoy===todayStr()?"Las actividades aparecerán aquí cuando se realice el primer registro del día":"No hubo registros en esta fecha"}</div>
               </div>
             )}
 
