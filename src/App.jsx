@@ -3946,7 +3946,6 @@ function ChecklistApp() {
       {!hideTabs&&(()=>{
         // Solo los tabs de configuración general (Tiendas=2 y Auditoría=3 tienen su propio acceso)
         const CFG_TABS=[
-          {i:0,label:"Usuarios",     ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>},
           {i:1,label:"Actividades",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1.5"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>},
           {i:4,label:"Rangos Día",   ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg>},
           {i:5,label:"Cortes Sup.",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>},
@@ -5734,7 +5733,7 @@ function ChecklistApp() {
     {id:"inicio",  label:"Inicio",        icon:<IcoInicio/>,  mod:0, tab:isViewer?1:0},
     ...(isAdmin?[{id:"tiendas",label:"Tiendas",icon:<IcoTiendas/>,mod:1,tab:3,cfgTab:2}]:[]),
     ...(isAdmin?[{id:"usuarios",label:"Usuarios",icon:<IcoUsuarios/>,mod:2,tab:3,cfgTab:0}]:[]),
-    ...(isAdmin?[{id:"config",label:"Configuración",icon:<IcoConfig/>,mod:3,tab:3}]:[]),
+    ...(isAdmin?[{id:"config",label:"Configuración",icon:<IcoConfig/>,mod:3,tab:3,cfgTab:1}]:[]),
   ];
   const sidebarActive = SIDEBAR_ITEMS.find(it=>it.mod===modulo)?.id||SIDEBAR_ITEMS[0]?.id;
 
@@ -6171,7 +6170,12 @@ function ChecklistApp() {
             {/* Header con toggle de vista — solo Admin ve el toggle */}
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                <span style={{display:"flex",alignItems:"center",marginTop:2,flexShrink:0}}><IcoTiendas/></span>
+                <span style={{display:"flex",alignItems:"center",marginTop:2,flexShrink:0}}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                    <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+                  </svg>
+                </span>
                 <div>
                   <div style={{fontFamily:BRAND_FONT,fontWeight:800,fontSize:"clamp(11px,2vw,14px)",color:"#1a2f4a",letterSpacing:".02em",lineHeight:1.1}}>Estado de Registros</div>
                   <div style={{fontSize:"clamp(10px,1.8vw,12px)",color:"#8aaabb",marginTop:3,fontWeight:500}}>{hoy} · {nowTime} hrs</div>
