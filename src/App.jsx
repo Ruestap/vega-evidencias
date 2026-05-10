@@ -4353,7 +4353,7 @@ function ChecklistApp() {
         </div>
       )}
 
-      {cfgTab===1&&(
+      {cfgTab===1&&(hideTabs||cfgMod==="evidencias")&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
@@ -4969,7 +4969,7 @@ function ChecklistApp() {
         </div>
         );
       })()}
-{cfgTab===4&&(
+{cfgTab===4&&(hideTabs||cfgMod==="evidencias")&&(
         <div>
           <div style={{marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>📅 Rangos del Día</div>
@@ -5038,7 +5038,7 @@ function ChecklistApp() {
       )}
 
       {/* ── CORTES DE SUPERVISIÓN — cfgTab===5 ── */}
-      {cfgTab===5&&(
+      {cfgTab===5&&(hideTabs||cfgMod==="evidencias")&&(
         <div>
           <div style={{marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>⏱️ Cortes de Supervisión</div>
@@ -5908,7 +5908,7 @@ function ChecklistApp() {
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
-            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);}}
+            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}}}
               style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
@@ -6852,7 +6852,7 @@ function ChecklistApp() {
             {/* Nav */}
             <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
               {SIDEBAR_ITEMS.map(it=>(
-                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);setDrawerOpen(false);}}
+                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}setDrawerOpen(false);}}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                     background:sidebarActive===it.id?"#2F6BFF":"transparent",
                     color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
