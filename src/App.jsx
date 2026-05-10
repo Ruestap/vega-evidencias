@@ -650,7 +650,9 @@ function ChecklistApp() {
   const [verRegistradas, setVerRegistradas] = useState(false);
   const [rangoExt,     setRangoExt]     = useState(null); // rango extendido temporal por actividad
   /* ── config ── */
-  const [cfgTab,  setCfgTab]  = useState(0);
+  const [cfgTab,  setCfgTab]  = useState(1);
+  const [cfgMod,  setCfgMod]  = useState(null); // null | "evidencias" | "auditoria"
+  const [ddOpen,  setDdOpen]  = useState(false); // dropdown Panel de control
   const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva en módulo Tiendas
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
   const [logFmt,  setLogFmt]  = useState("Todos");
@@ -3944,42 +3946,184 @@ function ChecklistApp() {
   const renderConfig = ({hideTabs=false}={})=>(
     <div style={{padding:"16px"}}>
       {!hideTabs&&(()=>{
-        // Solo los tabs de configuración general (Tiendas=2 y Auditoría=3 tienen su propio acceso)
-        const CFG_TABS=[
-          {i:1,label:"Actividades",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1.5"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>},
-          {i:4,label:"Rangos Día",   ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg>},
-          {i:5,label:"Cortes Sup.",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>},
+        /* ── íconos para el selector de módulo ── */
+        const IcoEvCfg=({active})=>(
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="2" width="13" height="17" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill={active?"rgba(255,255,255,.15)":"none"}/>
+            <line x1="5" y1="7" x2="12" y2="7" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+            <line x1="5" y1="10" x2="10" y2="10" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
+            <circle cx="16.5" cy="15.5" r="4" stroke={active?"rgba(255,255,255,.9)":"#6C6EF5"} strokeWidth="1.6" fill="none"/>
+            <line x1="19.5" y1="18.5" x2="22" y2="21" stroke={active?"rgba(255,255,255,.9)":"#6C6EF5"} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+        const IcoAudCfg=({active})=>(
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="3" width="20" height="14" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill={active?"rgba(255,255,255,.1)":"none"}/>
+            <circle cx="12" cy="10" r="3" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.4" fill="none"/>
+            <circle cx="12" cy="10" r="1.2" fill={active?"#fff":"#94A3B8"}/>
+            <path d="M6.5 10c1.5-2.5 9-2.5 11 0" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="12" y1="17" x2="12" y2="21" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        );
+        const MODS=[
+          {id:"evidencias", label:"Evidencias", Ico:IcoEvCfg},
+          {id:"auditoria",  label:"Auditoría",  Ico:IcoAudCfg},
         ];
-        const active=CFG_TABS.find(t=>t.i===cfgTab)||CFG_TABS[0];
+        const TAB_PILL_A={padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+        const TAB_PILL_I={padding:"9px 20px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+
         return(
-          <div style={{position:"relative",marginBottom:16}} id="cfg-dd-root">
-            {/* Selector tipo iOS dropdown */}
-            <button
-              onClick={()=>{const el=document.getElementById("cfg-dd-menu");if(el)el.style.display=el.style.display==="block"?"none":"block";}}
-              style={{width:"100%",padding:"12px 16px",borderRadius:14,border:"1.5px solid #E2E8F0",background:"#fff",
-                display:"flex",alignItems:"center",gap:10,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
-              <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:30,height:30,borderRadius:8,background:"#6C6EF5",color:"#fff"}}>{active.ico}</span>
-              <span style={{flex:1,textAlign:"left",fontWeight:700,fontSize:14,color:"#1a2f4a"}}>{active.label}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </button>
-            {/* Menú desplegable */}
-            <div id="cfg-dd-menu" style={{display:"none",position:"absolute",top:"calc(100% + 6px)",left:0,right:0,
-              background:"#fff",borderRadius:14,border:"1.5px solid #E2E8F0",
-              boxShadow:"0 8px 30px rgba(0,0,0,.12)",zIndex:200,overflow:"hidden"}}>
-              {CFG_TABS.map(t=>(
-                <button key={t.i} onClick={()=>{setCfgTab(t.i);document.getElementById("cfg-dd-menu").style.display="none";}}
-                  style={{width:"100%",padding:"13px 16px",border:"none",borderBottom:"1px solid #F1F5F9",
-                    background:cfgTab===t.i?"#F5F4FF":"#fff",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:12,transition:"background .1s"}}>
-                  <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,borderRadius:9,
-                    background:cfgTab===t.i?"#6C6EF5":"#F1F5F9",color:cfgTab===t.i?"#fff":"#64748B",transition:"all .1s"}}>
-                    {t.ico}
-                  </span>
-                  <span style={{fontWeight:cfgTab===t.i?700:500,fontSize:14,color:cfgTab===t.i?"#6C6EF5":"#1a2f4a"}}>{t.label}</span>
-                  {cfgTab===t.i&&<svg style={{marginLeft:"auto"}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12"/></svg>}
-                </button>
-              ))}
+          <div>
+            {/* ── Botón "Panel de control" con dropdown ── */}
+            <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
+              <button onClick={()=>setDdOpen(o=>!o)}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
+                  borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
+                  cursor:"pointer",color:cfgMod?"#6C6EF5":"#5a7a9a",
+                  fontWeight:600,fontSize:13,transition:"all .15s",
+                  borderBottom:!cfgMod?"2px solid #6C6EF5":"1.5px solid #E2E8F0"}}>
+                {/* ícono ··· */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+                  <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+                  <circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+                </svg>
+                {cfgMod
+                  ? (()=>{const m=MODS.find(x=>x.id===cfgMod);return m?<>{<m.Ico active={false}/>} {m.label}</>:"Panel de control";})()
+                  : "Panel de control"}
+              </button>
+              {/* Dropdown */}
+              {ddOpen&&(
+                <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,minWidth:200,
+                  background:"#fff",borderRadius:12,border:"1.5px solid #E2E8F0",
+                  boxShadow:"0 8px 24px rgba(0,0,0,.10)",zIndex:200,overflow:"hidden"}}>
+                  <div style={{padding:"10px 14px 6px",fontSize:11,fontWeight:700,
+                    color:"#8aaabb",letterSpacing:".06em",borderBottom:"1px solid #F1F5F9",
+                    display:"flex",alignItems:"center",gap:6}}>
+                    Seleccione Módulo
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20,6 9,17 4,12"/>
+                    </svg>
+                  </div>
+                  {MODS.map(m=>(
+                    <button key={m.id}
+                      onClick={()=>{setCfgMod(m.id);setDdOpen(false);
+                        if(m.id==="evidencias")setCfgTab(1);}}
+                      style={{width:"100%",padding:"12px 16px",border:"none",
+                        borderBottom:"1px solid #F8FAFC",background:"#fff",
+                        display:"flex",alignItems:"center",justifyContent:"space-between",
+                        cursor:"pointer",color:cfgMod===m.id?"#6C6EF5":"#1a2f4a",
+                        fontWeight:cfgMod===m.id?700:500,fontSize:13,
+                        transition:"background .1s"}}>
+                      {m.label}
+                      <m.Ico active={cfgMod===m.id}/>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Línea separadora */}
+            {cfgMod&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
+
+            {/* ── Pill activa del módulo seleccionado ── */}
+            {cfgMod&&(
+              <div style={{display:"flex",gap:8,marginBottom:0,paddingTop:12,flexWrap:"wrap"}}>
+                {MODS.map(m=>{
+                  const active=cfgMod===m.id;
+                  if(!active) return null;
+                  return(
+                    <button key={m.id} onClick={()=>{setCfgMod(null);setDdOpen(false);}}
+                      style={TAB_PILL_A}>
+                      <m.Ico active={true}/>
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── PASO 2a: Evidencias → subpestañas ── */}
+            {cfgMod==="evidencias"&&(()=>{
+              const EV_TABS=[
+                {i:1, label:"Actividades"},
+                {i:4, label:"Rangos Día"},
+                {i:5, label:"Cortes"},
+              ];
+              if(!EV_TABS.find(t=>t.i===cfgTab)) setCfgTab(1);
+              return(
+                <div style={{background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",
+                  borderTop:"1px solid #E2E8F0",marginTop:10,display:"flex",gap:4}}>
+                  {EV_TABS.map(t=>(
+                    <button key={t.i} onClick={()=>setCfgTab(t.i)}
+                      style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
+                        borderBottom:`3px solid ${cfgTab===t.i?"#6C6EF5":"transparent"}`,
+                        background:cfgTab===t.i?"#EEEFFE":"transparent",
+                        color:cfgTab===t.i?"#6C6EF5":"#64748B",
+                        fontWeight:cfgTab===t.i?700:500,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── PASO 2b: Auditoría → en construcción ── */}
+            {cfgMod==="auditoria"&&(()=>{
+              const AUD_TABS=["Rutas","Tareas","Score"];
+              return(
+                <div style={{marginTop:10}}>
+                  <div style={{background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",
+                    borderTop:"1px solid #E2E8F0",display:"flex",gap:4}}>
+                    {AUD_TABS.map((t,i)=>(
+                      <button key={t} style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
+                        borderBottom:`3px solid ${i===0?"#6C6EF5":"transparent"}`,
+                        background:i===0?"#EEEFFE":"transparent",
+                        color:i===0?"#6C6EF5":"#64748B",
+                        fontWeight:i===0?700:500,fontSize:13,cursor:"default",whiteSpace:"nowrap"}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{background:"#fff",borderRadius:"0 0 12px 12px",border:"1px solid #E2E8F0",
+                    borderTop:"none",padding:"48px 20px",textAlign:"center"}}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b2bec3"
+                      strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:12}}>
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <div style={{fontWeight:700,fontSize:14,color:"#5a7a9a",marginBottom:6}}>
+                      Estamos trabajando en esto
+                    </div>
+                    <div style={{fontSize:12,color:"#b2bec3",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>
+                      La arquitectura y lógica del módulo Auditoría estará disponible pronto.
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Estado vacío cuando no hay módulo seleccionado ── */}
+            {!cfgMod&&(
+              <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",
+                padding:"48px 20px",textAlign:"center",marginTop:8}}>
+                <svg width="56" height="56" viewBox="0 0 64 64" fill="none"
+                  style={{marginBottom:12}} aria-hidden="true">
+                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+                  <rect x="16" y="34" width="6" height="4" rx="2" fill="#FDB347"/>
+                  <path d="M6 42h52" stroke="#E8973A" strokeWidth="1.5"/>
+                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+                </svg>
+                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>
+                  Sin configuraciones realizadas hoy
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
