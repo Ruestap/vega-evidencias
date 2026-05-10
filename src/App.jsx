@@ -249,6 +249,50 @@ const EstrategiaTradeIcon = ({ size=44, radius=12 } = {}) => (
 
 
 /* ── Sidebar nav SVG icons ── */
+/* IcoPending — reemplaza ⏳ reloj de arena */
+const IcoPending=({size=14,color="#0984e3"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 3h14M5 21h14M6 3v4l4 4-4 4v4M18 3v4l-4 4 4 4v4"/>
+  </svg>
+);
+/* IcoClipboard — reemplaza 📋 */
+const IcoClipboard=({size=14,color="currentColor"})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="8" y="2" width="8" height="4" rx="1.5" ry="1.5"/>
+    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+    <line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/>
+  </svg>
+);
+/* IcoEvidenciasTab — basado en inspection_18476166.png: documento con lupa naranja */
+const IcoEvidenciasTab=({active,size=18})=>{
+  const c=active?"#fff":"#94A3B8";
+  const acc=active?"rgba(255,255,255,.9)":"#6C6EF5";
+  return(
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="13" height="17" rx="2" stroke={c} strokeWidth="1.5" fill={active?"rgba(255,255,255,.15)":"none"}/>
+      <line x1="5" y1="7" x2="12" y2="7" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="5" y1="10" x2="10" y2="10" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="5" y1="13" x2="8" y2="13" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="16.5" cy="15.5" r="4" stroke={acc} strokeWidth="1.8" fill="none"/>
+      <line x1="19.5" y1="18.5" x2="22" y2="21" stroke={acc} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+};
+/* IcoAuditoriaTab — basado en monitor_10409824.png: pantalla monitor con lupa/ojo */
+const IcoAuditoriaTab=({active,size=18})=>{
+  const c=active?"#fff":"#94A3B8";
+  return(
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="14" rx="2" stroke={c} strokeWidth="1.5" fill={active?"rgba(255,255,255,.1)":"none"}/>
+      <line x1="8" y1="21" x2="16" y2="21" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="12" y1="17" x2="12" y2="21" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="12" cy="10" r="3" stroke={c} strokeWidth="1.4" fill="none"/>
+      <circle cx="12" cy="10" r="1.2" fill={c}/>
+      <path d="M6.5 10c1.5-2.5 9-2.5 11 0" stroke={c} strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+    </svg>
+  );
+};
+
 const IcoInicio = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
@@ -977,7 +1021,7 @@ function ChecklistApp() {
     const nueva={...auditExclusiones,[tId]:{motivo,comentario,solicitadoPor:uName||uDni,fecha:todayStr(),aprobada:false}};
     try{
       await setDoc(doc(db,"config","auditExclusiones"),nueva);
-      showToast("📋 Exclusión enviada al administrador");
+      showToast("Exclusión enviada al administrador");
     }catch(e){ showToast("❌ Error al enviar exclusión"); }
   },[auditExclusiones,uName,uDni,showToast]);
 
@@ -1740,7 +1784,7 @@ function ChecklistApp() {
           <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
           <span style={{fontSize:11,color:"#1a2f4a",fontWeight:800}}>{nEval} disponible{nEval!==1?"s":""}</span>
           {nReg>0&&<span style={S.pill("#00b894","#e8faf5")}>✅ {nReg} registrada{nReg!==1?"s":""}</span>}
-          {nPend>0&&<span style={S.pill("#0984e3","#e8f4fd")}>⏳ {nPend} pendiente{nPend!==1?"s":""}</span>}
+          {nPend>0&&<span style={S.pill("#0984e3","#e8f4fd")}><IcoPending size={12} color={"#0984e3"}/> {nPend} pendiente{nPend!==1?"s":""}</span>}
           {nNA>0&&<span style={S.pill("#854F0B","#FAEEDA")}>N/A {nNA}</span>}
           {!isAdmin&&nNA===0&&<span style={S.pill("#0984e3","#e8f4fd")}>🔒 Solo pendientes</span>}
         </div>
@@ -1749,7 +1793,7 @@ function ChecklistApp() {
             <div style={{display:"flex",borderRadius:9,overflow:"hidden",border:"1.5px solid #e2e8f0",background:"#f8fafc"}}>
               <button onClick={()=>setVerRegistradas(false)}
                 style={{padding:"6px 12px",border:"none",background:!verRegistradas?"#1a2f4a":"transparent",color:!verRegistradas?"#fff":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s"}}>
-                ⏳ Pendientes
+                Pendientes
               </button>
               <button onClick={()=>setVerRegistradas(true)}
                 style={{padding:"6px 12px",border:"none",background:verRegistradas?"#0984e3":"transparent",color:verRegistradas?"#fff":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,transition:"all .15s"}}>
@@ -1976,7 +2020,7 @@ function ChecklistApp() {
         {/* botón registrar */}
         {pv!==null&&(
           <div style={{...S.card,padding:"14px",marginBottom:12,background:tier.bg,border:"1.5px solid "+tier.c+"44"}}>
-            <div style={{fontSize:11,color:tier.c,fontWeight:700,marginBottom:8}}>📋 RESUMEN DEL REGISTRO</div>
+            <div style={{fontSize:11,color:tier.c,fontWeight:700,marginBottom:8}}><IcoClipboard size={13} color={tier.c}/> RESUMEN DEL REGISTRO</div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
               <span style={{fontSize:12,color:"#5a7a9a"}}>Actividad</span>
               <span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{actInfo?.e} {actInfo?.n}</span>
@@ -2873,7 +2917,7 @@ function ChecklistApp() {
                   {/* Barra — crece hacia arriba, no tapa el texto */}
                   <div style={{width:"100%",height:80,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
                     {v!==null&&!isFuture&&<div style={{width:"100%",height:barH+"px",background:sc(v),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
-                    {isFuture&&<div style={{height:"100%",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700,flexDirection:"column",gap:2}}><span>⏳</span><span>PENDIENTE</span></div>}
+                    {isFuture&&<div style={{height:"100%",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#b2bec3",fontWeight:700,flexDirection:"column",gap:2}}><IcoPending size={10} color={"#b2bec3"}/><span>PEND.</span></div>}
                   </div>
                   <div style={{fontSize:10,color:"#1a2f4a",fontWeight:800}}>{s.label}</div>
                   {mx>0&&!isFuture&&<div style={{fontSize:9,color:"#8aaabb",textAlign:"center",lineHeight:1.3}}>{ob}/{mx} pts</div>}
@@ -3176,7 +3220,7 @@ function ChecklistApp() {
               const esAlerta=pctSinReg>15||pctFuera>5;
               return(
               <div style={{marginBottom:10,padding:"8px 12px",background:esAlerta?"#fff8f8":"#f0f9ff",borderRadius:8,border:`1px solid ${esAlerta?"#fecaca":"#bfdbfe"}`}}>
-                <div style={{fontSize:10,color:esAlerta?"#991b1b":"#1e40af",fontWeight:600,lineHeight:1.6}}>{esAlerta?"⚠️ ":"📋 "}{texto}</div>
+                <div style={{fontSize:10,color:esAlerta?"#991b1b":"#1e40af",fontWeight:600,lineHeight:1.6}}>{esAlerta?"⚠ ":""}{texto}</div>
               </div>
               );
             })()}
@@ -3899,14 +3943,47 @@ function ChecklistApp() {
   /* ══ TAB CONFIG ══ */
   const renderConfig = ({hideTabs=false}={})=>(
     <div style={{padding:"16px"}}>
-      {!hideTabs&&<div style={{display:"flex",gap:8,marginBottom:16}}>
-        {["Usuarios","Actividades","Tiendas","Auditoría","Rangos Día","Cortes Sup."].map((l,i)=>(
-          <button key={i} onClick={()=>setCfgTab(i)}
-            style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${cfgTab===i?"#00b5b4":"#e2e8f0"}`,background:cfgTab===i?"#1a2f4a":"#fff",color:cfgTab===i?"#fff":"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:12}}>
-            {l}
-          </button>
-        ))}
-      </div>}
+      {!hideTabs&&(()=>{
+        // Solo los tabs de configuración general (Tiendas=2 y Auditoría=3 tienen su propio acceso)
+        const CFG_TABS=[
+          {i:0,label:"Usuarios",     ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>},
+          {i:1,label:"Actividades",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1.5"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>},
+          {i:4,label:"Rangos Día",   ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg>},
+          {i:5,label:"Cortes Sup.",  ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>},
+        ];
+        const active=CFG_TABS.find(t=>t.i===cfgTab)||CFG_TABS[0];
+        return(
+          <div style={{position:"relative",marginBottom:16}} id="cfg-dd-root">
+            {/* Selector tipo iOS dropdown */}
+            <button
+              onClick={()=>{const el=document.getElementById("cfg-dd-menu");if(el)el.style.display=el.style.display==="block"?"none":"block";}}
+              style={{width:"100%",padding:"12px 16px",borderRadius:14,border:"1.5px solid #E2E8F0",background:"#fff",
+                display:"flex",alignItems:"center",gap:10,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+              <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:30,height:30,borderRadius:8,background:"#6C6EF5",color:"#fff"}}>{active.ico}</span>
+              <span style={{flex:1,textAlign:"left",fontWeight:700,fontSize:14,color:"#1a2f4a"}}>{active.label}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </button>
+            {/* Menú desplegable */}
+            <div id="cfg-dd-menu" style={{display:"none",position:"absolute",top:"calc(100% + 6px)",left:0,right:0,
+              background:"#fff",borderRadius:14,border:"1.5px solid #E2E8F0",
+              boxShadow:"0 8px 30px rgba(0,0,0,.12)",zIndex:200,overflow:"hidden"}}>
+              {CFG_TABS.map(t=>(
+                <button key={t.i} onClick={()=>{setCfgTab(t.i);document.getElementById("cfg-dd-menu").style.display="none";}}
+                  style={{width:"100%",padding:"13px 16px",border:"none",borderBottom:"1px solid #F1F5F9",
+                    background:cfgTab===t.i?"#F5F4FF":"#fff",cursor:"pointer",
+                    display:"flex",alignItems:"center",gap:12,transition:"background .1s"}}>
+                  <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,borderRadius:9,
+                    background:cfgTab===t.i?"#6C6EF5":"#F1F5F9",color:cfgTab===t.i?"#fff":"#64748B",transition:"all .1s"}}>
+                    {t.ico}
+                  </span>
+                  <span style={{fontWeight:cfgTab===t.i?700:500,fontSize:14,color:cfgTab===t.i?"#6C6EF5":"#1a2f4a"}}>{t.label}</span>
+                  {cfgTab===t.i&&<svg style={{marginLeft:"auto"}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12"/></svg>}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {cfgTab===0&&(
         <div>
@@ -4653,7 +4730,7 @@ function ChecklistApp() {
         <div>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12,gap:10,flexWrap:"wrap"}}>
             <div>
-              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}>📋 Log de Auditoría</div>
+              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:2}}><IcoClipboard size={13} color={"#1a2f4a"}/> Log de Auditoría</div>
               <div style={{fontSize:11,color:"#8aaabb"}}>{allLogs.length} registros totales</div>
             </div>
             {/* Alerta de duplicados */}
@@ -5080,7 +5157,7 @@ function ChecklistApp() {
                     onTouchStart={e=>{const t=e.currentTarget.querySelector(".sem-tip-v");if(t)t.style.display=t.style.display==="block"?"none":"block";}}>
                     <div style={{height:64,background:"#f0f4f8",borderRadius:6,display:"flex",alignItems:"flex-end",overflow:"hidden",border:isRef?"1.5px solid #0984e3":"none",cursor:(!isFut&&v)?'default':'default'}}>
                       {v&&!isFut&&<div style={{width:"100%",height:barH,background:isRef?"#0984e3":sc(v.pct),borderRadius:"4px 4px 0 0",transition:"height .4s"}}/>}
-                      {isFut&&<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}><span style={{fontSize:9,color:"#b2bec3"}}>⏳</span><span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>PEND.</span></div>}
+                      {isFut&&<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}><IcoPending size={10} color={"#b2bec3"}/><span style={{fontSize:8,color:"#b2bec3",fontWeight:700}}>PEND.</span></div>}
                     </div>
                     <div style={{textAlign:"center",marginTop:4}}>
                       <div style={{fontSize:9,color:isRef?"#0984e3":"#8aaabb",fontWeight:isRef?700:400}}>{s.label}</div>
@@ -5741,26 +5818,6 @@ function ChecklistApp() {
 
         {/* ── INICIO: pestañas principales + subpestañas por módulo ── */}
         {modulo===0&&(()=>{
-          const TabIcoEvidencias=({active})=>(
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="1" width="12" height="16" rx="2" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6" fill="none"/>
-              <line x1="4.5" y1="5.5" x2="11.5" y2="5.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-              <line x1="4.5" y1="8.5" x2="11.5" y2="8.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-              <line x1="4.5" y1="11.5" x2="8.5" y2="11.5" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.2" strokeLinecap="round"/>
-              <circle cx="16" cy="16" r="4" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" fill="none"/>
-              <line x1="19" y1="19" x2="22" y2="22" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          );
-          const TabIcoAuditoria=({active})=>(
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2.5L17 5.8V10.5C17 14.3 13.9 17.7 10 18.5C6.1 17.7 3 14.3 3 10.5V5.8L10 2.5Z"
-                stroke={active?"#fff":"#94A3B8"} strokeWidth="1.6"
-                fill={active?"rgba(255,255,255,.15)":"none"}/>
-              <polyline points="7,10.5 9,12.5 13.5,8"
-                stroke={active?"#fff":"#64748B"} strokeWidth="1.6"
-                strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </svg>
-          );
           const TAB_PILL_ACTIVE={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
           const TAB_PILL_INACTIVE={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
           return(
@@ -5770,7 +5827,7 @@ function ChecklistApp() {
                 const active=homeMainActive===m.id;
                 return(
                   <button key={m.id} onClick={()=>setTab(m.defaultTab)} style={active?TAB_PILL_ACTIVE:TAB_PILL_INACTIVE}>
-                    {m.id==="actividades"?<TabIcoEvidencias active={active}/>:<TabIcoAuditoria active={active}/>}
+                    {m.id==="actividades"?<IcoEvidenciasTab active={active}/>:<IcoAuditoriaTab active={active}/>}
                     {m.label}
                   </button>
                 );
@@ -5932,7 +5989,7 @@ function ChecklistApp() {
                   navigator.clipboard?.writeText(txt)||window.prompt("Copia el contenido:",txt);
                 }}
                 style={{padding:"13px 14px",borderRadius:12,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
-                📋 Copiar
+                Copiar
               </button>
               <button onClick={()=>setAuditEmailModal(null)}
                 style={{padding:"13px 20px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
@@ -6002,9 +6059,9 @@ function ChecklistApp() {
             <textarea readOnly value={waModal.msg} rows={5}
               style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:12,resize:"none",boxSizing:"border-box",marginBottom:14}}/>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>{navigator.clipboard?.writeText(waModal.msg);showToast("📋 Mensaje copiado");}}
+              <button onClick={()=>{navigator.clipboard?.writeText(waModal.msg);showToast("Mensaje copiado");}}
                 style={{flex:1,padding:"12px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
-                📋 Copiar mensaje
+                Copiar mensaje
               </button>
               <a href={`https://wa.me/${waModal.numero}?text=${encodeURIComponent(waModal.msg)}`} target="_blank" rel="noreferrer"
                 onClick={()=>setWaModal(null)}
@@ -6129,7 +6186,7 @@ function ChecklistApp() {
                     </button>
                     <button onClick={()=>setStatusCardView("operativo")}
                       style={{padding:"4px 12px",borderRadius:20,border:"0.5px solid #e2e8f0",background:statusCardView==="operativo"?"#f0f4f8":"transparent",color:statusCardView==="operativo"?"#1a2f4a":"#8aaabb",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                      📋 Operativo
+                      Operativo
                     </button>
                   </>
                 )}
@@ -6157,7 +6214,7 @@ function ChecklistApp() {
             {/* ── SIN REGISTROS AÚN ── */}
             {actsRefCard.length===0&&(
               <div style={{textAlign:"center",padding:"28px 16px",background:"#fff8e1",borderRadius:12,border:"1px solid #fde68a",margin:"8px 0"}}>
-                <div style={{fontSize:32,marginBottom:8}}>⏳</div>
+                <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IcoPending size={40} color={"#b2bec3"}/></div>
                 <div style={{fontWeight:700,fontSize:14,color:"#92400e",marginBottom:4}}>Sin registros para {hoy===todayStr()?"hoy":hoy}</div>
                 <div style={{fontSize:12,color:"#a16207"}}>{hoy===todayStr()?"Las actividades aparecerán aquí cuando se realice el primer registro del día":"No hubo registros en esta fecha"}</div>
               </div>
@@ -6312,7 +6369,7 @@ function ChecklistApp() {
               <span style={{fontSize:10,color:"#c8d8e8"}}>·</span>
               <span style={{fontSize:"clamp(10px,2.8vw,12px)",color:"#1a2f4a",fontWeight:700}}>{totalDisp} disponibles</span>
               <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#00b894",background:"#e8faf5",whiteSpace:"nowrap"}}>✅ {totalReg} registradas</span>
-              <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:totalPend>0?"#0984e3":"#b2bec3",background:totalPend>0?"#e8f4fd":"#f4f6f8",whiteSpace:"nowrap"}}>⏳ {totalPend} pendientes</span>
+              <span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:totalPend>0?"#0984e3":"#b2bec3",background:totalPend>0?"#e8f4fd":"#f4f6f8",whiteSpace:"nowrap"}}><IcoPending size={11} color={totalPend>0?"#0984e3":"#b2bec3"}/> {totalPend} pendientes</span>
               {totalNA>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:"clamp(10px,2.8vw,12px)",fontWeight:700,color:"#854F0B",background:"#FAEEDA",whiteSpace:"nowrap"}}>⛔ {totalNA} excluidas</span>}
             </div>
 
@@ -7229,7 +7286,7 @@ function PinModal({pins,onSave,onClose}){
           <div style={{fontSize:32,marginBottom:8}}>🔑</div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#1a2f4a"}}>Gestionar Códigos de Acceso</div>
         </div>
-        {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"auditor",label:"📋 Código Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
+        {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"auditor",label:"Código Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
           <div key={f.k} style={{marginBottom:14}}>
             <label style={{fontSize:10,fontWeight:800,color:f.c,letterSpacing:".06em",display:"block",marginBottom:5}}>{f.label}</label>
             <input type={show?"text":"password"} value={p[f.k]} onChange={e=>setP(x=>({...x,[f.k]:e.target.value}))}
