@@ -671,7 +671,8 @@ function ChecklistApp() {
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
-  const [newUsuario,   setNewUsuario]   = useState({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});
+  const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",editId:null};
+  const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
@@ -1053,9 +1054,13 @@ function ChecklistApp() {
     return act?.r || RANGOS_DEFAULT;
   },[rangosDia, acts]);
   const semanasDelMes = useMemo(()=>getWeeksOfMonth(vYear,vMonth),[vYear,vMonth]);
-  const isAdmin   = role==="admin";
-  const isAuditor = role==="admin"||role==="auditor";
-  const isViewer  = role==="viewer";
+  const isAdmin       = role==="admin";
+  const isCoord       = role==="coordinador";
+  const isEjecutor    = role==="ejecutor";
+  const isAuditor     = role==="admin"||role==="coordinador"||role==="auditor";
+  const isViewer      = role==="visor";
+  const canEdit       = role==="admin"||role==="coordinador";
+  const canViewReports= ["admin","coordinador","auditor","visor"].includes(role);
 
   // B1 fix: regsIndex declarado ANTES de getReg que lo referencia
   // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
@@ -1687,7 +1692,7 @@ function ChecklistApp() {
 
   if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
     onAcceso={(id)=>registrarAcceso(id)}
-    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="viewer"?1:0);setModulo(0);}}/>;
+    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="visor"?1:0);setModulo(0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -4128,230 +4133,224 @@ function ChecklistApp() {
         );
       })()}
 
-      {cfgTab===0&&(
+      {cfgTab===0&&(()=>{
+        /* ══ CONSTANTES MÓDULO USUARIOS ══ */
+        const ROL_CFG={
+          admin:      {label:"Admin",       c:"#f6a623",bg:"#fff8ec",ico:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>},
+          coordinador:{label:"Coordinador", c:"#6C6EF5",bg:"#EEEFFE",ico:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/></svg>},
+          ejecutor:   {label:"Ejecutor",    c:"#00b5b4",bg:"#e0fafa",ico:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L12 15l-4 1 1-4L16.5 3.5z"/></svg>},
+          auditor:    {label:"Auditor",     c:"#0984e3",bg:"#e6f1fb",ico:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>},
+          visor:      {label:"Visor",       c:"#8aaabb",bg:"#f0f4f8",ico:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>},
+        };
+        const ROL_DESC={
+          admin:"Acceso total: usuarios, tiendas, configuración, todos los módulos y reportes.",
+          coordinador:"Evidencias, Auditoría, Órdenes de Trabajo y reportes. Sin Usuarios ni Configuración.",
+          ejecutor:"Acceso exclusivo al módulo Órdenes de Trabajo.",
+          auditor:"Auditoría de Tiendas, Evidencias y sus reportes.",
+          visor:"Ve dashboards y reportes filtrados por su cargo y tienda asignada.",
+        };
+        const DOC_CFG={
+          dni: {label:"DNI",               ph:"12345678",    hint:"8 dígitos",         min:8, max:8,  alpha:false},
+          ruc: {label:"RUC",               ph:"20123456789", hint:"11 dígitos",        min:11,max:11, alpha:false},
+          ce:  {label:"Carnet Extranjería", ph:"CE12345678",  hint:"8–12 alfanumérico", min:8, max:12, alpha:true},
+          cod: {label:"Código interno",     ph:"VEGA2024RR",  hint:"8–12 alfanumérico", min:8, max:12, alpha:true},
+        };
+        const CARGOS_POR_AREA={
+          Marketing:  ["Coordinador Trade","Diseñador","Marketing Digital","Ecommerce","Gerente de Marketing"],
+          Operaciones:["Gerente de Operaciones","Jefe Zonal","Gerente de Tienda","Jefe de Tienda","Auditor Trade"],
+          Comercial:  ["Líder Comercial","Gerente Comercial","Supply"],
+        };
+        const CARGOS_CON_TIENDA=["Gerente de Tienda","Jefe de Tienda"];
+        const docCfg=DOC_CFG[newUsuario.tipoDoc]||DOC_CFG.dni;
+        const cargosDisp=CARGOS_POR_AREA[newUsuario.area]||[];
+        const needsTienda=CARGOS_CON_TIENDA.includes(newUsuario.cargo);
+        const dniLen=(newUsuario.dni||"").length;
+        const dniOk=dniLen>=docCfg.min&&dniLen<=docCfg.max;
+        return(
         <div>
           {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
             <div>
-              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Gestión de Usuarios</div>
-              <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>
-                {usuarios.filter(u=>u.activo!==false).length} activos · {usuarios.length} totales
-              </div>
+              <div style={{fontWeight:700,fontSize:14,color:"#1a2f4a"}}>Usuarios</div>
+              <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{usuarios.filter(u=>u.activo!==false).length} activos · {usuarios.length} totales</div>
             </div>
-            <button onClick={()=>{setShowNUsuario(true);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});}}
-              style={{padding:"9px 16px",borderRadius:10,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
-              ＋ Nuevo usuario
+            <button onClick={()=>{setShowNUsuario(true);setNewUsuario(NU_INIT);}}
+              style={{padding:"9px 16px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nuevo usuario
             </button>
           </div>
-
           {/* Buscador */}
           <div style={{position:"relative",marginBottom:14}}>
-            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#8aaabb"}}>🔍</span>
-            <input placeholder="Buscar usuario..." value={busqUsuario||""} onChange={e=>setBusqUsuario(e.target.value)}
-              style={{...S.inp,paddingLeft:36,fontSize:13}}/>
+            <svg style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8aaabb" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input placeholder="Buscar por nombre, credencial, cargo o área..." value={busqUsuario||""} onChange={e=>setBusqUsuario(e.target.value)} style={{...S.inp,paddingLeft:34,fontSize:13}}/>
           </div>
-
-          {/* Form nuevo/editar usuario */}
+          {/* Formulario */}
           {showNUsuario&&(
             <div style={{...S.card,padding:"16px",marginBottom:16,border:"1.5px solid #00b5b4"}}>
-              <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12}}>
-                {newUsuario.editId?"✏️ Editar usuario":"＋ Nuevo usuario"}
+              <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {newUsuario.editId?"Editar usuario":"Nuevo usuario"}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                <div>
-                  <label style={S.lbl}>NOMBRE COMPLETO *</label>
-                  <input value={newUsuario.nombre} onChange={e=>setNewUsuario(p=>({...p,nombre:e.target.value}))}
-                    placeholder="Ej: Roberto Ruesta" style={S.inp}/>
+              {/* Datos personales */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                <div><label style={S.lbl}>NOMBRE COMPLETO *</label><input value={newUsuario.nombre} onChange={e=>setNewUsuario(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Roberto Ruesta" style={S.inp}/></div>
+                <div><label style={S.lbl}>EMAIL</label><input type="email" value={newUsuario.email||""} onChange={e=>setNewUsuario(p=>({...p,email:e.target.value}))} placeholder="nombre@empresa.pe" style={S.inp}/></div>
+                <div><label style={S.lbl}>TELÉFONO</label><input type="tel" value={newUsuario.telefono||""} onChange={e=>setNewUsuario(p=>({...p,telefono:e.target.value}))} placeholder="+51 999 999 999" style={S.inp}/></div>
+                <div><label style={S.lbl}>WHATSAPP</label><input type="tel" value={newUsuario.whatsapp||""} onChange={e=>setNewUsuario(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))} placeholder="51987654321" style={S.inp}/></div>
+              </div>
+              {/* Credencial */}
+              <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  CREDENCIAL DE ACCESO
                 </div>
-                <div>
-                  <label style={S.lbl}>DNI / CE / RUC / CREDENCIAL *</label>
-                  <input type="text" value={newUsuario.dni||""} onChange={e=>setNewUsuario(p=>({...p,dni:e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12).toUpperCase()}))}
-                    placeholder="DNI/CE/RUC/código" maxLength={12} style={{...S.inp,letterSpacing:2,fontFamily:"monospace"}}/>
-                  <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</div>
+                <div style={{display:"flex",gap:6,marginBottom:10}}>
+                  {Object.entries(DOC_CFG).map(([k,v])=>{
+                    const on=newUsuario.tipoDoc===k;
+                    return(<button key={k} onClick={()=>setNewUsuario(p=>({...p,tipoDoc:k,dni:""}))}
+                      style={{flex:1,padding:"8px 4px",borderRadius:9,border:`1.5px solid ${on?"#1a2f4a":"#e2e8f0"}`,background:on?"#1a2f4a":"#f8fafc",color:on?"#fff":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:600,textAlign:"center",lineHeight:1.4}}>
+                      {v.label}
+                    </button>);
+                  })}
                 </div>
-                <div>
-                  <label style={S.lbl}>EMAIL (opcional)</label>
-                  <input type="email" value={newUsuario.email||""} onChange={e=>setNewUsuario(p=>({...p,email:e.target.value}))}
-                    placeholder="nombre@empresa.pe" style={S.inp}/>
-                </div>
-                <div>
-                  <label style={S.lbl}>TELÉFONO (opcional)</label>
-                  <input type="tel" value={newUsuario.telefono||""} onChange={e=>setNewUsuario(p=>({...p,telefono:e.target.value}))}
-                    placeholder="+51 999 999 999" style={S.inp}/>
-                </div>
-                <div>
-                  <label style={S.lbl}>WHATSAPP (con código país)</label>
-                  <input type="tel" value={newUsuario.whatsapp||""} onChange={e=>setNewUsuario(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
-                    placeholder="51987654321" style={S.inp}/>
-                </div>
-                <div>
-                  <label style={S.lbl}>ZONA (jefe zonal)</label>
-                  <input value={newUsuario.zona||""} onChange={e=>setNewUsuario(p=>({...p,zona:e.target.value}))}
-                    placeholder="Ej: Zona Norte, Zona Sur..." style={S.inp}/>
-                </div>
-                <div>
-                  <label style={S.lbl}>ÁREA / EQUIPO (opcional)</label>
-                  <input value={newUsuario.area||""} onChange={e=>setNewUsuario(p=>({...p,area:e.target.value}))}
-                    placeholder="Ej: Trade Marketing" style={S.inp}/>
-                </div>
-                <div>
-                  <label style={S.lbl}>ROL *</label>
-                  <div style={{display:"flex",gap:6}}>
-                    {[{r:"admin",l:"Admin",c:"#f6a623"},{r:"auditor",l:"Auditor",c:"#00b5b4"},{r:"viewer",l:"Visor",c:"#74b9ff"}].map(({r,l,c})=>(
-                      <button key={r} onClick={()=>setNewUsuario(p=>({...p,rol:r}))}
-                        style={{flex:1,padding:"9px 4px",borderRadius:9,border:`1.5px solid ${newUsuario.rol===r?c:"#e2e8f0"}`,background:newUsuario.rol===r?c+"22":"#fff",color:newUsuario.rol===r?c:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                        {l}
-                      </button>
-                    ))}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <label style={S.lbl}>NÚMERO *</label>
+                    <input value={newUsuario.dni||""} maxLength={docCfg.max}
+                      onChange={e=>{const v=docCfg.alpha?e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,docCfg.max).toUpperCase():e.target.value.replace(/[^0-9]/g,"").slice(0,docCfg.max);setNewUsuario(p=>({...p,dni:v}));}}
+                      placeholder={docCfg.ph} style={{...S.inp,fontFamily:"monospace",letterSpacing:2}}/>
+                    <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>{docCfg.hint}</div>
                   </div>
-                </div>
-              </div>
-              {/* Nota: el DNI es la credencial de acceso para todos los roles */}
-              {newUsuario.rol!=="auditor"&&(
-                <div style={{marginBottom:10,padding:"11px 14px",background:newUsuario.dni&&newUsuario.dni.length>=4?"#e0fafa":"#fff8ec",borderRadius:10,border:`1.5px solid ${newUsuario.dni&&newUsuario.dni.length>=4?"#00b5b4":"#f6a623"}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                    {/* Candado: cerrado+rojo si DNI vacío, abierto+verde si completo */}
-                    {newUsuario.dni&&newUsuario.dni.length>=4
-                      ? <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:"#e8faf5",border:"1.5px solid #00b894",fontSize:12,flexShrink:0}}>✓</span>
-                      : <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:"#fff1f2",border:"1.5px solid #ef4444",fontSize:12,flexShrink:0}}>🔒</span>
-                    }
-                    <div style={{fontSize:11,fontWeight:700,color:newUsuario.dni&&newUsuario.dni.length>=4?"#0d7a79":"#854F0B"}}>
-                      {newUsuario.dni&&newUsuario.dni.length>=4?"🔑 Credencial lista":"⚠️ Ingresa la credencial primero"}
+                  <div style={{padding:"10px 12px",borderRadius:10,background:dniOk?"#e0fafa":dniLen>0?"#fff8ec":"#f8fafc",border:`1px solid ${dniOk?"#00b5b4":dniLen>0?"#f6a623":"#e2e8f0"}`,display:"flex",alignItems:"center",gap:8}}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={dniOk?"#00b5b4":dniLen>0?"#f6a623":"#b2bec3"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>{dniOk&&<circle cx="12" cy="16" r="1" fill="#00b5b4"/>}
+                    </svg>
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:dniOk?"#085041":dniLen>0?"#854F0B":"#8aaabb"}}>{dniOk?"Credencial válida":dniLen>0?`Mín. ${docCfg.min} caracteres`:"Ingresa el número"}</div>
+                      <div style={{fontSize:10,color:dniOk?"#085041":dniLen>0?"#854F0B":"#b2bec3"}}>{dniOk?`Código: ${newUsuario.dni}`:`${dniLen} / ${docCfg.max}`}</div>
                     </div>
                   </div>
-                  <div style={{fontSize:11,color:newUsuario.dni&&newUsuario.dni.length>=4?"#0d7a79":"#854F0B",lineHeight:1.5}}>
-                    {newUsuario.dni&&newUsuario.dni.length>=4
-                      ? <>El código de acceso será <strong style={{fontFamily:"monospace",letterSpacing:2}}>{newUsuario.dni}</strong>. Al iniciar sesión debe ingresar este número.</>
-                      : "La credencial (mín. 4 chars) será el código de acceso al sistema."
-                    }
+                </div>
+              </div>
+              {/* Rol */}
+              <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  ROL Y ACCESO
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+                  {Object.entries(ROL_CFG).map(([r,rc])=>{
+                    const on=newUsuario.rol===r;
+                    return(<button key={r} onClick={()=>setNewUsuario(p=>({...p,rol:r}))}
+                      style={{flex:1,minWidth:60,padding:"9px 4px",borderRadius:9,border:`1.5px solid ${on?rc.c:"#e2e8f0"}`,background:on?rc.bg:"#f8fafc",color:on?rc.c:"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700,textAlign:"center"}}>
+                      {rc.label}
+                    </button>);
+                  })}
+                </div>
+                <div style={{padding:"9px 12px",borderRadius:9,background:ROL_CFG[newUsuario.rol]?.bg||"#f0f4f8",border:`1px solid ${ROL_CFG[newUsuario.rol]?.c||"#8aaabb"}33`,fontSize:11,color:ROL_CFG[newUsuario.rol]?.c||"#8aaabb",marginBottom:12,lineHeight:1.5}}>
+                  {ROL_DESC[newUsuario.rol]}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:needsTienda?10:0}}>
+                  <div>
+                    <label style={S.lbl}>ÁREA *</label>
+                    <select value={newUsuario.area||""} onChange={e=>setNewUsuario(p=>({...p,area:e.target.value,cargo:"",tiendaId:""}))} style={{...S.inp,cursor:"pointer"}}>
+                      <option value="">Seleccionar área</option>
+                      {Object.keys(CARGOS_POR_AREA).map(a=><option key={a}>{a}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={S.lbl}>CARGO</label>
+                    <select value={newUsuario.cargo||""} onChange={e=>setNewUsuario(p=>({...p,cargo:e.target.value,tiendaId:""}))} style={{...S.inp,cursor:"pointer"}} disabled={!newUsuario.area}>
+                      <option value="">{newUsuario.area?"Seleccionar cargo":"Primero elige área"}</option>
+                      {cargosDisp.map(c=><option key={c}>{c}</option>)}
+                    </select>
                   </div>
                 </div>
-              )}
-              <div style={{display:"flex",gap:8,marginTop:4}}>
+                {needsTienda&&(
+                  <div>
+                    <label style={S.lbl}>TIENDA ASIGNADA *</label>
+                    <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
+                      <option value="">Seleccionar tienda</option>
+                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
+                    </select>
+                    <div style={{fontSize:9,color:"#0984e3",marginTop:2}}>Este visor solo verá datos de esta tienda</div>
+                  </div>
+                )}
+              </div>
+              {/* Botones */}
+              <div style={{display:"flex",gap:8}}>
                 <button onClick={async()=>{
-                  if(!newUsuario.nombre.trim()) return showToast("⚠️ Ingresa el nombre");
-                  if(!newUsuario.dni||newUsuario.dni.length<4) return showToast("⚠️ La credencial debe tener al menos 4 caracteres");
+                  if(!newUsuario.nombre.trim()) return showToast("Ingresa el nombre completo");
+                  if(!dniOk) return showToast(`Credencial: ${docCfg.min}–${docCfg.max} caracteres`);
+                  if(!newUsuario.area) return showToast("Selecciona el área");
+                  const data={nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,tipoDoc:newUsuario.tipoDoc,dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",whatsapp:newUsuario.whatsapp||"",area:newUsuario.area||"",cargo:newUsuario.cargo||"",tiendaId:newUsuario.tiendaId||"",activo:true};
                   if(newUsuario.editId){
-                    await setDoc(doc(db,"usuarios",newUsuario.editId),{
-                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
-                      dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
-                      whatsapp:newUsuario.whatsapp||"",zona:newUsuario.zona||"",
-                      area:newUsuario.area||"",activo:true,
-                    },{merge:true});
-                    showToast("✅ Usuario actualizado");
+                    await setDoc(doc(db,"usuarios",newUsuario.editId),data,{merge:true});
+                    showToast("Usuario actualizado");
                   } else {
-                    // Verificar DNI duplicado
-                    if(usuarios.some(u=>u.dni===newUsuario.dni&&u.id!==newUsuario.editId)) return showToast("⚠️ DNI ya registrado");
                     const ref=doc(collection(db,"usuarios"));
-                    await setDoc(ref,{
-                      nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,
-                      dni:newUsuario.dni,email:newUsuario.email||"",telefono:newUsuario.telefono||"",
-                      whatsapp:newUsuario.whatsapp||"",zona:newUsuario.zona||"",
-                      area:newUsuario.area||"",activo:true,ultimoAcceso:null,
-                    });
-                    showToast("✅ Usuario registrado · el DNI es su código de acceso");
+                    await setDoc(ref,{...data,ultimoAcceso:null});
+                    showToast("Usuario registrado · la credencial es su clave de acceso");
                   }
-                  setShowNUsuario(false);
-                  setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});
-                }} style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                  setShowNUsuario(false);setNewUsuario(NU_INIT);
+                }} style={{flex:1,padding:"11px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
                   {newUsuario.editId?"Guardar cambios":"Registrar usuario"}
                 </button>
-                <button onClick={()=>{setShowNUsuario(false);setNewUsuario({nombre:"",rol:"auditor",email:"",telefono:"",whatsapp:"",zona:"",area:"",dni:"",editId:null});}}
-                  style={{padding:"11px 18px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
+                <button onClick={()=>{setShowNUsuario(false);setNewUsuario(NU_INIT);}} style={{padding:"11px 18px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
               </div>
             </div>
           )}
-
-          {/* Lista de usuarios */}
+          {/* Lista */}
           {(()=>{
-            const filtrados=(busqUsuario||"")
-              ?usuarios.filter(u=>u.nombre?.toLowerCase().includes(busqUsuario.toLowerCase())||u.dni?.includes(busqUsuario)||u.email?.toLowerCase().includes(busqUsuario.toLowerCase()))
-              :usuarios;
-            if(!filtrados.length) return(
-              <div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>
-                {busqUsuario?"Sin resultados para esa búsqueda":"Sin usuarios registrados. Crea el primero con ＋ Nuevo usuario."}
-              </div>
-            );
-            const ROL_CFG={
-              admin: {label:"Admin",c:"#f6a623",bg:"#fff8ec",icon:"admin-card"},
-              auditor:{label:"Auditor",c:"#00b5b4",bg:"#e0fafa",icon:"🪪"},
-              viewer: {label:"Visor",c:"#74b9ff",bg:"#e8f4fd",icon:"👁️"},
-            };
+            const filtrados=(busqUsuario||"")?usuarios.filter(u=>u.nombre?.toLowerCase().includes(busqUsuario.toLowerCase())||u.dni?.toLowerCase().includes(busqUsuario.toLowerCase())||u.cargo?.toLowerCase().includes(busqUsuario.toLowerCase())||u.area?.toLowerCase().includes(busqUsuario.toLowerCase())):usuarios;
+            if(!filtrados.length) return(<div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>{busqUsuario?"Sin resultados":"Sin usuarios registrados."}</div>);
             return filtrados.map(u=>{
-              const rc=ROL_CFG[u.rol]||{label:u.rol,c:"#8aaabb",bg:"#f0f4f8",icon:"👤"};
+              const rc=ROL_CFG[u.rol]||{label:u.rol,c:"#8aaabb",bg:"#f0f4f8"};
               const initials=(u.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+              const tiendaNombre=u.tiendaId?tiendas.find(t=>t.id===u.tiendaId)?.n:"";
               return(
-              <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12,opacity:u.activo===false?.5:1,transition:"opacity .2s"}}>
-                {/* Avatar */}
-                <div style={{width:42,height:42,borderRadius:12,background:rc.bg,border:`1.5px solid ${rc.c}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:rc.c,flexShrink:0,fontFamily:"'Syne',sans-serif"}}>
-                  {initials}
-                </div>
-                {/* Info */}
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    {u.nombre}
-                    {u.activo===false&&<span style={{fontSize:9,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PAUSADO</span>}
-                    {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&(
-                      <span style={{fontSize:9,color:"#854F0B",background:"#FAEEDA",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🔒 BLOQUEADO</span>
-                    )}
+                <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1,transition:"opacity .2s"}}>
+                  <div style={{width:40,height:40,borderRadius:11,background:rc.bg,border:`1.5px solid ${rc.c}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:rc.c,flexShrink:0}}>{initials}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
+                      {u.nombre}
+                      <span style={{padding:"1px 7px",borderRadius:20,fontSize:10,fontWeight:600,background:rc.bg,color:rc.c,border:`1px solid ${rc.c}33`}}>{rc.label}</span>
+                      {u.activo===false&&<span style={{fontSize:9,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PAUSADO</span>}
+                      {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&<span style={{fontSize:9,color:"#854F0B",background:"#FAEEDA",padding:"1px 6px",borderRadius:10,fontWeight:700}}>BLOQUEADO</span>}
+                    </div>
+                    <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                      <span style={{fontFamily:"monospace"}}>{(u.tipoDoc||"dni").toUpperCase()} ••••{(u.dni||"").slice(-4)}</span>
+                      {u.area&&<span style={{background:"#f0edff",color:"#6c5ce7",padding:"1px 7px",borderRadius:10,fontWeight:600}}>{u.area}</span>}
+                      {u.cargo&&<span style={{background:"#f0f4f8",color:"#5a7a9a",padding:"1px 7px",borderRadius:10}}>{u.cargo}</span>}
+                      {tiendaNombre&&<span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Vega {tiendaNombre}</span>}
+                      {u.ultimoAcceso&&<span>Último: {new Date(u.ultimoAcceso).toLocaleDateString("es-PE")}</span>}
+                    </div>
                   </div>
-                  <div style={{fontSize:10,color:"#8aaabb",marginTop:2,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontFamily:"monospace"}}>DNI: ••••{(u.dni||"").slice(-3)}</span>
-                    {u.email&&<span style={{color:"#0984e3"}}>{u.email}</span>}
-                    {u.area&&<span style={{background:"#f0edff",color:"#6c5ce7",padding:"1px 7px",borderRadius:10,fontWeight:700}}>{u.area}</span>}
-                    {u.zona&&<span style={{background:"#e0fafa",color:"#0d7a79",padding:"1px 7px",borderRadius:10,fontWeight:700}}>📍 {u.zona}</span>}
-                    {u.whatsapp&&<span style={{color:"#00b894"}}>WA: {u.whatsapp}</span>}
-                    {u.telefono&&<span>{u.telefono}</span>}
-                    {u.ultimoAcceso&&<span>· Último: {new Date(u.ultimoAcceso).toLocaleDateString("es-PE")}</span>}
-                  </div>
-                </div>
-                {/* Rol selector */}
-                <select value={u.rol} onChange={async e=>{
-                  const newRol=e.target.value;
-                  await setDoc(doc(db,"usuarios",u.id),{rol:newRol},{merge:true});
-                  showToast(`✅ Rol actualizado a ${newRol}`);
-                }} style={{padding:"6px 10px",borderRadius:9,border:`1.5px solid ${rc.c}55`,background:rc.bg,color:rc.c,fontSize:11,fontWeight:700,cursor:"pointer",outline:"none"}}>
-                  <option value="admin">Admin</option>
-                  <option value="auditor">🪪 Auditor</option>
-                  <option value="viewer">👁️ Visor</option>
-                </select>
-                {/* Edit */}
-                <button onClick={()=>{
-                  setNewUsuario({nombre:u.nombre,rol:u.rol,email:u.email||"",telefono:u.telefono||"",whatsapp:u.whatsapp||"",zona:u.zona||"",area:u.area||"",dni:u.dni||"",editId:u.id});
-                  setShowNUsuario(true);
-                }} style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:14}}>✏️</button>
-                {/* Pausar/Activar */}
-                <button onClick={async()=>{
-                  await setDoc(doc(db,"usuarios",u.id),{activo:u.activo===false},{merge:true});
-                  showToast(u.activo===false?"✅ Usuario activado":"⏸ Usuario pausado");
-                }} style={{padding:"6px 12px",borderRadius:9,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                  {u.activo===false?"Activar":"Pausar"}
-                </button>
-                {/* Desbloquear si está bloqueado */}
-                {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&(
-                  <button onClick={async()=>{
-                    await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:null,intentosFallidos:0},{merge:true});
-                    showToast("🔓 Usuario desbloqueado");
-                  }} style={{padding:"6px 10px",borderRadius:9,border:"1px solid #FAC775",background:"#FAEEDA",color:"#633806",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
-                    🔓 Desbloquear
+                  <button onClick={()=>{setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",telefono:u.telefono||"",whatsapp:u.whatsapp||"",area:u.area||"",cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});setShowNUsuario(true);}} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
-                )}
-                {/* WhatsApp alerta rápida */}
-                {u.whatsapp&&(
-                  <button onClick={()=>{
-                    const msg=`Hola ${u.nombre}, te escribimos desde Vega Evidencias. Se detectó un intento de acceso no autorizado a tu cuenta el ${new Date().toLocaleDateString("es-PE")} a las ${horaHHMM()}. Por favor verifica. Si no fuiste tú, contacta al administrador inmediatamente.`;
-                    setWaModal({msg,numero:u.whatsapp,nombre:u.nombre});
-                  }} style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #25D366",background:"#e8faf5",color:"#085041",cursor:"pointer",fontSize:13}}>💬</button>
-                )}
-                {/* Eliminar */}
-                <button onClick={()=>{if(window.confirm(`¿Eliminar a ${u.nombre}? Esta acción no se puede deshacer.`)) deleteUsuario(u.id);}}
-                  style={{padding:"7px 10px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:14}}>🗑️</button>
-              </div>
+                  <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{activo:u.activo===false},{merge:true});showToast(u.activo===false?"Usuario activado":"Usuario pausado");}} style={{padding:"6px 11px",borderRadius:9,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                    {u.activo===false?"Activar":"Pausar"}
+                  </button>
+                  {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&(
+                    <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:null,intentosFallidos:0},{merge:true});showToast("Usuario desbloqueado");}} style={{padding:"6px 9px",borderRadius:9,border:"1px solid #FAC775",background:"#FAEEDA",color:"#633806",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Desbloquear</button>
+                  )}
+                  {u.whatsapp&&(
+                    <button onClick={()=>{const msg=`Hola ${u.nombre}, te escribimos desde Vega Evidencias. Se detectó un intento de acceso no autorizado a tu cuenta el ${new Date().toLocaleDateString("es-PE")} a las ${horaHHMM()}. Por favor verifica. Si no fuiste tú, contacta al administrador inmediatamente.`;setWaModal({msg,numero:u.whatsapp,nombre:u.nombre});}} style={{padding:"7px 9px",borderRadius:9,border:"1.5px solid #25D366",background:"#e8faf5",color:"#085041",cursor:"pointer"}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </button>
+                  )}
+                  <button onClick={()=>{if(window.confirm(`¿Eliminar a ${u.nombre}?`)) deleteUsuario(u.id);}} style={{padding:"7px 9px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                  </button>
+                </div>
               );
             });
           })()}
         </div>
-      )}
+        );
+      })()}
 
       {cfgTab===1&&(hideTabs||cfgMod==="evidencias")&&(
         <div>
@@ -7181,17 +7180,14 @@ export default function App(props){
 /* ══ LOGIN ══════════════════════════════════════════════ */
 function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
-  const[pin,setPin]=useState("");
-  const[dni,setDni]=useState("");
-  const[step,setStep]=useState("inicio");
+  const[cred,setCred]=useState("");
   const[err,setErr]=useState("");
-  const[showPin,setShowPin]=useState(false);
-  const[bloqueo,setBloqueo]=useState(null); // {hasta:timestamp, restante:segundos}
+  const[showCred,setShowCred]=useState(false);
+  const[bloqueo,setBloqueo]=useState(null);
   const[intentos,setIntentos]=useState(0);
   const MAX_INTENTOS=3, BLOQUEO_MIN=5;
-  const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",marginBottom:12};
+  const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
-  // Cuenta regresiva de bloqueo
   useEffect(()=>{
     if(!bloqueo) return;
     const iv=setInterval(()=>{
@@ -7203,227 +7199,152 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   },[bloqueo]);
 
   const registrarFallo=()=>{
-    const n=intentos+1;
-    setIntentos(n);
+    const n=intentos+1; setIntentos(n);
     if(n>=MAX_INTENTOS){
       const hasta=Date.now()+BLOQUEO_MIN*60*1000;
       setBloqueo({hasta,restante:BLOQUEO_MIN*60});
       setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
-      // Guardar en Firestore si está disponible
       try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{setDoc(doc(db,"auth_attempts","_last"),{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ts:new Date().toISOString()},{merge:true});});});}catch{}
     } else {
-      setErr(`Código incorrecto · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
-      setTimeout(()=>setErr(""),2000);
+      setErr(`Credencial incorrecta · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
+      setTimeout(()=>setErr(""),3000);
     }
   };
 
-  const registrarExito=(id,nombre,rol)=>{
-    setIntentos(0);setBloqueo(null);
-    try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{const ref=doc(collection(db,"auth_log"));setDoc(ref,{credencial:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});});});}catch{}
+  const registrarExito=(id,nombre,rol,tiendaId,cargo)=>{
+    setIntentos(0); setBloqueo(null);
+    try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
+      const ref=doc(collection(db,"auth_log"));
+      setDoc(ref,{credencial:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});
+      if(id) setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString()},{merge:true});
+    });});}catch{}
     onLogin(rol,nombre,id||"");
   };
 
-  // Auditor — busca por dni en la colección usuarios (rol=auditor)
-  const tryDni=()=>{
+  const tryAcceso=()=>{
     if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=dni.trim();
-    if(clean.length<4){setErr("Código debe tener al menos 4 caracteres");return;}
-    const found=usuariosActivos.find(u=>u.rol==="auditor"&&u.dni===clean);
-    if(found){onAcceso?.(found.id);registrarExito(clean,found.nombre,"auditor");return;}
-    const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    if(audsLegacy.length>0){const leg=audsLegacy.find(a=>a.dni===clean);if(leg){onAcceso?.(leg.id);registrarExito(clean,leg.nombre,"auditor");return;}}
-    const hayAuditores=usuariosActivos.some(u=>u.rol==="auditor");
-    if(!hayAuditores&&clean===pins.auditor){registrarExito(clean,"Auditor","auditor");return;}
-    registrarFallo();
-  };
+    const clean=cred.trim().toUpperCase();
+    if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
 
-  // Admin
-  const tryPin=()=>{
-    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=pin.trim();
-    if(!clean){setErr("Ingresa tu código de acceso");return;}
+    // 1. Buscar en usuarios activos por credencial (dni)
+    const found=usuariosActivos.find(u=>u.dni&&u.dni.toUpperCase()===clean);
+    if(found){
+      onAcceso?.(found.id);
+      registrarExito(found.id,found.nombre,found.rol,found.tiendaId,found.cargo);
+      return;
+    }
+
+    // 2. Pins legacy (admin / viewer) para retrocompatibilidad
     if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){registrarExito("","Administrador","admin");return;}
-    const uAdmin=usuariosActivos.find(u=>u.rol==="admin"&&(u.dni===clean||u.credencial===clean));
-    if(uAdmin){onAcceso?.(uAdmin.id);registrarExito(clean,uAdmin.nombre,"admin");return;}
-    registrarFallo();
-  };
+    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){registrarExito("","Gerencia","visor");return;}
+    if(pins.auditor&&clean.toLowerCase()===pins.auditor.toLowerCase()){registrarExito("","Auditor","auditor");return;}
 
-  // Viewer
-  const tryViewer=()=>{
-    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=pin.trim();
-    if(!clean){setErr("Ingresa tu código de acceso");return;}
-    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){registrarExito("","Gerencia","viewer");return;}
-    const uViewer=usuariosActivos.find(u=>u.rol==="viewer"&&(u.dni===clean||u.credencial===clean));
-    if(uViewer){onAcceso?.(uViewer.id);registrarExito(clean,uViewer.nombre,"viewer");return;}
+    // 3. Auditores legacy
+    const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
+    const leg=audsLegacy.find(a=>a.dni&&a.dni.toUpperCase()===clean);
+    if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
+
     registrarFallo();
   };
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <div style={{width:"90%",maxWidth:342,background:"#fff",borderRadius:20,padding:"32px 32px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center",overflow:"visible"}}>
+      <div style={{width:"90%",maxWidth:360,background:"#fff",borderRadius:20,padding:"32px 28px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
+        {/* Logo */}
         <div style={{width:65,height:65,borderRadius:16,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 22px rgba(0,0,0,.14)"}}>
           <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-            {/* Clipboard */}
             <rect x="8" y="10" width="38" height="46" rx="5" fill="white"/>
             <rect x="18" y="6" width="18" height="10" rx="4" fill="#b2bec3"/>
             <rect x="12" y="22" width="22" height="3" rx="1.5" fill="#b2d8e8"/>
             <rect x="12" y="30" width="18" height="3" rx="1.5" fill="#b2d8e8"/>
             <rect x="12" y="38" width="14" height="3" rx="1.5" fill="#b2d8e8"/>
-            {/* Magnifier */}
             <circle cx="44" cy="44" r="14" fill="#37474F"/>
             <circle cx="44" cy="44" r="10" fill="none" stroke="#78909C" strokeWidth="3"/>
             <line x1="50" y1="50" x2="56" y2="56" stroke="#37474F" strokeWidth="4" strokeLinecap="round"/>
-            <circle cx="44" cy="44" r="6" fill="none" stroke="#90A4AE" strokeWidth="2"/>
           </svg>
         </div>
-        <div style={{fontFamily:BRAND_FONT,fontSize:23,fontWeight:700,lineHeight:1.7,paddingBottom:8,marginBottom:4,overflow:"visible",whiteSpace:"nowrap",textAlign:"center",letterSpacing:"-.04em"}}>
+        <div style={{fontFamily:"'Michroma',sans-serif",fontSize:22,fontWeight:700,marginBottom:4}}>
           <span style={{color:"#1a2f4a"}}>Estrategia</span><span style={{color:"#e74c3c"}}>Trade</span>
         </div>
-        <div style={{fontSize:11,color:"#7f93ab",letterSpacing:".01em",lineHeight:1.35,marginBottom:24,padding:"0 6px"}}>Control de Implementaciones y Auditoria</div>
+        <div style={{fontSize:11,color:"#7f93ab",marginBottom:28}}>Control de Implementaciones y Auditoria</div>
 
-        {/* Pantalla de bloqueo */}
+        {/* Bloqueo */}
         {bloqueo&&(
-          <div style={{padding:"20px 16px",background:"#fff1f2",borderRadius:14,border:"2px solid #fecaca",marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:28,marginBottom:8}}>🔒</div>
-            <div style={{fontWeight:800,fontSize:14,color:"#dc2626",marginBottom:4}}>Acceso bloqueado</div>
-            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:12}}>Demasiados intentos fallidos. Espera o contacta al administrador.</div>
+          <div style={{padding:"20px 16px",background:"#fff1f2",borderRadius:14,border:"2px solid #fecaca",marginBottom:16}}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" style={{marginBottom:8}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <div style={{fontWeight:700,fontSize:14,color:"#dc2626",marginBottom:4}}>Acceso bloqueado</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:10}}>Demasiados intentos fallidos</div>
             <div style={{fontSize:32,fontWeight:800,color:"#dc2626",fontFamily:"monospace",letterSpacing:4}}>
               {Math.floor(bloqueo.restante/60)}:{String(bloqueo.restante%60).padStart(2,"0")}
             </div>
-            <div style={{fontSize:10,color:"#8aaabb",marginTop:4}}>minutos : segundos</div>
+            <div style={{fontSize:10,color:"#8aaabb",marginTop:4}}>min : seg</div>
           </div>
         )}
 
-        {step==="inicio"&&!bloqueo&&(
+        {/* Formulario único */}
+        {!bloqueo&&(
           <>
-            <p style={{margin:"0 0 16px",fontSize:13,color:"#5a7a9a"}}>Selecciona tu tipo de acceso</p>
-            <button onClick={()=>{setStep("dni_auditor");setErr("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"2px solid #00b5b4",background:"#e0fafa",color:"#0d7a79",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <span style={{fontSize:24,flexShrink:0}}>🪪</span>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#0d7a79"}}>Auditor</div>
-                <div style={{fontSize:11,color:"#0d7a79",opacity:.8}}>Ingresa tu DNI / CE / RUC registrado</div>
-              </div>
-            </button>
-            <button onClick={()=>{setStep("pin_admin");setErr("");setPin("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #f6a623",background:"#fff8ec",color:"#854F0B",cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <div style={{width:48,height:48,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
-                  <rect x="8" y="14" width="40" height="28" rx="5" fill="#74b9ff"/>
-                  <rect x="12" y="20" width="12" height="14" rx="6" fill="#e8f4fd"/>
-                  <rect x="28" y="22" width="16" height="3" rx="1.5" fill="white"/>
-                  <rect x="28" y="28" width="11" height="3" rx="1.5" fill="white"/>
-                  <circle cx="46" cy="42" r="10" fill="#00b894"/>
-                  <path d="M40 42l4 4 7-7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#854F0B"}}>Administrador</div>
-                <div style={{fontSize:11,color:"#854F0B",opacity:.8}}>Ingresa tu DNI / código registrado</div>
-              </div>
-            </button>
-            <button onClick={()=>{setStep("pin_viewer");setErr("");setPin("");}}
-              style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1.5px solid #74b9ff",background:"#e8f4fd",color:"#0652dd",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-              <div style={{width:48,height:48,borderRadius:12,background:"#e8f4fd",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
-                  <rect x="8" y="16" width="48" height="28" rx="4" fill="#74b9ff"/>
-                  <rect x="12" y="20" width="40" height="20" rx="2" fill="#e8f4fd"/>
-                  <rect x="24" y="44" width="16" height="4" rx="2" fill="#74b9ff"/>
-                  <rect x="18" y="48" width="28" height="3" rx="1.5" fill="#74b9ff"/>
-                  <circle cx="24" cy="30" r="5" fill="white" stroke="#555" strokeWidth="1.5"/>
-                  <circle cx="40" cy="30" r="5" fill="white" stroke="#555" strokeWidth="1.5"/>
-                  <circle cx="24" cy="30" r="2" fill="#555"/>
-                  <circle cx="40" cy="30" r="2" fill="#555"/>
-                  <path d="M29 30h6" stroke="#555" strokeWidth="1.5"/>
-                </svg>
-              </div>
-              <div>
-                <div style={{fontSize:14,fontWeight:800,color:"#0652dd"}}>Visor Gerencial</div>
-                <div style={{fontSize:11,color:"#0652dd",opacity:.8}}>Ingresa tu DNI / código registrado</div>
-              </div>
-            </button>
-          </>
-        )}
-
-        {/* Paso: Auditor — DNI / CE / RUC hasta 12 caracteres */}
-        {(step==="dni_auditor"||step==="dni")&&(
-          <>
-            <div style={{fontSize:32,marginBottom:10}}>🪪</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>Ingresa tu DNI / CE / RUC</p>
-            <p style={{margin:"0 0 20px",fontSize:12,color:"#8aaabb"}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</p>
-            <input autoFocus type="text" value={dni}
-              onChange={e=>setDni(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
-              onKeyDown={e=>e.key==="Enter"&&tryDni()}
-              placeholder="DNI / CE / RUC" maxLength={12}
-              style={{...inpS,border:`2px solid ${err?"#ef4444":"#00b5b4"}`,letterSpacing:4,fontSize:20,fontWeight:700,fontFamily:"monospace"}}/>
-            {err&&<div style={{color:"#ef4444",fontSize:11,marginBottom:10,marginTop:-8,lineHeight:1.4}}>❌ {err}</div>}
-            <button onClick={tryDni} disabled={dni.length<4}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:dni.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:dni.length>=4?"white":"#94a3b8",cursor:dni.length>=4?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
-              Entrar →
-            </button>
-            <button onClick={()=>{setStep("inicio");setDni("");setErr("");}}
-              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
-              ← Volver
-            </button>
-          </>
-        )}
-
-        {/* Paso: Admin y Viewer — DNI / CE / RUC / código hasta 12 chars alfanumérico */}
-        {(step==="pin"||step==="pin_admin"||step==="pin_viewer")&&(
-          <>
-            <div style={{display:"flex",justifyContent:"center",alignItems:"center",marginBottom:10}}>{step==="pin_viewer"?<span style={{fontSize:32}}>👁️</span>:<AdminAccessIcon size={54}/>}</div>
-            <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"#1a2f4a"}}>
-              {step==="pin_viewer"?"Acceso — Visor Gerencial":"Acceso — Administrador"}
-            </p>
-            <p style={{margin:"0 0 6px",fontSize:12,color:"#8aaabb"}}>DNI (8) · CE/pasaporte (hasta 12) · alfanumérico</p>
-            <p style={{margin:"0 0 12px",fontSize:10,color:"#b2bec3"}}>Registrado en tu perfil de usuario</p>
-            {/* Input con toggle candado: oculto por defecto, ojo para revelar */}
-            <div style={{position:"relative",marginBottom:12}}>
+            <div style={{marginBottom:8,textAlign:"left"}}>
+              <label style={{fontSize:11,fontWeight:600,color:"#5a7a9a",letterSpacing:".05em"}}>CREDENCIAL DE ACCESO</label>
+            </div>
+            <div style={{position:"relative",marginBottom:6}}>
               <input autoFocus
-                type={showPin?"text":"password"}
-                value={pin}
-                onChange={e=>setPin(e.target.value.replace(/[^a-zA-Z0-9]/g,'').slice(0,12))}
-                onKeyDown={e=>e.key==="Enter"&&(step==="pin_viewer"?tryViewer():tryPin())}
-                placeholder="DNI / CE / código"
+                type={showCred?"text":"password"}
+                value={cred}
+                onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
+                onKeyDown={e=>e.key==="Enter"&&tryAcceso()}
+                placeholder="DNI / RUC / CE / código"
                 maxLength={12}
                 autoComplete="new-password"
-                style={{...inpS,border:`2px solid ${err?"#ef4444":step==="pin_viewer"?"#74b9ff":"#f6a623"}`,letterSpacing:showPin?4:8,fontSize:showPin?20:24,fontWeight:700,marginBottom:0,paddingRight:48,fontFamily:"monospace"}}/>
-              <button
-                type="button"
-                onClick={()=>setShowPin(v=>!v)}
-                style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:20,padding:4,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                {showPin
-                  ? <span title="Ocultar código" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:24,borderRadius:"50%",background:"#e8faf5",border:"1.5px solid #00b894",fontSize:13}}>✓</span>
-                  : <span title="Mostrar código" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:24,borderRadius:"50%",background:"#fff1f2",border:"1.5px solid #ef4444",fontSize:13}}>🔒</span>
-                }
+                style={{...inpS,border:`2px solid ${err?"#ef4444":"#e2e8f0"}`,paddingRight:44}}/>
+              <button type="button" onClick={()=>setShowCred(v=>!v)}
+                style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#8aaabb",padding:4}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  {showCred
+                    ?<><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                    :<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                </svg>
               </button>
             </div>
-            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:10,lineHeight:1.4}}>❌ {err}</div>}
-            {/* Indicador de progreso — hasta 12 puntos */}
-            <div style={{display:"flex",justifyContent:"center",gap:3,marginBottom:14}}>
-              {[...Array(12)].map((_,i)=>(
-                <div key={i} style={{width:6,height:6,borderRadius:"50%",background:i<pin.length?(step==="pin_viewer"?"#74b9ff":"#f6a623"):"#e2e8f0",transition:"background .1s"}}/>
-              ))}
+            <div style={{fontSize:10,color:"#8aaabb",marginBottom:16,textAlign:"left"}}>
+              DNI (8 díg.) · RUC (11 díg.) · CE / Código interno (8–12 alfanum.)
             </div>
-            <button onClick={step==="pin_viewer"?tryViewer:tryPin} disabled={pin.length<4}
-              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:pin.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",color:pin.length>=4?"white":"#94a3b8",cursor:pin.length>=4?"pointer":"not-allowed",fontSize:14,fontWeight:700,marginBottom:10}}>
+            {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:12,padding:"8px 12px",background:"#fff1f2",borderRadius:9,border:"1px solid #fecaca"}}>{err}</div>}
+            <button onClick={tryAcceso} disabled={cred.length<4}
+              style={{width:"100%",padding:"14px",borderRadius:12,border:"none",
+                background:cred.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",
+                color:cred.length>=4?"#fff":"#94a3b8",
+                cursor:cred.length>=4?"pointer":"not-allowed",
+                fontSize:15,fontWeight:700,marginBottom:0,
+                boxShadow:cred.length>=4?"0 4px 14px rgba(0,181,180,.3)":"none",
+                transition:"all .2s"}}>
               Ingresar →
-            </button>
-            <button onClick={()=>{setStep("inicio");setPin("");setErr("");setShowPin(false);}}
-              style={{width:"100%",padding:"10px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#8aaabb",cursor:"pointer",fontSize:13}}>
-              ← Volver
             </button>
           </>
         )}
 
+        {/* Roles disponibles */}
+        <div style={{marginTop:20,padding:"12px",background:"#f8fafc",borderRadius:10,border:"1px solid #f0f4f8"}}>
+          <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,fontWeight:600}}>TIPOS DE ACCESO</div>
+          <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+            {[
+              {l:"Admin",c:"#f6a623",bg:"#fff8ec"},
+              {l:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},
+              {l:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},
+              {l:"Auditor",c:"#0984e3",bg:"#e6f1fb"},
+              {l:"Visor",c:"#8aaabb",bg:"#f0f4f8"},
+            ].map(({l,c,bg})=>(
+              <span key={l} style={{padding:"2px 8px",borderRadius:20,background:bg,color:c,fontSize:10,fontWeight:600,border:`1px solid ${c}33`}}>{l}</span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{marginTop:16,fontSize:10,color:"#b2bec3"}}>EstrategiaTrade · v1.0.0</div>
       </div>
     </div>
   );
 }
-
-
 function PinModal({pins,onSave,onClose}){
   const[p,setP]=useState({...pins});
   const[show,setShow]=useState(false);
