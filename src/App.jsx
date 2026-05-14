@@ -4204,7 +4204,8 @@ function ChecklistApp() {
         const CARGOS_CON_TIENDA=["Gerente de Tienda","Jefe de Tienda"];
         const docCfg=DOC_CFG[newUsuario.tipoDoc]||DOC_CFG.dni;
         const areaActiva=areas.filter(a=>a.activa!==false);
-        const cargosDisp=(areas.find(a=>a.id===newUsuario.area||a.nombre===newUsuario.area)?.cargos||[]).filter(c=>c.activo!==false);
+        const areaSelObj=areas.find(a=>a.id===newUsuario.area||a.nombre===newUsuario.area||a.nombre?.toLowerCase()===newUsuario.area?.toLowerCase());
+        const cargosDisp=(areaSelObj?.cargos||[]).filter(c=>c.activo!==false);
         const needsTienda=CARGOS_CON_TIENDA.includes(newUsuario.cargo);
         const dniLen=(newUsuario.dni||"").length;
         const dniOk=dniLen>=docCfg.min&&dniLen<=docCfg.max;
@@ -4407,7 +4408,11 @@ function ChecklistApp() {
                           {tiendaNombre&&<span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Vega {tiendaNombre}</span>}
                         </div>
                       </div>
-                      <button onClick={()=>{setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:u.area||"",cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});setShowNUsuario(true);}} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
+                      <button onClick={()=>{
+                        const areaId=areas.find(a=>a.id===u.area||a.nombre===u.area||a.nombre?.toLowerCase()===u.area?.toLowerCase())?.id||u.area||"";
+                        setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
+                        setShowNUsuario(true);
+                      }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
                       <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{activo:u.activo===false},{merge:true});showToast(u.activo===false?"Usuario activado":"Usuario pausado");}} style={{padding:"6px 11px",borderRadius:9,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>{u.activo===false?"Activar":"Pausar"}</button>
@@ -7474,7 +7479,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   return(
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#1a2f4a,#0d1f35)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#b8c8d8 0%,#8aaabb 40%,#5a7a9a 100%)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
       <div style={{width:"90%",maxWidth:360,background:"#fff",borderRadius:20,padding:"32px 28px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
         {/* Logo */}
@@ -7550,23 +7555,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           </>
         )}
 
-        {/* Roles disponibles */}
-        <div style={{marginTop:20,padding:"12px",background:"#f8fafc",borderRadius:10,border:"1px solid #f0f4f8"}}>
-          <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,fontWeight:600}}>TIPOS DE ACCESO</div>
-          <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
-            {[
-              {l:"Admin",c:"#f6a623",bg:"#fff8ec"},
-              {l:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},
-              {l:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},
-              {l:"Auditor",c:"#0984e3",bg:"#e6f1fb"},
-              {l:"Visor",c:"#8aaabb",bg:"#f0f4f8"},
-            ].map(({l,c,bg})=>(
-              <span key={l} style={{padding:"2px 8px",borderRadius:20,background:bg,color:c,fontSize:10,fontWeight:600,border:`1px solid ${c}33`}}>{l}</span>
-            ))}
-          </div>
-        </div>
-
-        <div style={{marginTop:16,fontSize:10,color:"#b2bec3"}}>EstrategiaTrade · v1.0.0</div>
+        <div style={{marginTop:16,fontSize:10,color:"#b2bec3"}}>EstrategiaTrade · v2.0</div>
       </div>
     </div>
   );
