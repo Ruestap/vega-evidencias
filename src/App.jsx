@@ -888,6 +888,7 @@ function ChecklistApp() {
 
   // Sync colección auditorias
   useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"auditorias"),snap=>{
       const data={};
       snap.forEach(d=>{data[d.id]={id:d.id,...d.data()};});
       setAuditorias(data);
