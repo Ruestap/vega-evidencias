@@ -4204,7 +4204,9 @@ function ChecklistApp() {
         const CARGOS_CON_TIENDA=["Gerente de Tienda","Jefe de Tienda"];
         const docCfg=DOC_CFG[newUsuario.tipoDoc]||DOC_CFG.dni;
         const areaActiva=areas.filter(a=>a.activa!==false);
-        const areaSelObj=areas.find(a=>a.id===newUsuario.area||a.nombre===newUsuario.area||a.nombre?.toLowerCase()===newUsuario.area?.toLowerCase());
+        const AREA_LEGACY_MAP={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
+        const areaIdNorm=AREA_LEGACY_MAP[newUsuario.area]||newUsuario.area;
+        const areaSelObj=areas.find(a=>a.id===areaIdNorm||a.nombre?.toLowerCase()===areaIdNorm?.toLowerCase());
         const cargosDisp=(areaSelObj?.cargos||[]).filter(c=>c.activo!==false);
         const needsTienda=CARGOS_CON_TIENDA.includes(newUsuario.cargo);
         const dniLen=(newUsuario.dni||"").length;
@@ -4389,7 +4391,9 @@ function ChecklistApp() {
                 return filtrados.map(u=>{
                   const rc=ROL_CFG_U[u.rol]||{label:u.rol||"?",c:"#8aaabb",bg:"#f0f4f8"};
                   const initials=(u.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-                  const areaNombre=areas.find(a=>a.id===u.area)?.nombre||u.area||"";
+                  const AREA_LEG={"Trade Marketing":"marketing","trade marketing":"marketing"};
+                  const areaIdR=AREA_LEG[u.area]||u.area;
+                  const areaNombre=areas.find(a=>a.id===areaIdR||a.nombre?.toLowerCase()===areaIdR?.toLowerCase())?.nombre||u.area||"";
                   const tiendaNombre=u.tiendaId?tiendas.find(t=>t.id===u.tiendaId)?.n:"";
                   return(
                     <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1}}>
@@ -4409,7 +4413,13 @@ function ChecklistApp() {
                         </div>
                       </div>
                       <button onClick={()=>{
-                        const areaId=areas.find(a=>a.id===u.area||a.nombre===u.area||a.nombre?.toLowerCase()===u.area?.toLowerCase())?.id||u.area||"";
+                        // Mapeo legacy: nombres viejos de Firebase → ids nuevos en Firestore
+                        const AREA_LEGACY={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
+                        const rawArea=u.area||"";
+                        const areaId=areas.find(a=>a.id===rawArea)?.id
+                          ||areas.find(a=>a.nombre?.toLowerCase()===rawArea.toLowerCase())?.id
+                          ||AREA_LEGACY[rawArea]
+                          ||rawArea;
                         setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
                         setShowNUsuario(true);
                       }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
