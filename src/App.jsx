@@ -4001,6 +4001,397 @@ function ChecklistApp() {
   };
 
   /* ══ TAB CONFIG ══ */
+  /* ══ renderUsuarios — módulo independiente del sidebar ══ */
+  const renderUsuarios=()=>{
+    /* Estado del dropdown — qué módulo está seleccionado */
+    const USR_MODS=[
+      {id:"usuarios", label:"Usuarios",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>},
+      {id:"areas",    label:"Áreas",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
+      {id:"roles",    label:"Roles",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
+    ];
+
+    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
+    const DOC_CFG={dni:{label:"DNI",ph:"12345678",hint:"8 dígitos",min:8,max:8,alpha:false},ruc:{label:"RUC",ph:"20123456789",hint:"11 dígitos",min:11,max:11,alpha:false},ce:{label:"Carnet Extranjería",ph:"CE12345678",hint:"8–12 alfanum.",min:8,max:12,alpha:true},cod:{label:"Código interno",ph:"VEGA2024RR",hint:"8–12 alfanum.",min:8,max:12,alpha:true}};
+    const CARGOS_CON_TIENDA=["Gerente de Tienda","Jefe de Tienda"];
+    const AREA_LEGACY_MAP={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
+    const docCfg=DOC_CFG[newUsuario.tipoDoc]||DOC_CFG.dni;
+    const areaActiva=areas.filter(a=>a.activa!==false);
+    const areaIdNorm=AREA_LEGACY_MAP[newUsuario.area]||newUsuario.area;
+    const areaSelObj=areas.find(a=>a.id===areaIdNorm||a.nombre?.toLowerCase()===areaIdNorm?.toLowerCase());
+    const cargosDisp=(areaSelObj?.cargos||[]).filter(c=>c.activo!==false);
+    const needsTienda=CARGOS_CON_TIENDA.includes(newUsuario.cargo);
+    const dniLen=(newUsuario.dni||"").length;
+    const dniOk=dniLen>=docCfg.min&&dniLen<=docCfg.max;
+    const activeMod=USR_MODS.find(m=>m.id===usrTab)||null;
+
+    return(
+    <div style={{padding:"16px"}}>
+      {/* ── Botón "Gestión de Usuarios" con dropdown ── */}
+      <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
+        <button onClick={()=>setDdOpen(o=>!o)}
+          style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
+            borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
+            cursor:"pointer",color:usrTab?"#6C6EF5":"#5a7a9a",
+            fontWeight:600,fontSize:13,
+            borderBottom:!usrTab?"2px solid #6C6EF5":"1.5px solid #E2E8F0"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+          </svg>
+          {activeMod
+            ? <>{React.cloneElement(activeMod.ico,{stroke:"#6C6EF5"})} {activeMod.label}</>
+            : "Gestión de Usuarios"}
+        </button>
+        {ddOpen&&(
+          <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,minWidth:210,
+            background:"#fff",borderRadius:12,border:"1.5px solid #E2E8F0",
+            boxShadow:"0 8px 24px rgba(0,0,0,.10)",zIndex:200,overflow:"hidden"}}>
+            <div style={{padding:"10px 14px 6px",fontSize:11,fontWeight:700,
+              color:"#8aaabb",letterSpacing:".06em",borderBottom:"1px solid #F1F5F9",
+              display:"flex",alignItems:"center",gap:6}}>
+              Seleccione Módulo
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12"/></svg>
+            </div>
+            {USR_MODS.map(m=>(
+              <button key={m.id}
+                onClick={()=>{setUsrTab(m.id);setDdOpen(false);setShowNUsuario(false);}}
+                style={{width:"100%",padding:"12px 16px",border:"none",
+                  borderBottom:"1px solid #F8FAFC",background:usrTab===m.id?"#F5F4FF":"#fff",
+                  display:"flex",alignItems:"center",justifyContent:"space-between",
+                  cursor:"pointer",color:usrTab===m.id?"#6C6EF5":"#1a2f4a",
+                  fontWeight:usrTab===m.id?700:500,fontSize:13}}>
+                {m.label}
+                {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#94A3B8"})}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Línea separadora */}
+      {usrTab&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
+
+      {/* Pill activa */}
+      {usrTab&&(
+        <div style={{paddingTop:12,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <button onClick={()=>{setUsrTab(null);setDdOpen(false);setShowNUsuario(false);}}
+            style={{display:"inline-flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)"}}>
+            {activeMod&&React.cloneElement(activeMod.ico,{stroke:"#fff"})}
+            {activeMod?.label}
+          </button>
+          {/* Botón acción contextual */}
+          <button onClick={()=>setShowNUsuario(true)}
+            style={{padding:"9px 16px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            {usrTab==="usuarios"?"Nuevo usuario":usrTab==="roles"?"Nuevo rol":"Nueva área"}
+          </button>
+        </div>
+      )}
+
+      {/* ── CONTENIDO USUARIOS ── */}
+      {usrTab==="usuarios"&&(()=>{
+        const filtrados=(busqUsuario||"")?usuarios.filter(u=>u.nombre?.toLowerCase().includes(busqUsuario.toLowerCase())||u.dni?.toLowerCase().includes(busqUsuario.toLowerCase())||u.cargo?.toLowerCase().includes(busqUsuario.toLowerCase())||u.area?.toLowerCase().includes(busqUsuario.toLowerCase())):usuarios;
+        return(
+        <div>
+          <div style={{fontSize:11,color:"#8aaabb",marginBottom:10}}>{usuarios.filter(u=>u.activo!==false).length} activos · {usuarios.length} totales</div>
+          <div style={{position:"relative",marginBottom:12}}>
+            <svg style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8aaabb" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input placeholder="Buscar por nombre, credencial, cargo o área..." value={busqUsuario||""} onChange={e=>setBusqUsuario(e.target.value)} style={{...S.inp,paddingLeft:34,fontSize:13}}/>
+          </div>
+          {showNUsuario&&(
+            <div style={{...S.card,padding:"16px",marginBottom:14,border:"1.5px solid #00b5b4"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {newUsuario.editId?"Editar usuario":"Nuevo usuario"}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                <div><label style={S.lbl}>NOMBRE COMPLETO *</label><input value={newUsuario.nombre} onChange={e=>setNewUsuario(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Roberto Ruesta" style={S.inp}/></div>
+                <div><label style={S.lbl}>EMAIL</label><input type="email" value={newUsuario.email||""} onChange={e=>setNewUsuario(p=>({...p,email:e.target.value}))} placeholder="nombre@empresa.pe" style={S.inp}/></div>
+                <div style={{gridColumn:"1/-1"}}>
+                  <label style={S.lbl}>CONTACTO (MÓVIL / WHATSAPP)</label>
+                  <input type="tel" value={newUsuario.whatsapp||""} onChange={e=>setNewUsuario(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15),telefono:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))} placeholder="51987654321" style={S.inp}/>
+                </div>
+              </div>
+              <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  CREDENCIAL DE ACCESO
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:10}}>
+                  {Object.entries(DOC_CFG).map(([k,v])=>{const on=newUsuario.tipoDoc===k;return(<button key={k} onClick={()=>setNewUsuario(p=>({...p,tipoDoc:k,dni:""}))} style={{flex:1,padding:"8px 4px",borderRadius:9,border:`1.5px solid ${on?"#1a2f4a":"#e2e8f0"}`,background:on?"#1a2f4a":"#f8fafc",color:on?"#fff":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:600,textAlign:"center"}}>{v.label}</button>);})}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <label style={S.lbl}>NÚMERO *</label>
+                    <input value={newUsuario.dni||""} maxLength={docCfg.max} onChange={e=>{const v=docCfg.alpha?e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,docCfg.max).toUpperCase():e.target.value.replace(/[^0-9]/g,"").slice(0,docCfg.max);setNewUsuario(p=>({...p,dni:v}));}} placeholder={docCfg.ph} style={{...S.inp,fontFamily:"monospace",letterSpacing:2}}/>
+                    <div style={{fontSize:9,color:"#8aaabb",marginTop:2}}>{docCfg.hint}</div>
+                  </div>
+                  <div style={{padding:"10px 12px",borderRadius:10,background:dniOk?"#e0fafa":dniLen>0?"#fff8ec":"#f8fafc",border:`1px solid ${dniOk?"#00b5b4":dniLen>0?"#f6a623":"#e2e8f0"}`,display:"flex",alignItems:"center",gap:8}}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={dniOk?"#00b5b4":dniLen>0?"#f6a623":"#b2bec3"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:dniOk?"#085041":dniLen>0?"#854F0B":"#8aaabb"}}>{dniOk?"Credencial válida":dniLen>0?`Mín. ${docCfg.min} chars`:"Ingresa el número"}</div>
+                      <div style={{fontSize:10,color:dniOk?"#085041":"#b2bec3"}}>{dniOk?`Código: ${newUsuario.dni}`:`${dniLen}/${docCfg.max}`}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10}}>ROL Y ACCESO</div>
+                <div style={{marginBottom:10}}>
+                  <label style={S.lbl}>ROL *</label>
+                  <select value={newUsuario.rol||"auditor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
+                    {roles.filter(r=>r.activo!==false).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  </select>
+                  <div style={{fontSize:10,color:ROL_CFG_U[newUsuario.rol]?.c||"#8aaabb",marginTop:3}}>{roles.find(r=>r.id===newUsuario.rol)?.desc||""}</div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:needsTienda?10:0}}>
+                  <div>
+                    <label style={S.lbl}>ÁREA *</label>
+                    <select value={newUsuario.area||""} onChange={e=>setNewUsuario(p=>({...p,area:e.target.value,cargo:"",tiendaId:""}))} style={{...S.inp,cursor:"pointer"}}>
+                      <option value="">Seleccionar área</option>
+                      {areaActiva.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={S.lbl}>CARGO</label>
+                    <select value={newUsuario.cargo||""} onChange={e=>setNewUsuario(p=>({...p,cargo:e.target.value,tiendaId:""}))} style={{...S.inp,cursor:"pointer"}} disabled={!newUsuario.area}>
+                      <option value="">{newUsuario.area?"Seleccionar cargo":"Primero elige área"}</option>
+                      {cargosDisp.map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {needsTienda&&(
+                  <div>
+                    <label style={S.lbl}>TIENDA ASIGNADA *</label>
+                    <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
+                      <option value="">Seleccionar tienda</option>
+                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={async()=>{
+                  if(!newUsuario.nombre.trim()) return showToast("Ingresa el nombre completo");
+                  if(!dniOk) return showToast(`Credencial: ${docCfg.min}–${docCfg.max} caracteres`);
+                  if(!newUsuario.area) return showToast("Selecciona el área");
+                  const data={nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,tipoDoc:newUsuario.tipoDoc,dni:newUsuario.dni,email:newUsuario.email||"",whatsapp:newUsuario.whatsapp||"",telefono:newUsuario.whatsapp||"",area:newUsuario.area||"",cargo:newUsuario.cargo||"",tiendaId:newUsuario.tiendaId||"",activo:true};
+                  if(newUsuario.editId){await setDoc(doc(db,"usuarios",newUsuario.editId),data,{merge:true});showToast("Usuario actualizado");}
+                  else{const ref=doc(collection(db,"usuarios"));await setDoc(ref,{...data,ultimoAcceso:null});showToast("Usuario registrado");}
+                  setShowNUsuario(false);setNewUsuario(NU_INIT);
+                }} style={{flex:1,padding:"11px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                  {newUsuario.editId?"Guardar cambios":"Registrar usuario"}
+                </button>
+                <button onClick={()=>{setShowNUsuario(false);setNewUsuario(NU_INIT);}} style={{padding:"11px 18px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {!filtrados.length?<div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>{busqUsuario?"Sin resultados":"Sin usuarios registrados."}</div>:
+          filtrados.map(u=>{
+            const rc=ROL_CFG_U[u.rol]||{label:u.rol||"?",c:"#8aaabb",bg:"#f0f4f8"};
+            const initials=(u.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+            const AREA_LEG={"Trade Marketing":"marketing","trade marketing":"marketing"};
+            const areaIdR=AREA_LEG[u.area]||u.area;
+            const areaNombre=areas.find(a=>a.id===areaIdR||a.nombre?.toLowerCase()===areaIdR?.toLowerCase())?.nombre||u.area||"";
+            const tiendaNombre=u.tiendaId?tiendas.find(t=>t.id===u.tiendaId)?.n:"";
+            return(
+              <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1}}>
+                <div style={{width:40,height:40,borderRadius:11,background:rc.bg,border:`1.5px solid ${rc.c}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:rc.c,flexShrink:0}}>{initials}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
+                    {u.nombre}
+                    <span style={{padding:"1px 7px",borderRadius:20,fontSize:10,fontWeight:600,background:rc.bg,color:rc.c,border:`1px solid ${rc.c}33`}}>{rc.label}</span>
+                    {u.activo===false&&<span style={{fontSize:9,color:"#dc2626",background:"#fff1f2",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PAUSADO</span>}
+                    {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&<span style={{fontSize:9,color:"#854F0B",background:"#FAEEDA",padding:"1px 6px",borderRadius:10,fontWeight:700}}>BLOQUEADO</span>}
+                  </div>
+                  <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                    <span style={{fontFamily:"monospace"}}>{(u.tipoDoc||"DNI").toUpperCase()} ••••{(u.dni||"").slice(-4)}</span>
+                    {areaNombre&&<span style={{background:"#f0edff",color:"#6c5ce7",padding:"1px 7px",borderRadius:10,fontWeight:600}}>{areaNombre}</span>}
+                    {u.cargo&&<span style={{background:"#f0f4f8",color:"#5a7a9a",padding:"1px 7px",borderRadius:10}}>{u.cargo}</span>}
+                    {tiendaNombre&&<span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Vega {tiendaNombre}</span>}
+                  </div>
+                </div>
+                <button onClick={()=>{
+                  const AREA_LEGACY={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
+                  const rawArea=u.area||"";
+                  const areaId=areas.find(a=>a.id===rawArea)?.id||areas.find(a=>a.nombre?.toLowerCase()===rawArea.toLowerCase())?.id||AREA_LEGACY[rawArea]||rawArea;
+                  setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
+                  setShowNUsuario(true);
+                }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{activo:u.activo===false},{merge:true});showToast(u.activo===false?"Usuario activado":"Usuario pausado");}} style={{padding:"6px 11px",borderRadius:9,border:`1px solid ${u.activo===false?"#bbf7d0":"#fecaca"}`,background:u.activo===false?"#f0fdf4":"#fff1f2",color:u.activo===false?"#16a34a":"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>{u.activo===false?"Activar":"Pausar"}</button>
+                {u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()&&<button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:null,intentosFallidos:0},{merge:true});showToast("Usuario desbloqueado");}} style={{padding:"6px 9px",borderRadius:9,border:"1px solid #FAC775",background:"#FAEEDA",color:"#633806",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Desbloquear</button>}
+                {u.whatsapp&&<button onClick={()=>{setWaModal({msg:`Hola ${u.nombre}, se detectó un acceso no autorizado. Por favor verifica.`,numero:u.whatsapp,nombre:u.nombre});}} style={{padding:"7px 9px",borderRadius:9,border:"1.5px solid #25D366",background:"#e8faf5",color:"#085041",cursor:"pointer"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>}
+                <button onClick={()=>{if(window.confirm(`¿Eliminar a ${u.nombre}?`))deleteUsuario(u.id);}} style={{padding:"7px 9px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
+              </div>
+            );
+          })}
+        </div>
+        );
+      })()}
+
+      {/* ── CONTENIDO ROLES ── */}
+      {usrTab==="roles"&&(()=>{
+        return(
+        <div>
+          {showNUsuario&&(
+            <div style={{...S.card,padding:"14px",marginBottom:12,border:"1.5px solid #6C6EF5"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:12}}>{newRol.editId?"Editar rol":"Nuevo rol"}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div><label style={S.lbl}>NOMBRE DEL ROL *</label><input value={newRol.nombre} onChange={e=>setNewRol(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Supervisor" style={S.inp}/></div>
+                <div>
+                  <label style={S.lbl}>COLOR</label>
+                  <div style={{display:"flex",gap:6,marginTop:4}}>
+                    {["#f6a623","#6C6EF5","#00b5b4","#0984e3","#e17055","#a29bfe","#fd79a8","#55efc4"].map(c=>(
+                      <div key={c} onClick={()=>setNewRol(p=>({...p,color:c}))} style={{width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",border:`2.5px solid ${newRol.color===c?"#1a2f4a":"transparent"}`}}/>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{marginBottom:10}}><label style={S.lbl}>DESCRIPCIÓN</label><input value={newRol.desc} onChange={e=>setNewRol(p=>({...p,desc:e.target.value}))} placeholder="Ej: Acceso a reportes de su área" style={S.inp}/></div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={async()=>{
+                  if(!newRol.nombre.trim()) return showToast("Ingresa el nombre del rol");
+                  const id=newRol.editId||newRol.nombre.toLowerCase().replace(/\s+/g,"_");
+                  await setDoc(doc(db,"roles",id),{nombre:newRol.nombre.trim(),desc:newRol.desc,color:newRol.color,sistema:false,activo:true},{merge:true});
+                  showToast("Rol guardado");setShowNUsuario(false);setNewRol({nombre:"",desc:"",color:"#6C6EF5",editId:null});
+                }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>{newRol.editId?"Guardar cambios":"Crear rol"}</button>
+                <button onClick={()=>{setShowNUsuario(false);setNewRol({nombre:"",desc:"",color:"#6C6EF5",editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,fontWeight:600,letterSpacing:".04em"}}>ROLES DEL SISTEMA — no eliminables</div>
+          {roles.map(r=>{
+            const usrCount=usuarios.filter(u=>u.rol===r.id).length;
+            const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
+            return(
+              <div key={r.id} style={{...S.card,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:r.activo===false?.55:1}}>
+                <div style={{width:8,height:40,borderRadius:3,background:clr,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    {r.nombre}
+                    {r.sistema&&<span style={{fontSize:9,background:"#e8faf5",color:"#085041",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Sistema</span>}
+                    {r.activo===false&&<span style={{fontSize:9,background:"#fff1f2",color:"#dc2626",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Inactivo</span>}
+                  </div>
+                  <div style={{fontSize:11,color:"#8aaabb"}}>{r.desc||""}</div>
+                  <div style={{fontSize:10,color:"#b2bec3",marginTop:2}}>{usrCount} usuario{usrCount!==1?"s":""} asignado{usrCount!==1?"s":""}</div>
+                </div>
+                <button onClick={()=>{setNewRol({nombre:r.nombre,desc:r.desc||"",color:r.color||"#8aaabb",editId:r.id});setShowNUsuario(true);}} style={{padding:"6px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:600}}>Editar</button>
+                <div onClick={async()=>{await setDoc(doc(db,"roles",r.id),{activo:r.activo===false},{merge:true});showToast(r.activo===false?"Rol activado":"Rol desactivado");}} style={{width:36,height:20,borderRadius:10,background:r.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                  <div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:r.activo===false?2:18,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        );
+      })()}
+
+      {/* ── CONTENIDO ÁREAS ── */}
+      {usrTab==="areas"&&(()=>{
+        return(
+        <div>
+          {showNUsuario&&(
+            <div style={{...S.card,padding:"14px",marginBottom:12,border:"1.5px solid #00b5b4"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:10}}>{newArea.editId?"Editar área":"Nueva área"}</div>
+              <div style={{marginBottom:10}}><label style={S.lbl}>NOMBRE DEL ÁREA *</label><input value={newArea.nombre} onChange={e=>setNewArea(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Logística" style={S.inp}/></div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={async()=>{
+                  if(!newArea.nombre.trim()) return showToast("Ingresa el nombre del área");
+                  const id=newArea.editId||newArea.nombre.toLowerCase().replace(/\s+/g,"_").replace(/[áéíóú]/g,c=>({á:"a",é:"e",í:"i",ó:"o",ú:"u"}[c]||c));
+                  await setDoc(doc(db,"areas",id),{nombre:newArea.nombre.trim(),activa:true,cargos:newArea.editId?(areas.find(a=>a.id===newArea.editId)?.cargos||[]):[]},{merge:true});
+                  showToast("Área guardada");setShowNUsuario(false);setNewArea({nombre:"",editId:null});
+                }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>{newArea.editId?"Guardar cambios":"Crear área"}</button>
+                <button onClick={()=>{setShowNUsuario(false);setNewArea({nombre:"",editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {areas.map(a=>{
+            const usrCount=usuarios.filter(u=>u.area===a.id||u.area===a.nombre).length;
+            const isOpen=areaOpen===a.id;
+            return(
+              <div key={a.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:a.activa===false?.55:1}}>
+                <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setAreaOpen(isOpen?null:a.id)}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:a.activa===false?"#b2bec3":"#00b5b4",flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
+                      {a.nombre}
+                      {a.activa===false&&<span style={{fontSize:9,background:"#fff1f2",color:"#dc2626",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Inactiva</span>}
+                    </div>
+                    <div style={{fontSize:10,color:"#8aaabb"}}>{(a.cargos||[]).length} cargos · {usrCount} usuario{usrCount!==1?"s":""}</div>
+                  </div>
+                  <button onClick={e=>{e.stopPropagation();setNewArea({nombre:a.nombre,editId:a.id});setShowNUsuario(true);}} style={{padding:"5px 9px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
+                  <div onClick={async e=>{e.stopPropagation();await setDoc(doc(db,"areas",a.id),{activa:a.activa===false},{merge:true});showToast(a.activa===false?"Área activada":"Área desactivada");}} style={{width:36,height:20,borderRadius:10,background:a.activa===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                    <div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:a.activa===false?2:18,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?"rotate(180deg)":"",transition:"transform .2s"}}><polyline points="6,9 12,15 18,9"/></svg>
+                </div>
+                {isOpen&&(
+                  <div style={{borderTop:"1px solid #f0f4f8",background:"#f8fafc",padding:"10px 14px"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",letterSpacing:".04em"}}>
+                      CARGOS
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        {newCargo.areaId===a.id
+                          ?<div style={{display:"flex",gap:6}}>
+                            <input value={newCargo.nombre} onChange={e=>setNewCargo(p=>({...p,nombre:e.target.value}))} placeholder="Nombre del cargo" style={{...S.inp,padding:"5px 10px",fontSize:11,width:160}}/>
+                            <button onClick={async()=>{
+                              if(!newCargo.nombre.trim()) return;
+                              const cargos=[...(a.cargos||[]),{id:"c"+Date.now(),nombre:newCargo.nombre.trim(),activo:true}];
+                              await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});
+                              showToast("Cargo agregado");setNewCargo({areaId:null,nombre:""});
+                            }} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>+ Agregar</button>
+                            <button onClick={()=>setNewCargo({areaId:null,nombre:""})} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>✕</button>
+                          </div>
+                          :<button onClick={()=>setNewCargo({areaId:a.id,nombre:""})} style={{padding:"4px 8px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",gap:4}}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Agregar cargo
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    {(a.cargos||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 0"}}>Sin cargos registrados</div>}
+                    {(a.cargos||[]).map((c,ci)=>(
+                      <div key={c.id||ci} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 8px",borderRadius:8,background:ci%2===0?"#fff":"transparent",marginBottom:2,opacity:c.activo===false?.5:1}}>
+                        <span style={{fontSize:12,color:"#1a2f4a"}}>{c.nombre}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:10,color:"#b2bec3"}}>{usuarios.filter(u=>u.cargo===c.nombre).length} usr</span>
+                          <div onClick={async()=>{const cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:x.activo===false}:x);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});}} style={{width:30,height:17,borderRadius:9,background:c.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                            <div style={{width:13,height:13,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:c.activo===false?2:15,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        );
+      })()}
+
+      {/* Estado vacío */}
+      {!usrTab&&(
+        <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"48px 20px",textAlign:"center",marginTop:8}}>
+          <svg width="56" height="56" viewBox="0 0 64 64" fill="none" style={{marginBottom:12}}>
+            <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+            <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+            <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+            <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+            <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+          </svg>
+          <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Sin configuraciones realizadas hoy</div>
+        </div>
+      )}
+    </div>
+    );
+  };
+
   const renderConfig = ({hideTabs=false}={})=>(
     <div style={{padding:"16px"}}>
       {!hideTabs&&(()=>{
@@ -6148,7 +6539,7 @@ function ChecklistApp() {
         {/* Nav */}
         <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
           {SIDEBAR_ITEMS.map(it=>(
-            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}if(it.mod===2)setUsrTab("usuarios");}}
+            <button key={it.id} className="et-nav-item et-sidebar-nav-btn" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}if(it.mod===2){setUsrTab(null);setDdOpen(false);}}}
               style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                 background:sidebarActive===it.id?"#2F6BFF":"transparent",
                 color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
@@ -6242,7 +6633,7 @@ function ChecklistApp() {
       {modulo===0&&tab===1&&renderReporte()}
       {modulo===0&&tab===2&&(isViewer?renderViewerDash():renderDashboard())}
       {modulo===1&&isAdmin&&renderConfig({hideTabs:true})}
-      {modulo===2&&isAdmin&&renderConfig({hideTabs:true})}
+      {modulo===2&&isAdmin&&renderUsuarios()}
       {modulo===3&&isAdmin&&renderConfig()}
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
@@ -7092,7 +7483,7 @@ function ChecklistApp() {
             {/* Nav */}
             <nav style={{flex:1,padding:"12px 8px",overflowY:"auto"}}>
               {SIDEBAR_ITEMS.map(it=>(
-                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}setDrawerOpen(false);}}
+                <button key={it.id} className="et-nav-item" onClick={()=>{setModulo(it.mod);setTab(it.tab);if(it.cfgTab!==undefined)setCfgTab(it.cfgTab);if(it.mod===3){setCfgMod(null);setDdOpen(false);}if(it.mod===2){setUsrTab(null);setDdOpen(false);}setDrawerOpen(false);}}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",
                     background:sidebarActive===it.id?"#2F6BFF":"transparent",
                     color:sidebarActive===it.id?"#fff":"rgba(255,255,255,.6)",
