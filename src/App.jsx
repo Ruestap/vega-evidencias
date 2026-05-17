@@ -655,6 +655,15 @@ function ChecklistApp() {
   const [ddOpen,  setDdOpen]  = useState(false); // dropdown Panel de control
   const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva en módulo Tiendas
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
+  /* ── auditoría config ── */
+  const [audCfgTab,  setAudCfgTab]  = useState("rutas");
+  const [rutas,      setRutas]      = useState([]);
+  const [modulosAud, setModulosAud] = useState([]);
+  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloId:"",tiendas:[],editId:null});
+  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});
+  const [showNewRuta,setShowNewRuta]= useState(false);
+  const [showNewMod, setShowNewMod] = useState(false);
+  const [modAudOpen, setModAudOpen] = useState(null);
   /* ── módulo usuarios ── */
   const [usrTab,  setUsrTab]  = useState("usuarios"); // "usuarios" | "roles" | "areas"
   const [roles,   setRoles]   = useState([]);
@@ -839,6 +848,28 @@ function ChecklistApp() {
       setUsuarios(data);
     });
     return ()=>unsub();
+  },[]);
+
+  // Sync rutas desde Firestore
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"rutas"),snap=>{
+      const data=[];
+      snap.forEach(d=>data.push({id:d.id,...d.data()}));
+      data.sort((a,b)=>(b.creadaEn||"").localeCompare(a.creadaEn||""));
+      setRutas(data);
+    });
+    return()=>unsub();
+  },[]);
+
+  // Sync modulos_auditoria desde Firestore
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"modulos_auditoria"),snap=>{
+      const data=[];
+      snap.forEach(d=>data.push({id:d.id,...d.data()}));
+      data.sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
+      setModulosAud(data);
+    });
+    return()=>unsub();
   },[]);
 
   // Sync roles desde Firestore
@@ -4520,35 +4551,302 @@ function ChecklistApp() {
 
             {/* ── PASO 2b: Auditoría → en construcción ── */}
             {cfgMod==="auditoria"&&(()=>{
-              const AUD_TABS=["Rutas","Tareas","Score"];
+              const semanaActual=(()=>{const d=new Date();const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return `${y}-W${String(w).padStart(2,"0")}`;})();
+              const audTabs=[{id:"rutas",label:"Rutas"},{id:"tareas",label:"Tareas"},{id:"score",label:"Score"}];
+              const auditores=usuarios.filter(u=>["auditor","coordinador","admin"].includes(u.rol)&&u.activo!==false);
+              const rutasSemana=rutas.filter(r=>r.semana===semanaActual);
               return(
                 <div style={{marginTop:10}}>
-                  <div style={{background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",
-                    borderTop:"1px solid #E2E8F0",display:"flex",gap:4}}>
-                    {AUD_TABS.map((t,i)=>(
-                      <button key={t} style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
-                        borderBottom:`3px solid ${i===0?"#6C6EF5":"transparent"}`,
-                        background:i===0?"#EEEFFE":"transparent",
-                        color:i===0?"#6C6EF5":"#64748B",
-                        fontWeight:i===0?700:500,fontSize:13,cursor:"default",whiteSpace:"nowrap"}}>
-                        {t}
+                  {/* Sub-tabs */}
+                  <div style={{background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0",display:"flex",gap:4,marginBottom:0}}>
+                    {audTabs.map(t=>(
+                      <button key={t.id} onClick={()=>setAudCfgTab(t.id)}
+                        style={{padding:"9px 18px",border:"none",borderRadius:"8px 8px 0 0",
+                          borderBottom:`3px solid ${audCfgTab===t.id?"#6C6EF5":"transparent"}`,
+                          background:audCfgTab===t.id?"#EEEFFE":"transparent",
+                          color:audCfgTab===t.id?"#6C6EF5":"#64748B",
+                          fontWeight:audCfgTab===t.id?700:500,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}}>
+                        {t.label}
                       </button>
                     ))}
                   </div>
-                  <div style={{background:"#fff",borderRadius:"0 0 12px 12px",border:"1px solid #E2E8F0",
-                    borderTop:"none",padding:"48px 20px",textAlign:"center"}}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b2bec3"
-                      strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:12}}>
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="12"/>
-                      <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <div style={{fontWeight:700,fontSize:14,color:"#5a7a9a",marginBottom:6}}>
-                      Estamos trabajando en esto
-                    </div>
-                    <div style={{fontSize:12,color:"#b2bec3",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>
-                      La arquitectura y lógica del módulo Auditoría estará disponible pronto.
-                    </div>
+
+                  <div style={{background:"#fff",borderRadius:"0 0 12px 12px",border:"1px solid #E2E8F0",borderTop:"none",padding:"16px"}}>
+
+                    {/* ══ TAB RUTAS ══ */}
+                    {audCfgTab==="rutas"&&(()=>{
+                      return(
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Rutas semanales</div>
+                            <div style={{fontSize:11,color:"#8aaabb"}}>Semana automática: {semanaActual} · {rutasSemana.length} rutas asignadas</div>
+                          </div>
+                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});}}
+                            style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Nueva ruta
+                          </button>
+                        </div>
+
+                        {showNewRuta&&(
+                          <div style={{...S.card,padding:"16px",marginBottom:14,border:"1.5px solid #00b5b4"}}>
+                            <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                              Nueva ruta — {semanaActual}
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                              <div>
+                                <label style={S.lbl}>AUDITOR *</label>
+                                <select value={newRuta.auditorId} onChange={e=>setNewRuta(p=>({...p,auditorId:e.target.value}))} style={S.inp}>
+                                  <option value="">Seleccionar auditor</option>
+                                  {auditores.map(a=><option key={a.id} value={a.id}>{a.nombre} · {a.cargo||a.rol}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={S.lbl}>MÓDULO A EVALUAR</label>
+                                <select value={newRuta.moduloId} onChange={e=>setNewRuta(p=>({...p,moduloId:e.target.value}))} style={S.inp}>
+                                  <option value="">Sin módulo específico</option>
+                                  {modulosAud.filter(m=>m.activo!==false).map(m=><option key={m.id} value={m.id}>{m.nombre}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div style={{marginBottom:12}}>
+                              <label style={S.lbl}>TIENDAS ASIGNADAS *</label>
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
+                                {tiendas.filter(t=>t.activa).map(t=>{
+                                  const sel=(newRuta.tiendas||[]).includes(t.id);
+                                  return(
+                                    <label key={t.id} onClick={()=>setNewRuta(p=>({...p,tiendas:sel?p.tiendas.filter(x=>x!==t.id):[...(p.tiendas||[]),t.id]}))}
+                                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:9,border:`1.5px solid ${sel?"#00b5b4":"#e2e8f0"}`,cursor:"pointer",fontSize:12,background:sel?"#e0fafa":"#fff",color:sel?"#085041":"#1a2f4a"}}>
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={sel?"#00b5b4":"#b2bec3"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
+                                      </svg>
+                                      Vega {t.n}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              {(newRuta.tiendas||[]).length===0&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>Selecciona al menos una tienda</div>}
+                            </div>
+                            <div style={{display:"flex",gap:8}}>
+                              <button onClick={async()=>{
+                                if(!newRuta.auditorId) return showToast("Selecciona un auditor");
+                                if(!(newRuta.tiendas||[]).length) return showToast("Selecciona al menos una tienda");
+                                const data={auditorId:newRuta.auditorId,moduloId:newRuta.moduloId||"",tiendas:newRuta.tiendas,semana:semanaActual,activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
+                                if(newRuta.editId){await setDoc(doc(db,"rutas",newRuta.editId),data,{merge:true});showToast("Ruta actualizada");}
+                                else{await setDoc(doc(collection(db,"rutas")),data);showToast("Ruta creada");}
+                                setShowNewRuta(false);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});
+                              }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                                {newRuta.editId?"Guardar cambios":"Crear ruta"}
+                              </button>
+                              <button onClick={()=>{setShowNewRuta(false);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {rutasSemana.length===0&&!showNewRuta&&(
+                          <div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>
+                            Sin rutas para esta semana. Crea la primera.
+                          </div>
+                        )}
+
+                        {rutasSemana.map(r=>{
+                          const auditor=usuarios.find(u=>u.id===r.auditorId);
+                          const modulo=modulosAud.find(m=>m.id===r.moduloId);
+                          const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
+                          const auditadasSemana=Object.values(auditorias||{}).filter(a=>a.auditorId===r.auditorId&&a.semana===semanaActual&&(r.tiendas||[]).includes(a.tiendaId));
+                          const pct=tiendasRuta.length>0?Math.round(auditadasSemana.length/tiendasRuta.length*100):0;
+                          const initials=(auditor?.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+                          return(
+                            <div key={r.id} style={{...S.card,padding:"12px 16px",marginBottom:8,opacity:r.activo===false?.55:1}}>
+                              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                                <div style={{width:38,height:38,borderRadius:10,background:"#e6f1fb",border:"1.5px solid #85B7EB44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#0C447C",flexShrink:0}}>{initials}</div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:2}}>{auditor?.nombre||"Auditor"}</div>
+                                  <div style={{fontSize:11,color:"#8aaabb"}}>
+                                    {modulo?`Módulo: ${modulo.nombre}`:"Sin módulo asignado"}
+                                  </div>
+                                </div>
+                                <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:r.activo===false?"#fff1f2":"#e0fafa",color:r.activo===false?"#dc2626":"#085041"}}>
+                                  {r.activo===false?"Inactiva":"Activa"}
+                                </span>
+                                <button onClick={()=>{
+                                  setNewRuta({auditorId:r.auditorId,moduloId:r.moduloId||"",tiendas:r.tiendas||[],editId:r.id});
+                                  setShowNewRuta(true);
+                                }} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
+                              </div>
+                              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+                                {tiendasRuta.map(t=>{
+                                  const auditada=auditadasSemana.some(a=>a.tiendaId===t.id);
+                                  return(
+                                    <span key={t.id} style={{fontSize:10,fontWeight:500,padding:"2px 8px",borderRadius:20,background:auditada?"#EAF3DE":"#e6f1fb",color:auditada?"#27500A":"#0C447C",border:`0.5px solid ${auditada?"#C0DD97":"#85B7EB"}`}}>
+                                      Vega {t.n} {auditada?"✓":""}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                                <div style={{flex:1,height:4,borderRadius:2,background:"#f0f4f8"}}>
+                                  <div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:pct===100?"#639922":"#00b5b4",transition:"width .3s"}}/>
+                                </div>
+                                <span style={{fontSize:11,fontWeight:700,color:pct===100?"#27500A":"#085041",minWidth:36}}>{pct}%</span>
+                                <span style={{fontSize:11,color:"#8aaabb"}}>{auditadasSemana.length}/{tiendasRuta.length}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      );
+                    })()}
+
+                    {/* ══ TAB TAREAS ══ */}
+                    {audCfgTab==="tareas"&&(()=>{
+                      const areaActiva=areas.filter(a=>a.activa!==false);
+                      return(
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Módulos de evaluación</div>
+                            <div style={{fontSize:11,color:"#8aaabb"}}>{modulosAud.filter(m=>m.activo!==false).length} módulos activos</div>
+                          </div>
+                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});}}
+                            style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Nuevo módulo
+                          </button>
+                        </div>
+
+                        {showNewMod&&(
+                          <div style={{...S.card,padding:"16px",marginBottom:14,border:"1.5px solid #6C6EF5"}}>
+                            <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:12}}>{newModAud.editId?"Editar módulo":"Nuevo módulo de evaluación"}</div>
+                            <div style={{marginBottom:10}}>
+                              <label style={S.lbl}>NOMBRE DEL MÓDULO *</label>
+                              <input value={newModAud.nombre} onChange={e=>setNewModAud(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Implementación POP" style={S.inp}/>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+                              <div>
+                                <label style={S.lbl}>ÁREA *</label>
+                                <select value={newModAud.area} onChange={e=>setNewModAud(p=>({...p,area:e.target.value,cargo:""}))} style={S.inp}>
+                                  <option value="">Seleccionar</option>
+                                  {areaActiva.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={S.lbl}>CARGO (default)</label>
+                                <select value={newModAud.cargo} onChange={e=>setNewModAud(p=>({...p,cargo:e.target.value}))} style={S.inp} disabled={!newModAud.area}>
+                                  <option value="">Seleccionar</option>
+                                  {(areas.find(a=>a.id===newModAud.area)?.cargos||[]).filter(c=>c.activo!==false).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={S.lbl}>ROL (default)</label>
+                                <select value={newModAud.rol} onChange={e=>setNewModAud(p=>({...p,rol:e.target.value}))} style={S.inp}>
+                                  <option value="auditor">Auditor</option>
+                                  <option value="coordinador">Coordinador</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
+                              <label style={{...S.lbl,marginBottom:8}}>TAREAS DEL MÓDULO</label>
+                              {(newModAud.tareas||[]).map((t,i)=>(
+                                <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
+                                  <input value={t.nombre} onChange={e=>setNewModAud(p=>({...p,tareas:p.tareas.map((x,xi)=>xi===i?{...x,nombre:e.target.value}:x)}))}
+                                    placeholder="Nombre de la tarea" style={{...S.inp,flex:1}}/>
+                                  <button onClick={()=>setNewModAud(p=>({...p,tareas:p.tareas.filter((_,xi)=>xi!==i)}))}
+                                    style={{padding:"6px 9px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                  </button>
+                                </div>
+                              ))}
+                              <button onClick={()=>setNewModAud(p=>({...p,tareas:[...(p.tareas||[]),{id:"t"+Date.now(),nombre:"",activo:true}]}))}
+                                style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,marginTop:4}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Agregar tarea
+                              </button>
+                            </div>
+                            <div style={{display:"flex",gap:8}}>
+                              <button onClick={async()=>{
+                                if(!newModAud.nombre.trim()) return showToast("Ingresa el nombre del módulo");
+                                if(!newModAud.area) return showToast("Selecciona el área");
+                                const tareas=(newModAud.tareas||[]).filter(t=>t.nombre.trim()).map((t,i)=>({...t,orden:i}));
+                                const data={nombre:newModAud.nombre.trim(),area:newModAud.area,cargo:newModAud.cargo||"",rol:newModAud.rol,tareas,activo:true};
+                                if(newModAud.editId){await setDoc(doc(db,"modulos_auditoria",newModAud.editId),data,{merge:true});showToast("Módulo actualizado");}
+                                else{await setDoc(doc(collection(db,"modulos_auditoria")),data);showToast("Módulo creado");}
+                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});
+                              }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                                {newModAud.editId?"Guardar cambios":"Crear módulo"}
+                              </button>
+                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {modulosAud.length===0&&!showNewMod&&(
+                          <div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>Sin módulos. Crea el primero.</div>
+                        )}
+
+                        {modulosAud.map(m=>{
+                          const isOpen=modAudOpen===m.id;
+                          const areaNombre=areas.find(a=>a.id===m.area)?.nombre||m.area||"";
+                          return(
+                            <div key={m.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:m.activo===false?.55:1}}>
+                              <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setModAudOpen(isOpen?null:m.id)}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                                    {m.nombre}
+                                    {m.activo===false&&<span style={{fontSize:9,background:"#fff1f2",color:"#dc2626",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Inactivo</span>}
+                                  </div>
+                                  <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:5,flexWrap:"wrap"}}>
+                                    {areaNombre&&<span style={{background:"#f0edff",color:"#534AB7",padding:"1px 7px",borderRadius:10,fontWeight:600}}>{areaNombre}</span>}
+                                    {m.cargo&&<span style={{background:"#f0f4f8",color:"#5a7a9a",padding:"1px 7px",borderRadius:10}}>{m.cargo}</span>}
+                                    <span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Rol: {m.rol}</span>
+                                    <span style={{color:"#b2bec3"}}>{(m.tareas||[]).length} tareas</span>
+                                  </div>
+                                </div>
+                                <button onClick={e=>{e.stopPropagation();setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],editId:m.id});setShowNewMod(true);}}
+                                  style={{padding:"5px 9px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
+                                <div onClick={async e=>{e.stopPropagation();await setDoc(doc(db,"modulos_auditoria",m.id),{activo:m.activo===false},{merge:true});showToast(m.activo===false?"Módulo activado":"Módulo desactivado");}}
+                                  style={{width:36,height:20,borderRadius:10,background:m.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
+                                  <div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:m.activo===false?2:18,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                                </div>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?"rotate(180deg)":"",transition:"transform .2s"}}><polyline points="6,9 12,15 18,9"/></svg>
+                              </div>
+                              {isOpen&&(
+                                <div style={{borderTop:"1px solid #f0f4f8",background:"#f8fafc",padding:"10px 14px"}}>
+                                  <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",marginBottom:8,letterSpacing:".04em"}}>TAREAS ({(m.tareas||[]).length})</div>
+                                  {(m.tareas||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3"}}>Sin tareas. Edita el módulo para agregar.</div>}
+                                  {(m.tareas||[]).map((t,ti)=>(
+                                    <div key={t.id||ti} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:ti%2===0?"#fff":"transparent",marginBottom:2,opacity:t.activo===false?.5:1}}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b2bec3" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                      <span style={{flex:1,fontSize:12,color:"#1a2f4a"}}>{t.nombre}</span>
+                                      <div onClick={async()=>{
+                                        const tareas=(m.tareas||[]).map((x,xi)=>xi===ti?{...x,activo:x.activo===false}:x);
+                                        await setDoc(doc(db,"modulos_auditoria",m.id),{tareas},{merge:true});
+                                      }} style={{width:30,height:17,borderRadius:9,background:t.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                                        <div style={{width:13,height:13,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:t.activo===false?2:15,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      );
+                    })()}
+
+                    {/* ══ TAB SCORE — pendiente ══ */}
+                    {audCfgTab==="score"&&(
+                      <div style={{textAlign:"center",padding:"40px 20px"}}>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b2bec3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:12}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <div style={{fontWeight:700,fontSize:14,color:"#5a7a9a",marginBottom:6}}>Score — próximamente</div>
+                        <div style={{fontSize:12,color:"#b2bec3",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>Los criterios de evaluación cuantitativa y cualitativa se configurarán aquí una vez definida la arquitectura por módulo.</div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               );
@@ -6713,6 +7011,10 @@ function ChecklistApp() {
           onSolicitarExclusion={solicitarExclusionAudit}
           isAdmin={isAdmin}
           onGestionarExclusion={gestionarExclusionAudit}
+          rutaActiva={(()=>{
+            const semana=(()=>{const d=new Date();const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return`${y}-W${String(w).padStart(2,"0")}`;})();
+            return rutas.find(r=>r.auditorId===uDni&&r.semana===semana&&r.activo!==false)||null;
+          })()}
         />
         </>
       )}
@@ -7576,24 +7878,46 @@ function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
   );
 }
 
-function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion}){
+function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva,uDni}){
   const [busqA,setBusqA]=useState("");
   const [fmtA,setFmtA]=useState("Todas");
-  const [naModal,setNaModal]=useState(null); // tId o null
+  const [naModal,setNaModal]=useState(null);
   const [naMotivo,setNaMotivo]=useState("");
   const [naComentario,setNaComentario]=useState("");
   const fmts=["Todas","Mayorista","Supermayorista","Market"];
   const fmtC={Mayorista:"#6c5ce7",Supermayorista:"#0984e3",Market:"#00b5b4"};
+
+  // Tiendas de la ruta activa del auditor
+  const tiendasEnRuta=new Set(rutaActiva?.tiendas||[]);
+
   const tFiltA=tiendas.filter(t=>{
     if(!t.activa) return false;
     if(fmtA!=="Todas"&&t.f!==fmtA) return false;
     if(busqA&&!t.n.toLowerCase().includes(busqA.toLowerCase())&&!t.dist?.toLowerCase().includes(busqA.toLowerCase())) return false;
     return true;
-  }).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  }).sort((a,b)=>{
+    // Primero las tiendas en ruta
+    const aR=tiendasEnRuta.has(a.id);
+    const bR=tiendasEnRuta.has(b.id);
+    if(aR&&!bR) return -1;
+    if(!aR&&bR) return 1;
+    return a.n.localeCompare(b.n,"es");
+  });
 
   return(
     <div style={{paddingBottom:80}}>
       <div style={{padding:"10px 16px 4px",fontWeight:800,fontSize:18,color:"#1a2f4a"}}>Seleccione Tienda a Auditar</div>
+
+      {/* Banner ruta activa */}
+      {rutaActiva&&(
+        <div style={{margin:"0 16px 10px",padding:"10px 14px",borderRadius:10,background:"#e0fafa",border:"1.5px solid #00b5b4",display:"flex",alignItems:"center",gap:10}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#085041" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:12,color:"#085041"}}>Tienes una ruta asignada esta semana</div>
+            <div style={{fontSize:11,color:"#0d7a79"}}>{tiendasEnRuta.size} tiendas · Las tiendas de tu ruta aparecen primero</div>
+          </div>
+        </div>
+      )}
 
       {/* Filtro por formato */}
       <div style={{display:"flex",gap:5,padding:"8px 16px",overflowX:"auto"}}>
@@ -7622,15 +7946,20 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
         const excl=auditExclusiones?.[t.id];
         const esExcluida=excl&&excl.aprobada;
         const esPendiente=excl&&!excl.aprobada;
+        const enRuta=tiendasEnRuta.has(t.id);
         return(
           <div key={t.id} style={{margin:"0 16px 8px"}}>
-            <div style={{padding:"11px 14px",background:esExcluida?"#fafafa":esPendiente?"#fffdf6":"#fff",
-              borderRadius:10,border:`1px solid ${esExcluida?"#e2e8f0":esPendiente?"#FAC775":"#e2e8f0"}`,
+            <div style={{padding:"11px 14px",background:esExcluida?"#fafafa":enRuta?"#f0fff8":"#fff",
+              borderRadius:10,border:`1px solid ${esExcluida?"#e2e8f0":enRuta?"#00b5b4":"#e2e8f0"}`,
               display:"flex",alignItems:"center",gap:10,
               cursor:esExcluida?"default":"pointer",opacity:esExcluida?0.7:1}}
               onClick={()=>{ if(!esExcluida) onCheckIn(t.id); }}>
               <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Vega {t.n}</div>
+                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
+                  Vega {t.n}
+                  {enRuta&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#e0fafa",color:"#085041",border:"1px solid #00b5b444"}}>En ruta</span>}
+                  {!enRuta&&rutaActiva&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#f0f4f8",color:"#8aaabb",border:"1px solid #dde3e9"}}>Fuera de ruta</span>}
+                </div>
                 <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{t.f} · {t.dist}</div>
                 {(esExcluida||esPendiente)&&(
                   <div style={{fontSize:10,color:"#854F0B",marginTop:3}}>
@@ -7711,7 +8040,8 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
 
   if(paso===0) return <SeleccionTienda tiendas={tiendas} onCheckIn={onCheckIn}
     auditExclusiones={auditExclusiones} onSolicitarExclusion={onSolicitarExclusion}
-    isAdmin={isAdmin} onGestionarExclusion={onGestionarExclusion}/>;
+    isAdmin={isAdmin} onGestionarExclusion={onGestionarExclusion}
+    rutaActiva={rutaActiva} uDni={uDni}/>;
 
   if(paso===1){
     const modulo=modulosActivos[moduloActivo];
