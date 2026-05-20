@@ -660,7 +660,7 @@ function ChecklistApp() {
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
   const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloId:"",tiendas:[],editId:null});
-  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});
+  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
   const [modAudOpen, setModAudOpen] = useState(null);
@@ -861,12 +861,29 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
-  // Sync modulos_auditoria desde Firestore
+  // Sync modulos_auditoria desde Firestore — precarga los 4 módulos base si está vacío
   useEffect(()=>{
+    const MODULOS_BASE=[
+      {id:"m_eval_personal", nombre:"Evaluación Personal", orden:1, activo:true,
+       tareas:["Hospitalidad y cordialidad","Uniforme completo","Presentación personal"],
+       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}]},
+      {id:"m_pasos_venta",   nombre:"Pasos de la venta",   orden:2, activo:true,
+       tareas:["Saludo inicial cliente","Conocimiento Always on","Abordaje proactivo","Acompañamiento guiado","Impulso venta activa / Vende+","Cierre de venta"],
+       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"}]},
+      {id:"m_visibilidad",   nombre:"Visibilidad del PDV",  orden:3, activo:true,
+       tareas:["Letrero exterior actualizado","Material campaña instalada","Reel TV / Audio activado","Planograma vigente Foco CAT","Cabeceras / Rompetráficos actualizados","Productos ordenados y limpios","Precios visibles y correctos","Rotación adecuada (FIFO)","Góndola bien abastecida","Promociones visibles","Corredores libres de palets","Portaprecios instalado y actualizado","Exhibidor Vende+ actualizado"],
+       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"}]},
+      {id:"m_criterios",     nombre:"Criterios clave (sanidad - orden)", orden:4, activo:true,
+       tareas:["Frutas y verduras en buen estado","Vitrina de comestibles ordenada"],
+       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}]},
+    ];
     const unsub=onSnapshot(collection(db,"modulos_auditoria"),snap=>{
       const data=[];
       snap.forEach(d=>data.push({id:d.id,...d.data()}));
-      data.sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
+      if(data.length===0){
+        MODULOS_BASE.forEach(m=>setDoc(doc(db,"modulos_auditoria",m.id),m).catch(()=>{}));
+      }
+      data.sort((a,b)=>(a.orden||99)-(b.orden||99));
       setModulosAud(data);
     });
     return()=>unsub();
@@ -4710,7 +4727,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Módulos de evaluación</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>{modulosAud.filter(m=>m.activo!==false).length} módulos activos</div>
                           </div>
-                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});}}
+                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nuevo módulo
@@ -4724,30 +4741,46 @@ function ChecklistApp() {
                               <label style={S.lbl}>NOMBRE DEL MÓDULO *</label>
                               <input value={newModAud.nombre} onChange={e=>setNewModAud(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Implementación POP" style={S.inp}/>
                             </div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
-                              <div>
-                                <label style={S.lbl}>ÁREA *</label>
-                                <select value={newModAud.area} onChange={e=>setNewModAud(p=>({...p,area:e.target.value,cargo:""}))} style={S.inp}>
-                                  <option value="">Seleccionar</option>
-                                  {areaActiva.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
-                                </select>
+
+                            {/* ── Accesos múltiples ── */}
+                            <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                                <label style={S.lbl}>ACCESOS (área · cargo · rol)</label>
+                                <button onClick={()=>setNewModAud(p=>({...p,accesos:[...(p.accesos||[]),{area:"",cargo:"",rol:"auditor"}]}))}
+                                  style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                  Agregar acceso
+                                </button>
                               </div>
-                              <div>
-                                <label style={S.lbl}>CARGO (default)</label>
-                                <select value={newModAud.cargo} onChange={e=>setNewModAud(p=>({...p,cargo:e.target.value}))} style={S.inp} disabled={!newModAud.area}>
-                                  <option value="">Seleccionar</option>
-                                  {(areas.find(a=>a.id===newModAud.area)?.cargos||[]).filter(c=>c.activo!==false).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-                                </select>
-                              </div>
-                              <div>
-                                <label style={S.lbl}>ROL (default)</label>
-                                <select value={newModAud.rol} onChange={e=>setNewModAud(p=>({...p,rol:e.target.value}))} style={S.inp}>
-                                  <option value="auditor">Auditor</option>
-                                  <option value="coordinador">Coordinador</option>
-                                  <option value="admin">Admin</option>
-                                </select>
-                              </div>
+                              {(newModAud.accesos||[]).length===0&&(
+                                <div style={{fontSize:11,color:"#8aaabb",padding:"6px 0"}}>Sin accesos definidos — agrega al menos uno</div>
+                              )}
+                              {(newModAud.accesos||[]).map((ac,ai)=>(
+                                <div key={ai} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
+                                  <select value={ac.area} onChange={e=>{const v=e.target.value;setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,area:v,cargo:""}:x)}));}}
+                                    style={{...S.inp,margin:0}}>
+                                    <option value="">Área *</option>
+                                    {areaActiva.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
+                                  </select>
+                                  <select value={ac.cargo} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,cargo:e.target.value}:x)}))}
+                                    style={{...S.inp,margin:0}} disabled={!ac.area}>
+                                    <option value="">Cargo</option>
+                                    {(areas.find(a=>a.id===ac.area)?.cargos||[]).filter(c=>c.activo!==false).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                                  </select>
+                                  <select value={ac.rol} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,rol:e.target.value}:x)}))}
+                                    style={{...S.inp,margin:0}}>
+                                    <option value="auditor">Auditor</option>
+                                    <option value="coordinador">Coordinador</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                  <button onClick={()=>setNewModAud(p=>({...p,accesos:p.accesos.filter((_,xi)=>xi!==ai)}))}
+                                    style={{padding:"6px 9px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                                  </button>
+                                </div>
+                              ))}
                             </div>
+
                             <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
                               <label style={{...S.lbl,marginBottom:8}}>TAREAS DEL MÓDULO</label>
                               {(newModAud.tareas||[]).map((t,i)=>(
@@ -4769,16 +4802,17 @@ function ChecklistApp() {
                             <div style={{display:"flex",gap:8}}>
                               <button onClick={async()=>{
                                 if(!newModAud.nombre.trim()) return showToast("Ingresa el nombre del módulo");
-                                if(!newModAud.area) return showToast("Selecciona el área");
+                                if(!(newModAud.accesos||[]).length) return showToast("Agrega al menos un acceso");
                                 const tareas=(newModAud.tareas||[]).filter(t=>t.nombre.trim()).map((t,i)=>({...t,orden:i}));
-                                const data={nombre:newModAud.nombre.trim(),area:newModAud.area,cargo:newModAud.cargo||"",rol:newModAud.rol,tareas,activo:true};
+                                const accesos=(newModAud.accesos||[]).filter(a=>a.area);
+                                const data={nombre:newModAud.nombre.trim(),accesos,tareas,activo:true,orden:modulosAud.length+1};
                                 if(newModAud.editId){await setDoc(doc(db,"modulos_auditoria",newModAud.editId),data,{merge:true});showToast("Módulo actualizado");}
                                 else{await setDoc(doc(collection(db,"modulos_auditoria")),data);showToast("Módulo creado");}
-                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});
+                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
                               }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                                 {newModAud.editId?"Guardar cambios":"Crear módulo"}
                               </button>
-                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -8029,11 +8063,10 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   );
 }
 
-// FIX_RUTAACTIVA_PARAM_20260520_DEPLOY_OK
 function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloActivo,
   obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,
   onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha,
-  auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva=null}){
+  auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva}){
   const tienda=tiendas.find(t=>t.id===tiendaSelId);
   const modulosActivos=modulos.filter(m=>m.activo).sort((a,b)=>a.orden-b.orden);
   const scoreFinal=calcScoreFinal(respuestas,modulosActivos);
