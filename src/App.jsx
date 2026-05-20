@@ -8029,10 +8029,11 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   );
 }
 
+// FIX_RUTAACTIVA_PARAM_20260520_DEPLOY_OK
 function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloActivo,
   obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,
   onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha,
-  auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion}){
+  auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva=null}){
   const tienda=tiendas.find(t=>t.id===tiendaSelId);
   const modulosActivos=modulos.filter(m=>m.activo).sort((a,b)=>a.orden-b.orden);
   const scoreFinal=calcScoreFinal(respuestas,modulosActivos);
