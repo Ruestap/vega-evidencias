@@ -861,30 +861,43 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
-  // Sync modulos_auditoria desde Firestore — precarga los 4 módulos base si está vacío
+  // Sync modulos_auditoria desde Firestore
   useEffect(()=>{
-    const MODULOS_BASE=[
-      {id:"m_eval_personal", nombre:"Evaluación Personal", orden:1, activo:true,
-       tareas:["Hospitalidad y cordialidad","Uniforme completo","Presentación personal"],
-       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}]},
-      {id:"m_pasos_venta",   nombre:"Pasos de la venta",   orden:2, activo:true,
-       tareas:["Saludo inicial cliente","Conocimiento Always on","Abordaje proactivo","Acompañamiento guiado","Impulso venta activa / Vende+","Cierre de venta"],
-       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"}]},
-      {id:"m_visibilidad",   nombre:"Visibilidad del PDV",  orden:3, activo:true,
-       tareas:["Letrero exterior actualizado","Material campaña instalada","Reel TV / Audio activado","Planograma vigente Foco CAT","Cabeceras / Rompetráficos actualizados","Productos ordenados y limpios","Precios visibles y correctos","Rotación adecuada (FIFO)","Góndola bien abastecida","Promociones visibles","Corredores libres de palets","Portaprecios instalado y actualizado","Exhibidor Vende+ actualizado"],
-       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"}]},
-      {id:"m_criterios",     nombre:"Criterios clave (sanidad - orden)", orden:4, activo:true,
-       tareas:["Frutas y verduras en buen estado","Vitrina de comestibles ordenada"],
-       accesos:[{area:"Marketing",cargo:"Auditor Trademarketing",rol:"Auditor"},{area:"Gestión Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}]},
-    ];
     const unsub=onSnapshot(collection(db,"modulos_auditoria"),snap=>{
-      const data=[];
-      snap.forEach(d=>data.push({id:d.id,...d.data()}));
-      if(data.length===0){
-        MODULOS_BASE.forEach(m=>setDoc(doc(db,"modulos_auditoria",m.id),m).catch(()=>{}));
+      if(snap.empty){
+        const MODS_INIT=[
+          {id:"mod_evaluacion_personal",nombre:"Evaluación Personal",area:"marketing",cargo:"Auditor Tradeketing",rol:"auditor",activo:true,tareas:[
+            {id:"t1",nombre:"Hospitalidad y cordialidad",activo:true},{id:"t2",nombre:"Uniforme completo",activo:true},{id:"t3",nombre:"Presentación Personal",activo:true}
+          ],accesos:[
+            {area:"Marketing",cargo:"Auditor Tradeketing",rol:"Auditor"},{area:"Gestion Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}
+          ]},
+          {id:"mod_pasos_venta",nombre:"Pasos de la Venta",area:"marketing",cargo:"Auditor Tradeketing",rol:"auditor",activo:true,tareas:[
+            {id:"t1",nombre:"Saludo Inicial cliente",activo:true},{id:"t2",nombre:"Conocimiento Always on",activo:true},{id:"t3",nombre:"Abordaje proactivo",activo:true},
+            {id:"t4",nombre:"Acompañamiento guiado",activo:true},{id:"t5",nombre:"Impulso Venta Activa / Vende +",activo:true},{id:"t6",nombre:"Cierre de venta",activo:true}
+          ],accesos:[
+            {area:"Marketing",cargo:"Auditor Tradeketing",rol:"Auditor"},{area:"Gestion Humana",cargo:"Capacitador",rol:"Auditor"}
+          ]},
+          {id:"mod_visibilidad_pdv",nombre:"Visibilidad del PDV",area:"marketing",cargo:"Auditor Tradeketing",rol:"auditor",activo:true,tareas:[
+            {id:"t1",nombre:"Letrero exterior actualizado",activo:true},{id:"t2",nombre:"Material campaña instalada",activo:true},{id:"t3",nombre:"Reel TV / Audio activado",activo:true},
+            {id:"t4",nombre:"Planograma vigente Foco CAT",activo:true},{id:"t5",nombre:"Cabeceras / Rompetráficos actualizados",activo:true},{id:"t6",nombre:"Productos ordenados y limpios",activo:true},
+            {id:"t7",nombre:"Precios visibles y correctos",activo:true},{id:"t8",nombre:"Rotación adecuada (FIFO)",activo:true},{id:"t9",nombre:"Gondola desabastecida",activo:true},
+            {id:"t10",nombre:"Promociones visibles",activo:true},{id:"t11",nombre:"Palets dejados en corredores",activo:true},{id:"t12",nombre:"Portaprecios instalado y actualizado",activo:true},
+            {id:"t13",nombre:"Exhibidor Vende + Actualizado",activo:true}
+          ],accesos:[{area:"Marketing",cargo:"Auditor Tradeketing",rol:"Auditor"}]},
+          {id:"mod_criterios_clave",nombre:"Criterios Claves (Sanidad - Orden)",area:"marketing",cargo:"Auditor Tradeketing",rol:"auditor",activo:true,tareas:[
+            {id:"t1",nombre:"Frutas y verduras en mal estado",activo:true},{id:"t2",nombre:"Vitrina de comestibles desordenado",activo:true}
+          ],accesos:[
+            {area:"Marketing",cargo:"Auditor Tradeketing",rol:"Auditor"},{area:"Gestion Humana",cargo:"Capacitador",rol:"Auditor"},{area:"Operaciones",cargo:"Jefe Zonal",rol:"Auditor"}
+          ]},
+        ];
+        MODS_INIT.forEach(m=>setDoc(doc(db,"modulos_auditoria",m.id),m));
+        setModulosAud(MODS_INIT);
+      } else {
+        const data=[];
+        snap.forEach(d=>data.push({id:d.id,...d.data()}));
+        data.sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
+        setModulosAud(data);
       }
-      data.sort((a,b)=>(a.orden||99)-(b.orden||99));
-      setModulosAud(data);
     });
     return()=>unsub();
   },[]);
@@ -4727,7 +4740,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Módulos de evaluación</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>{modulosAud.filter(m=>m.activo!==false).length} módulos activos</div>
                           </div>
-                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});}}
+                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nuevo módulo
@@ -4737,75 +4750,88 @@ function ChecklistApp() {
                         {showNewMod&&(
                           <div style={{...S.card,padding:"16px",marginBottom:14,border:"1.5px solid #6C6EF5"}}>
                             <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:12}}>{newModAud.editId?"Editar módulo":"Nuevo módulo de evaluación"}</div>
-                            <div style={{marginBottom:10}}>
+                            <div style={{marginBottom:12}}>
                               <label style={S.lbl}>NOMBRE DEL MÓDULO *</label>
-                              <input value={newModAud.nombre} onChange={e=>setNewModAud(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Implementación POP" style={S.inp}/>
+                              <input value={newModAud.nombre} onChange={e=>setNewModAud(p=>({...p,nombre:e.target.value}))} placeholder="Ej: Evaluación Personal" style={S.inp}/>
                             </div>
-
-                            {/* ── Accesos múltiples ── */}
+                            {/* Accesos múltiples */}
                             <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
-                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                                <label style={S.lbl}>ACCESOS (área · cargo · rol)</label>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                                <label style={{...S.lbl,marginBottom:0}}>ACCESOS (ÁREA / CARGO / ROL) *</label>
                                 <button onClick={()=>setNewModAud(p=>({...p,accesos:[...(p.accesos||[]),{area:"",cargo:"",rol:"auditor"}]}))}
                                   style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                   Agregar acceso
                                 </button>
                               </div>
-                              {(newModAud.accesos||[]).length===0&&(
-                                <div style={{fontSize:11,color:"#8aaabb",padding:"6px 0"}}>Sin accesos definidos — agrega al menos uno</div>
-                              )}
-                              {(newModAud.accesos||[]).map((ac,ai)=>(
-                                <div key={ai} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
-                                  <select value={ac.area} onChange={e=>{const v=e.target.value;setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,area:v,cargo:""}:x)}));}}
-                                    style={{...S.inp,margin:0}}>
-                                    <option value="">Área *</option>
-                                    {areaActiva.map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
-                                  </select>
-                                  <select value={ac.cargo} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,cargo:e.target.value}:x)}))}
-                                    style={{...S.inp,margin:0}} disabled={!ac.area}>
-                                    <option value="">Cargo</option>
-                                    {(areas.find(a=>a.id===ac.area)?.cargos||[]).filter(c=>c.activo!==false).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-                                  </select>
-                                  <select value={ac.rol} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,rol:e.target.value}:x)}))}
-                                    style={{...S.inp,margin:0}}>
-                                    <option value="auditor">Auditor</option>
-                                    <option value="coordinador">Coordinador</option>
-                                    <option value="admin">Admin</option>
-                                  </select>
-                                  <button onClick={()=>setNewModAud(p=>({...p,accesos:p.accesos.filter((_,xi)=>xi!==ai)}))}
-                                    style={{padding:"6px 9px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
-                                  </button>
-                                </div>
-                              ))}
+                              {(newModAud.accesos||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"4px 0"}}>Sin accesos. Agrega al menos uno.</div>}
+                              {(newModAud.accesos||[]).map((ac,ai)=>{
+                                const cargosAc=(areas.find(a=>a.id===ac.area||a.nombre===ac.area)?.cargos||[]).filter(c=>c.activo!==false);
+                                return(
+                                  <div key={ai} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,marginBottom:8,padding:"10px",borderRadius:9,background:"#f8fafc",border:"0.5px solid #e2e8f0"}}>
+                                    <div>
+                                      <label style={{...S.lbl,fontSize:9}}>ÁREA</label>
+                                      <select value={ac.area} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,area:e.target.value,cargo:""}:x)}))} style={{...S.inp,fontSize:11}}>
+                                        <option value="">Seleccionar</option>
+                                        {areas.filter(a=>a.activa!==false).map(a=><option key={a.id} value={a.id}>{a.nombre}</option>)}
+                                        <option value="Gestion Humana">Gestión Humana</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label style={{...S.lbl,fontSize:9}}>CARGO</label>
+                                      <select value={ac.cargo} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,cargo:e.target.value}:x)}))} style={{...S.inp,fontSize:11}}>
+                                        <option value="">Seleccionar</option>
+                                        {cargosAc.length>0
+                                          ?cargosAc.map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)
+                                          :<><option value="Auditor Tradeketing">Auditor Tradeketing</option><option value="Capacitador">Capacitador</option><option value="Jefe Zonal">Jefe Zonal</option></>
+                                        }
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label style={{...S.lbl,fontSize:9}}>ROL</label>
+                                      <select value={ac.rol} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,rol:e.target.value}:x)}))} style={{...S.inp,fontSize:11}}>
+                                        <option value="auditor">Auditor</option>
+                                        <option value="coordinador">Coordinador</option>
+                                        <option value="admin">Admin</option>
+                                      </select>
+                                    </div>
+                                    <button onClick={()=>setNewModAud(p=>({...p,accesos:p.accesos.filter((_,xi)=>xi!==ai)}))}
+                                      style={{padding:"6px 8px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",alignSelf:"end",marginBottom:1}}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
-
+                            {/* Tareas */}
                             <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
-                              <label style={{...S.lbl,marginBottom:8}}>TAREAS DEL MÓDULO</label>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                                <label style={{...S.lbl,marginBottom:0}}>TAREAS DEL MÓDULO</label>
+                                <button onClick={()=>setNewModAud(p=>({...p,tareas:[...(p.tareas||[]),{id:"t"+Date.now(),nombre:"",activo:true}]}))}
+                                  style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                  Agregar tarea
+                                </button>
+                              </div>
+                              {(newModAud.tareas||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3"}}>Sin tareas aún.</div>}
                               {(newModAud.tareas||[]).map((t,i)=>(
                                 <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
                                   <input value={t.nombre} onChange={e=>setNewModAud(p=>({...p,tareas:p.tareas.map((x,xi)=>xi===i?{...x,nombre:e.target.value}:x)}))}
-                                    placeholder="Nombre de la tarea" style={{...S.inp,flex:1}}/>
+                                    placeholder={`Tarea ${i+1}`} style={{...S.inp,flex:1}}/>
                                   <button onClick={()=>setNewModAud(p=>({...p,tareas:p.tareas.filter((_,xi)=>xi!==i)}))}
                                     style={{padding:"6px 9px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer"}}>
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
                                   </button>
                                 </div>
                               ))}
-                              <button onClick={()=>setNewModAud(p=>({...p,tareas:[...(p.tareas||[]),{id:"t"+Date.now(),nombre:"",activo:true}]}))}
-                                style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,marginTop:4}}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Agregar tarea
-                              </button>
                             </div>
                             <div style={{display:"flex",gap:8}}>
                               <button onClick={async()=>{
                                 if(!newModAud.nombre.trim()) return showToast("Ingresa el nombre del módulo");
-                                if(!(newModAud.accesos||[]).length) return showToast("Agrega al menos un acceso");
+                                if(!(newModAud.accesos||[]).filter(a=>a.area).length) return showToast("Agrega al menos un acceso");
                                 const tareas=(newModAud.tareas||[]).filter(t=>t.nombre.trim()).map((t,i)=>({...t,orden:i}));
                                 const accesos=(newModAud.accesos||[]).filter(a=>a.area);
-                                const data={nombre:newModAud.nombre.trim(),accesos,tareas,activo:true,orden:modulosAud.length+1};
+                                const data={nombre:newModAud.nombre.trim(),accesos,tareas,activo:true};
                                 if(newModAud.editId){await setDoc(doc(db,"modulos_auditoria",newModAud.editId),data,{merge:true});showToast("Módulo actualizado");}
                                 else{await setDoc(doc(collection(db,"modulos_auditoria")),data);showToast("Módulo creado");}
                                 setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
@@ -6882,7 +6908,7 @@ function ChecklistApp() {
           ))}
         </nav>
         {/* Footer del sidebar */}
-        <div className="et-sidebar-label" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+        <div className="et-sidebar-label" style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 2.0</div>
       </div>
 
       {/* ══ MAIN AREA ══ */}
@@ -7836,7 +7862,7 @@ function ChecklistApp() {
                 Estado
               </button>}
             </nav>
-            <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 1.0.0</div>
+            <div style={{padding:"12px 18px",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.25)"}}>Versión 2.0</div>
           </div>
         </div>
       )}
