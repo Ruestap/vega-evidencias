@@ -4834,83 +4834,48 @@ function ChecklistApp() {
                           <div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>Sin módulos. Crea el primero.</div>
                         )}
 
-                        {modulosAud.map((m,mIdx)=>{
+                        {modulosAud.map(m=>{
                           const isOpen=modAudOpen===m.id;
-                          const ROMANOS=["I","II","III","IV","V","VI","VII","VIII"];
-                          const romano=ROMANOS[mIdx]||String(mIdx+1);
-                          const MOD_COLORS=[
-                            {bg:"#e6f1fb",txt:"#0C447C",accent:"#185FA5",pill:"#B5D4F4"},
-                            {bg:"#e0fafa",txt:"#085041",accent:"#0F6E56",pill:"#9FE1CB"},
-                            {bg:"#f0edff",txt:"#3C3489",accent:"#534AB7",pill:"#CECBF6"},
-                            {bg:"#FAEEDA",txt:"#633806",accent:"#854F0B",pill:"#FAC775"},
-                          ];
-                          const mc=MOD_COLORS[mIdx%4];
-                          const accesos=m.accesos||[];
-                          const accesoAreas=[...new Set(accesos.map(a=>a.area||a.cargo||"").filter(Boolean))];
-                          const accesoRoles=[...new Set(accesos.map(a=>a.rol||"").filter(Boolean))];
-                          const tareasActivas=(m.tareas||[]).filter(t=>t.activo!==false).length;
-                          const totalTareas=(m.tareas||[]).length;
+                          const areaNombre=areas.find(a=>a.id===m.area)?.nombre||m.area||"";
                           return(
-                            <div key={m.id} style={{border:"1px solid #E2E8F0",borderRadius:14,marginBottom:10,overflow:"hidden",opacity:m.activo===false?.55:1,background:"#fff"}}>
-                              <div style={{display:"flex",alignItems:"stretch",cursor:"pointer"}} onClick={()=>setModAudOpen(isOpen?null:m.id)}>
-                                <div style={{width:48,background:mc.accent,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                                  <span style={{color:"#fff",fontWeight:800,fontSize:13,letterSpacing:".02em",writingMode:"vertical-rl",transform:"rotate(180deg)",padding:"10px 0"}}>{romano}</span>
-                                </div>
-                                <div style={{flex:1,padding:"12px 14px",minWidth:0}}>
-                                  <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6}}>
-                                    <div style={{flex:1,minWidth:0}}>
-                                      <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:4,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                                        {"Módulo "+romano+" · "+m.nombre}
-                                        {m.activo===false&&<span style={{fontSize:9,background:"#fff1f2",color:"#dc2626",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Inactivo</span>}
-                                      </div>
-                                      <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
-                                        <span style={{fontSize:10,color:"#8aaabb"}}>{totalTareas} tareas</span>
-                                        {accesoAreas.map((a,i)=>(
-                                          <span key={i} style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:mc.bg,color:mc.txt,border:"0.5px solid "+mc.pill}}>{a}</span>
-                                        ))}
-                                        {accesoRoles.map((r,i)=>(
-                                          <span key={"r"+i} style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#f0f4f8",color:"#5a7a9a"}}>{r}</span>
-                                        ))}
-                                        {!accesoAreas.length&&m.area&&(
-                                          <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:mc.bg,color:mc.txt,border:"0.5px solid "+mc.pill}}>{m.area}</span>
-                                        )}
-                                        {!accesoAreas.length&&m.cargo&&(
-                                          <span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#f0f4f8",color:"#5a7a9a"}}>{m.cargo}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                                      <button onClick={()=>{setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],accesos:m.accesos||[],editId:m.id});setShowNewMod(true);}}
-                                        style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:600}}>Editar</button>
-                                      <div onClick={async()=>{await setDoc(doc(db,"modulos_auditoria",m.id),{activo:m.activo===false},{merge:true});showToast(m.activo===false?"Módulo activado":"Módulo desactivado");}}
-                                        style={{width:38,height:22,borderRadius:11,background:m.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
-                                        <div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:m.activo===false?2:18,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
-                                      </div>
-                                    </div>
+                            <div key={m.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:m.activo===false?.55:1}}>
+                              <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setModAudOpen(isOpen?null:m.id)}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                                    {m.nombre}
+                                    {m.activo===false&&<span style={{fontSize:9,background:"#fff1f2",color:"#dc2626",padding:"1px 6px",borderRadius:10,fontWeight:700}}>Inactivo</span>}
+                                  </div>
+                                  <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:5,flexWrap:"wrap"}}>
+                                    {areaNombre&&<span style={{background:"#f0edff",color:"#534AB7",padding:"1px 7px",borderRadius:10,fontWeight:600}}>{areaNombre}</span>}
+                                    {m.cargo&&<span style={{background:"#f0f4f8",color:"#5a7a9a",padding:"1px 7px",borderRadius:10}}>{m.cargo}</span>}
+                                    <span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Rol: {m.rol}</span>
+                                    <span style={{color:"#b2bec3"}}>{(m.tareas||[]).length} tareas</span>
                                   </div>
                                 </div>
-                                <div style={{display:"flex",alignItems:"center",paddingRight:12}}>
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?"rotate(180deg)":"",transition:"transform .2s",flexShrink:0}}><polyline points="6,9 12,15 18,9"/></svg>
+                                <button onClick={e=>{e.stopPropagation();setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],editId:m.id});setShowNewMod(true);}}
+                                  style={{padding:"5px 9px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
+                                <div onClick={async e=>{e.stopPropagation();await setDoc(doc(db,"modulos_auditoria",m.id),{activo:m.activo===false},{merge:true});showToast(m.activo===false?"Módulo activado":"Módulo desactivado");}}
+                                  style={{width:36,height:20,borderRadius:10,background:m.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
+                                  <div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:m.activo===false?2:18,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
                                 </div>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?"rotate(180deg)":"",transition:"transform .2s"}}><polyline points="6,9 12,15 18,9"/></svg>
                               </div>
                               {isOpen&&(
-                                <div style={{borderTop:"1px solid #f0f4f8",background:"#f8fafc"}}>
-                                  <div style={{padding:"10px 14px 4px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                                    <span style={{fontSize:10,fontWeight:700,color:"#8aaabb",letterSpacing:".05em"}}>TAREAS ({totalTareas})</span>
-                                    <span style={{fontSize:10,color:mc.accent,fontWeight:600}}>{tareasActivas} activas</span>
-                                  </div>
-                                  {totalTareas===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 14px 12px"}}>Sin tareas. Edita el módulo para agregar.</div>}
+                                <div style={{borderTop:"1px solid #f0f4f8",background:"#f8fafc",padding:"10px 14px"}}>
+                                  <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",marginBottom:8,letterSpacing:".04em"}}>TAREAS ({(m.tareas||[]).length})</div>
+                                  {(m.tareas||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3"}}>Sin tareas. Edita el módulo para agregar.</div>}
                                   {(m.tareas||[]).map((t,ti)=>(
-                                    <div key={t.id||ti} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderTop:ti>0?"0.5px solid #f0f4f8":"none",background:"#fff",opacity:t.activo===false?.5:1}}>
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8d8e8" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                                      <span style={{flex:1,fontSize:12,color:t.activo===false?"#b2bec3":"#1a2f4a",textDecoration:t.activo===false?"line-through":"none"}}>{t.nombre}</span>
-                                      <div onClick={async e=>{e.stopPropagation();const tareas=(m.tareas||[]).map((x,xi)=>xi===ti?{...x,activo:x.activo===false}:x);await setDoc(doc(db,"modulos_auditoria",m.id),{tareas},{merge:true});}}
-                                        style={{width:32,height:18,borderRadius:9,background:t.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
-                                        <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:t.activo===false?2:16,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
+                                    <div key={t.id||ti} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:ti%2===0?"#fff":"transparent",marginBottom:2,opacity:t.activo===false?.5:1}}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b2bec3" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                      <span style={{flex:1,fontSize:12,color:"#1a2f4a"}}>{t.nombre}</span>
+                                      <div onClick={async()=>{
+                                        const tareas=(m.tareas||[]).map((x,xi)=>xi===ti?{...x,activo:x.activo===false}:x);
+                                        await setDoc(doc(db,"modulos_auditoria",m.id),{tareas},{merge:true});
+                                      }} style={{width:30,height:17,borderRadius:9,background:t.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                                        <div style={{width:13,height:13,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:t.activo===false?2:15,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
                                       </div>
                                     </div>
                                   ))}
-                                  {totalTareas>0&&<div style={{height:6,background:"#f8fafc"}}/>}
                                 </div>
                               )}
                             </div>
