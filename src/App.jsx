@@ -622,7 +622,7 @@ function ChecklistApp() {
   const [role,    setRole]    = useState(null);
   const [uName,   setUName]   = useState("");
   const [uDni,    setUDni]    = useState("");
-  const [pins,    setPins]    = useState({admin:"vega2026",auditor:"auditor88",viewer:"gerencia1"});
+  const [pins,    setPins]    = useState({admin:"",auditor:"",viewer:""});
   const [pinMod,  setPinMod]  = useState(false);
   const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
@@ -659,7 +659,7 @@ function ChecklistApp() {
   const [audCfgTab,  setAudCfgTab]  = useState("rutas");
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
-  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloId:"",tiendas:[],editId:null});
+  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],editId:null});
   const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
@@ -4599,7 +4599,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Rutas semanales</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>Semana automática: {semanaActual} · {rutasSemana.length} rutas asignadas</div>
                           </div>
-                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});}}
+                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nueva ruta
@@ -4621,11 +4621,24 @@ function ChecklistApp() {
                                 </select>
                               </div>
                               <div>
-                                <label style={S.lbl}>MÓDULO A EVALUAR</label>
-                                <select value={newRuta.moduloId} onChange={e=>setNewRuta(p=>({...p,moduloId:e.target.value}))} style={S.inp}>
-                                  <option value="">Sin módulo específico</option>
-                                  {modulosAud.filter(m=>m.activo!==false).map(m=><option key={m.id} value={m.id}>{m.nombre}</option>)}
-                                </select>
+                                <label style={S.lbl}>MÓDULOS A EVALUAR</label>
+                                <div style={{border:"1.5px solid #e2e8f0",borderRadius:10,background:"#fff",overflow:"hidden"}}>
+                                  {[{id:"",nombre:"Sin módulo específico"},...modulosAud.filter(m=>m.activo!==false)].map((m,i)=>{
+                                    const isNone=m.id==="";
+                                    const sel=isNone?(newRuta.moduloIds||[]).length===0:(newRuta.moduloIds||[]).includes(m.id);
+                                    return(
+                                      <label key={m.id||"none"} onClick={()=>{
+                                        if(isNone){setNewRuta(p=>({...p,moduloIds:[]}));}
+                                        else{setNewRuta(p=>{const ids=p.moduloIds||[];const next=ids.includes(m.id)?ids.filter(x=>x!==m.id):[...ids,m.id];return{...p,moduloIds:next};});}
+                                      }} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",cursor:"pointer",borderTop:i>0?"1px solid #f0f4f8":"none",background:sel?"#e0fafa":"#fff",transition:"background .15s"}}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill={sel?"#00b5b4":"none"} stroke={sel?"#00b5b4":"#c8d8e8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                          {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
+                                        </svg>
+                                        <span style={{fontSize:12,fontWeight:sel?700:400,color:sel?"#085041":"#1a2f4a"}}>{m.nombre}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                             <div style={{marginBottom:12}}>
@@ -4650,14 +4663,14 @@ function ChecklistApp() {
                               <button onClick={async()=>{
                                 if(!newRuta.auditorId) return showToast("Selecciona un auditor");
                                 if(!(newRuta.tiendas||[]).length) return showToast("Selecciona al menos una tienda");
-                                const data={auditorId:newRuta.auditorId,moduloId:newRuta.moduloId||"",tiendas:newRuta.tiendas,semana:semanaActual,activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
+                                const data={auditorId:newRuta.auditorId,moduloIds:newRuta.moduloIds||[],moduloId:(newRuta.moduloIds||[])[0]||"",tiendas:newRuta.tiendas,semana:semanaActual,activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
                                 if(newRuta.editId){await setDoc(doc(db,"rutas",newRuta.editId),data,{merge:true});showToast("Ruta actualizada");}
                                 else{await setDoc(doc(collection(db,"rutas")),data);showToast("Ruta creada");}
-                                setShowNewRuta(false);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});
+                                setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});
                               }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                                 {newRuta.editId?"Guardar cambios":"Crear ruta"}
                               </button>
-                              <button onClick={()=>{setShowNewRuta(false);setNewRuta({auditorId:"",moduloId:"",tiendas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                              <button onClick={()=>{setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -4682,14 +4695,14 @@ function ChecklistApp() {
                                 <div style={{flex:1,minWidth:0}}>
                                   <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:2}}>{auditor?.nombre||"Auditor"}</div>
                                   <div style={{fontSize:11,color:"#8aaabb"}}>
-                                    {modulo?`Módulo: ${modulo.nombre}`:"Sin módulo asignado"}
+                                    {(r.moduloIds&&r.moduloIds.length>0)?r.moduloIds.map(id=>modulosAud.find(m=>m.id===id)?.nombre).filter(Boolean).join(" · "):(r.moduloId&&modulosAud.find(m=>m.id===r.moduloId)?.nombre)||"Sin módulo asignado"}
                                   </div>
                                 </div>
                                 <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:r.activo===false?"#fff1f2":"#e0fafa",color:r.activo===false?"#dc2626":"#085041"}}>
                                   {r.activo===false?"Inactiva":"Activa"}
                                 </span>
                                 <button onClick={()=>{
-                                  setNewRuta({auditorId:r.auditorId,moduloId:r.moduloId||"",tiendas:r.tiendas||[],editId:r.id});
+                                  setNewRuta({auditorId:r.auditorId,moduloIds:r.moduloIds||(r.moduloId?[r.moduloId]:[]),tiendas:r.tiendas||[],editId:r.id});
                                   setShowNewRuta(true);
                                 }} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
                               </div>
@@ -5755,7 +5768,7 @@ function ChecklistApp() {
                     {authLog.slice(0,20).map((l,i)=>(
                       <tr key={i} style={{borderBottom:"1px solid #f5f7fa"}}>
                         <td style={{padding:"6px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
-                        <td style={{padding:"6px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.credencial||"-"}</td>
+                        <td style={{padding:"6px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
                         <td style={{padding:"6px 10px"}}>
                           <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
                             color:l.rol==="admin"?"#633806":l.rol==="viewer"?"#0C447C":"#085041",
@@ -8182,13 +8195,32 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   const[bloqueo,setBloqueo]=useState(null);
   const[intentos,setIntentos]=useState(0);
   const MAX_INTENTOS=3, BLOQUEO_MIN=5;
+  // Verificar bloqueo persistente en Firestore al montar (anti-bypass recarga)
+  useEffect(()=>{
+    import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,getDoc})=>{
+      getDoc(doc(db,"auth_attempts","_last")).then(snap=>{
+        if(!snap.exists()) return;
+        const d=snap.data();
+        if(d.bloqueadoHasta){
+          const hasta=new Date(d.bloqueadoHasta).getTime();
+          const rest=Math.ceil((hasta-Date.now())/1000);
+          if(rest>0){setBloqueo({hasta,restante:rest});setErr("Dispositivo bloqueado por intentos fallidos.");}
+        }
+      }).catch(()=>{});
+    });});
+  },[]);
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
   useEffect(()=>{
     if(!bloqueo) return;
     const iv=setInterval(()=>{
       const rest=Math.ceil((bloqueo.hasta-Date.now())/1000);
-      if(rest<=0){setBloqueo(null);setIntentos(0);setErr("");}
+      if(rest<=0){
+          setBloqueo(null);setIntentos(0);setErr("");
+          import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{
+            setDoc(doc(db,"auth_attempts","_last"),{bloqueadoHasta:null,intentos:0},{merge:true}).catch(()=>{});
+          });});
+        }
       else setBloqueo(b=>({...b,restante:rest}));
     },1000);
     return()=>clearInterval(iv);
@@ -8211,7 +8243,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     setIntentos(0); setBloqueo(null);
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
-      setDoc(ref,{credencial:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});
+      setDoc(ref,{userId:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});
       if(id) setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString()},{merge:true});
     });});}catch{}
     onLogin(rol,nombre,id||"");
