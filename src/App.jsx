@@ -630,6 +630,8 @@ function ChecklistApp() {
   const [tab,     setTab]     = useState(0);
   const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
   const [fecha,   setFecha]   = useState(todayStr());
+  // Semana ISO actual — disponible en todo el componente
+  const semanaActual=(()=>{const d=new Date();const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return`${y}-W${String(w).padStart(2,"0")}`;})();
   const [vYear,   setVYear]   = useState(now.getFullYear());
   const [vMonth,  setVMonth]  = useState(now.getMonth());
   const [selWeek, setSelWeek] = useState(null);
@@ -4569,7 +4571,6 @@ function ChecklistApp() {
 
             {/* ── PASO 2b: Auditoría → en construcción ── */}
             {cfgMod==="auditoria"&&(()=>{
-              const semanaActual=(()=>{const d=new Date();const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return `${y}-W${String(w).padStart(2,"0")}`;})();
               const audTabs=[{id:"rutas",label:"Rutas"},{id:"tareas",label:"Tareas"},{id:"score",label:"Score"}];
               const auditores=usuarios.filter(u=>["auditor","coordinador","admin"].includes(u.rol)&&u.activo!==false);
               const rutasSemana=rutas.filter(r=>r.semana===semanaActual);
@@ -7094,6 +7095,7 @@ function ChecklistApp() {
         })()}
         <PantallaAuditoria
           paso={auditPaso} tiendas={tiendas} tiendaSelId={auditTiendaSel}
+          auditorias={auditorias}
           modulos={(()=>{
             // Usar modulosAud (Firestore) si disponibles y no vacíos; fallback a checklistModulos
             const rutaAct=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false);
@@ -7130,8 +7132,7 @@ function ChecklistApp() {
           isAdmin={isAdmin}
           onGestionarExclusion={gestionarExclusionAudit}
           rutaActiva={(()=>{
-            const semana=(()=>{const d=new Date();const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return`${y}-W${String(w).padStart(2,"0")}`;})();
-            return rutas.find(r=>r.auditorId===uDni&&r.semana===semana&&r.activo!==false)||null;
+            return rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false)||null;
           })()}
         />
         </>
@@ -7170,12 +7171,37 @@ function ChecklistApp() {
             <div style={{display:"flex",gap:8}}>
               <button
                 onClick={()=>{
-                  const url=`mailto:${auditEmailModal.to||""}?subject=${encodeURIComponent(auditEmailModal.subject)}&body=${auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26")}`;
-                  window.location.href=url;
-                  setTimeout(()=>setAuditEmailModal(null),500);
+                  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                  const body=auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26");
+                  const subj=encodeURIComponent(auditEmailModal.subject);
+                  const to=encodeURIComponent(auditEmailModal.to||"");
+                  const mailtoUrl=`mailto:${auditEmailModal.to||""}?subject=${subj}&body=${body}`;
+                  if(isMobile){
+                    // Móvil: abre app de correo nativa normalmente
+                    window.location.href=mailtoUrl;
+                  } else {
+                    // Desktop: intenta abrir en pestaña nueva (fuerza navegador, no Zoom)
+                    const win=window.open(mailtoUrl,"_blank","noopener");
+                    // Si el navegador bloqueó el popup, fallback a href
+                    if(!win||win.closed||typeof win.closed==="undefined") window.location.href=mailtoUrl;
+                  }
+                  setTimeout(()=>setAuditEmailModal(null),600);
                 }}
                 style={{flex:1,padding:"13px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>
                 ✉️ Abrir correo
+              </button>
+              <button
+                onClick={()=>{
+                  // Outlook Web: abre directamente en Outlook.com/Office365
+                  const body=auditEmailModal.body.replace(/\n/g,"%0A").replace(/&/g,"%26");
+                  const subj=encodeURIComponent(auditEmailModal.subject);
+                  const outlookUrl=`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(auditEmailModal.to||"")}&subject=${subj}&body=${body}`;
+                  window.open(outlookUrl,"_blank","noopener");
+                  setTimeout(()=>setAuditEmailModal(null),600);
+                }}
+                style={{padding:"13px 12px",borderRadius:12,border:"1px solid #0078D4",background:"#e8f0fe",color:"#0078D4",cursor:"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#0078D4"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                Outlook
               </button>
               <button
                 onClick={()=>{
@@ -7996,7 +8022,7 @@ function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
   );
 }
 
-function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva,uDni}){
+function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva,uDni,auditorias}){
   const [busqA,setBusqA]=useState("");
   const [fmtA,setFmtA]=useState("Todas");
   const [naModal,setNaModal]=useState(null);
@@ -8008,17 +8034,35 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   // Tiendas de la ruta activa del auditor
   const tiendasEnRuta=new Set(rutaActiva?.tiendas||[]);
 
+  // Tiendas ya auditadas en el ciclo actual (bloqueadas según frecuencia)
+  const ahora=new Date();
+  const tiendasBloqueadas=new Set((auditorias?Object.values(auditorias):[]).filter(a=>{
+    if(a.auditorId!==uDni||a.estado==="borrador") return false;
+    const fa=new Date(a.fecha||a.timestamp||"");
+    if(isNaN(fa)) return false;
+    const freq=rutaActiva?.frecuencia||"semanal";
+    if(freq==="unica"||freq==="semanal"){
+      // mismo ISO week
+      const wA=(d=>{const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return`${y}-W${String(w).padStart(2,"0")}`;})(fa);
+      const wN=(d=>{const j=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));j.setUTCDate(j.getUTCDate()+4-(j.getUTCDay()||7));const y=j.getUTCFullYear();const w=Math.ceil((((j-new Date(Date.UTC(y,0,1)))/86400000)+1)/7);return`${y}-W${String(w).padStart(2,"0")}`;})(ahora);
+      return wA===wN;
+    }
+    if(freq==="diaria") return fa.toDateString()===ahora.toDateString();
+    if(freq==="mensual") return fa.getFullYear()===ahora.getFullYear()&&fa.getMonth()===ahora.getMonth();
+    return false;
+  }).map(a=>a.tiendaId));
+
   const tFiltA=tiendas.filter(t=>{
     if(!t.activa) return false;
     if(fmtA!=="Todas"&&t.f!==fmtA) return false;
     if(busqA&&!t.n.toLowerCase().includes(busqA.toLowerCase())&&!t.dist?.toLowerCase().includes(busqA.toLowerCase())) return false;
     return true;
   }).sort((a,b)=>{
-    // Primero las tiendas en ruta
-    const aR=tiendasEnRuta.has(a.id);
-    const bR=tiendasEnRuta.has(b.id);
-    if(aR&&!bR) return -1;
-    if(!aR&&bR) return 1;
+    // Primero las tiendas en ruta; luego bloqueadas al final
+    const aR=tiendasEnRuta.has(a.id); const bR=tiendasEnRuta.has(b.id);
+    const aB=tiendasBloqueadas.has(a.id); const bB=tiendasBloqueadas.has(b.id);
+    if(aR&&!bR) return -1; if(!aR&&bR) return 1;
+    if(!aB&&bB) return -1; if(aB&&!bB) return 1;
     return a.n.localeCompare(b.n,"es");
   });
 
@@ -8076,18 +8120,21 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
         const esExcluida=excl&&excl.aprobada;
         const esPendiente=excl&&!excl.aprobada;
         const enRuta=tiendasEnRuta.has(t.id);
+        const esBloqueada=tiendasBloqueadas.has(t.id);
+        const bloqLabel=esBloqueada?(rutaActiva?.frecuencia==="diaria"?"Auditada hoy":rutaActiva?.frecuencia==="mensual"?"Auditada este mes":"Auditada esta semana"):null;
         return(
           <div key={t.id} style={{margin:"0 16px 8px"}}>
-            <div style={{padding:"11px 14px",background:esExcluida?"#fafafa":enRuta?"#f0fff8":"#fff",
-              borderRadius:10,border:`1px solid ${esExcluida?"#e2e8f0":enRuta?"#00b5b4":"#e2e8f0"}`,
+            <div style={{padding:"11px 14px",background:esBloqueada?"#f0f4f8":esExcluida?"#fafafa":enRuta?"#f0fff8":"#fff",
+              borderRadius:10,border:`1px solid ${esBloqueada?"#c8d8e8":esExcluida?"#e2e8f0":enRuta?"#00b5b4":"#e2e8f0"}`,
               display:"flex",alignItems:"center",gap:10,
-              cursor:esExcluida?"default":"pointer",opacity:esExcluida?0.7:1}}
-              onClick={()=>{ if(!esExcluida) onCheckIn(t.id); }}>
+              cursor:(esExcluida||esBloqueada)?"default":"pointer",opacity:(esExcluida||esBloqueada)?0.65:1}}
+              onClick={()=>{ if(!esExcluida&&!esBloqueada) onCheckIn(t.id); }}>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
                   Vega {t.n}
-                  {enRuta&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#e0fafa",color:"#085041",border:"1px solid #00b5b444"}}>En ruta</span>}
-                  {!enRuta&&rutaActiva&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#f0f4f8",color:"#8aaabb",border:"1px solid #dde3e9"}}>Fuera de ruta</span>}
+                  {esBloqueada&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#EAF3DE",color:"#27500A",border:"1px solid #C0DD97"}}>✓ {bloqLabel}</span>}
+                  {!esBloqueada&&enRuta&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#e0fafa",color:"#085041",border:"1px solid #00b5b444"}}>En ruta</span>}
+                  {!esBloqueada&&!enRuta&&rutaActiva&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#f0f4f8",color:"#8aaabb",border:"1px solid #dde3e9"}}>Fuera de ruta</span>}
                 </div>
                 <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{t.f} · {t.dist}</div>
                 {(esExcluida||esPendiente)&&(
@@ -8096,6 +8143,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
                   </div>
                 )}
               </div>
+              {esBloqueada&&!esExcluida&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#27500A",background:"#EAF3DE",border:"1px solid #C0DD97",flexShrink:0}}>✓ Realizada</span>}
               {esExcluida&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#854F0B",background:"#FAEEDA",flexShrink:0}}>N/A</span>}
               {esPendiente&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:"#BA7517",background:"#FAEEDA",border:"1px solid #FAC775",flexShrink:0}}>N/A pend.</span>}
               {/* Admin: botones gestión */}
@@ -8159,7 +8207,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
 }
 
 function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloActivo,
-  obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,
+  obs,compromisos,onCheckIn,onValor,onObsItem,onObsModulo,onSiguienteModulo,auditorias,
   onAnteriorModulo,onObs,onCompromisos,onCheckOut,onBorrador,onCancelar,uName,uDni,fecha,
   auditExclusiones,onSolicitarExclusion,isAdmin,onGestionarExclusion,rutaActiva}){
   const tienda=tiendas.find(t=>t.id===tiendaSelId);
@@ -8170,7 +8218,7 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
   if(paso===0) return <SeleccionTienda tiendas={tiendas} onCheckIn={onCheckIn}
     auditExclusiones={auditExclusiones} onSolicitarExclusion={onSolicitarExclusion}
     isAdmin={isAdmin} onGestionarExclusion={onGestionarExclusion}
-    rutaActiva={rutaActiva} uDni={uDni}/>;
+    rutaActiva={rutaActiva} uDni={uDni} auditorias={auditorias}/>;
 
   if(paso===1){
     const modulo=modulosActivos[moduloActivo];
@@ -8204,10 +8252,23 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
         <div style={{position:"sticky",bottom:0,background:"#fff",padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",gap:10}}>
           <button onClick={onBorrador} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>💾 Borrador</button>
           {moduloActivo>0&&<button onClick={onAnteriorModulo} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#1a2f4a",cursor:"pointer",fontSize:12,fontWeight:700}}>← Anterior</button>}
-          <button onClick={esUltimo?()=>onSiguienteModulo():onSiguienteModulo}
-            style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:800}}>
-            {esUltimo?"Continuar → Notas":`Siguiente: ${modulosActivos[moduloActivo+1]?.label?.split(" ")[0]}`}
-          </button>
+          {(()=>{
+            const itemsModulo=(modulo?.items||[]).filter(i=>i.activo);
+            const sinResponder=itemsModulo.filter(i=>respuestas[i.id]?.valor===undefined);
+            const bloqueado=sinResponder.length>0;
+            return(
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                {bloqueado&&<div style={{fontSize:10,color:"#ef4444",fontWeight:600,textAlign:"center",padding:"2px 0"}}>
+                  ⚠ {sinResponder.length} ítem{sinResponder.length>1?"s":""} sin responder
+                </div>}
+                <button onClick={()=>{if(bloqueado)return;esUltimo?onSiguienteModulo():onSiguienteModulo();}}
+                  disabled={bloqueado}
+                  style={{padding:"12px",borderRadius:10,border:"none",background:bloqueado?"#e2e8f0":"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:bloqueado?"#94a3b8":"#fff",cursor:bloqueado?"not-allowed":"pointer",fontSize:13,fontWeight:800,transition:"all .2s"}}>
+                  {esUltimo?"Continuar → Notas":`Siguiente: ${modulosActivos[moduloActivo+1]?.label?.split(" ")[0]||"→"}`}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
