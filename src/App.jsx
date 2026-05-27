@@ -177,7 +177,7 @@ const CHECKLIST_MODULOS_INIT = [
 
 // Retorna {ob, mx, pct} por sección — ob=pts obtenidos, mx=pts máximos posibles
 function calcScoreModulo(respuestas,modulo){
-  const items=modulo.items.filter(i=>i.activo);
+  const items=(modulo?.items||[]).filter(i=>i.activo);
   if(!items.length) return null;
   const mx=items.length*3;
   const ob=items.reduce((sum,i)=>{
@@ -1075,8 +1075,8 @@ function ChecklistApp() {
       moduloId:m.id, moduloLabel:m.label,
       score:calcScoreModulo(auditRespuestas,m), // {ob,mx,pct}
       obsModulo:auditRespuestas[`__obs_${m.id}`]?.obs||"",
-      itemsResp:m.items.filter(i=>i.activo&&auditRespuestas[i.id]?.valor!==undefined).length,
-      itemsTotal:m.items.filter(i=>i.activo).length,
+      itemsResp:(m.items||[]).filter(i=>i.activo&&auditRespuestas[i.id]?.valor!==undefined).length,
+      itemsTotal:(m.items||[]).filter(i=>i.activo).length,
     }));
     const scoreFinal=calcScoreFinal(auditRespuestas,mods);
     let gpsOut=auditGPSOut;
@@ -7102,9 +7102,10 @@ function ChecklistApp() {
             const modsFiltrar=rutaAct?.moduloIds?.length?rutaAct.moduloIds:null;
             const fromFirestore=modulosAud.filter(m=>m.activo!==false&&(!modsFiltrar||modsFiltrar.includes(m.id))).map(m=>({
               id:m.id,label:m.nombre,
-              escala:[0,1.5,3],
+              escala:m.escala||[0,1.5,3],
+              escalaTxt:m.escalaTxt||["No ejecutado","Por mejorar","Correcto"],
               items:(m.tareas||[]).filter(t=>t.activo!==false).map((t,ti)=>({
-                id:t.id||`${m.id}_t${ti}`,texto:t.nombre,activo:true,orden:ti
+                id:t.id||`${m.id}_t${ti}`,texto:t.nombre||t.id||`Item ${ti+1}`,activo:true,orden:ti
               })),
               activo:true,
               c:["#6C6EF5","#00b5b4","#534AB7","#854F0B"][modulosAud.indexOf(m)%4]||"#6C6EF5"
@@ -7970,7 +7971,7 @@ function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
               style={{flex:1,padding:"9px 4px",borderRadius:8,border:"none",fontWeight:700,fontSize:11,cursor:"pointer",lineHeight:1.3,
                       background:val===v?colores[idx]:"#e2e8f0",color:val===v?"#fff":"#5a7a9a",transition:"all .12s"}}>
               <span style={{display:"block",fontSize:13,fontWeight:800}}>{v}</span>
-              <span style={{fontSize:9,fontWeight:400}}>{escalaTxt[idx]}</span>
+              <span style={{fontSize:9,fontWeight:400}}>{(escalaTxt||[])[idx]||""}</span>
             </button>
           ))}
         </div>
@@ -7989,7 +7990,7 @@ function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
 }
 
 function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
-  const items=modulo.items.filter(i=>i.activo).sort((a,b)=>a.orden-b.orden);
+  const items=(modulo?.items||[]).filter(i=>i.activo).sort((a,b)=>(a.orden??0)-(b.orden??0));
   const scoreModulo=calcScoreModulo(respuestas,modulo);
   const tier=getTierAuditoria(scoreModulo?.pct);
   const respondidos=items.filter(i=>respuestas[i.id]?.valor!==undefined).length;
@@ -7999,7 +8000,7 @@ function ModuloAuditoria({modulo,respuestas,onValor,onObsItem,onObsModulo}){
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:tier.bg,borderRadius:10,border:`1.5px solid ${tier.c}33`,marginBottom:12}}>
         <div>
           <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>{modulo.label}</div>
-          <div style={{fontSize:11,color:"#8aaabb"}}>{respondidos}/{items.length} ítems · {modulo.escala.join(" / ")}</div>
+          <div style={{fontSize:11,color:"#8aaabb"}}>{respondidos}/{items.length} ítems · {(modulo?.escala||[0,1.5,3]).join(" / ")}</div>
         </div>
         <div style={{textAlign:"center",minWidth:64}}>
           <div style={{fontSize:22,lineHeight:1}}>{tier.icon}</div>
@@ -8221,7 +8222,8 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
     rutaActiva={rutaActiva} uDni={uDni} auditorias={auditorias}/>;
 
   if(paso===1){
-    const modulo=modulosActivos[moduloActivo];
+    const modulo=modulosActivos[moduloActivo]||modulosActivos[0]||null;
+    if(!modulo) return <div style={{padding:32,textAlign:"center",color:"#8aaabb"}}>Sin módulos configurados. Contacta al administrador.</div>;
     const esUltimo=moduloActivo===modulosActivos.length-1;
     return(
       <div style={{paddingBottom:100}}>
