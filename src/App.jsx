@@ -659,7 +659,8 @@ function ChecklistApp() {
   const [audCfgTab,  setAudCfgTab]  = useState("rutas");
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
-  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],editId:null});
+  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",editId:null});
+  const [rutasFiltro, setRutasFiltro] = useState("activas"); // "activas" | "todas"
   const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
@@ -4594,16 +4595,24 @@ function ChecklistApp() {
                     {audCfgTab==="rutas"&&(()=>{
                       return(
                       <div>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                           <div>
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Rutas semanales</div>
-                            <div style={{fontSize:11,color:"#8aaabb"}}>Semana automática: {semanaActual} · {rutasSemana.length} rutas asignadas</div>
+                            <div style={{fontSize:11,color:"#8aaabb"}}>Semana automática: {semanaActual} · {rutasSemana.filter(r=>rutasFiltro==="todas"||r.activo!==false).length} rutas {rutasFiltro==="activas"?"activas":"en total"}</div>
                           </div>
-                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});}}
+                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nueva ruta
                           </button>
+                        </div>
+                        <div style={{display:"flex",gap:6,marginBottom:12}}>
+                          {["activas","todas"].map(f=>(
+                            <button key={f} onClick={()=>setRutasFiltro(f)}
+                              style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${rutasFiltro===f?"#1a2f4a":"#e2e8f0"}`,background:rutasFiltro===f?"#1a2f4a":"#fff",color:rutasFiltro===f?"#fff":"#5a7a9a",fontSize:11,cursor:"pointer",fontWeight:rutasFiltro===f?700:400}}>
+                              {f==="activas"?"Activas":"Todas (históricas)"}
+                            </button>
+                          ))}
                         </div>
 
                         {showNewRuta&&(
@@ -4641,7 +4650,16 @@ function ChecklistApp() {
                                 </div>
                               </div>
                             </div>
-                            <div style={{marginBottom:12}}>
+                            <div style={{marginBottom:10}}>
+                                <label style={S.lbl}>FRECUENCIA</label>
+                                <select value={newRuta.frecuencia||"semanal"} onChange={e=>setNewRuta(p=>({...p,frecuencia:e.target.value}))} style={S.inp}>
+                                  <option value="semanal">Semanal (se repite cada semana)</option>
+                                  <option value="diaria">Diaria (se repite cada día)</option>
+                                  <option value="mensual">Mensual (se repite cada mes)</option>
+                                  <option value="unica">Única (solo esta semana)</option>
+                                </select>
+                              </div>
+              <div style={{marginBottom:12}}>
                               <label style={S.lbl}>TIENDAS ASIGNADAS *</label>
                               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
                                 {tiendas.filter(t=>t.activa).map(t=>{
@@ -4663,7 +4681,7 @@ function ChecklistApp() {
                               <button onClick={async()=>{
                                 if(!newRuta.auditorId) return showToast("Selecciona un auditor");
                                 if(!(newRuta.tiendas||[]).length) return showToast("Selecciona al menos una tienda");
-                                const data={auditorId:newRuta.auditorId,moduloIds:newRuta.moduloIds||[],moduloId:(newRuta.moduloIds||[])[0]||"",tiendas:newRuta.tiendas,semana:semanaActual,activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
+                                const data={auditorId:newRuta.auditorId,moduloIds:newRuta.moduloIds||[],moduloId:(newRuta.moduloIds||[])[0]||"",tiendas:newRuta.tiendas,semana:semanaActual,frecuencia:newRuta.frecuencia||"semanal",activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
                                 if(newRuta.editId){await setDoc(doc(db,"rutas",newRuta.editId),data,{merge:true});showToast("Ruta actualizada");}
                                 else{await setDoc(doc(collection(db,"rutas")),data);showToast("Ruta creada");}
                                 setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});
@@ -4681,7 +4699,7 @@ function ChecklistApp() {
                           </div>
                         )}
 
-                        {rutasSemana.map(r=>{
+                        {rutasSemana.filter(r=>rutasFiltro==="todas"||r.activo!==false).map(r=>{
                           const auditor=usuarios.find(u=>u.id===r.auditorId);
                           const modulo=modulosAud.find(m=>m.id===r.moduloId);
                           const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
@@ -4698,13 +4716,17 @@ function ChecklistApp() {
                                     {(r.moduloIds&&r.moduloIds.length>0)?r.moduloIds.map(id=>modulosAud.find(m=>m.id===id)?.nombre).filter(Boolean).join(" · "):(r.moduloId&&modulosAud.find(m=>m.id===r.moduloId)?.nombre)||"Sin módulo asignado"}
                                   </div>
                                 </div>
+                                <span style={{fontSize:10,fontWeight:500,padding:"2px 6px",borderRadius:20,background:"#f0f4f8",color:"#5a7a9a",border:"0.5px solid #e2e8f0"}}>
+                                  {r.frecuencia==="diaria"?"Diaria":r.frecuencia==="mensual"?"Mensual":r.frecuencia==="unica"?"Única":"Semanal"}
+                                </span>
                                 <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:r.activo===false?"#fff1f2":"#e0fafa",color:r.activo===false?"#dc2626":"#085041"}}>
                                   {r.activo===false?"Inactiva":"Activa"}
                                 </span>
                                 <button onClick={()=>{
-                                  setNewRuta({auditorId:r.auditorId,moduloIds:r.moduloIds||(r.moduloId?[r.moduloId]:[]),tiendas:r.tiendas||[],editId:r.id});
+                                  setNewRuta({auditorId:r.auditorId,moduloIds:r.moduloIds||(r.moduloId?[r.moduloId]:[]),tiendas:r.tiendas||[],frecuencia:r.frecuencia||"semanal",editId:r.id});
                                   setShowNewRuta(true);
                                 }} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
+                                <div title={r.activo===false?"Activar ruta":"Desactivar ruta"} onClick={async e=>{e.stopPropagation();await setDoc(doc(db,"rutas",r.id),{activo:r.activo===false},{ merge:true});showToast(r.activo===false?"Ruta activada":"Ruta desactivada");}} style={{width:34,height:19,borderRadius:10,background:r.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}><div style={{width:15,height:15,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:r.activo===false?2:17,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/></div>
                               </div>
                               <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
                                 {tiendasRuta.map(t=>{
@@ -7072,7 +7094,21 @@ function ChecklistApp() {
         })()}
         <PantallaAuditoria
           paso={auditPaso} tiendas={tiendas} tiendaSelId={auditTiendaSel}
-          modulos={checklistModulos} respuestas={auditRespuestas} moduloActivo={auditModuloActivo}
+          modulos={(()=>{
+            // Usar modulosAud (Firestore) si disponibles y no vacíos; fallback a checklistModulos
+            const rutaAct=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false);
+            const modsFiltrar=rutaAct?.moduloIds?.length?rutaAct.moduloIds:null;
+            const fromFirestore=modulosAud.filter(m=>m.activo!==false&&(!modsFiltrar||modsFiltrar.includes(m.id))).map(m=>({
+              id:m.id,label:m.nombre,
+              escala:[0,1.5,3],
+              items:(m.tareas||[]).filter(t=>t.activo!==false).map((t,ti)=>({
+                id:t.id||`${m.id}_t${ti}`,texto:t.nombre,activo:true,orden:ti
+              })),
+              activo:true,
+              c:["#6C6EF5","#00b5b4","#534AB7","#854F0B"][modulosAud.indexOf(m)%4]||"#6C6EF5"
+            }));
+            return fromFirestore.length>0?fromFirestore:checklistModulos;
+          })()} respuestas={auditRespuestas} moduloActivo={auditModuloActivo}
           obs={auditObs} compromisos={auditCompromisos} gpsCheckIn={auditGPS}
           onCheckIn={auditCheckIn}
           onValor={(itemId,val)=>setAuditRespuestas(prev=>({...prev,[itemId]:{...prev[itemId],valor:val}}))}
@@ -7985,6 +8021,17 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
     if(!aR&&bR) return 1;
     return a.n.localeCompare(b.n,"es");
   });
+
+  // FIX 5: Auditor sin ruta asignada — estado vacío informativo
+  if(!rutaActiva&&!isAdmin){
+    return(
+      <div style={{padding:"48px 24px",textAlign:"center"}}>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c8d8e8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:16}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div style={{fontWeight:700,fontSize:15,color:"#1a2f4a",marginBottom:8}}>Sin ruta asignada</div>
+        <div style={{fontSize:12,color:"#8aaabb",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>Tu coordinador o administrador aún no ha asignado una ruta para esta semana. Comunícate con ellos para que te asignen las tiendas que debes auditar.</div>
+      </div>
+    );
+  }
 
   return(
     <div style={{paddingBottom:80}}>
