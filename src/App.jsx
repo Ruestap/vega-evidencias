@@ -177,6 +177,7 @@ const CHECKLIST_MODULOS_INIT = [
 
 // Retorna {ob, mx, pct} por sección — ob=pts obtenidos, mx=pts máximos posibles
 function calcScoreModulo(respuestas,modulo){
+  if(!modulo) return null;
   const items=(modulo?.items||[]).filter(i=>i.activo);
   if(!items.length) return null;
   const mx=items.length*3;
@@ -190,6 +191,7 @@ function calcScoreModulo(respuestas,modulo){
 }
 // Score final Opción 2: suma total obtenida / 72 pts totales × 100
 function calcScoreFinal(respuestas,modulos){
+  if(!modulos||!modulos.length) return null;
   const activos=modulos.filter(m=>m.activo);
   let totalOb=0, totalMx=0, algunoRespondido=false;
   activos.forEach(m=>{
@@ -7136,8 +7138,10 @@ function ChecklistApp() {
           onObsItem={(itemId,obs)=>setAuditRespuestas(prev=>({...prev,[itemId]:{...prev[itemId],obs}}))}
           onObsModulo={(mId,obs)=>setAuditRespuestas(prev=>({...prev,[`__obs_${mId}`]:{obs}}))}
           onSiguienteModulo={()=>{
-            const n=checklistModulos.filter(m=>m.activo).length;
-            if(auditModuloActivo<n-1) setAuditModuloActivo(p=>p+1);
+            const total=auditModulosActivos.length>0
+              ?auditModulosActivos.length
+              :checklistModulos.filter(m=>m.activo).length;
+            if(auditModuloActivo<total-1) setAuditModuloActivo(p=>p+1);
             else setAuditPaso(2);
           }}
           onAnteriorModulo={()=>setAuditModuloActivo(p=>Math.max(0,p-1))}
@@ -8268,7 +8272,7 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
           <div style={{display:"flex",gap:4,marginTop:8}}>
             {modulosActivos.map((m,idx)=>{
               const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s?.pct);
-              return<div key={m.id} style={{flex:1,height:4,borderRadius:2,background:idx<moduloActivo?t.c:idx===moduloActivo?"#00b5b4":"rgba(255,255,255,.2)"}}/>;
+              return<div key={m.id} style={{flex:1,height:4,borderRadius:2,background:idx<moduloActivo?(t?.c||'#00b5b4'):idx===moduloActivo?"#00b5b4":"rgba(255,255,255,.2)"}}/>;
             })}
           </div>
           <div style={{fontSize:10,opacity:.6,marginTop:4}}>Módulo {moduloActivo+1}/{modulosActivos.length}: {modulo?.label}</div>
@@ -8277,8 +8281,8 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
           <div style={{display:"flex",gap:6,padding:"10px 16px",overflowX:"auto"}}>
             {modulosActivos.slice(0,moduloActivo).map(m=>{
               const s=calcScoreModulo(respuestas,m);const t=getTierAuditoria(s?.pct);
-              return<div key={m.id} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,background:t.bg,border:`1px solid ${t.c}44`}}>
-                <span style={{fontSize:10,fontWeight:700,color:t.c}}>{m.label.split(" ")[0]}: {s?`${s.ob}/${s.mx} (${s.pct}%)`:'—'}</span>
+              return<div key={m.id} style={{flexShrink:0,padding:"4px 10px",borderRadius:20,background:t?.bg||'#f0f4f8',border:`1px solid ${(t?.c||'#e2e8f0')}44`}}>
+                <span style={{fontSize:10,fontWeight:700,color:t?.c||'#8aaabb'}}>{m.label.split(" ")[0]}: {s?`${s.ob}/${s.mx} (${s.pct}%)`:'—'}</span>
               </div>;
             })}
           </div>
