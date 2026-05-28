@@ -667,6 +667,8 @@ function ChecklistApp() {
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
   const [modAudOpen, setModAudOpen] = useState(null);
+  // Módulos activos usados en la auditoría en curso (IDs y escala reales)
+  const [auditModulosActivos, setAuditModulosActivos] = useState([]);
   /* ── módulo usuarios ── */
   const [usrTab,  setUsrTab]  = useState("usuarios"); // "usuarios" | "roles" | "areas"
   const [roles,   setRoles]   = useState([]);
@@ -1063,6 +1065,20 @@ function ChecklistApp() {
     setAuditRespuestas({});
     setAuditModuloActivo(0);
     setAuditObs(""); setAuditCompromisos(""); setAuditGPSOut(null);
+    // Capturar los módulos activos al iniciar — mismo cálculo que el IIFE del prop
+    const rutaActChk=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false);
+    const modsFiltrarChk=rutaActChk?.moduloIds?.length?rutaActChk.moduloIds:null;
+    const fromFSChk=modulosAud.filter(m=>m.activo!==false&&(!modsFiltrarChk||modsFiltrarChk.includes(m.id))).map((m,mi)=>({
+      id:m.id,label:m.nombre,
+      escala:m.escala||[0,1.5,3],
+      escalaTxt:m.escalaTxt||["No ejecutado","Por mejorar","Correcto"],
+      items:(m.tareas||[]).filter(t=>t.activo!==false).map((t,ti)=>({
+        id:t.id||`${m.id}_t${ti}`,texto:t.nombre||t.id||`Item ${ti+1}`,activo:true,orden:ti
+      })),
+      activo:true,
+      c:["#6C6EF5","#00b5b4","#534AB7","#854F0B"][mi%4]||"#6C6EF5"
+    }));
+    setAuditModulosActivos(fromFSChk.length>0?fromFSChk:checklistModulos.filter(m=>m.activo));
     setAuditPaso(1);
     showToast(gps.sinGPS?"⚠️ Sin GPS — continuando":"✅ Check-in registrado");
   },[obtenerGPS,showToast]);
@@ -1070,7 +1086,8 @@ function ChecklistApp() {
   /* ── Check-out: calcula scores y guarda en Firestore ── */
   const auditCheckOut = useCallback(async(estado="enviado")=>{
     const tienda=tiendas.find(t=>t.id===auditTiendaSel);
-    const mods=checklistModulos.filter(m=>m.activo);
+    // Usar módulos capturados al inicio de la auditoría (IDs reales usados)
+    const mods=auditModulosActivos.length>0?auditModulosActivos:checklistModulos.filter(m=>m.activo);
     const scoresPorModulo=mods.map(m=>({
       moduloId:m.id, moduloLabel:m.label,
       score:calcScoreModulo(auditRespuestas,m), // {ob,mx,pct}
@@ -1097,7 +1114,7 @@ function ChecklistApp() {
       await setDoc(doc(db,"auditorias",docId),payload);
       showToast(estado==="borrador"?"💾 Borrador guardado":`✅ Enviada · ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"} ${scoreFinal!==null?getTierAuditoria(scoreFinal).icon:""}`);
       setAuditPaso(0); setAuditTiendaSel(null); setAuditRespuestas({});
-      setAuditGPS(null); setAuditGPSOut(null); setAuditCheckInTs(null);
+      setAuditGPS(null); setAuditGPSOut(null); setAuditCheckInTs(null); setAuditModulosActivos([]);
       // Generar mailto si es envío final
       if(estado==="enviado"){
         const tiendaObj=tiendas.find(t=>t.id===auditTiendaSel);
@@ -1105,7 +1122,7 @@ function ChecklistApp() {
         const tiendaEmail=tiendaObj?.email||"";
         const toEmails=[zonaEmail,tiendaEmail].filter(Boolean).join(",");
         const subj=`Auditoría Vega ${tiendaObj?.n||auditTiendaSel} · ${fecha} · ${scoreFinal!==null?scoreFinal.toFixed(1)+"%":"S/D"}`;
-        const mods2=checklistModulos.filter(m=>m.activo);
+        // mods ya contiene los módulos correctos definidos arriba
         let bodyLines=[`Auditoría realizada por: ${uName||uDni}`,`Tienda: Vega ${tiendaObj?.n||auditTiendaSel} · ${fecha}`,``];
         scoresPorModulo.forEach(sm=>{
           const pct=sm.score?sm.score.pct:"S/D";
@@ -1121,7 +1138,7 @@ function ChecklistApp() {
       }
     }catch(e){ console.error("auditCheckOut:",e); showToast("❌ Error al enviar."); }
   },[auditTiendaSel,auditRespuestas,auditObs,auditCompromisos,auditGPS,auditGPSOut,
-     auditCheckInTs,checklistModulos,tiendas,fecha,uDni,uName,showToast,obtenerGPS]);
+     auditCheckInTs,auditModulosActivos,checklistModulos,tiendas,fecha,uDni,uName,showToast,obtenerGPS]);
 
   // Solicitar exclusión N/A de auditoría (auditor) — queda pendiente hasta que admin apruebe
   const solicitarExclusionAudit = useCallback(async(tId, motivo, comentario)=>{
