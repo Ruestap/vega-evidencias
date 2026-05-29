@@ -7205,8 +7205,11 @@ function ChecklistApp() {
                   <button
                     onClick={()=>{
                       const url=buildMailto();
-                      if(esMovil){window.location.href=url;}
-                      else{const w=window.open(url,"_blank","noopener");if(!w||w.closed)window.location.href=url;}
+                      // <a> programático evita que Zoom intercepte el mailto en desktop
+                      const a=document.createElement("a");
+                      a.href=url; a.rel="noopener";
+                      document.body.appendChild(a); a.click();
+                      setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);
                       setTimeout(()=>setAuditEmailModal(null),600);
                     }}
                     style={{flex:1,minWidth:120,padding:"13px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>
@@ -8078,7 +8081,9 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   // Tiendas ya auditadas en el ciclo actual (bloqueadas según frecuencia)
   const ahora=new Date();
   const tiendasBloqueadas=new Set((auditorias?Object.values(auditorias):[]).filter(a=>{
-    if(a.auditorId!==uDni||a.estado==="borrador") return false;
+    // Admin ve bloqueadas las que YA auditó cualquier auditor; auditor solo las propias
+    if(a.estado==="borrador") return false;
+    if(!isAdmin&&a.auditorId!==uDni) return false;
     const fa=new Date(a.fecha||a.timestamp||"");
     if(isNaN(fa)) return false;
     const freq=rutaActiva?.frecuencia||"semanal";
@@ -8448,9 +8453,9 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     }
 
     // 2. Pins legacy (admin / viewer) para retrocompatibilidad
-    if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){registrarExito("","Administrador","admin");return;}
-    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){registrarExito("","Gerencia","visor");return;}
-    if(pins.auditor&&clean.toLowerCase()===pins.auditor.toLowerCase()){registrarExito("","Auditor","auditor");return;}
+    if(pins.admin&&clean.toLowerCase()===pins.admin.toLowerCase()){registrarExito("__admin_pin__","Administrador","admin");return;}
+    if(pins.viewer&&clean.toLowerCase()===pins.viewer.toLowerCase()){registrarExito("__visor_pin__","Gerencia","visor");return;}
+    if(pins.auditor&&clean.toLowerCase()===pins.auditor.toLowerCase()){registrarExito("__auditor_pin__","Auditor","auditor");return;}
 
     // 3. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
