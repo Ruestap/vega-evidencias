@@ -7193,41 +7193,69 @@ function ChecklistApp() {
             </div>
             {(()=>{
               const esMovil=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"");
-              // Construir body truncado para URLs (máx 900 chars para Outlook Web)
-              const bodyCorto=auditEmailModal.body.length>900
-                ?auditEmailModal.body.slice(0,900)+"\n[...ver reporte completo en la app]"
-                :auditEmailModal.body;
-              const bodyEnc=bodyCorto.replace(/\n/g,"%0A").replace(/&/g,"%26");
-              const subj=encodeURIComponent(auditEmailModal.subject);
-              const to=encodeURIComponent(auditEmailModal.to||"");
-              const outlookUrl=`https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subj}&body=${bodyEnc}`;
-              const gmailUrl=`https://mail.google.com/mail/?view=cm&to=${to}&su=${subj}&body=${bodyCorto.replace(/\n/g,"%0A")}`;
+
+              // ── abrirEmailWeb: lógica extraída de Traking.jsx (funcional) ──
+              // Usa office365.com + encodeURIComponent limpio + fallback <a target="_blank">
+              const abrirEmailWeb=(to,asunto,cuerpo)=>{
+                const cuerpoLimpio=String(cuerpo)
+                  .replace(/<br\s*[/]?>/gi,"\n")
+                  .replace(/<a[^>]*>([^<]*)<[/]a>/gi,"$1")
+                  .replace(/<[^>]+>/g,"")
+                  .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+                const url="https://outlook.office365.com/mail/deeplink/compose?to="
+                  +encodeURIComponent(to||"")
+                  +"&subject="+encodeURIComponent(asunto||"")
+                  +"&body="+encodeURIComponent(cuerpoLimpio);
+                const win=window.open(url,"_blank","noopener,noreferrer");
+                if(!win){
+                  const a=document.createElement("a");
+                  a.href=url; a.target="_blank"; a.rel="noopener noreferrer";
+                  document.body.appendChild(a); a.click();
+                  setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);
+                }
+              };
+
+              const gmailUrl=(()=>{
+                const cuerpoG=String(auditEmailModal.body)
+                  .replace(/<[^>]+>/g,"").replace(/&amp;/g,"&");
+                return "https://mail.google.com/mail/?view=cm"
+                  +"&to="+encodeURIComponent(auditEmailModal.to||"")
+                  +"&su="+encodeURIComponent(auditEmailModal.subject||"")
+                  +"&body="+encodeURIComponent(cuerpoG);
+              })();
 
               return(
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 
-                  {/* DESKTOP: Outlook Web + Gmail + Copiar — SIN mailto para evitar Zoom */}
+                  {/* DESKTOP: Outlook 365 + Gmail + Copiar — sin mailto, sin Zoom */}
                   {!esMovil&&(<>
                     <button
-                      onClick={()=>{window.open(outlookUrl,"_blank","noopener");setTimeout(()=>setAuditEmailModal(null),500);}}
+                      onClick={()=>{
+                        abrirEmailWeb(auditEmailModal.to,auditEmailModal.subject,auditEmailModal.body);
+                        setTimeout(()=>setAuditEmailModal(null),500);
+                      }}
                       style={{flex:1,minWidth:120,padding:"12px 10px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#0078D4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                      Outlook Web
+                      Outlook 365
                     </button>
                     <button
-                      onClick={()=>{window.open(gmailUrl,"_blank","noopener");setTimeout(()=>setAuditEmailModal(null),500);}}
+                      onClick={()=>{window.open(gmailUrl,"_blank","noopener,noreferrer");setTimeout(()=>setAuditEmailModal(null),500);}}
                       style={{padding:"12px 10px",borderRadius:12,border:"1px solid #EA4335",background:"#fff8f8",color:"#EA4335",cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/></svg>
                       Gmail
                     </button>
                   </>)}
 
-                  {/* MÓVIL: mailto nativo + WhatsApp */}
+                  {/* MÓVIL: mailto nativo (sin Zoom) + WhatsApp */}
                   {esMovil&&(<>
                     <button
                       onClick={()=>{
+                        const cuerpoLimpio=String(auditEmailModal.body)
+                          .replace(/<[^>]+>/g,"").replace(/&amp;/g,"&");
                         const a=document.createElement("a");
-                        a.href=`mailto:${auditEmailModal.to||""}?subject=${subj}&body=${bodyEnc}`;
+                        a.href="mailto:"+encodeURIComponent(auditEmailModal.to||"")
+                          +"?subject="+encodeURIComponent(auditEmailModal.subject||"")
+                          +"&body="+encodeURIComponent(cuerpoLimpio);
                         document.body.appendChild(a); a.click();
                         setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);
                         setTimeout(()=>setAuditEmailModal(null),600);
@@ -7237,8 +7265,8 @@ function ChecklistApp() {
                     </button>
                     <button
                       onClick={()=>{
-                        const txt=encodeURIComponent(`*${auditEmailModal.subject}*\n\n${auditEmailModal.body.slice(0,900)}`);
-                        window.open(`https://wa.me/?text=${txt}`,"_blank","noopener");
+                        const txt=encodeURIComponent("*"+auditEmailModal.subject+"*\n\n"+auditEmailModal.body.slice(0,900));
+                        window.open("https://wa.me/?text="+txt,"_blank","noopener");
                         setTimeout(()=>setAuditEmailModal(null),500);
                       }}
                       style={{padding:"12px 10px",borderRadius:12,border:"1px solid #25D366",background:"#e8fef0",color:"#128C7E",cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
@@ -7250,12 +7278,12 @@ function ChecklistApp() {
                   {/* Siempre: Copiar + Cerrar */}
                   <button
                     onClick={async()=>{
-                      const txt=`Para: ${auditEmailModal.to||"(sin destinatario)"}\nAsunto: ${auditEmailModal.subject}\n\n${auditEmailModal.body}`;
+                      const txt="Para: "+(auditEmailModal.to||"(sin destinatario)")+"\nAsunto: "+auditEmailModal.subject+"\n\n"+auditEmailModal.body;
                       try{await navigator.clipboard.writeText(txt);showToast("Copiado al portapapeles");}
                       catch{window.prompt("Copia:",txt);}
                     }}
                     style={{padding:"12px 14px",borderRadius:12,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>
-                    📋 Copiar
+                    Copiar
                   </button>
                   <button onClick={()=>setAuditEmailModal(null)}
                     style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
