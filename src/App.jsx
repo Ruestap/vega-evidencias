@@ -695,6 +695,7 @@ function ChecklistApp() {
   const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
+  const [showDetalleAccesos, setShowDetalleAccesos] = useState(false);
   const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",editId:null};
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
@@ -4517,7 +4518,7 @@ function ChecklistApp() {
         const accesosHoy=authLog.filter(l=>l.timestamp&&new Date(l.timestamp).toDateString()===hoyStr);
         const fallHoy=accesosHoy.filter(l=>!l.exitoso).length;
         const hayActividad=accesosHoy.length>0;
-        const [showDetalle,setShowDetalle]=React.useState(false);
+        // showDetalleAccesos viene del estado del componente principal
         // Últimas 5 sesiones del admin logueado hoy
         const misAccesos=accesosHoy.filter(l=>l.userId===uDni||l.nombre===uName).slice(0,5);
 
@@ -4567,17 +4568,17 @@ function ChecklistApp() {
                   <div style={{fontSize:9,color:"#d97706",marginTop:3}}>⚠ {fallHoy} fallido{fallHoy>1?"s":""}</div>
                 )}
                 <button
-                  onClick={()=>setShowDetalle(s=>!s)}
-                  style={{marginTop:6,fontSize:9,color:showDetalle?"#791F1F":"#6C6EF5",background:"none",
-                    border:"1px solid "+(showDetalle?"#fca5a5":"#e2e8f0"),borderRadius:20,
+                  onClick={()=>setShowDetalleAccesos(s=>!s)}
+                  style={{marginTop:6,fontSize:9,color:showDetalleAccesos?"#791F1F":"#6C6EF5",background:"none",
+                    border:"1px solid "+(showDetalleAccesos?"#fca5a5":"#e2e8f0"),borderRadius:20,
                     padding:"2px 8px",cursor:"pointer",fontFamily:"inherit",display:"block"}}>
-                  {showDetalle?"✕ Cerrar":"...Detalles"}
+                  {showDetalleAccesos?"✕ Cerrar":"...Detalles"}
                 </button>
               </div>
             </div>
 
             {/* Panel desplegable alineado a la derecha — últimas 5 sesiones del admin */}
-            {showDetalle&&(
+            {showDetalleAccesos&&(
               <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
                 <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",
                   boxShadow:"0 4px 16px rgba(0,0,0,.08)",padding:"12px 14px",width:280}}>
