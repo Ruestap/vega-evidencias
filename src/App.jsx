@@ -4448,19 +4448,84 @@ function ChecklistApp() {
         );
       })()}
 
-      {/* Estado vacío */}
-      {!usrTab&&(
-        <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"48px 20px",textAlign:"center",marginTop:8}}>
-          <svg width="56" height="56" viewBox="0 0 64 64" fill="none" style={{marginBottom:12}}>
-            <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
-            <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
-            <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
-            <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
-            <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
-          </svg>
-          <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Sin configuraciones realizadas hoy</div>
-        </div>
-      )}
+      {/* Panel de actividad del día — visible cuando no hay tab seleccionada */}
+      {!usrTab&&(()=>{
+        const hoyStr=new Date().toDateString();
+        // Accesos de hoy
+        const accesosHoy=authLog.filter(l=>l.timestamp&&new Date(l.timestamp).toDateString()===hoyStr);
+        const fallHoy=accesosHoy.filter(l=>!l.exitoso).length;
+        // Usuarios modificados hoy (campos updatedAt o creadoEn)
+        const usuModHoy=usuarios.filter(u=>{
+          const d=u.updatedAt||u.creadoEn||"";
+          return d&&new Date(d).toDateString()===hoyStr;
+        });
+        const hayActividad=accesosHoy.length>0||usuModHoy.length>0;
+        return(
+          <div style={{marginTop:8}}>
+            {!hayActividad&&(
+              <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"48px 20px",textAlign:"center"}}>
+                <svg width="52" height="52" viewBox="0 0 64 64" fill="none" style={{marginBottom:12}}>
+                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+                </svg>
+                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Sin actividad registrada hoy</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Los cambios de usuarios y accesos aparecerán aquí</div>
+              </div>
+            )}
+            {hayActividad&&(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:2}}>Actividad de hoy</div>
+                {/* Resumen accesos */}
+                {accesosHoy.length>0&&(
+                  <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",padding:"12px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                      </svg>
+                      <span style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Accesos hoy</span>
+                      <span style={{fontSize:10,color:"#8aaabb"}}>{accesosHoy.length} total</span>
+                      {fallHoy>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallHoy} fallido{fallHoy>1?"s":""}</span>}
+                    </div>
+                    {accesosHoy.slice(0,5).map((l,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderTop:i>0?"0.5px solid #f5f7fa":"none"}}>
+                        <span style={{fontSize:10,color:"#5a7a9a",minWidth:70,whiteSpace:"nowrap"}}>{l.timestamp?new Date(l.timestamp).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}):"-"}</span>
+                        <span style={{flex:1,fontSize:11,fontWeight:500,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</span>
+                        <span style={{fontSize:9,padding:"1px 6px",borderRadius:20,fontWeight:700,
+                          color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
+                          {l.exitoso?"✓ OK":"✗ Fallido"}
+                        </span>
+                      </div>
+                    ))}
+                    {accesosHoy.length>5&&<div style={{fontSize:10,color:"#8aaabb",marginTop:6,textAlign:"center"}}>+{accesosHoy.length-5} más — ver en Log de accesos</div>}
+                  </div>
+                )}
+                {/* Usuarios modificados hoy */}
+                {usuModHoy.length>0&&(
+                  <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",padding:"12px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                      </svg>
+                      <span style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Usuarios modificados</span>
+                      <span style={{fontSize:10,color:"#8aaabb"}}>{usuModHoy.length}</span>
+                    </div>
+                    {usuModHoy.slice(0,5).map((u,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderTop:i>0?"0.5px solid #f5f7fa":"none"}}>
+                        <span style={{flex:1,fontSize:11,fontWeight:500,color:"#1a2f4a"}}>{u.nombre||u.id||"-"}</span>
+                        <span style={{fontSize:9,color:"#8aaabb"}}>{u.rol||"-"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
     );
   };
@@ -4993,8 +5058,105 @@ function ChecklistApp() {
                   <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
                   <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
                 </svg>
-                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>
-                  Sin configuraciones realizadas hoy
+                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ══ LOG DE ACCESOS — usrTab="log" ══ */}
+      {usrTab==="log"&&isAdmin&&(()=>{
+        const [logFiltroUser,  setLogFiltroUser]  = React.useState("");
+        const [logFiltroEstado,setLogFiltroEstado]= React.useState("todos");
+        const [logFiltroDias,  setLogFiltroDias]  = React.useState(30);
+        const hoy=new Date();
+        const cutoff=new Date(hoy.getTime()-logFiltroDias*24*60*60*1000);
+        const logFiltrado=authLog.filter(l=>{
+          if(logFiltroEstado!=="todos"&&String(l.exitoso)!==(logFiltroEstado==="ok"?"true":"false")) return false;
+          if(logFiltroUser&&!(l.nombre||"").toLowerCase().includes(logFiltroUser.toLowerCase())) return false;
+          if(l.timestamp&&new Date(l.timestamp)<cutoff) return false;
+          return true;
+        });
+        const fallidos=logFiltrado.filter(l=>!l.exitoso).length;
+        return(
+          <div style={{padding:"4px 0"}}>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
+              <span style={{fontSize:10,color:"#8aaabb"}}>{logFiltrado.length} registros</span>
+              {fallidos>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallidos} fallido{fallidos>1?"s":""}</span>}
+            </div>
+
+            {/* Filtros */}
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+              <input value={logFiltroUser} onChange={e=>setLogFiltroUser(e.target.value)}
+                placeholder="Buscar usuario..." style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,flex:1,minWidth:120,fontFamily:"inherit"}}/>
+              <select value={logFiltroEstado} onChange={e=>setLogFiltroEstado(e.target.value)}
+                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                <option value="todos">Todos</option>
+                <option value="ok">✓ OK</option>
+                <option value="fallido">✗ Fallidos</option>
+              </select>
+              <select value={logFiltroDias} onChange={e=>setLogFiltroDias(Number(e.target.value))}
+                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                <option value={7}>Últimos 7 días</option>
+                <option value={30}>Últimos 30 días</option>
+                <option value={90}>Últimos 90 días</option>
+              </select>
+            </div>
+
+            {/* Alerta de anomalías */}
+            {fallidos>=3&&(
+              <div style={{background:"#FFF3CD",border:"1px solid #FAC775",borderRadius:9,padding:"8px 12px",marginBottom:10,fontSize:11,color:"#633806",display:"flex",alignItems:"center",gap:8}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <strong>{fallidos} intentos fallidos</strong> detectados en el período — revisa si hay acceso no autorizado.
+              </div>
+            )}
+
+            {/* Tabla */}
+            {logFiltrado.length===0&&(
+              <div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros para los filtros seleccionados.</div>
+            )}
+            {logFiltrado.length>0&&(
+              <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc"}}>
+                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
+                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logFiltrado.slice(0,50).map((l,i)=>(
+                      <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:!l.exitoso?"#FFF8F8":i%2===0?"#fff":"#fafcff"}}>
+                        <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
+                        <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
+                        <td style={{padding:"7px 10px"}}>
+                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                            color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
+                            background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
+                            {l.rol||"-"}
+                          </span>
+                        </td>
+                        <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
+                        <td style={{padding:"7px 10px"}}>
+                          <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
+                            color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
+                            {l.exitoso?"✓ OK":"✗ Fallido"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{padding:"8px 12px",fontSize:10,color:"#8aaabb",borderTop:"0.5px solid #f0f4f8"}}>
+                  Mostrando {Math.min(logFiltrado.length,50)} de {logFiltrado.length} · Retención: 90 días activa
                 </div>
               </div>
             )}
@@ -6095,53 +6257,7 @@ function ChecklistApp() {
                 </div>
                 <div style={{fontSize:11,color:"#5a7a9a",marginBottom:10}}>
                   Desde <strong>{(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}
-          {usrTab==="log"&&isAdmin&&(
-            <div style={{padding:"4px 0"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                </svg>
-                <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
-                <span style={{fontSize:10,color:"#8aaabb",marginLeft:4}}>{authLog.length} registros</span>
-              </div>
-              {authLog.length===0&&<div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros de acceso.</div>}
-              {authLog.length>0&&(
-                <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                    <thead>
-                      <tr style={{background:"#f8fafc"}}>
-                        {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
-                          <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {authLog.slice(0,30).map((l,i)=>(
-                        <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:i%2===0?"#fff":"#fafcff"}}>
-                          <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
-                          <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
-                          <td style={{padding:"7px 10px"}}>
-                            <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
-                              color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
-                              background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
-                              {l.rol||"-"}
-                            </span>
-                          </td>
-                          <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
-                          <td style={{padding:"7px 10px"}}>
-                            <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
-                              color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
-                              {l.exitoso?"✓ OK":"✗ Fallido"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}</strong> hasta:
+</strong> hasta:
                 </div>
                 <input type="time" value={cortesSupervision.c2}
                   onChange={e=>{
@@ -8617,4 +8733,14 @@ function PinModal({pins,onSave,onClose}){
       </div>
     </div>
   );
-}
+}<div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"48px 20px",textAlign:"center",marginTop:8}}>
+                <svg width="52" height="52" viewBox="0 0 64 64" fill="none" style={{marginBottom:12}}>
+                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+                </svg>
+                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
+              </div>
