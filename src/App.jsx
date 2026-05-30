@@ -4082,6 +4082,8 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
       {id:"roles",    label:"Roles",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
+      {id:"log",      label:"Log de accesos",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
@@ -4509,84 +4511,7 @@ function ChecklistApp() {
         );
       })()}
 
-      {/* Panel de actividad del día — visible cuando no hay tab seleccionada */}
-      {usrTab==="usuarios"&&!showNUsuario&&(()=>{
-        const hoyStr=new Date().toDateString();
-        // Accesos de hoy
-        const accesosHoy=authLog.filter(l=>l.timestamp&&new Date(l.timestamp).toDateString()===hoyStr);
-        const fallHoy=accesosHoy.filter(l=>!l.exitoso).length;
-        // Usuarios modificados hoy (campos updatedAt o creadoEn)
-        const usuModHoy=usuarios.filter(u=>{
-          const d=u.updatedAt||u.creadoEn||"";
-          return d&&new Date(d).toDateString()===hoyStr;
-        });
-        const hayActividad=accesosHoy.length>0||usuModHoy.length>0;
-        return(
-          <div style={{marginTop:8}}>
-            {!hayActividad&&(
-              <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"48px 20px",textAlign:"center"}}>
-                <svg width="52" height="52" viewBox="0 0 64 64" fill="none" style={{marginBottom:12}}>
-                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
-                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
-                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
-                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
-                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
-                </svg>
-                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Sin actividad registrada hoy</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Los cambios de usuarios y accesos aparecerán aquí</div>
-              </div>
-            )}
-            {hayActividad&&(
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",marginBottom:2}}>Actividad de hoy</div>
-                {/* Resumen accesos */}
-                {accesosHoy.length>0&&(
-                  <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",padding:"12px 14px"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                      </svg>
-                      <span style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Accesos hoy</span>
-                      <span style={{fontSize:10,color:"#8aaabb"}}>{accesosHoy.length} total</span>
-                      {fallHoy>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallHoy} fallido{fallHoy>1?"s":""}</span>}
-                    </div>
-                    {accesosHoy.slice(0,5).map((l,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderTop:i>0?"0.5px solid #f5f7fa":"none"}}>
-                        <span style={{fontSize:10,color:"#5a7a9a",minWidth:70,whiteSpace:"nowrap"}}>{l.timestamp?new Date(l.timestamp).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}):"-"}</span>
-                        <span style={{flex:1,fontSize:11,fontWeight:500,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</span>
-                        <span style={{fontSize:9,padding:"1px 6px",borderRadius:20,fontWeight:700,
-                          color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
-                          {l.exitoso?"✓ OK":"✗ Fallido"}
-                        </span>
-                      </div>
-                    ))}
-                    {accesosHoy.length>5&&<div style={{fontSize:10,color:"#8aaabb",marginTop:6,textAlign:"center"}}>+{accesosHoy.length-5} más — ver en Log de accesos</div>}
-                  </div>
-                )}
-                {/* Usuarios modificados hoy */}
-                {usuModHoy.length>0&&(
-                  <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",padding:"12px 14px"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-                      </svg>
-                      <span style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Usuarios modificados</span>
-                      <span style={{fontSize:10,color:"#8aaabb"}}>{usuModHoy.length}</span>
-                    </div>
-                    {usuModHoy.slice(0,5).map((u,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderTop:i>0?"0.5px solid #f5f7fa":"none"}}>
-                        <span style={{flex:1,fontSize:11,fontWeight:500,color:"#1a2f4a"}}>{u.nombre||u.id||"-"}</span>
-                        <span style={{fontSize:9,color:"#8aaabb"}}>{u.rol||"-"}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+
     </div>
     );
   };
@@ -5120,7 +5045,7 @@ function ChecklistApp() {
                   <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
                 </svg>
                 <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
               </div>
             )}
           </div>
@@ -8705,5 +8630,5 @@ function PinModal({pins,onSave,onClose}){
                   <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
                 </svg>
                 <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
               </div>
