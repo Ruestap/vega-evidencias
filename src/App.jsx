@@ -4082,6 +4082,8 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
       {id:"roles",    label:"Roles",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
+      {id:"log",      label:"Log de accesos",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
@@ -4147,7 +4149,7 @@ function ChecklistApp() {
       {usrTab&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
 
       {/* Pill activa */}
-      {usrTab&&(
+      {usrTab&&usrTab!=="log"&&(
         <div style={{paddingTop:12,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <button onClick={()=>{setUsrTab(null);setDdOpen(false);setShowNUsuario(false);}}
             style={{display:"inline-flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)"}}>
@@ -5042,10 +5044,11 @@ function ChecklistApp() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:0}}>
             <div>
               <div style={{fontWeight:700,fontSize:14,color:"#1a2f4a"}}>
-                {usrTab==="usuarios"?"Usuarios":usrTab==="roles"?"Gestión de Roles":"Gestión de Áreas"}
+                {usrTab==="usuarios"?"Usuarios":usrTab==="roles"?"Gestión de Roles":usrTab==="log"?"Log de accesos":"Gestión de Áreas"}
               </div>
               <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>
                 {usrTab==="usuarios"?`${usrsCnt} activos · ${usuarios.length} totales`:
+                 usrTab==="log"?`${authLog.length} registros recientes`:
                  usrTab==="roles"?`${roles.length} roles configurados`:
                  `${areas.filter(a=>a.activa!==false).length} áreas activas`}
               </div>
@@ -5829,44 +5832,7 @@ function ChecklistApp() {
             )}
           </div>
 
-          {/* Log de accesos — auth_log */}
-          {isAdmin&&authLog.length>0&&(
-            <div style={{...S.card,padding:"14px",marginBottom:14}}>
-              <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:10}}>🔐 Log de accesos</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead>
-                    <tr style={{background:"#f8fafc"}}>
-                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
-                        <th key={h} style={{padding:"6px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"2px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {authLog.slice(0,20).map((l,i)=>(
-                      <tr key={i} style={{borderBottom:"1px solid #f5f7fa"}}>
-                        <td style={{padding:"6px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
-                        <td style={{padding:"6px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
-                        <td style={{padding:"6px 10px"}}>
-                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
-                            color:l.rol==="admin"?"#633806":l.rol==="viewer"?"#0C447C":"#085041",
-                            background:l.rol==="admin"?"#FAEEDA":l.rol==="viewer"?"#E6F1FB":"#E1F5EE"}}>
-                            {l.rol||"-"}
-                          </span>
-                        </td>
-                        <td style={{padding:"6px 10px",color:"#8aaabb"}}>{l.dispositivo||"-"}</td>
-                        <td style={{padding:"6px 10px"}}>
-                          <span style={{fontSize:9,fontWeight:700,color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB",padding:"2px 7px",borderRadius:20}}>
-                            {l.exitoso?"✓ OK":"✗ Fallido"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Log de accesos movido a sección Usuarios → tab "log" */}
 
           {/* Log de registros de evidencias — a continuación */}
           {(()=>{
@@ -6128,7 +6094,54 @@ function ChecklistApp() {
                   🔵 CORTE 2 · BLOQUE PLATA
                 </div>
                 <div style={{fontSize:11,color:"#5a7a9a",marginBottom:10}}>
-                  Desde <strong>{(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}</strong> hasta:
+                  Desde <strong>{(()=>{const[h,m]=cortesSupervision.c1.split(":").map(Number);const nx=h*60+m+1;return String(Math.floor(nx/60)).padStart(2,"0")+":"+String(nx%60).padStart(2,"0");})()}
+          {usrTab==="log"&&isAdmin&&(
+            <div style={{padding:"4px 0"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+                <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
+                <span style={{fontSize:10,color:"#8aaabb",marginLeft:4}}>{authLog.length} registros</span>
+              </div>
+              {authLog.length===0&&<div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros de acceso.</div>}
+              {authLog.length>0&&(
+                <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr style={{background:"#f8fafc"}}>
+                        {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
+                          <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {authLog.slice(0,30).map((l,i)=>(
+                        <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:i%2===0?"#fff":"#fafcff"}}>
+                          <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
+                          <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
+                          <td style={{padding:"7px 10px"}}>
+                            <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                              color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
+                              background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
+                              {l.rol||"-"}
+                            </span>
+                          </td>
+                          <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
+                          <td style={{padding:"7px 10px"}}>
+                            <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
+                              color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
+                              {l.exitoso?"✓ OK":"✗ Fallido"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}</strong> hasta:
                 </div>
                 <input type="time" value={cortesSupervision.c2}
                   onChange={e=>{
@@ -7087,7 +7100,7 @@ function ChecklistApp() {
                 {label:"Visitas esta semana",val:misSemana.length,c:"#0984e3"},
                 {label:"Mi score promedio",val:miProm!==null?miProm.toFixed(1)+"%":"S/D",c:miProm>=75?"#00b894":miProm>=60?"#f6a623":"#d63031"},
                 {label:"Total visitas",val:misAuditorias.length,c:"#1a2f4a"},
-                {label:"Mi ranking",val:miPos>0?`#${miPos} de ${ranking.length}`:"-",c:"#6c5ce7"},
+                // Mi ranking eliminado — irrelevante con 1 auditor
               ].map((k,i)=>(
                 <div key={i} style={{background:k.c+"12",border:`1px solid ${k.c}33`,borderRadius:10,padding:"12px 14px"}}>
                   <div style={{fontSize:10,color:"#5a7a9a",marginBottom:4}}>{k.label}</div>
@@ -7194,14 +7207,15 @@ function ChecklistApp() {
             {(()=>{
               const esMovil=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"");
 
-              // ── abrirEmailWeb: lógica extraída de Traking.jsx (funcional) ──
-              // Usa office365.com + encodeURIComponent limpio + fallback <a target="_blank">
+              // ── abrirEmailWeb (lógica Traking.jsx) ──
               const abrirEmailWeb=(to,asunto,cuerpo)=>{
                 const cuerpoLimpio=String(cuerpo)
                   .replace(/<br\s*[/]?>/gi,"\n")
                   .replace(/<a[^>]*>([^<]*)<[/]a>/gi,"$1")
                   .replace(/<[^>]+>/g,"")
                   .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+                // Un solo botón inteligente: siempre abre el cliente web configurado
+                // Para Outlook 365 (corporativo) — sin mailto, sin Zoom
                 const url="https://outlook.office365.com/mail/deeplink/compose?to="
                   +encodeURIComponent(to||"")
                   +"&subject="+encodeURIComponent(asunto||"")
@@ -7215,38 +7229,28 @@ function ChecklistApp() {
                 }
               };
 
-              const gmailUrl=(()=>{
-                const cuerpoG=String(auditEmailModal.body)
-                  .replace(/<[^>]+>/g,"").replace(/&amp;/g,"&");
-                return "https://mail.google.com/mail/?view=cm"
-                  +"&to="+encodeURIComponent(auditEmailModal.to||"")
-                  +"&su="+encodeURIComponent(auditEmailModal.subject||"")
-                  +"&body="+encodeURIComponent(cuerpoG);
-              })();
-
               return(
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 
-                  {/* DESKTOP: Outlook 365 + Gmail + Copiar — sin mailto, sin Zoom */}
-                  {!esMovil&&(<>
+                  {/* DESKTOP: Un solo botón "Enviar por correo" → Outlook 365 Web */}
+                  {!esMovil&&(
                     <button
                       onClick={()=>{
                         abrirEmailWeb(auditEmailModal.to,auditEmailModal.subject,auditEmailModal.body);
                         setTimeout(()=>setAuditEmailModal(null),500);
                       }}
-                      style={{flex:1,minWidth:120,padding:"12px 10px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#0078D4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                      Outlook 365
+                      style={{flex:1,minWidth:140,padding:"12px 14px",borderRadius:12,border:"none",
+                        background:"linear-gradient(135deg,#0078D4,#1a2f4a)",color:"#fff",
+                        fontWeight:800,fontSize:13,cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                      </svg>
+                      Enviar por correo
                     </button>
-                    <button
-                      onClick={()=>{window.open(gmailUrl,"_blank","noopener,noreferrer");setTimeout(()=>setAuditEmailModal(null),500);}}
-                      style={{padding:"12px 10px",borderRadius:12,border:"1px solid #EA4335",background:"#fff8f8",color:"#EA4335",cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/></svg>
-                      Gmail
-                    </button>
-                  </>)}
+                  )}
 
-                  {/* MÓVIL: mailto nativo (sin Zoom) + WhatsApp */}
+                  {/* MÓVIL: mailto nativo + WhatsApp */}
                   {esMovil&&(<>
                     <button
                       onClick={()=>{
@@ -7260,7 +7264,9 @@ function ChecklistApp() {
                         setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);
                         setTimeout(()=>setAuditEmailModal(null),600);
                       }}
-                      style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>
+                      style={{flex:1,padding:"12px",borderRadius:12,border:"none",
+                        background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",
+                        color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>
                       ✉️ Correo
                     </button>
                     <button
@@ -7269,7 +7275,9 @@ function ChecklistApp() {
                         window.open("https://wa.me/?text="+txt,"_blank","noopener");
                         setTimeout(()=>setAuditEmailModal(null),500);
                       }}
-                      style={{padding:"12px 10px",borderRadius:12,border:"1px solid #25D366",background:"#e8fef0",color:"#128C7E",cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+                      style={{padding:"12px 10px",borderRadius:12,border:"1px solid #25D366",
+                        background:"#e8fef0",color:"#128C7E",cursor:"pointer",fontSize:13,
+                        fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                       WhatsApp
                     </button>
@@ -7282,11 +7290,13 @@ function ChecklistApp() {
                       try{await navigator.clipboard.writeText(txt);showToast("Copiado al portapapeles");}
                       catch{window.prompt("Copia:",txt);}
                     }}
-                    style={{padding:"12px 14px",borderRadius:12,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>
+                    style={{padding:"12px 14px",borderRadius:12,border:"1px solid #c8d8e8",
+                      background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>
                     Copiar
                   </button>
                   <button onClick={()=>setAuditEmailModal(null)}
-                    style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                    style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",
+                      background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
                     Cerrar
                   </button>
                 </div>
