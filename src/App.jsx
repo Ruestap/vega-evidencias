@@ -4082,8 +4082,7 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
       {id:"roles",    label:"Roles",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
-      {id:"log",      label:"Log de accesos",
-        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
+      /* Log de accesos eliminado del menú — ya aparece en su propia sección */
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
@@ -4511,7 +4510,227 @@ function ChecklistApp() {
         );
       })()}
 
+      {/* ── Panel de actividad del día ──
+           · Sin actividad → pantalla limpia (sin texto redundante)
+           · Con actividad → tarjeta de resumen + dropdown "Detalles" expandible        */}
+      {usrTab==="usuarios"&&!showNUsuario&&(()=>{
+        const hoyStr=new Date().toDateString();
+        const fechaHoy=new Date().toLocaleDateString("es-PE",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
 
+        /* datos del día */
+        const accesosHoy=(authLog||[]).filter(l=>l.timestamp&&new Date(l.timestamp).toDateString()===hoyStr);
+        const fallHoy=accesosHoy.filter(l=>!l.exitoso).length;
+        const usuModHoy=(usuarios||[]).filter(u=>{
+          const d=u.updatedAt||u.creadoEn||"";
+          return d&&new Date(d).toDateString()===hoyStr;
+        });
+        const hayActividad=accesosHoy.length>0||usuModHoy.length>0;
+
+        if(!hayActividad){
+          /* ── Sin actividad: pantalla limpia vacía ── */
+          return(
+            <div style={{marginTop:8,background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",
+              padding:"52px 20px",textAlign:"center"}}>
+              <svg width="52" height="52" viewBox="0 0 64 64" fill="none" style={{marginBottom:14}} aria-hidden="true">
+                <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+                <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+                <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+                <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+                <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+              </svg>
+              <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Sin actividad registrada hoy</div>
+              <div style={{fontSize:11,color:"#c8d8e8",marginTop:4,textTransform:"capitalize"}}>{fechaHoy}</div>
+            </div>
+          );
+        }
+
+        /* ── Con actividad: tarjeta resumen + detalles expandibles ── */
+        return(
+          <div style={{marginTop:8}}>
+
+            {/* Tarjeta resumen del día */}
+            <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",
+              padding:"14px 16px",marginBottom:10}}>
+
+              {/* Encabezado del día */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Resumen del día</div>
+                  <div style={{fontSize:10,color:"#8aaabb",marginTop:1,textTransform:"capitalize"}}>{fechaHoy}</div>
+                </div>
+                {/* Badge de alertas si hay fallos */}
+                {fallHoy>0&&(
+                  <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                    background:"#FCEBEB",color:"#791F1F",display:"flex",alignItems:"center",gap:4}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {fallHoy} acceso{fallHoy>1?"s":""} fallido{fallHoy>1?"s":""}
+                  </span>
+                )}
+              </div>
+
+              {/* KPIs del día en fila */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8,marginBottom:14}}>
+                {[
+                  {label:"Accesos",val:accesosHoy.length,c:"#00b5b4",bg:"#e0fafa",
+                    ico:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
+                  {label:"Exitosos",val:accesosHoy.length-fallHoy,c:"#059669",bg:"#d1fae5",
+                    ico:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>},
+                  ...(fallHoy>0?[{label:"Fallidos",val:fallHoy,c:"#dc2626",bg:"#fee2e2",
+                    ico:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}]:[]),
+                  ...(usuModHoy.length>0?[{label:"Modificados",val:usuModHoy.length,c:"#6C6EF5",bg:"#EEEFFE",
+                    ico:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>}]:[]),
+                ].map((k,i)=>(
+                  <div key={i} style={{background:k.bg,borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                    <div style={{color:k.c,marginBottom:3}}>{React.cloneElement(k.ico,{stroke:k.c})}</div>
+                    <div style={{fontWeight:800,fontSize:18,color:k.c,lineHeight:1}}>{k.val}</div>
+                    <div style={{fontSize:9,color:k.c,fontWeight:600,marginTop:2,opacity:.8}}>{k.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Último acceso resumido */}
+              {accesosHoy.length>0&&(()=>{
+                const ultimo=accesosHoy[0];
+                return(
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",
+                    borderRadius:8,background:"#f8fafc",border:"0.5px solid #E2E8F0"}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8aaabb" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span style={{fontSize:10,color:"#8aaabb"}}>Último acceso:</span>
+                    <span style={{fontSize:11,fontWeight:600,color:"#1a2f4a",flex:1}}>
+                      {ultimo.nombre||ultimo.userId||"—"}
+                    </span>
+                    <span style={{fontSize:10,color:"#5a7a9a"}}>
+                      {ultimo.timestamp?new Date(ultimo.timestamp).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}):"—"}
+                    </span>
+                    <span style={{fontSize:9,padding:"1px 6px",borderRadius:20,fontWeight:700,
+                      color:ultimo.exitoso?"#085041":"#791F1F",
+                      background:ultimo.exitoso?"#E1F5EE":"#FCEBEB"}}>
+                      {ultimo.exitoso?"✓ OK":"✗ Fallido"}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* ── Dropdown "Detalles" expandible ── */}
+            {(()=>{
+              const [abierto,setAbierto]=React.useState(false);
+              return(
+                <div style={{background:"#fff",borderRadius:12,border:"1px solid #E2E8F0",overflow:"hidden"}}>
+                  {/* Cabecera del dropdown — siempre visible */}
+                  <button
+                    onClick={()=>setAbierto(v=>!v)}
+                    style={{width:"100%",padding:"11px 16px",border:"none",background:"transparent",
+                      cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",
+                      fontFamily:"inherit"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                      </svg>
+                      <span style={{fontWeight:600,fontSize:12,color:"#1a2f4a"}}>Detalles</span>
+                      <span style={{fontSize:10,color:"#8aaabb"}}>{accesosHoy.length+usuModHoy.length} eventos</span>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8aaabb" strokeWidth="2.5" strokeLinecap="round"
+                      style={{transition:"transform .2s",transform:abierto?"rotate(180deg)":"rotate(0deg)"}}
+                      aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+
+                  {/* Contenido expandible */}
+                  {abierto&&(
+                    <div style={{borderTop:"0.5px solid #f0f4f8",padding:"12px 16px",
+                      display:"flex",flexDirection:"column",gap:10}}>
+
+                      {/* Lista de accesos */}
+                      {accesosHoy.length>0&&(
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",
+                            letterSpacing:".06em",marginBottom:8,textTransform:"uppercase",
+                            display:"flex",alignItems:"center",gap:6}}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                            Accesos del día · {accesosHoy.length} total
+                          </div>
+                          <div style={{background:"#f8fafc",borderRadius:9,
+                            border:"0.5px solid #E2E8F0",overflow:"hidden"}}>
+                            {accesosHoy.map((l,i)=>(
+                              <div key={i} style={{display:"flex",alignItems:"center",gap:10,
+                                padding:"8px 12px",
+                                borderTop:i>0?"0.5px solid #f0f4f8":"none"}}>
+                                <span style={{fontSize:10,color:"#5a7a9a",minWidth:72,whiteSpace:"nowrap"}}>
+                                  {l.timestamp?new Date(l.timestamp).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"}):"—"}
+                                </span>
+                                <span style={{flex:1,fontSize:11,fontWeight:500,color:"#1a2f4a"}}>
+                                  {l.nombre||l.userId||"—"}
+                                </span>
+                                {l.rol&&<span style={{fontSize:9,color:"#8aaabb"}}>{l.rol}</span>}
+                                <span style={{fontSize:9,padding:"1px 7px",borderRadius:20,fontWeight:700,
+                                  color:l.exitoso?"#085041":"#791F1F",
+                                  background:l.exitoso?"#E1F5EE":"#FCEBEB",whiteSpace:"nowrap"}}>
+                                  {l.exitoso?"✓ OK":"✗ Fallido"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Lista de usuarios modificados */}
+                      {usuModHoy.length>0&&(
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",
+                            letterSpacing:".06em",marginBottom:8,textTransform:"uppercase",
+                            display:"flex",alignItems:"center",gap:6}}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            Usuarios modificados hoy · {usuModHoy.length}
+                          </div>
+                          <div style={{background:"#f8fafc",borderRadius:9,
+                            border:"0.5px solid #E2E8F0",overflow:"hidden"}}>
+                            {usuModHoy.map((u,i)=>(
+                              <div key={i} style={{display:"flex",alignItems:"center",gap:10,
+                                padding:"8px 12px",borderTop:i>0?"0.5px solid #f0f4f8":"none"}}>
+                                <div style={{width:28,height:28,borderRadius:"50%",
+                                  background:"#EEEFFE",display:"flex",alignItems:"center",
+                                  justifyContent:"center",fontSize:10,fontWeight:700,
+                                  color:"#6C6EF5",flexShrink:0}}>
+                                  {(u.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()}
+                                </div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",
+                                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                    {u.nombre||u.id||"—"}
+                                  </div>
+                                  <div style={{fontSize:9,color:"#8aaabb"}}>
+                                    {u.cargo||u.rol||"—"} · {u.area||""}
+                                  </div>
+                                </div>
+                                {(u.updatedAt||u.creadoEn)&&(
+                                  <span style={{fontSize:9,color:"#8aaabb",whiteSpace:"nowrap"}}>
+                                    {new Date(u.updatedAt||u.creadoEn).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
+                                  </span>
+                                )}
+                                <span style={{fontSize:9,padding:"1px 7px",borderRadius:20,fontWeight:700,
+                                  color:"#6C6EF5",background:"#EEEFFE",whiteSpace:"nowrap"}}>
+                                  {u.creadoEn&&new Date(u.creadoEn).toDateString()===hoyStr?"Nuevo":"Editado"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+          </div>
+        );
+      })()}
     </div>
     );
   };
