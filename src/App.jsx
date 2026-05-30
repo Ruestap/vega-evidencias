@@ -4082,8 +4082,6 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
       {id:"roles",    label:"Roles",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
-      {id:"log",      label:"Log de accesos",
-        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
@@ -4102,68 +4100,32 @@ function ChecklistApp() {
 
     return(
     <div style={{padding:"16px"}}>
-      {/* ── Botón "Gestión de Usuarios" con dropdown ── */}
-      <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
-        <button onClick={()=>setDdOpen(o=>!o)}
-          style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
-            borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
-            cursor:"pointer",color:usrTab?"#6C6EF5":"#5a7a9a",
-            fontWeight:600,fontSize:13,
-            borderBottom:!usrTab?"2px solid #6C6EF5":"1.5px solid #E2E8F0"}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/>
-          </svg>
-          {activeMod
-            ? <>{React.cloneElement(activeMod.ico,{stroke:"#6C6EF5"})} {activeMod.label}</>
-            : "Gestión de Usuarios"}
-        </button>
-        {ddOpen&&(
-          <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,minWidth:210,
-            background:"#fff",borderRadius:12,border:"1.5px solid #E2E8F0",
-            boxShadow:"0 8px 24px rgba(0,0,0,.10)",zIndex:200,overflow:"hidden"}}>
-            <div style={{padding:"10px 14px 6px",fontSize:11,fontWeight:700,
-              color:"#8aaabb",letterSpacing:".06em",borderBottom:"1px solid #F1F5F9",
-              display:"flex",alignItems:"center",gap:6}}>
-              Seleccione Módulo
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12"/></svg>
-            </div>
-            {USR_MODS.map(m=>(
-              <button key={m.id}
-                onClick={()=>{setUsrTab(m.id);setDdOpen(false);setShowNUsuario(false);}}
-                style={{width:"100%",padding:"12px 16px",border:"none",
-                  borderBottom:"1px solid #F8FAFC",background:usrTab===m.id?"#F5F4FF":"#fff",
-                  display:"flex",alignItems:"center",justifyContent:"space-between",
-                  cursor:"pointer",color:usrTab===m.id?"#6C6EF5":"#1a2f4a",
-                  fontWeight:usrTab===m.id?700:500,fontSize:13}}>
-                {m.label}
-                {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#94A3B8"})}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Línea separadora */}
-      {usrTab&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
-
-      {/* Pill activa */}
-      {usrTab&&usrTab!=="log"&&(
-        <div style={{paddingTop:12,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <button onClick={()=>{setUsrTab(null);setDdOpen(false);setShowNUsuario(false);}}
-            style={{display:"inline-flex",alignItems:"center",gap:8,padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)"}}>
-            {activeMod&&React.cloneElement(activeMod.ico,{stroke:"#fff"})}
-            {activeMod?.label}
+      {/* ── Tabs horizontales — sin dropdown ── */}
+      <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1.5px solid #E2E8F0",paddingBottom:0}}>
+        {USR_MODS.map(m=>(
+          <button key={m.id}
+            onClick={()=>{setUsrTab(m.id);setShowNUsuario(false);}}
+            style={{display:"flex",alignItems:"center",gap:6,padding:"9px 14px",
+              border:"none",borderBottom:usrTab===m.id?"2.5px solid #6C6EF5":"2.5px solid transparent",
+              background:"transparent",cursor:"pointer",
+              color:usrTab===m.id?"#6C6EF5":"#5a7a9a",
+              fontWeight:usrTab===m.id?700:500,fontSize:12,
+              marginBottom:"-1.5px",fontFamily:"inherit"}}>
+            {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#94A3B8",width:"14",height:"14"})}
+            {m.label}
           </button>
-          {/* Botón acción contextual */}
+        ))}
+        {/* Botón acción contextual alineado a la derecha */}
+        {usrTab&&usrTab!=="log"&&(
           <button onClick={()=>setShowNUsuario(true)}
-            style={{padding:"9px 16px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            style={{marginLeft:"auto",padding:"7px 14px",borderRadius:50,border:"none",
+              background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,
+              fontSize:11,display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {usrTab==="usuarios"?"Nuevo usuario":usrTab==="roles"?"Nuevo rol":"Nueva área"}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── CONTENIDO USUARIOS ── */}
       {usrTab==="usuarios"&&(()=>{
@@ -4448,8 +4410,107 @@ function ChecklistApp() {
         );
       })()}
 
+
+      {/* ══ LOG DE ACCESOS — usrTab="log" ══ */}
+      {usrTab==="log"&&isAdmin&&(()=>{
+        const [logFiltroUser,  setLogFiltroUser]  = React.useState("");
+        const [logFiltroEstado,setLogFiltroEstado]= React.useState("todos");
+        const [logFiltroDias,  setLogFiltroDias]  = React.useState(30);
+        const hoy=new Date();
+        const cutoff=new Date(hoy.getTime()-logFiltroDias*24*60*60*1000);
+        const logFiltrado=authLog.filter(l=>{
+          if(logFiltroEstado!=="todos"&&String(l.exitoso)!==(logFiltroEstado==="ok"?"true":"false")) return false;
+          if(logFiltroUser&&!(l.nombre||"").toLowerCase().includes(logFiltroUser.toLowerCase())) return false;
+          if(l.timestamp&&new Date(l.timestamp)<cutoff) return false;
+          return true;
+        });
+        const fallidos=logFiltrado.filter(l=>!l.exitoso).length;
+        return(
+          <div style={{padding:"4px 0"}}>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
+              <span style={{fontSize:10,color:"#8aaabb"}}>{logFiltrado.length} registros</span>
+              {fallidos>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallidos} fallido{fallidos>1?"s":""}</span>}
+            </div>
+
+            {/* Filtros */}
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+              <input value={logFiltroUser} onChange={e=>setLogFiltroUser(e.target.value)}
+                placeholder="Buscar usuario..." style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,flex:1,minWidth:120,fontFamily:"inherit"}}/>
+              <select value={logFiltroEstado} onChange={e=>setLogFiltroEstado(e.target.value)}
+                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                <option value="todos">Todos</option>
+                <option value="ok">✓ OK</option>
+                <option value="fallido">✗ Fallidos</option>
+              </select>
+              <select value={logFiltroDias} onChange={e=>setLogFiltroDias(Number(e.target.value))}
+                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                <option value={7}>Últimos 7 días</option>
+                <option value={30}>Últimos 30 días</option>
+                <option value={90}>Últimos 90 días</option>
+              </select>
+            </div>
+
+            {/* Alerta de anomalías */}
+            {fallidos>=3&&(
+              <div style={{background:"#FFF3CD",border:"1px solid #FAC775",borderRadius:9,padding:"8px 12px",marginBottom:10,fontSize:11,color:"#633806",display:"flex",alignItems:"center",gap:8}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <strong>{fallidos} intentos fallidos</strong> detectados en el período — revisa si hay acceso no autorizado.
+              </div>
+            )}
+
+            {/* Tabla */}
+            {logFiltrado.length===0&&(
+              <div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros para los filtros seleccionados.</div>
+            )}
+            {logFiltrado.length>0&&(
+              <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc"}}>
+                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
+                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logFiltrado.slice(0,50).map((l,i)=>(
+                      <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:!l.exitoso?"#FFF8F8":i%2===0?"#fff":"#fafcff"}}>
+                        <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
+                        <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
+                        <td style={{padding:"7px 10px"}}>
+                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                            color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
+                            background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
+                            {l.rol||"-"}
+                          </span>
+                        </td>
+                        <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
+                        <td style={{padding:"7px 10px"}}>
+                          <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
+                            color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
+                            {l.exitoso?"✓ OK":"✗ Fallido"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{padding:"8px 12px",fontSize:10,color:"#8aaabb",borderTop:"0.5px solid #f0f4f8"}}>
+                  Mostrando {Math.min(logFiltrado.length,50)} de {logFiltrado.length} · Retención: 90 días activa
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Panel de actividad del día — visible cuando no hay tab seleccionada */}
-      {!usrTab&&(()=>{
+      {usrTab==="usuarios"&&!showNUsuario&&(()=>{
         const hoyStr=new Date().toDateString();
         // Accesos de hoy
         const accesosHoy=authLog.filter(l=>l.timestamp&&new Date(l.timestamp).toDateString()===hoyStr);
@@ -5059,105 +5120,7 @@ function ChecklistApp() {
                   <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
                 </svg>
                 <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* ══ LOG DE ACCESOS — usrTab="log" ══ */}
-      {usrTab==="log"&&isAdmin&&(()=>{
-        const [logFiltroUser,  setLogFiltroUser]  = React.useState("");
-        const [logFiltroEstado,setLogFiltroEstado]= React.useState("todos");
-        const [logFiltroDias,  setLogFiltroDias]  = React.useState(30);
-        const hoy=new Date();
-        const cutoff=new Date(hoy.getTime()-logFiltroDias*24*60*60*1000);
-        const logFiltrado=authLog.filter(l=>{
-          if(logFiltroEstado!=="todos"&&String(l.exitoso)!==(logFiltroEstado==="ok"?"true":"false")) return false;
-          if(logFiltroUser&&!(l.nombre||"").toLowerCase().includes(logFiltroUser.toLowerCase())) return false;
-          if(l.timestamp&&new Date(l.timestamp)<cutoff) return false;
-          return true;
-        });
-        const fallidos=logFiltrado.filter(l=>!l.exitoso).length;
-        return(
-          <div style={{padding:"4px 0"}}>
-            {/* Header */}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-              </svg>
-              <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
-              <span style={{fontSize:10,color:"#8aaabb"}}>{logFiltrado.length} registros</span>
-              {fallidos>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallidos} fallido{fallidos>1?"s":""}</span>}
-            </div>
-
-            {/* Filtros */}
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-              <input value={logFiltroUser} onChange={e=>setLogFiltroUser(e.target.value)}
-                placeholder="Buscar usuario..." style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,flex:1,minWidth:120,fontFamily:"inherit"}}/>
-              <select value={logFiltroEstado} onChange={e=>setLogFiltroEstado(e.target.value)}
-                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
-                <option value="todos">Todos</option>
-                <option value="ok">✓ OK</option>
-                <option value="fallido">✗ Fallidos</option>
-              </select>
-              <select value={logFiltroDias} onChange={e=>setLogFiltroDias(Number(e.target.value))}
-                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
-                <option value={7}>Últimos 7 días</option>
-                <option value={30}>Últimos 30 días</option>
-                <option value={90}>Últimos 90 días</option>
-              </select>
-            </div>
-
-            {/* Alerta de anomalías */}
-            {fallidos>=3&&(
-              <div style={{background:"#FFF3CD",border:"1px solid #FAC775",borderRadius:9,padding:"8px 12px",marginBottom:10,fontSize:11,color:"#633806",display:"flex",alignItems:"center",gap:8}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <strong>{fallidos} intentos fallidos</strong> detectados en el período — revisa si hay acceso no autorizado.
-              </div>
-            )}
-
-            {/* Tabla */}
-            {logFiltrado.length===0&&(
-              <div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros para los filtros seleccionados.</div>
-            )}
-            {logFiltrado.length>0&&(
-              <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead>
-                    <tr style={{background:"#f8fafc"}}>
-                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
-                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logFiltrado.slice(0,50).map((l,i)=>(
-                      <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:!l.exitoso?"#FFF8F8":i%2===0?"#fff":"#fafcff"}}>
-                        <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
-                        <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
-                        <td style={{padding:"7px 10px"}}>
-                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
-                            color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
-                            background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
-                            {l.rol||"-"}
-                          </span>
-                        </td>
-                        <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
-                        <td style={{padding:"7px 10px"}}>
-                          <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
-                            color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
-                            {l.exitoso?"✓ OK":"✗ Fallido"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{padding:"8px 12px",fontSize:10,color:"#8aaabb",borderTop:"0.5px solid #f0f4f8"}}>
-                  Mostrando {Math.min(logFiltrado.length,50)} de {logFiltrado.length} · Retención: 90 días activa
-                </div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles</div>
               </div>
             )}
           </div>
@@ -8742,5 +8705,5 @@ function PinModal({pins,onSave,onClose}){
                   <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
                 </svg>
                 <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles</div>
               </div>
