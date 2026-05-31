@@ -175,19 +175,26 @@ const CHECKLIST_MODULOS_INIT = [
     ]},
 ];
 
-// Retorna {ob, mx, pct} por sección — ob=pts obtenidos, mx=pts máximos posibles
+// FIX_SCORE_VERSIONADO_20260530: cálculo escalable por configuración/snapshot de score.
+// Retorna {ob, mx, pct} por sección — ob=pts obtenidos, mx=pts máximos posibles.
+function getMaxScoreModulo(modulo){
+  const escala=Array.isArray(modulo?.escala)&&modulo.escala.length?modulo.escala:[0,1.5,3];
+  const maxNum=Math.max(...escala.map(v=>Number(v)||0));
+  return Number(modulo?.maxScore ?? modulo?.scoreSnapshot?.maxScore ?? maxNum || 3);
+}
 function calcScoreModulo(respuestas,modulo){
-  if(!modulo) return null;
+  if(!modulo||modulo.scoreEnabled===false) return null;
   const items=(modulo?.items||[]).filter(i=>i.activo);
   if(!items.length) return null;
-  const mx=items.length*3;
+  const maxModulo=getMaxScoreModulo(modulo);
+  const mx=items.reduce((sum,i)=>sum+Number(i.maxScore ?? maxModulo),0);
   const ob=items.reduce((sum,i)=>{
     const v=respuestas?.[i.id]?.valor;
-    return sum+(v!==null&&v!==undefined?v:0);
+    return sum+(v!==null&&v!==undefined?Number(v)||0:0);
   },0);
   const respondidos=items.filter(i=>respuestas?.[i.id]?.valor!==null&&respuestas?.[i.id]?.valor!==undefined);
   if(!respondidos.length) return null;
-  return {ob:Math.round(ob*100)/100, mx, pct:Math.round((ob/mx)*100)};
+  return {ob:Math.round(ob*100)/100, mx:Math.round(mx*100)/100, pct:mx?Math.round((ob/mx)*100):0};
 }
 // Score final Opción 2: suma total obtenida / 72 pts totales × 100
 function calcScoreFinal(respuestas,modulos){
@@ -210,6 +217,233 @@ function getTierAuditoria(pct){
   if(pct>=60) return{label:"Regular",  c:"#f6a623",bg:"#fff8ec",icon:"⚠️"};
   if(pct>0)   return{label:"Crítico",  c:"#d63031",bg:"#ffeae6",icon:"🔴"};
   return             {label:"Sin nota", c:"#636e72",bg:"#f4f6f8",icon:"⬛"};
+}
+
+
+const VEGA_PALETTE={navy:"#1a2f4a",teal:"#00b5b4",violet:"#6C6EF5",orange:"#f6a623",blue:"#0984e3"};
+const ZONAS_VEGA=[
+  {id:"01",nombre:"LIMA NORTE"},
+  {id:"02",nombre:"CALLAO"},
+  {id:"03",nombre:"LIMA CERCADO"},
+  {id:"04",nombre:"LIMA MODERNA"},
+  {id:"05",nombre:"LIMA SUR"},
+  {id:"06",nombre:"LIMA ESTE"},
+];
+const DISTRITO_ZONA={
+  "CHORRILLOS":"05","LA MOLINA":"06","LINCE":"04","LOS OLIVOS":"01","RIMAC":"03","RÍMAC":"03","CARABAYLLO":"01",
+  "SAN BORJA":"04","BELLAVISTA":"02","MIRAFLORES":"04","CALLAO":"02","S.J.L.":"06","SAN JUAN DE LURIGANCHO":"06",
+  "PUEBLO LIBRE":"04","SAN MIGUEL":"04","SURCO":"05","SANTIAGO DE SURCO":"05","JESUS MARÍA":"04","JESÚS MARÍA":"04",
+  "INDEPENDENCIA":"01","S.M.P.":"01","SAN MARTIN DE PORRES":"01","SAN MARTÍN DE PORRES":"01","EL AGUSTINO":"06",
+  "BREÑA":"03","LIMA CERCADO":"03","CERCADO DE LIMA":"03","V.M.T.":"05","VILLA MARIA DEL TRIUNFO":"05","VILLA MARÍA DEL TRIUNFO":"05",
+  "VENTANILLA":"02","ATE VITARTE":"06","ATE":"06","COMAS":"01","LA VICTORIA":"03","SANTA ANITA":"06","SURQUILLO":"05",
+  "PUENTE PIEDRA":"01","V.E.S.":"05","VILLA EL SALVADOR":"05","SAN ISIDRO":"04"
+};
+const normalizeTxt=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toUpperCase();
+function getZonaIdTienda(t){
+  const z=String(t?.zonaId||t?.ID_ZONA||"").padStart(2,"0");
+  if(ZONAS_VEGA.some(x=>x.id===z)) return z;
+  return DISTRITO_ZONA[normalizeTxt(t?.dist||t?.Distrito||"")]||"";
+}
+function getZonaNombre(zid){return ZONAS_VEGA.find(z=>z.id===String(zid).padStart(2,"0"))?.nombre||"Sin zona";}
+function getRouteMetaFromTiendas(lista){
+  const zonas=[...new Set((lista||[]).map(getZonaIdTienda).filter(Boolean))];
+  const distritos=[...new Set((lista||[]).map(t=>t.dist).filter(Boolean))].sort();
+  const formatos=[...new Set((lista||[]).map(t=>t.f).filter(Boolean))].sort();
+  return {zonas,distritos,formatos,totalTiendas:(lista||[]).length};
+}
+function defaultScoreConfig(modulo){
+  const nowIso=new Date().toISOString();
+  return {
+    enabled:false,
+    tipo:"numerico",
+    escala:Array.isArray(modulo?.escala)&&modulo.escala.length?modulo.escala:[0,1.5,3],
+    labels:Array.isArray(modulo?.escalaTxt)&&modulo.escalaTxt.length?modulo.escalaTxt:["No ejecutado","Por mejorar","Correcto"],
+    version:Number(modulo?.scoreConfig?.version||1),
+    vigenteDesde:modulo?.scoreConfig?.vigenteDesde||nowIso,
+    vigenteHasta:null,
+    createdAt:modulo?.scoreConfig?.createdAt||nowIso
+  };
+}
+function normalizeScoreConfig(modulo){
+  const cfg={...defaultScoreConfig(modulo),...(modulo?.scoreConfig||{})};
+  if(cfg.tipo==="binario"){cfg.escala=[0,1];cfg.labels=cfg.labels?.length===2?cfg.labels:["No","Sí"];}
+  if(cfg.tipo==="checklist"){cfg.escala=[0,1];cfg.labels=cfg.labels?.length===2?cfg.labels:["No realizado","Realizado"];}
+  cfg.escala=(cfg.escala||[]).map(v=>Number(v)).filter(v=>!Number.isNaN(v));
+  if(!cfg.escala.length) cfg.escala=[0,1.5,3];
+  cfg.maxScore=Math.max(...cfg.escala.map(v=>Number(v)||0));
+  return cfg;
+}
+function buildScoreSnapshotForModulo(modulo){
+  const cfg=normalizeScoreConfig(modulo);
+  return {
+    moduloId:modulo?.id||"",
+    moduloNombre:modulo?.nombre||modulo?.label||"",
+    enabled:cfg.enabled===true,
+    tipo:cfg.tipo,
+    escala:cfg.escala,
+    labels:cfg.labels,
+    maxScore:cfg.maxScore,
+    version:cfg.version,
+    vigenteDesde:cfg.vigenteDesde,
+    snapshotAt:new Date().toISOString()
+  };
+}
+function scoreConfigToAuditModulo(m,mi=0){
+  const snapshot=buildScoreSnapshotForModulo(m);
+  return {
+    id:m.id,label:m.nombre,
+    escala:snapshot.escala,
+    escalaTxt:snapshot.labels,
+    maxScore:snapshot.maxScore,
+    scoreEnabled:snapshot.enabled,
+    scoreSnapshot:snapshot,
+    items:(m.tareas||[]).filter(t=>t.activo!==false).map((t,ti)=>({
+      id:t.id||`${m.id}_t${ti}`,texto:t.nombre||t.id||`Item ${ti+1}`,activo:true,orden:ti,maxScore:snapshot.maxScore
+    })),
+    activo:true,
+    c:[VEGA_PALETTE.violet,VEGA_PALETTE.teal,VEGA_PALETTE.blue,VEGA_PALETTE.orange][mi%4]||VEGA_PALETTE.violet
+  };
+}
+// FIX_RUTAS_ZONA_DISTRITO_20260530: rutas auditables por zona, distrito, formato y snapshot de cobertura.
+// FIX_CALENDARIO_TRADE_20260531: calendarios por perfil, feriados corporativos y carga masiva directorio.
+const CALENDARIO_PERFILES={
+  administrativo:{id:"administrativo",nombre:"Administrativo",dias:[1,2,3,4,5,6],horarios:{1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["09:00","12:00"]},domingoRegular:false,requiereExcepcionDomingo:true},
+  operativo_trade:{id:"operativo_trade",nombre:"Operativo Trade",dias:[1,2,3,4,5,6,0],horarios:{1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["09:00","12:00"],0:["tienda","tienda"]},domingoRegular:true,requiereExcepcionDomingo:false},
+  tienda:{id:"tienda",nombre:"Tienda",dias:[1,2,3,4,5,6,0],usaHorarioTienda:true,domingoRegular:true}
+};
+const FERIADOS_OPERATIVOS_2026=[
+  {fecha:"2026-01-01",nombre:"Año Nuevo",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-01-02",nombre:"Día no laborable sector público",tipo:"dia_no_laborable",laborable:true,requiereRevision:true},
+  {fecha:"2026-04-02",nombre:"Jueves Santo",tipo:"feriado_variable",laborable:false},
+  {fecha:"2026-04-03",nombre:"Viernes Santo",tipo:"feriado_variable",laborable:false},
+  {fecha:"2026-05-01",nombre:"Día del Trabajo",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-06-07",nombre:"Día de la Bandera",tipo:"dia_comercial",laborable:true},
+  {fecha:"2026-06-29",nombre:"San Pedro y San Pablo",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-07-23",nombre:"Día de la Fuerza Aérea del Perú",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-07-27",nombre:"Día no laborable previo a Fiestas Patrias",tipo:"dia_no_laborable",laborable:true,requiereRevision:true},
+  {fecha:"2026-07-28",nombre:"Fiestas Patrias",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-07-29",nombre:"Fiestas Patrias",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-08-06",nombre:"Batalla de Junín",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-08-30",nombre:"Santa Rosa de Lima",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-10-08",nombre:"Combate de Angamos",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-11-01",nombre:"Todos los Santos",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-12-08",nombre:"Inmaculada Concepción",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-12-09",nombre:"Batalla de Ayacucho",tipo:"feriado_nacional",laborable:false},
+  {fecha:"2026-12-25",nombre:"Navidad",tipo:"feriado_nacional",laborable:false}
+];
+const DIRECTORIO_TIENDAS_2026=[{"idTienda":"127","sucursal":"MARKET ALAMEDA LOS CEDROS","formato":"MARKET","direccion":"Av. Alameda Los Cedros 214","distrito":"Chorrillos","zonaId":"05","gerenteTienda":"Diana Arpita","dniGerente":"70128964","celular":"905463505","emailTienda":"tiendamkalamedaloscedros@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"131","sucursal":"MARKET ALAMEDA LOS CÓNDORES","formato":"MARKET","direccion":"Alameda los Condores 628","distrito":"La Molina","zonaId":"06","gerenteTienda":"Omar Cabezas","dniGerente":"76247282","celular":"960137801","emailTienda":"Tiendamkalamedaloscondores@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00PM","horarioVieSab":"7:00 AM A 10:00PM","horarioDom":"7:00 AM A 10:00PM"},{"idTienda":"106","sucursal":"ALAYZA CANEVARO II","formato":"MARKET","direccion":"Av. General Cesar Canevaro Nro. 213 Lima - Lima - Lince","distrito":"Lince","zonaId":"04","gerenteTienda":"Desiderio Alcala","dniGerente":"48001526","celular":"950106098","emailTienda":"tiendamkcanevaro@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:30PM","horarioVieSab":"7:00 AM A 10:30PM","horarioDom":"7:00 AM A 10:30PM"},{"idTienda":"119","sucursal":"VEGA MARKET LOS ALISOS","formato":"MARKET","direccion":"Av. Los Alisos Mz. R Lote 45 Urb. Los Jazmines de Naranjal","distrito":"Los Olivos","zonaId":"01","gerenteTienda":"Milagros Perez","dniGerente":"44577178","celular":"905435118","emailTienda":"tiendamkalisos@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:30PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:30PM"},{"idTienda":"126","sucursal":"VEGA MARKET AMANCAES 3","formato":"MARKET","direccion":"Av. Amancaes 124, Rímac","distrito":"Rimac","zonaId":"03","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"64","sucursal":"AMARANTO","formato":"MARKET","direccion":"Jr. Amaranto 108 - 110, Urb. Santa Isabel","distrito":"Carabayllo","zonaId":"01","gerenteTienda":"SIN ASIGNACION","dniGerente":"77236208","celular":"946347670","emailTienda":"tiendamkamaranto@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:30PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:30PM"},{"idTienda":"57","sucursal":"AVIACIÓN","formato":"MARKET","direccion":"Av. Aviacion N° 3540","distrito":"San Borja","zonaId":"04","gerenteTienda":"Alvaro Quispe","dniGerente":"72965830","celular":"960814794","emailTienda":"tiendamkaviacion@corporacionvega.pe","jefeZonal":"JHONATAN AYLLON","emailJefeZonal":"ayllon.j@corporacionvega.pe","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"129","sucursal":"MARKET BELLAVISTA","formato":"MARKET","direccion":"Jiron. Grau 485","distrito":"Bellavista","zonaId":"02","gerenteTienda":"Marlene Bustos","dniGerente":"71269335","celular":"946401416","emailTienda":"tiendamkbellavista@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 09:30PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 09:30PM"},{"idTienda":"104","sucursal":"BENAVIDES","formato":"MARKET","direccion":"Av. Alfredo Benavides Nro. 1615 Urb. San Jorge Lima - Lima - Miraflores","distrito":"Miraflores","zonaId":"04","gerenteTienda":"Andrea Cajahuaringa","dniGerente":"77511782","celular":"960135900","emailTienda":"tiendamkbenavides@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00PM","horarioVieSab":"7:00 AM A 10:00PM","horarioDom":"7:00 AM A 10:00PM"},{"idTienda":"62","sucursal":"BOCANEGRA","formato":"MARKET","direccion":"Av. Bocanegra Mz, A Lote N° 30, Urb. Albino Herrera, Primera Etapa","distrito":"Callao","zonaId":"02","gerenteTienda":"Cristhian Pino","dniGerente":"76354842","celular":"933109000","emailTienda":"tiendamkbocanegra@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"49","sucursal":"CANEVARO","formato":"MARKET","direccion":"Av. Canevaro N°1405 (Ref. frente al Parque de bomberos)","distrito":"Lince","zonaId":"04","gerenteTienda":"Desiderio Alcala","dniGerente":"48001526","celular":"950106098","emailTienda":"tiendamkcanevaro@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:30PM","horarioVieSab":"7:00 AM A 10:30PM","horarioDom":"7:00 AM A 10:30PM"},{"idTienda":"68","sucursal":"CANTA CALLAO","formato":"MARKET","direccion":"Parcela 2-A, Ex Fundo Taboada – Valle de Boca Negra, Local Comercial Nº 110","distrito":"Callao","zonaId":"02","gerenteTienda":"Jennifer Mena","dniGerente":"48277500","celular":"933121837","emailTienda":"tiendamkcantacallao@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:30PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:30PM"},{"idTienda":"47","sucursal":"CHIMU","formato":"MARKET","direccion":"Av Gran Chimu 1641 Urb. Zarate","distrito":"S.J.L.","zonaId":"06","gerenteTienda":"Marina Peralta","dniGerente":"60573452","celular":"981219210","emailTienda":"tiendamkchimu@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"113","sucursal":"VEGA MARKET CLEMENT","formato":"MARKET","direccion":"Av. José Leguía y Meléndez Nro. 1040","distrito":"Pueblo Libre","zonaId":"04","gerenteTienda":"Angelica Espino","dniGerente":"45242373","celular":"923673251","emailTienda":"tiendamkclement@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"66","sucursal":"ESCARDO","formato":"MARKET","direccion":"Av. Rafael Escardo Salazar Nº 454 urbanización Maranga","distrito":"San Miguel","zonaId":"04","gerenteTienda":"Sandra Perez","dniGerente":"71352880","celular":"923864933","emailTienda":"tiendamkescardo@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"136","sucursal":"MARKET GUARDIA CIVIL NORTE","formato":"MARKET","direccion":"Av. Guardia Civil Norte 625, Urb. Los Parrales de Surco","distrito":"Surco","zonaId":"05","gerenteTienda":"SIN ASIGNACION","dniGerente":"126","celular":"903132051","emailTienda":"tiendamkguardiacivil@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"102","sucursal":"OVALO HIGUERETA","formato":"MARKET","direccion":"Av. Santiago De Surco Nro. 3004 Int. 101 Urb. La Castellana Lima","distrito":"Surco","zonaId":"05","gerenteTienda":"Maryori Melchor","dniGerente":"75616859","celular":"972106044","emailTienda":"tiendamkhiguereta@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"54","sucursal":"HUANDOY","formato":"MARKET","direccion":"Av Huandoy N° 5032","distrito":"Los Olivos","zonaId":"01","gerenteTienda":"Garmith Garcia","dniGerente":"70616834","celular":"936087278","emailTienda":"tiendamkhuandoy@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"105","sucursal":"HUSARES JUNIN","formato":"MARKET","direccion":"Av. Husares De Junin Nro. 366 Int. 1 Fnd. Oyague","distrito":"Jesus María","zonaId":"04","gerenteTienda":"Dangelo Mendoza","dniGerente":"75784643","celular":"970175458","emailTienda":"tiendamkhusaresdejunin@corporacionega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"81","sucursal":"IGNACIO MERINO","formato":"MARKET","direccion":"Av. Ignacio Merino 1999","distrito":"Lince","zonaId":"04","gerenteTienda":"Janice Perez","dniGerente":"72860206","celular":"919285149","emailTienda":"tiendamkmerino@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"135","sucursal":"MARKET INDEPENDENCIA","formato":"MARKET","direccion":"Av. Gerardo Unger Nro. 3601 local LC02 Urb. Industrial Panamericana Norte","distrito":"Independencia","zonaId":"01","gerenteTienda":"Edilcia Erazo","dniGerente":"76406913","celular":"947153066","emailTienda":"tiendamkindependencia@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"46","sucursal":"IZAGUIRRE","formato":"MARKET","direccion":"Av Carlos Izaguirre MZ \"A\", Lt 30","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"Claudia condezo","dniGerente":"72208222","celular":"955262639","emailTienda":"tiendamkizaguirre@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"109","sucursal":"LA CULTURA","formato":"MARKET","direccion":"Av. Aviación N° 2347","distrito":"San Borja","zonaId":"04","gerenteTienda":"Juliana Flores","dniGerente":"48529473","celular":"977836664","emailTienda":"tiendamklacultura@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"132","sucursal":"MARKET LAS GUINDAS - EL AGUSTINO","formato":"MARKET","direccion":"Ca. Las Guindas 348 Urb, El Agustino (Ref media cuadra Condominios Alameda El Agustino)","distrito":"El Agustino","zonaId":"06","gerenteTienda":"Nayely Yllaconza Alfaro","dniGerente":"74638654","celular":"924081454","emailTienda":"tiendamklasguindas@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"122","sucursal":"VEGA MARKET LORETO","formato":"MARKET","direccion":"Jiron Loreto 478","distrito":"Breña","zonaId":"03","gerenteTienda":"Estefany Vicuña","dniGerente":"38761055","celular":"977813294","emailTienda":"tiendamkloreto@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:30PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:30PM"},{"idTienda":"121","sucursal":"VEGA MARKET LOS OLIVOS","formato":"MARKET","direccion":"Av. Los Olivos 210","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"Gladys Nima Velasquez","dniGerente":"9472570","celular":"919469433","emailTienda":"tiendamklosolivos@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"36","sucursal":"MALVINAS","formato":"MARKET","direccion":"Av Argentina cdra 6 Int \"L\" . CC Via Mix","distrito":"Lima Cercado","zonaId":"03","gerenteTienda":"Karla Mark","dniGerente":"41628705","celular":"936760427","emailTienda":"tiendamkmalvinas@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"108","sucursal":"MARANGA","formato":"MARKET","direccion":"Av. Los Precursores N° 362-366 - San Miguel","distrito":"San Miguel","zonaId":"04","gerenteTienda":"Melany Malpartida","dniGerente":"75116179","celular":"977835975","emailTienda":"tiendamkmaranga@corporacionvega.pe","jefeZonal":"JORGE ANGEL","emailJefeZonal":"angel.j@corporacionvega.pe","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"55","sucursal":"MARIATEGUI","formato":"MARKET","direccion":"Jose Carlos Mareategui N° 798","distrito":"V.M.T.","zonaId":"05","gerenteTienda":"Alison Begazo","dniGerente":"70924408","celular":"981400423","emailTienda":"tiendamkvillamariategui@corporacionvega.pe","jefeZonal":"MIRIAM CALDERON","emailJefeZonal":"calderon.m@corporacionvega.pe","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"130","sucursal":"MARKET MARIANO CORNEJO","formato":"MARKET","direccion":"Av Mariano Cornejo 1407","distrito":"Pueblo Libre","zonaId":"04","gerenteTienda":"Estefany Perez","dniGerente":"75472806","celular":"923026116","emailTienda":"tiendamkmarianocornejo@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"125","sucursal":"MARKET MARIANO PASTOR","formato":"MARKET","direccion":"C. Mariano Pastor Sevilla 194 (Ref 1/2 cuadra Merc Bolivar)","distrito":"Pueblo Libre","zonaId":"04","gerenteTienda":"Edith Navarro","dniGerente":"44780016","celular":"905435166","emailTienda":"tiendamkmarianopastor@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"65","sucursal":"MI PERU","formato":"MARKET","direccion":"Av. Ayacucho  Mz \"A9\" Lt -22 Gr \"A\" - Mi Perú","distrito":"Ventanilla","zonaId":"02","gerenteTienda":"SIN ASIGNACION","dniGerente":"126","celular":"924699772","emailTienda":"tiendamkmiperu@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"138","sucursal":"MARKET MICAELA - ATE VITARTE","formato":"MARKET","direccion":"Calle Comercial Mz U Lote 9 (Ref 1/2 cuadra de mercado modelo n°1 micaela bastidas)","distrito":"Ate Vitarte","zonaId":"06","gerenteTienda":"Daniela Jacobe Chavez","dniGerente":"70534738","celular":"970671821","emailTienda":"tiendamkmicaelabastidas@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"58","sucursal":"MONTENEGRO","formato":"MARKET","direccion":"Jr. Mar de flores. Oeste 127 MZ Q1 - Lt 2B","distrito":"S.J.L.","zonaId":"06","gerenteTienda":"Andrea Chirinos","dniGerente":"73960825","celular":"998367335","emailTienda":"tiendamkmontenegro@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"48","sucursal":"PALMERAS","formato":"MARKET","direccion":"Av Las Palmeras 5345","distrito":"Los Olivos","zonaId":"01","gerenteTienda":"Gissel Garcia","dniGerente":"48813628","celular":"955261940","emailTienda":"tiendamkpalmeras@corporacionvega.pe","jefeZonal":"LUIS CHIRRE","emailJefeZonal":"chirre.l@corporacionvega.pe","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"74","sucursal":"RIOBAMBA","formato":"MARKET","direccion":"Urb. Perú, Jr. Riobamba 501, San Martín de Porres","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"Rosa Vela","dniGerente":"74325960","celular":"946228284","emailTienda":"tiendamkriobamba@corporacionvega.pe","jefeZonal":"ADRIAN BOHORQUEZ","emailJefeZonal":"bohorquez.a@corporacionvega.pe","horarioLunJue":"7:30 AM A 09:30PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 09:30PM"},{"idTienda":"110","sucursal":"ROOSEVELT","formato":"MARKET","direccion":"Jr. Franklin Roosevelt 812","distrito":"Surco","zonaId":"05","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"115","sucursal":"MARKET ROSPIGLIOSI","formato":"MARKET","direccion":"Av. Ignacio Merino Nro. 1502 esq. con Manuel Segura","distrito":"Lince","zonaId":"04","gerenteTienda":"Wilson Ruiz","dniGerente":"74747773","celular":"902763401","emailTienda":"tiendamkrospigliosi@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"128","sucursal":"MARKET SALAMANCA","formato":"MARKET","direccion":"Urb. Salamanca de Monterrico Av. Los Aymaras 349","distrito":"Ate Vitarte","zonaId":"06","gerenteTienda":"Flor del Rocio Karina Medina Meza","dniGerente":"70331727","celular":"908921583","emailTienda":"tiendamksalamanca@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"114","sucursal":"","formato":"MARKET","direccion":"Av. Los Ángeles 602, Comas 15314","distrito":"Comas","zonaId":"01","gerenteTienda":"FRASSINETTI ROJAS, MARCO ANTONIO","dniGerente":"09145374","celular":"998131795","emailTienda":"tiendasmsurcobenavides@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00PM","horarioVieSab":"7:00 AM A 10:00PM","horarioDom":"7:00 AM A 10:00PM"},{"idTienda":"134","sucursal":"MARKET SAN LUIS","formato":"MARKET","direccion":"Av. San Juan 771 San Luis","distrito":"La Victoria","zonaId":"03","gerenteTienda":"Daysi Espinoza","dniGerente":"60917070","celular":"923808560","emailTienda":"tiendamksanluis@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"114","sucursal":"VEGA MARKET PLAZA SANTA CATALINA","formato":"MARKET","direccion":"Av. Carlos Villaran 500 - C.C. Santa","distrito":"La Victoria","zonaId":"03","gerenteTienda":"Fernando Mendoza","dniGerente":"77014295","celular":"977742429","emailTienda":"tiendamksantacatalina@corporacion.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:30PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"41","sucursal":"SANTO DOMINGO","formato":"MARKET","direccion":"Av Mariano Condorcanqui Mz T","distrito":"Carabayllo","zonaId":"01","gerenteTienda":"Ana Tarazona","dniGerente":"75115874","celular":"994062180","emailTienda":"tiendamksantodomingo@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"63","sucursal":"UNIVERSAL","formato":"MARKET","direccion":"Jr. César Vallejo 356- 360 Urb. Universal","distrito":"Santa Anita","zonaId":"06","gerenteTienda":"William Mamani","dniGerente":"71152755","celular":"908864064","emailTienda":"tiendamkuniversal@corporacionega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"116","sucursal":"MARKET VARA DE ORO","formato":"MARKET","direccion":"Calle Vara de Oro 288 - Urg Zarate Comu 3","distrito":"S.J.L.","zonaId":"06","gerenteTienda":"Jesus Aranda","dniGerente":"73856215","celular":"994195075","emailTienda":"tiendamkvaradeoro@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"137","sucursal":"MARKET VILLARAN-SURQUILLO","formato":"MARKET","direccion":"Av. Manuel Villlaran 708 Urb. Los Sauces Surquillo","distrito":"Surquillo","zonaId":"05","gerenteTienda":"Sayuri Ramos","dniGerente":"76824616","celular":"908661641","emailTienda":"tiendamkmanuelvillaran@corporacionvega.pe","jefeZonal":"118","emailJefeZonal":"","horarioLunJue":"7:30 AM A 10:00PM","horarioVieSab":"7:30 AM A 10:00PM","horarioDom":"7:30 AM A 10:00PM"},{"idTienda":"20","sucursal":"COLLIQUE","formato":"MAYORISTA","direccion":"Av. Andrés Avelino Cáceres N°236, Mz K, Lt.1, 2da. Zona (Mcdo. 12 de Octubre)","distrito":"Comas","zonaId":"01","gerenteTienda":"JUDITH GARCIA MANSILLA","dniGerente":"46999189","celular":"981447496","emailTienda":"tiendamycollique@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 7:00 PM","horarioVieSab":"7:00 AM A 7:00 PM","horarioDom":"7:00 AM A 4:00 PM"},{"idTienda":"19","sucursal":"INFANTAS","formato":"MAYORISTA","direccion":"Av.  Av Gerardo Unger 6531(Ref Media  Cuadra Comisaria de Infantas)","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"ESPINOZA URBIZAGASTEGUI, MARITZA","dniGerente":"48342783","celular":"924493221","emailTienda":"tiendamyinfantas@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"8:00 AM A 8:00 PM","horarioVieSab":"8:00 AM A 8:00 PM","horarioDom":"8:00 AM A 2:00 PM"},{"idTienda":"39","sucursal":"PRODUCTORES","formato":"MAYORISTA","direccion":"Av. La Cultura s/n Psje. B Puesto 13 Santa Anita - Mercado Productores","distrito":"Santa Anita","zonaId":"06","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"2","sucursal":"AÑO NUEVO CASH","formato":"CASH AND CARRY","direccion":"Urb. Villa Collique Zonal 4 Jr. Jupiter Mz 6 Lote 68","distrito":"Comas","zonaId":"01","gerenteTienda":"TORREJON CAMPOS, GIOVANNA JACKELINE","dniGerente":"10741260","celular":"981446596","emailTienda":"tiendasmanonuevo@corporacionvega.pe","jefeZonal":"MARTHA SAYAGO 981464464","emailJefeZonal":"sayago.m@corporacionvega.pe","horarioLunJue":"7:00 AM A 7:00 PM","horarioVieSab":"7:00 AM A 7:00 PM","horarioDom":"7:00 AM A 7:00 PM"},{"idTienda":"82","sucursal":"BELAUNDE","formato":"MAYORISTA","direccion":"Av Belaunde Oeste 198","distrito":"Comas","zonaId":"01","gerenteTienda":"QUISPE ZAFRA, ROSA IRENE","dniGerente":"40583983","celular":"908931759","emailTienda":"tiendasmbelaunde@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:30 AM A 9:30PM","horarioVieSab":"7:30 AM A 9:30PM","horarioDom":"7:30 AM A 5:00PM"},{"idTienda":"24","sucursal":"CHORRILLOS","formato":"CASH AND CARRY","direccion":"Jr. Genaro Numa Llona N° 200 (Ref Alt 2 de Estacion de Bomberos )","distrito":"Chorrillos","zonaId":"05","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"37","sucursal":"COLONIAL","formato":"CASH AND CARRY","direccion":"Av Colonial  679 - Int 103 - Cruce Carcamo (Cercado de Lima)","distrito":"Lima Cercado","zonaId":"03","gerenteTienda":"CORNEJO FIGUEROA, DAVID ALONSO","dniGerente":"46177458","celular":"981444354","emailTienda":"tiendasmcolonial@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00 PM","horarioVieSab":"7:00 AM A 10:00 PM","horarioDom":"7:00 AM A 10:00 PM"},{"idTienda":"60","sucursal":"FILOMENO","formato":"CASH AND CARRY","direccion":"Urb. Ciudad  y Campo - Av Armando Filomeno 105","distrito":"Rimac","zonaId":"03","gerenteTienda":"CORTEZ TAIPE, WENDY LISBETH","dniGerente":"47558407","celular":"981445079","emailTienda":"tiendasmfilomeno@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 9.30PM","horarioVieSab":"7:00 AM A 9.30PM","horarioDom":"7:00 AM A 9.30PM"},{"idTienda":"5","sucursal":"HUAMANTANGA","formato":"CASH AND CARRY","direccion":"Av. Puente Piedra 200(Ref - Frente al Puesto Regular)","distrito":"Puente Piedra","zonaId":"01","gerenteTienda":"RODAS SALAS, ARQUIMEDES RICHARD","dniGerente":"44499334","celular":"981 448 481","emailTienda":"tiendasmhuamantanga@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"6:00 AM A 7:00 PM","horarioVieSab":"6:00 AM A 7:00 PM","horarioDom":"6:00 AM A 7:00 PM"},{"idTienda":"72","sucursal":"LIMA VES","formato":"CASH AND CARRY","direccion":"Av. Lima Lt \"A - 02\" (Ref Ex Electra) Villa El Salvador","distrito":"V.E.S.","zonaId":"05","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"98","sucursal":"MINKA CASH","formato":"CASH AND CARRY","direccion":"Av. Argentina N°3093 - Pabellón 7 - Int 97","distrito":"Callao","zonaId":"02","gerenteTienda":"ABREGU GUILLEN, LUIS ALBERTO","dniGerente":"40452075","celular":"994190675","emailTienda":"tiendasmminka@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00 PM","horarioVieSab":"7:00 AM A 10:00 PM","horarioDom":"7:00 AM A 10:00 PM"},{"idTienda":"32","sucursal":"NARANJAL","formato":"CASH AND CARRY","direccion":"Av. Pacasmayo Mz. A Lt -01 Ref. (Ovalo de Canta Callao / Av Sol de Naranjal)","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"NOLE CHIROQUE, JUAN GABRIEL","dniGerente":"22","celular":"981166984","emailTienda":"tiendasmnaranjal@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"7:00 AM A 9:00 PM","horarioDom":"7:00 AM A 9:00 PM"},{"idTienda":"112","sucursal":"NÉSTOR GAMBETA CASH","formato":"CASH AND CARRY","direccion":"Via Leocio Prado  Mz G Lt.96 (Ref 2 Cuadras de PRECIO UNO)","distrito":"Puente Piedra","zonaId":"01","gerenteTienda":"","dniGerente":"","celular":"","emailTienda":"","jefeZonal":"","emailJefeZonal":"","horarioLunJue":"","horarioVieSab":"","horarioDom":""},{"idTienda":"31","sucursal":"SAN ANTONIO","formato":"CASH AND CARRY","direccion":"Fundación Punchauca Caudivilla Mz “D” Lt - 01 San Antonio Alt. km 22 de la Tupac Amaru","distrito":"Carabayllo","zonaId":"01","gerenteTienda":"ROSALES LOPEZ, JESSICA GRACIELA","dniGerente":"42083653","celular":"981480643","emailTienda":"tiendasmsanantonio@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 9:00 PM","horarioVieSab":"7:00 AM A 9:00 PM","horarioDom":"7:00 AM A 9:00 PM"},{"idTienda":"34","sucursal":"SAN DIEGO","formato":"CASH AND CARRY","direccion":"Mza. Ñ1 Lote 3 Urb. San Diego Vipol","distrito":"S.M.P.","zonaId":"01","gerenteTienda":"LOPEZ CAMPOS, MARIA FIORELA","dniGerente":"72166579","celular":"933596376","emailTienda":"tiendasmsandiego@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"8:00 AM A 10:00 PM","horarioVieSab":"8:00 AM A 10:00 PM","horarioDom":"7:00 AM A 9:00 PM"},{"idTienda":"78","sucursal":"SANTA CLARA","formato":"CASH AND CARRY","direccion":"Av. Estrella 286 Urb. Santa Clara  Distrito de Ate Vitarte","distrito":"Ate Vitarte","zonaId":"06","gerenteTienda":"ALAMA OTOYA, ANDY WALTER","dniGerente":"40043081","celular":"929421036","emailTienda":"tiendasmsantaclara@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00 PM","horarioVieSab":"7:00 AM A 10:00 PM","horarioDom":"7:00 AM A 10:00 PM"},{"idTienda":"35","sucursal":"SURCO","formato":"CASH AND CARRY","direccion":"Urb Prolongacion  Benavides - Av Tomas Marsano Mz \"G-4\" Lt 23","distrito":"Surco","zonaId":"05","gerenteTienda":"FRASSINETTI ROJAS, MARCO ANTONIO","dniGerente":"09145374","celular":"998131795","emailTienda":"tiendasmsurcobenavides@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00PM","horarioVieSab":"7:00 AM A 10:00PM","horarioDom":"7:00 AM A 10:00PM"},{"idTienda":"111","sucursal":"TRES REGIONES CASH","formato":"CASH AND CARRY","direccion":"Panamericana norte km. 33.5, Zapallal - Puente Piedra (mercado las tres regiones)","distrito":"Puente Piedra","zonaId":"01","gerenteTienda":"ALVARADO BOLAÑOS, MARIA FLOR","dniGerente":"47340490","celular":"981023282","emailTienda":"tiendasmtresregiones@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 7:00 PM","horarioVieSab":"7:00 AM A 7:00 PM","horarioDom":"7:00 AM A 7:00 PM"},{"idTienda":"172","sucursal":"","formato":"MAYORISTA","direccion":"Avenida Javier Prado Este 1372-1380","distrito":"San Isidro","zonaId":"04","gerenteTienda":"FRASSINETTI ROJAS, MARCO ANTONIO","dniGerente":"09145374","celular":"998131795","emailTienda":"tiendasmsurcobenavides@corporacionvega.pe","jefeZonal":"18","emailJefeZonal":"","horarioLunJue":"7:00 AM A 10:00PM","horarioVieSab":"7:00 AM A 10:00PM","horarioDom":"7:00 AM A 10:00PM"}];
+function thirdSundayOfAugust(year){
+  const d=new Date(year,7,1);let count=0;
+  for(let day=1;day<=31;day++){d.setDate(day);if(d.getDay()===0){count++;if(count===3)return `${year}-08-${String(day).padStart(2,"0")}`;}}
+  return `${year}-08-16`;
+}
+function getFeriadosOperativos(year){
+  const base=year===2026?FERIADOS_OPERATIVOS_2026:FERIADOS_OPERATIVOS_2026.map(f=>({...f,fecha:f.fecha.replace(/^2026/,String(year))}));
+  return [...base,{fecha:thirdSundayOfAugust(year),nombre:"Vega Evento / Aniversario Vega",tipo:"feriado_corporativo",laborable:false,afectaRutas:true,afectaAuditorias:true,permiteExcepcionAdmin:true}];
+}
+function getFeriadoOperativo(fechaStr){
+  const year=Number(String(fechaStr||"").slice(0,4))||new Date().getFullYear();
+  return getFeriadosOperativos(year).find(f=>f.fecha===fechaStr)||null;
+}
+function isOperativoTradeUser(u){
+  const txt=normalizeTxt([u?.perfilCalendario,u?.equipo,u?.area,u?.cargo,u?.rol,u?.nombre].filter(Boolean).join(" "));
+  return /OPERATIVO|TRADE|PROMOTOR|PROMOTORA|MERCADERISTA|DEGUSTADOR|DEGUSTADORA/.test(txt);
+}
+function getPerfilCalendarioUsuario(u){
+  if(u?.perfilCalendario&&CALENDARIO_PERFILES[u.perfilCalendario]) return u.perfilCalendario;
+  if(isOperativoTradeUser(u)) return "operativo_trade";
+  return "administrativo";
+}
+function canAuditarEnFecha(usuario,fechaStr,tienda,{isAdmin=false,asignacionExcepcional=false}={}){
+  const d=new Date((fechaStr||todayStr())+"T12:00:00");
+  const dow=d.getDay();
+  const feriado=getFeriadoOperativo(fechaStr);
+  const perfil=getPerfilCalendarioUsuario(usuario);
+  const cfg=CALENDARIO_PERFILES[perfil]||CALENDARIO_PERFILES.administrativo;
+  if(isAdmin) return {ok:true,perfil,estado:(dow===0||feriado?.laborable===false)?"excepcional_admin":"regular",feriado};
+  if(asignacionExcepcional) return {ok:true,perfil,estado:"excepcional_asignada",feriado};
+  if(feriado&&feriado.laborable===false) return {ok:false,perfil,estado:"bloqueado_feriado",feriado};
+  if(dow===0&&!cfg.domingoRegular) return {ok:false,perfil,estado:"bloqueado_domingo",feriado};
+  if(!cfg.dias.includes(dow)) return {ok:false,perfil,estado:"fuera_calendario",feriado};
+  if(perfil==="operativo_trade"&&dow===0){
+    const horarioDom=tienda?.horarioDom||tienda?.horario?.domingo||"";
+    return {ok:!!horarioDom,perfil,estado:horarioDom?"regular_tienda_domingo":"sin_horario_tienda",feriado};
+  }
+  return {ok:true,perfil,estado:"regular",feriado};
+}
+function mapFormatoDirectorio(formato){
+  const f=normalizeTxt(formato);
+  if(f.includes("MARKET")) return "Market";
+  if(f.includes("CASH")||f.includes("SUPERMAYOR")) return "Supermayorista";
+  return "Mayorista";
+}
+function compactStoreName(s){
+  return String(s||"").replace(/^VEGA\s+/i,"").replace(/^MARKET\s+/i,"").replace(/^CASH\s+/i,"").replace(/^TRADICIONAL\s+/i,"").trim();
+}
+function buildContactosTiendaFromDirectorio(row){
+  const contactos=[];
+  const gerenteNombre=String(row?.gerenteTienda||"").trim();
+  const gerenteValido=gerenteNombre&&normalizeTxt(gerenteNombre)!=="SIN ASIGNACION";
+  if(gerenteValido){
+    contactos.push({
+      id:"gerente_tienda",
+      tipo:"contacto_operativo",
+      cargo:"Gerente/Jefe de tienda",
+      nombre:gerenteNombre,
+      dni:row.dniGerente||"",
+      celular:row.celular||"",
+      email:row.emailTienda||"",
+      accesoApp:false,
+      usuarioId:null,
+      activo:true,
+      fuente:"Directorio Tiendas 2026"
+    });
+  }
+  const zonalNombre=String(row?.jefeZonal||"").trim();
+  if(zonalNombre){
+    contactos.push({
+      id:"jefe_zonal",
+      tipo:"contacto_operativo",
+      cargo:"Jefe zonal",
+      nombre:zonalNombre,
+      email:row.emailJefeZonal||"",
+      accesoApp:false,
+      usuarioId:null,
+      activo:true,
+      fuente:"Directorio Tiendas 2026"
+    });
+  }
+  return contactos;
+}
+function getContactoPrincipalTienda(tienda){
+  const contactos=(tienda?.contactosTienda||[]).filter(c=>c&&c.activo!==false);
+  return contactos.find(c=>c.id==="gerente_tienda")||contactos[0]||null;
+}
+function mergeDirectorioTiendas(tiendasActuales, directorio=DIRECTORIO_TIENDAS_2026){
+  const normName=t=>normalizeTxt(String(t?.n||"").replace(/^VEGA /i,""));
+  const current=[...(tiendasActuales||[])];
+  directorio.forEach(row=>{
+    const n=compactStoreName(row.sucursal);
+    if(!n) return;
+    let idx=current.findIndex(t=>String(t.idTienda||"")===String(row.idTienda));
+    if(idx<0) idx=current.findIndex(t=>normName(t)===normalizeTxt(n)||normalizeTxt(n).includes(normName(t))||normName(t).includes(normalizeTxt(n)));
+    const contactosTienda=buildContactosTiendaFromDirectorio(row);
+    const contactoPrincipal=contactosTienda.find(c=>c.id==="gerente_tienda")||null;
+    const patch={
+      idTienda:row.idTienda,n:n,f:mapFormatoDirectorio(row.formato),dir:row.direccion,dist:row.distrito,zonaId:row.zonaId,
+      email:row.emailTienda,emailTienda:row.emailTienda,
+      contactoTienda:contactoPrincipal,contactosTienda,
+      gerenteTienda:contactoPrincipal?.nombre||"",dniGerente:contactoPrincipal?.dni||"",celular:contactoPrincipal?.celular||"",
+      jefeZonalNombre:contactosTienda.find(c=>c.id==="jefe_zonal")?.nombre||"",emailJefeZonal:row.emailJefeZonal,
+      jefeTiendaEsUsuario:false,usuarioJefeTiendaId:null,requiereUsuarioTienda:false,rolSugeridoSiAccede:"viewer_tienda",
+      horarioLunJue:row.horarioLunJue,horarioVieSab:row.horarioVieSab,horarioDom:row.horarioDom,
+      horario:{lunJue:row.horarioLunJue,vieSab:row.horarioVieSab,domingo:row.horarioDom},
+      tiendaAuditada:true,activa:true,actualizadoDirectorio:"2026"
+    };
+    if(idx>=0) current[idx]={...current[idx],...patch};
+    else current.push({id:"td"+row.idTienda,...patch});
+  });
+  return current;
 }
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -658,18 +892,20 @@ function ChecklistApp() {
   const [cfgMod,  setCfgMod]  = useState(null); // null | "evidencias" | "auditoria"
   const [ddOpen,  setDdOpen]  = useState(false); // dropdown Panel de control
   const [ddUsrOpen, setDdUsrOpen] = useState(false); // FIX_RUTAACTIVA_PARAM_20260520_DEPLOY_OK dropdown Gestión de Usuarios — independiente de ddOpen
-  const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva en módulo Tiendas
+  const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva/Carga en módulo Tiendas
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
   /* ── auditoría config ── */
-  const [audCfgTab,  setAudCfgTab]  = useState("rutas");
+  const [audCfgTab,  setAudCfgTab]  = useState("score");
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
-  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",editId:null});
+  const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});
   const [rutasFiltro, setRutasFiltro] = useState("activas"); // "activas" | "todas"
-  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
+  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
   const [modAudOpen, setModAudOpen] = useState(null);
+  const [scoreModuloSel,setScoreModuloSel] = useState("");
+  const [scoreDraft,setScoreDraft] = useState({enabled:false,tipo:"numerico",escala:"0,1.5,3",labels:"No ejecutado,Por mejorar,Correcto"});
   // Módulos activos usados en la auditoría en curso (IDs y escala reales)
   const [auditModulosActivos, setAuditModulosActivos] = useState([]);
   /* ── módulo usuarios ── */
@@ -705,6 +941,7 @@ function ChecklistApp() {
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
+  const [bulkImportLog,setBulkImportLog]=useState(null);
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
@@ -1002,8 +1239,10 @@ function ChecklistApp() {
   },[]);
 
   const deleteUsuario = useCallback(async (id)=>{
-    await deleteDoc(doc(db,"usuarios",id));
-  },[]);
+    // FIX_SEGURIDAD_SOFT_DELETE_20260531: no borrar usuarios físicamente; se conserva trazabilidad histórica.
+// FIX_CONTACTOS_TIENDA_NO_USUARIOS_20260531: Directorio 2026 carga jefes/gerentes como contactos operativos, no como usuarios.
+    await setDoc(doc(db,"usuarios",id),{activo:false,deletedAt:new Date().toISOString(),deletedBy:uDni||"sistema"},{merge:true});
+  },[uDni]);
 
   const registrarAcceso = useCallback(async (id)=>{
     if(!id) return;
@@ -1076,16 +1315,10 @@ function ChecklistApp() {
     // Capturar los módulos activos al iniciar — mismo cálculo que el IIFE del prop
     const rutaActChk=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false);
     const modsFiltrarChk=rutaActChk?.moduloIds?.length?rutaActChk.moduloIds:null;
-    const fromFSChk=modulosAud.filter(m=>m.activo!==false&&(!modsFiltrarChk||modsFiltrarChk.includes(m.id))).map((m,mi)=>({
-      id:m.id,label:m.nombre,
-      escala:m.escala||[0,1.5,3],
-      escalaTxt:m.escalaTxt||["No ejecutado","Por mejorar","Correcto"],
-      items:(m.tareas||[]).filter(t=>t.activo!==false).map((t,ti)=>({
-        id:t.id||`${m.id}_t${ti}`,texto:t.nombre||t.id||`Item ${ti+1}`,activo:true,orden:ti
-      })),
-      activo:true,
-      c:["#6C6EF5","#00b5b4","#534AB7","#854F0B"][mi%4]||"#6C6EF5"
-    }));
+    const fromFSChk=modulosAud
+      .filter(m=>m.activo!==false&&(!modsFiltrarChk||modsFiltrarChk.includes(m.id)))
+      .map((m,mi)=>scoreConfigToAuditModulo(m,mi))
+      .filter(m=>m.scoreEnabled!==false);
     setAuditModulosActivos(fromFSChk.length>0?fromFSChk:checklistModulos.filter(m=>m.activo));
     setAuditPaso(1);
     showToast(gps.sinGPS?"⚠️ Sin GPS — continuando":"✅ Check-in registrado");
@@ -1110,11 +1343,16 @@ function ChecklistApp() {
     const checkOutTs=new Date().toISOString();
     const durMin=Math.round((new Date(checkOutTs)-new Date(checkInTs))/60000);
     const docId=`${auditTiendaSel}--${fecha}--${uDni}--${Date.now()}`;
+    const rutaSnap=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false&&(r.tiendas||[]).includes(auditTiendaSel))||null;
+    const usuarioActual=usuarios.find(u=>u.id===uDni||u.dni===uDni)||{id:uDni,nombre:uName,rol:role};
+    const calEval=canAuditarEnFecha(usuarioActual,fecha,tienda,{isAdmin:role==="admin",asignacionExcepcional:rutaSnap?.tipoRuta==="excepcional"||rutaSnap?.tipoRuta==="fuera_ruta"});
     const payload={
       auditorId:uDni, auditorNombre:uName,
-      tiendaId:auditTiendaSel, tiendaNombre:tienda?.n||auditTiendaSel, tiendaFormato:tienda?.f||"",
+      tiendaId:auditTiendaSel, tiendaNombre:tienda?.n||auditTiendaSel, tiendaFormato:tienda?.f||"", tiendaZonaId:getZonaIdTienda(tienda), tiendaDistrito:tienda?.dist||"",
       fecha, checkIn:{timestamp:checkInTs,gps:auditGPS}, checkOut:{timestamp:checkOutTs,gps:gpsOut},
-      duracionMin:durMin, respuestas:auditRespuestas, scoresPorModulo, scoreFinal,
+      duracionMin:durMin, respuestas:auditRespuestas, scoresPorModulo, scoreFinal, scoreSnapshots:mods.map(m=>m.scoreSnapshot).filter(Boolean),
+      routeSnapshot:rutaSnap?{id:rutaSnap.id,semana:rutaSnap.semana,frecuencia:rutaSnap.frecuencia,tipoRuta:rutaSnap.tipoRuta||"regular",perfilCalendario:rutaSnap.perfilCalendario||getPerfilCalendarioUsuario(usuarioActual),routeMeta:rutaSnap.routeMeta||null,excepcion:rutaSnap.excepcion||null}:null,
+      calendarioSnapshot:{perfil:calEval.perfil,estado:calEval.estado,feriado:calEval.feriado||null,validadoEn:new Date().toISOString()},
       observaciones:auditObs, compromisos:auditCompromisos,
       estado, creadoEn:checkInTs, updatedAt:checkOutTs,
     };
@@ -2224,13 +2462,19 @@ function ChecklistApp() {
         </div>
       </div>
       {/* contenido del paso */}
-      {esFS?(
-        <div style={{padding:"32px 16px",textAlign:"center"}}>
-          <div style={{fontSize:40,marginBottom:12}}>😴</div>
-          <div style={{fontWeight:700,fontSize:16,color:"#1a2f4a",marginBottom:6}}>Domingo</div>
-          <div style={{fontSize:13,color:"#8aaabb"}}>El domingo el personal administrativo descansa. Las tiendas abren el sábado.</div>
-        </div>
-      ):paso===1?renderPaso1():paso===2?renderPaso2():renderPaso3()}
+      {(()=>{
+        const usuarioActual=usuarios.find(u=>u.id===uDni||u.dni===uDni)||{id:uDni,nombre:uName,rol:role};
+        const rutaDomingo=rutas.find(r=>r.auditorId===uDni&&r.semana===semanaActual&&r.activo!==false&&(r.perfilCalendario==="operativo_trade"||r.tipoRuta==="excepcional"));
+        const cal=canAuditarEnFecha(usuarioActual,fecha,null,{isAdmin:role==="admin",asignacionExcepcional:!!rutaDomingo});
+        if(!cal.ok){return(
+          <div style={{padding:"32px 16px",textAlign:"center"}}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:12}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 15h8"/></svg>
+            <div style={{fontWeight:800,fontSize:16,color:"#1a2f4a",marginBottom:6}}>Día no habilitado para operación regular</div>
+            <div style={{fontSize:13,color:"#8aaabb",lineHeight:1.5}}>El perfil {CALENDARIO_PERFILES[cal.perfil]?.nombre||cal.perfil} requiere asignación excepcional o ruta Operativo Trade para auditar en esta fecha.</div>
+          </div>
+        );}
+        return paso===1?renderPaso1():paso===2?renderPaso2():renderPaso3();
+      })()}
     </div>
   );
 
@@ -4278,7 +4522,7 @@ function ChecklistApp() {
             const areaNombre=areas.find(a=>a.id===areaIdR||a.nombre?.toLowerCase()===areaIdR?.toLowerCase())?.nombre||u.area||"";
             const tiendaNombre=u.tiendaId?tiendas.find(t=>t.id===u.tiendaId)?.n:"";
             return(
-              <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1}}>
+              <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?0.5:1}}>
                 <div style={{width:40,height:40,borderRadius:11,background:rc.bg,border:`1.5px solid ${rc.c}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:rc.c,flexShrink:0}}>{initials}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
@@ -4349,7 +4593,7 @@ function ChecklistApp() {
             const usrCount=usuarios.filter(u=>u.rol===r.id).length;
             const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
             return(
-              <div key={r.id} style={{...S.card,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:r.activo===false?.55:1}}>
+              <div key={r.id} style={{...S.card,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:r.activo===false?0.55:1}}>
                 <div style={{width:8,height:40,borderRadius:3,background:clr,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
@@ -4394,7 +4638,7 @@ function ChecklistApp() {
             const usrCount=usuarios.filter(u=>u.area===a.id||u.area===a.nombre).length;
             const isOpen=areaOpen===a.id;
             return(
-              <div key={a.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:a.activa===false?.55:1}}>
+              <div key={a.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:a.activa===false?0.55:1}}>
                 <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setAreaOpen(isOpen?null:a.id)}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:a.activa===false?"#b2bec3":"#00b5b4",flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
@@ -4435,7 +4679,7 @@ function ChecklistApp() {
                     </div>
                     {(a.cargos||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 0"}}>Sin cargos registrados</div>}
                     {(a.cargos||[]).map((c,ci)=>(
-                      <div key={c.id||ci} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 8px",borderRadius:8,background:ci%2===0?"#fff":"transparent",marginBottom:2,opacity:c.activo===false?.5:1}}>
+                      <div key={c.id||ci} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 8px",borderRadius:8,background:ci%2===0?"#fff":"transparent",marginBottom:2,opacity:c.activo===false?0.5:1}}>
                         <span style={{fontSize:12,color:"#1a2f4a"}}>{c.nombre}</span>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <span style={{fontSize:10,color:"#b2bec3"}}>{usuarios.filter(u=>u.cargo===c.nombre).length} usr</span>
@@ -4821,8 +5065,8 @@ function ChecklistApp() {
 
             {/* ── PASO 2b: Auditoría → en construcción ── */}
             {cfgMod==="auditoria"&&(()=>{
-              const audTabs=[{id:"rutas",label:"Rutas"},{id:"tareas",label:"Tareas"},{id:"score",label:"Score"}];
-              const auditores=usuarios.filter(u=>["auditor","coordinador","admin"].includes(u.rol)&&u.activo!==false);
+              const audTabs=[{id:"score",label:"Score"},{id:"tareas",label:"Tareas"},{id:"rutas",label:"Rutas"}];
+              const auditores=usuarios.filter(u=>(["auditor","coordinador","admin"].includes(u.rol)||isOperativoTradeUser(u))&&u.activo!==false);
               const rutasSemana=rutas.filter(r=>r.semana===semanaActual);
               return(
                 <div style={{marginTop:10}}>
@@ -4851,7 +5095,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Rutas semanales</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>Semana automática: {semanaActual} · {rutasSemana.filter(r=>rutasFiltro==="todas"||r.activo!==false).length} rutas {rutasFiltro==="activas"?"activas":"en total"}</div>
                           </div>
-                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",editId:null});}}
+                          <button onClick={()=>{setShowNewRuta(true);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nueva ruta
@@ -4906,40 +5150,120 @@ function ChecklistApp() {
                                 <select value={newRuta.frecuencia||"semanal"} onChange={e=>setNewRuta(p=>({...p,frecuencia:e.target.value}))} style={S.inp}>
                                   <option value="semanal">Semanal (se repite cada semana)</option>
                                   <option value="diaria">Diaria (se repite cada día)</option>
+                                  <option value="quincenal">Quincenal (cada 15 días)</option>
                                   <option value="mensual">Mensual (se repite cada mes)</option>
                                   <option value="unica">Única (solo esta semana)</option>
                                 </select>
                               </div>
-              <div style={{marginBottom:12}}>
-                              <label style={S.lbl}>TIENDAS ASIGNADAS *</label>
-                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
-                                {tiendas.filter(t=>t.activa).map(t=>{
-                                  const sel=(newRuta.tiendas||[]).includes(t.id);
-                                  return(
-                                    <label key={t.id} onClick={()=>setNewRuta(p=>({...p,tiendas:sel?p.tiendas.filter(x=>x!==t.id):[...(p.tiendas||[]),t.id]}))}
-                                      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:9,border:`1.5px solid ${sel?"#00b5b4":"#e2e8f0"}`,cursor:"pointer",fontSize:12,background:sel?"#e0fafa":"#fff",color:sel?"#085041":"#1a2f4a"}}>
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={sel?"#00b5b4":"#b2bec3"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
-                                      </svg>
-                                      Vega {t.n}
-                                    </label>
-                                  );
-                                })}
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                              <div>
+                                <label style={S.lbl}>TIPO DE RUTA</label>
+                                <select value={newRuta.tipoRuta||"regular"} onChange={e=>setNewRuta(p=>({...p,tipoRuta:e.target.value}))} style={S.inp}>
+                                  <option value="regular">Regular programada</option>
+                                  <option value="fuera_ruta">Fuera de ruta aprobado</option>
+                                  <option value="excepcional">Excepcional domingo / feriado</option>
+                                </select>
                               </div>
+                              <div>
+                                <label style={S.lbl}>CALENDARIO APLICADO</label>
+                                <select value={newRuta.perfilCalendario||"auto"} onChange={e=>setNewRuta(p=>({...p,perfilCalendario:e.target.value}))} style={S.inp}>
+                                  <option value="auto">Automático por rol/equipo</option>
+                                  <option value="administrativo">Administrativo</option>
+                                  <option value="operativo_trade">Operativo Trade</option>
+                                  <option value="tienda">Horario de tienda</option>
+                                </select>
+                              </div>
+                            </div>
+                            {(newRuta.tipoRuta==="fuera_ruta"||newRuta.tipoRuta==="excepcional")&&(
+                              <div style={{marginBottom:10}}>
+                                <label style={S.lbl}>MOTIVO OBLIGATORIO</label>
+                                <input value={newRuta.motivoExcepcion||""} onChange={e=>setNewRuta(p=>({...p,motivoExcepcion:e.target.value}))} placeholder="Ej: cobertura especial, tienda crítica, campaña o reasignación" style={S.inp}/>
+                              </div>
+                            )}
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:8,marginBottom:12}}>
+                              {[{k:"administrativo",t:"Administrativo",d:"L-V 08:30-18:30 · S 09:00-12:00"},{k:"operativo_trade",t:"Operativo Trade",d:"Domingo habilitado si hay ruta y tienda opera"},{k:"tienda",t:"Tienda",d:"Valida horario real por local"}].map(x=>(
+                                <div key={x.k} style={{padding:10,borderRadius:12,border:"1px solid #e2e8f0",background:(newRuta.perfilCalendario===x.k?"#EEEFFE":"#f8fafc")}}>
+                                  <div style={{display:"flex",alignItems:"center",gap:7,fontSize:11,fontWeight:800,color:newRuta.perfilCalendario===x.k?"#6C6EF5":"#1a2f4a"}}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    {x.t}
+                                  </div>
+                                  <div style={{fontSize:10,color:"#8aaabb",marginTop:4,lineHeight:1.35}}>{x.d}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{marginBottom:12}}>
+                              <label style={S.lbl}>COBERTURA DE RUTA</label>
+                              {(()=>{
+                                const zonaSel=newRuta.zona||"";
+                                const distDisponibles=[...new Set(tiendas.filter(t=>t.activa&&(!zonaSel||getZonaIdTienda(t)===zonaSel)).map(t=>t.dist).filter(Boolean))].sort();
+                                const tiendasFiltradas=tiendas.filter(t=>{
+                                  if(!t.activa) return false;
+                                  if(newRuta.zona&&getZonaIdTienda(t)!==newRuta.zona) return false;
+                                  if(newRuta.distrito&&t.dist!==newRuta.distrito) return false;
+                                  if(newRuta.formato&&newRuta.formato!=="Todas"&&t.f!==newRuta.formato) return false;
+                                  return true;
+                                });
+                                const idsFiltrados=tiendasFiltradas.map(t=>t.id);
+                                const seleccionadas=(newRuta.tiendas||[]).length;
+                                return(
+                                  <div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                                      <select value={newRuta.zona||""} onChange={e=>setNewRuta(p=>({...p,zona:e.target.value,distrito:""}))} style={S.inp}>
+                                        <option value="">Todas las zonas</option>
+                                        {ZONAS_VEGA.map(z=><option key={z.id} value={z.id}>{z.nombre}</option>)}
+                                      </select>
+                                      <select value={newRuta.distrito||""} onChange={e=>setNewRuta(p=>({...p,distrito:e.target.value}))} style={S.inp}>
+                                        <option value="">Todos los distritos</option>
+                                        {distDisponibles.map(d=><option key={d} value={d}>{d}</option>)}
+                                      </select>
+                                      <select value={newRuta.formato||"Todas"} onChange={e=>setNewRuta(p=>({...p,formato:e.target.value}))} style={S.inp}>
+                                        <option value="Todas">Todos los formatos</option>
+                                        {[...new Set(tiendas.map(t=>t.f).filter(Boolean))].sort().map(f=><option key={f} value={f}>{f}</option>)}
+                                      </select>
+                                    </div>
+                                    <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+                                      <button onClick={()=>setNewRuta(p=>({...p,tiendas:[...new Set([...(p.tiendas||[]),...idsFiltrados])]}))} style={{padding:"6px 10px",borderRadius:20,border:"1px solid #00b5b4",background:"#e0fafa",color:"#085041",fontSize:11,fontWeight:700,cursor:"pointer"}}>Seleccionar filtro ({idsFiltrados.length})</button>
+                                      <button onClick={()=>setNewRuta(p=>({...p,tiendas:(p.tiendas||[]).filter(id=>!idsFiltrados.includes(id))}))} style={{padding:"6px 10px",borderRadius:20,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontSize:11,fontWeight:600,cursor:"pointer"}}>Limpiar filtro</button>
+                                      <span style={{fontSize:11,color:"#8aaabb"}}>{seleccionadas} tiendas seleccionadas</span>
+                                    </div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4,maxHeight:260,overflow:"auto",paddingRight:4}}>
+                                      {tiendasFiltradas.map(t=>{
+                                        const sel=(newRuta.tiendas||[]).includes(t.id);
+                                        const zid=getZonaIdTienda(t);
+                                        return(
+                                          <label key={t.id} onClick={()=>setNewRuta(p=>({...p,tiendas:sel?p.tiendas.filter(x=>x!==t.id):[...(p.tiendas||[]),t.id]}))}
+                                            style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:9,border:`1.5px solid ${sel?"#00b5b4":"#e2e8f0"}`,cursor:"pointer",fontSize:12,background:sel?"#e0fafa":"#fff",color:sel?"#085041":"#1a2f4a"}}>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={sel?"#00b5b4":"#b2bec3"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                              {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
+                                            </svg>
+                                            <span style={{flex:1}}>Vega {t.n}</span>
+                                            <span style={{fontSize:9,color:"#8aaabb"}}>{getZonaNombre(zid)} · {t.dist}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               {(newRuta.tiendas||[]).length===0&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>Selecciona al menos una tienda</div>}
                             </div>
                             <div style={{display:"flex",gap:8}}>
                               <button onClick={async()=>{
                                 if(!newRuta.auditorId) return showToast("Selecciona un auditor");
                                 if(!(newRuta.tiendas||[]).length) return showToast("Selecciona al menos una tienda");
-                                const data={auditorId:newRuta.auditorId,moduloIds:newRuta.moduloIds||[],moduloId:(newRuta.moduloIds||[])[0]||"",tiendas:newRuta.tiendas,semana:semanaActual,frecuencia:newRuta.frecuencia||"semanal",activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
+                                if((newRuta.tipoRuta==="fuera_ruta"||newRuta.tipoRuta==="excepcional")&&!String(newRuta.motivoExcepcion||"").trim()) return showToast("Ingresa el motivo de la excepción");
+                                const tiendasAsignadas=tiendas.filter(t=>(newRuta.tiendas||[]).includes(t.id));
+                                const auditorRuta=usuarios.find(u=>u.id===newRuta.auditorId);
+                                const perfilAuto=getPerfilCalendarioUsuario(auditorRuta);
+                                const perfilAplicado=newRuta.perfilCalendario==="auto"?perfilAuto:newRuta.perfilCalendario;
+                                const data={auditorId:newRuta.auditorId,moduloIds:newRuta.moduloIds||[],moduloId:(newRuta.moduloIds||[])[0]||"",tiendas:newRuta.tiendas,routeMeta:getRouteMetaFromTiendas(tiendasAsignadas),semana:semanaActual,frecuencia:newRuta.frecuencia||"semanal",tipoRuta:newRuta.tipoRuta||"regular",perfilCalendario:perfilAplicado,perfilCalendarioOrigen:newRuta.perfilCalendario||"auto",calendarioSnapshot:CALENDARIO_PERFILES[perfilAplicado]||CALENDARIO_PERFILES.administrativo,excepcion:(newRuta.tipoRuta==="fuera_ruta"||newRuta.tipoRuta==="excepcional")?{tipo:newRuta.tipoRuta,motivo:String(newRuta.motivoExcepcion||"").trim(),aprobadoPor:uDni,aprobadoEn:new Date().toISOString()}:null,activo:true,creadaEn:new Date().toISOString(),creadaPor:uDni};
                                 if(newRuta.editId){await setDoc(doc(db,"rutas",newRuta.editId),data,{merge:true});showToast("Ruta actualizada");}
                                 else{await setDoc(doc(collection(db,"rutas")),data);showToast("Ruta creada");}
-                                setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});
+                                setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});
                               }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                                 {newRuta.editId?"Guardar cambios":"Crear ruta"}
                               </button>
-                              <button onClick={()=>{setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                              <button onClick={()=>{setShowNewRuta(false);setNewRuta({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -4958,7 +5282,7 @@ function ChecklistApp() {
                           const pct=tiendasRuta.length>0?Math.round(auditadasSemana.length/tiendasRuta.length*100):0;
                           const initials=(auditor?.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
                           return(
-                            <div key={r.id} style={{...S.card,padding:"12px 16px",marginBottom:8,opacity:r.activo===false?.55:1}}>
+                            <div key={r.id} style={{...S.card,padding:"12px 16px",marginBottom:8,opacity:r.activo===false?0.55:1}}>
                               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                                 <div style={{width:38,height:38,borderRadius:10,background:"#e6f1fb",border:"1.5px solid #85B7EB44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#0C447C",flexShrink:0}}>{initials}</div>
                                 <div style={{flex:1,minWidth:0}}>
@@ -4968,13 +5292,19 @@ function ChecklistApp() {
                                   </div>
                                 </div>
                                 <span style={{fontSize:10,fontWeight:500,padding:"2px 6px",borderRadius:20,background:"#f0f4f8",color:"#5a7a9a",border:"0.5px solid #e2e8f0"}}>
-                                  {r.frecuencia==="diaria"?"Diaria":r.frecuencia==="mensual"?"Mensual":r.frecuencia==="unica"?"Única":"Semanal"}
+                                  {r.frecuencia==="diaria"?"Diaria":r.frecuencia==="quincenal"?"Quincenal":r.frecuencia==="mensual"?"Mensual":r.frecuencia==="unica"?"Única":"Semanal"}
+                                </span>
+                                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:r.tipoRuta==="regular"?"#e6f1fb":r.tipoRuta==="fuera_ruta"?"#FAEEDA":"#EEEFFE",color:r.tipoRuta==="regular"?"#0C447C":r.tipoRuta==="fuera_ruta"?"#854F0B":"#3C3489"}}>
+                                  {r.tipoRuta==="fuera_ruta"?"Fuera de ruta":r.tipoRuta==="excepcional"?"Excepcional":"Regular"}
+                                </span>
+                                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:r.perfilCalendario==="operativo_trade"?"#e0fafa":r.perfilCalendario==="tienda"?"#e8f4fd":"#f0f4f8",color:r.perfilCalendario==="operativo_trade"?"#085041":r.perfilCalendario==="tienda"?"#0C447C":"#5a7a9a"}}>
+                                  {r.perfilCalendario==="operativo_trade"?"Operativo Trade":r.perfilCalendario==="tienda"?"Horario tienda":"Administrativo"}
                                 </span>
                                 <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:r.activo===false?"#fff1f2":"#e0fafa",color:r.activo===false?"#dc2626":"#085041"}}>
                                   {r.activo===false?"Inactiva":"Activa"}
                                 </span>
                                 <button onClick={()=>{
-                                  setNewRuta({auditorId:r.auditorId,moduloIds:r.moduloIds||(r.moduloId?[r.moduloId]:[]),tiendas:r.tiendas||[],frecuencia:r.frecuencia||"semanal",editId:r.id});
+                                  setNewRuta({auditorId:r.auditorId,moduloIds:r.moduloIds||(r.moduloId?[r.moduloId]:[]),tiendas:r.tiendas||[],frecuencia:r.frecuencia||"semanal",zona:r.routeMeta?.zonas?.[0]||"",distrito:r.routeMeta?.distritos?.length===1?r.routeMeta.distritos[0]:"",formato:r.routeMeta?.formatos?.length===1?r.routeMeta.formatos[0]:"Todas",tipoRuta:r.tipoRuta||"regular",perfilCalendario:r.perfilCalendarioOrigen||r.perfilCalendario||"auto",motivoExcepcion:r.excepcion?.motivo||"",editId:r.id});
                                   setShowNewRuta(true);
                                 }} style={{padding:"5px 8px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>Editar</button>
                                 <div title={r.activo===false?"Activar ruta":"Desactivar ruta"} onClick={async e=>{e.stopPropagation();await setDoc(doc(db,"rutas",r.id),{activo:r.activo===false},{ merge:true});showToast(r.activo===false?"Ruta activada":"Ruta desactivada");}} style={{width:34,height:19,borderRadius:10,background:r.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}><div style={{width:15,height:15,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:r.activo===false?2:17,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/></div>
@@ -5013,7 +5343,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Módulos de evaluación</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>{modulosAud.filter(m=>m.activo!==false).length} módulos activos</div>
                           </div>
-                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});}}
+                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nuevo módulo
@@ -5091,14 +5421,14 @@ function ChecklistApp() {
                                 if(!(newModAud.accesos||[]).length) return showToast("Agrega al menos un acceso");
                                 const tareas=(newModAud.tareas||[]).filter(t=>t.nombre.trim()).map((t,i)=>({...t,orden:i}));
                                 const accesos=(newModAud.accesos||[]).filter(a=>a.area);
-                                const data={nombre:newModAud.nombre.trim(),accesos,tareas,activo:true,orden:modulosAud.length+1};
+                                const data={nombre:newModAud.nombre.trim(),accesos,tareas,scoreConfig:newModAud.scoreConfig||{enabled:false,tipo:"numerico",escala:[0,1.5,3],labels:["No ejecutado","Por mejorar","Correcto"],version:1,vigenteDesde:new Date().toISOString()},activo:true,orden:modulosAud.length+1};
                                 if(newModAud.editId){await setDoc(doc(db,"modulos_auditoria",newModAud.editId),data,{merge:true});showToast("Módulo actualizado");}
                                 else{await setDoc(doc(collection(db,"modulos_auditoria")),data);showToast("Módulo creado");}
-                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});
+                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});
                               }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                                 {newModAud.editId?"Guardar cambios":"Crear módulo"}
                               </button>
-                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -5124,7 +5454,7 @@ function ChecklistApp() {
                           const tareasActivas=(m.tareas||[]).filter(t=>t.activo!==false).length;
                           const totalTareas=(m.tareas||[]).length;
                           return(
-                            <div key={m.id} style={{border:"1px solid #E2E8F0",borderRadius:14,marginBottom:10,overflow:"hidden",opacity:m.activo===false?.55:1,background:"#fff"}}>
+                            <div key={m.id} style={{border:"1px solid #E2E8F0",borderRadius:14,marginBottom:10,overflow:"hidden",opacity:m.activo===false?0.55:1,background:"#fff"}}>
                               <div style={{display:"flex",alignItems:"stretch",cursor:"pointer"}} onClick={()=>setModAudOpen(isOpen?null:m.id)}>
                                 <div style={{width:48,background:mc.accent,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                                   <span style={{color:"#fff",fontWeight:800,fontSize:13,letterSpacing:".02em",writingMode:"vertical-rl",transform:"rotate(180deg)",padding:"10px 0"}}>{romano}</span>
@@ -5153,7 +5483,7 @@ function ChecklistApp() {
                                       </div>
                                     </div>
                                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                                      <button onClick={()=>{setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],accesos:m.accesos||[],editId:m.id});setShowNewMod(true);}}
+                                      <button onClick={()=>{setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],accesos:m.accesos||[],scoreConfig:m.scoreConfig||null,editId:m.id});setShowNewMod(true);}}
                                         style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:600}}>Editar</button>
                                       <div onClick={async()=>{await setDoc(doc(db,"modulos_auditoria",m.id),{activo:m.activo===false},{merge:true});showToast(m.activo===false?"Módulo activado":"Módulo desactivado");}}
                                         style={{width:38,height:22,borderRadius:11,background:m.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
@@ -5174,7 +5504,7 @@ function ChecklistApp() {
                                   </div>
                                   {totalTareas===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 14px 12px"}}>Sin tareas. Edita el módulo para agregar.</div>}
                                   {(m.tareas||[]).map((t,ti)=>(
-                                    <div key={t.id||ti} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderTop:ti>0?"0.5px solid #f0f4f8":"none",background:"#fff",opacity:t.activo===false?.5:1}}>
+                                    <div key={t.id||ti} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderTop:ti>0?"0.5px solid #f0f4f8":"none",background:"#fff",opacity:t.activo===false?0.5:1}}>
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8d8e8" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                                       <span style={{flex:1,fontSize:12,color:t.activo===false?"#b2bec3":"#1a2f4a",textDecoration:t.activo===false?"line-through":"none"}}>{t.nombre}</span>
                                       <div onClick={async e=>{e.stopPropagation();const tareas=(m.tareas||[]).map((x,xi)=>xi===ti?{...x,activo:x.activo===false}:x);await setDoc(doc(db,"modulos_auditoria",m.id),{tareas},{merge:true});}}
@@ -5193,14 +5523,137 @@ function ChecklistApp() {
                       );
                     })()}
 
-                    {/* ══ TAB SCORE — pendiente ══ */}
-                    {audCfgTab==="score"&&(
-                      <div style={{textAlign:"center",padding:"40px 20px"}}>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b2bec3" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:12}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        <div style={{fontWeight:700,fontSize:14,color:"#5a7a9a",marginBottom:6}}>Score — próximamente</div>
-                        <div style={{fontSize:12,color:"#b2bec3",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>Los criterios de evaluación cuantitativa y cualitativa se configurarán aquí una vez definida la arquitectura por módulo.</div>
+                    {/* ══ TAB SCORE — versionado ══ */}
+                    {audCfgTab==="score"&&(()=>{
+                      const mods=modulosAud.filter(m=>m.activo!==false);
+                      const selected=mods.find(m=>m.id===scoreModuloSel)||null;
+                      const selectedCfg=selected?normalizeScoreConfig(selected):null;
+                      const history=(selected?.scoreConfigHistory||[]).slice().sort((a,b)=>(b.version||0)-(a.version||0));
+                      const applyDraftFromModule=m=>{
+                        const cfg=normalizeScoreConfig(m);
+                        setScoreModuloSel(m.id);
+                        setScoreDraft({enabled:cfg.enabled===true,tipo:cfg.tipo,escala:(cfg.escala||[]).join(","),labels:(cfg.labels||[]).join(",")});
+                      };
+                      return(
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:12,flexWrap:"wrap"}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Score por módulo</div>
+                            <div style={{fontSize:11,color:"#8aaabb"}}>Primero define cómo se evalúa. Las tareas y rutas usan esta configuración vigente sin tocar históricos.</div>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:12,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5" rx="1"/><rect x="12" y="8" width="3" height="8" rx="1"/><rect x="17" y="4" width="3" height="12" rx="1"/></svg>
+                            <span style={{fontSize:11,fontWeight:700,color:"#6C6EF5"}}>Versionado activo</span>
+                          </div>
+                        </div>
+
+                        {mods.length===0&&<div style={{textAlign:"center",padding:"32px",color:"#8aaabb",fontSize:13}}>Crea primero un módulo en Tareas.</div>}
+                        {mods.length>0&&(
+                          <div style={{display:"grid",gridTemplateColumns:"minmax(260px,.9fr) 1.1fr",gap:14,alignItems:"start"}}>
+                            <div>
+                              {mods.map(m=>{
+                                const cfg=normalizeScoreConfig(m);
+                                const active=selected?.id===m.id;
+                                return(
+                                  <button key={m.id} onClick={()=>applyDraftFromModule(m)} style={{width:"100%",textAlign:"left",border:`1.5px solid ${active?"#6C6EF5":"#e2e8f0"}`,background:active?"#EEEFFE":"#fff",borderRadius:14,padding:12,marginBottom:8,cursor:"pointer"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={cfg.enabled?"#00b5b4":"#8aaabb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                                      <span style={{fontSize:12,fontWeight:800,color:"#1a2f4a",flex:1}}>{m.nombre}</span>
+                                      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,background:cfg.enabled?"#e0fafa":"#f0f4f8",color:cfg.enabled?"#085041":"#8aaabb"}}>{cfg.enabled?"Evaluable":"No evaluable"}</span>
+                                    </div>
+                                    <div style={{fontSize:10,color:"#5a7a9a",lineHeight:1.5}}>Tipo: {cfg.tipo} · Escala: {(cfg.escala||[]).join(" / ")} · Configuración {cfg.version}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {!selected&&(
+                              <div style={{border:"1.5px dashed #c8d8e8",borderRadius:16,padding:32,background:"#f8fafc",textAlign:"center"}}>
+                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5" rx="1"/><rect x="12" y="8" width="3" height="8" rx="1"/><rect x="17" y="4" width="3" height="12" rx="1"/></svg>
+                                <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>Selecciona un módulo</div>
+                                <div style={{fontSize:11,color:"#8aaabb",lineHeight:1.5}}>El score se configura por módulo y cada cambio crea una nueva configuración histórica.</div>
+                              </div>
+                            )}
+                            {selected&&(
+                              <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:14,background:"#fff"}}>
+                                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+                                  <div>
+                                    <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a"}}>{selected.nombre}</div>
+                                    <div style={{fontSize:11,color:"#8aaabb"}}>Configuración vigente: {selectedCfg?.enabled?"activa":"inactiva"} · versión interna {selectedCfg?.version}</div>
+                                  </div>
+                                  <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:11,fontWeight:700,color:"#1a2f4a"}}>
+                                    <span>Score activo</span>
+                                    <div onClick={()=>setScoreDraft(p=>({...p,enabled:!p.enabled}))} style={{width:38,height:22,borderRadius:11,background:scoreDraft.enabled?"#00b5b4":"#e2e8f0",position:"relative",transition:"background .2s"}}>
+                                      <div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:scoreDraft.enabled?18:2,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                                    </div>
+                                  </label>
+                                </div>
+
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                                  <div>
+                                    <label style={S.lbl}>TIPO DE EVALUACIÓN</label>
+                                    <select value={scoreDraft.tipo} onChange={e=>{
+                                      const tipo=e.target.value;
+                                      setScoreDraft(p=>({ ...p, tipo, escala:tipo==="numerico"?p.escala:("0,1"), labels:tipo==="binario"?"No,Sí":tipo==="checklist"?"No realizado,Realizado":p.labels }));
+                                    }} style={S.inp}>
+                                      <option value="numerico">Numérico configurable</option>
+                                      <option value="binario">Sí / No</option>
+                                      <option value="checklist">Realizado / No realizado</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label style={S.lbl}>ESCALA</label>
+                                    <input value={scoreDraft.escala} disabled={scoreDraft.tipo!=="numerico"} onChange={e=>setScoreDraft(p=>({...p,escala:e.target.value}))} placeholder="0,1.5,3" style={{...S.inp,opacity:scoreDraft.tipo!=="numerico"?0.65:1}}/>
+                                  </div>
+                                </div>
+                                <div style={{marginBottom:12}}>
+                                  <label style={S.lbl}>ETIQUETAS</label>
+                                  <input value={scoreDraft.labels} onChange={e=>setScoreDraft(p=>({...p,labels:e.target.value}))} placeholder="No ejecutado,Por mejorar,Correcto" style={S.inp}/>
+                                </div>
+
+                                <div style={{padding:10,borderRadius:12,background:"#f8fafc",border:"1px solid #e2e8f0",marginBottom:12}}>
+                                  <div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",marginBottom:6}}>Vista previa</div>
+                                  <div style={{display:"flex",gap:6}}>
+                                    {(scoreDraft.tipo==="numerico"?scoreDraft.escala.split(","):scoreDraft.tipo==="binario"?["0","1"]:["0","1"]).map((v,i)=>(
+                                      <div key={i} style={{flex:1,padding:"8px 6px",borderRadius:10,background:["#1a2f4a","#f6a623","#00b5b4"][i%3],color:"#fff",textAlign:"center"}}>
+                                        <div style={{fontSize:15,fontWeight:900}}>{v.trim()}</div>
+                                        <div style={{fontSize:9,opacity:.85}}>{(scoreDraft.labels.split(",")[i]||"").trim()}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <button onClick={async()=>{
+                                  const escala=(scoreDraft.tipo==="numerico"?scoreDraft.escala.split(",").map(x=>Number(x.trim())).filter(x=>!Number.isNaN(x)):[0,1]);
+                                  if(scoreDraft.enabled&&(!escala.length||Math.max(...escala)<=0)) return showToast("Configura una escala válida");
+                                  const labels=scoreDraft.labels.split(",").map(x=>x.trim()).filter(Boolean);
+                                  const prev=normalizeScoreConfig(selected);
+                                  const next={enabled:scoreDraft.enabled===true,tipo:scoreDraft.tipo,escala,labels:labels.length?labels:prev.labels,version:(Number(prev.version)||0)+1,vigenteDesde:new Date().toISOString(),vigenteHasta:null,updatedBy:uDni,updatedAt:new Date().toISOString()};
+                                  const hist=[...(selected.scoreConfigHistory||[]),{...next}];
+                                  await setDoc(doc(db,"modulos_auditoria",selected.id),{scoreConfig:next,scoreConfigHistory:hist},{merge:true});
+                                  showToast("Score actualizado con nueva configuración");
+                                }} style={{width:"100%",padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:12}}>
+                                  Guardar nueva configuración
+                                </button>
+
+                                <div style={{marginTop:14,borderTop:"1px solid #f0f4f8",paddingTop:10}}>
+                                  <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",marginBottom:6}}>HISTORIAL DE CONFIGURACIONES</div>
+                                  {history.length===0&&<div style={{fontSize:11,color:"#b2bec3"}}>Aún no hay cambios registrados.</div>}
+                                  {history.slice(0,4).map((h,i)=>(
+                                    <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderTop:i>0?"1px solid #f8fafc":"none"}}>
+                                      <span style={{fontSize:10,fontWeight:800,color:"#6C6EF5",minWidth:95}}>Configuración {h.version}</span>
+                                      <span style={{fontSize:10,color:"#5a7a9a",flex:1}}>{h.tipo} · {(h.escala||[]).join(" / ")}</span>
+                                      <span style={{fontSize:9,color:"#8aaabb"}}>{h.enabled?"Activa":"Inactiva"}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
+                      );
+                    })()}
 
                   </div>
                 </div>
@@ -5442,7 +5895,7 @@ function ChecklistApp() {
                   const areaNombre=areas.find(a=>a.id===areaIdR||a.nombre?.toLowerCase()===areaIdR?.toLowerCase())?.nombre||u.area||"";
                   const tiendaNombre=u.tiendaId?tiendas.find(t=>t.id===u.tiendaId)?.n:"";
                   return(
-                    <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?.5:1}}>
+                    <div key={u.id} style={{...S.card,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:u.activo===false?0.5:1}}>
                       <div style={{width:40,height:40,borderRadius:11,background:rc.bg,border:`1.5px solid ${rc.c}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:rc.c,flexShrink:0}}>{initials}</div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:700,fontSize:13,color:u.activo===false?"#94a3b8":"#1a2f4a",display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
@@ -5521,7 +5974,7 @@ function ChecklistApp() {
                 const usrCount=usuarios.filter(u=>u.rol===r.id).length;
                 const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
                 return(
-                  <div key={r.id} style={{...S.card,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:r.activo===false?.55:1}}>
+                  <div key={r.id} style={{...S.card,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,opacity:r.activo===false?0.55:1}}>
                     <div style={{width:8,height:40,borderRadius:3,background:clr,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
@@ -5570,7 +6023,7 @@ function ChecklistApp() {
                 const usrCount=usuarios.filter(u=>u.area===a.id||u.area===a.nombre).length;
                 const isOpen=areaOpen===a.id;
                 return(
-                  <div key={a.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:a.activa===false?.55:1}}>
+                  <div key={a.id} style={{...S.card,padding:0,marginBottom:8,overflow:"hidden",opacity:a.activa===false?0.55:1}}>
                     {/* Header área */}
                     <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setAreaOpen(isOpen?null:a.id)}>
                       <div style={{width:8,height:8,borderRadius:"50%",background:a.activa===false?"#b2bec3":"#00b5b4",flexShrink:0}}/>
@@ -5614,7 +6067,7 @@ function ChecklistApp() {
                         </div>
                         {(a.cargos||[]).length===0&&<div style={{fontSize:11,color:"#b2bec3",padding:"8px 0"}}>Sin cargos registrados</div>}
                         {(a.cargos||[]).map((c,ci)=>(
-                          <div key={c.id||ci} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 8px",borderRadius:8,background:ci%2===0?"#fff":"transparent",marginBottom:2,opacity:c.activo===false?.5:1}}>
+                          <div key={c.id||ci} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 8px",borderRadius:8,background:ci%2===0?"#fff":"transparent",marginBottom:2,opacity:c.activo===false?0.5:1}}>
                             <span style={{fontSize:12,color:"#1a2f4a"}}>{c.nombre}</span>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
                               <span style={{fontSize:10,color:"#b2bec3"}}>{usuarios.filter(u=>u.cargo===c.nombre).length} usr</span>
@@ -5776,6 +6229,12 @@ function ChecklistApp() {
                   </svg>
                   Nueva
                 </button>
+                <button onClick={()=>setTpTab("carga")} style={tpTab==="carga"?PILL_ON:PILL_OFF}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="carga"?"#fff":"#6B7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Carga masiva
+                </button>
               </div>
 
               {/* ── subpestañas formato (solo en pestaña lista) ── */}
@@ -5814,15 +6273,18 @@ function ChecklistApp() {
                     {nAct} activas · {nInact} inactivas
                   </div>
                   {ts.map(ti=>{
-                    const zonalU=usuarios.find(u=>u.id===ti.zonaId);
+                    const contactoPrincipal=getContactoPrincipalTienda(ti);
+                    const jefeZonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")||null;
                     return(
                       <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.6}}>
                         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontWeight:700,fontSize:13,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</div>
-                            <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
-                              {ti.email&&<span>✉ {ti.email}</span>}
-                              {zonalU&&<span>👤 {zonalU.nombre}</span>}
+                            <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:8,flexWrap:"wrap",marginTop:2,alignItems:"center"}}>
+                              {ti.email&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.email}</span>}
+                              {contactoPrincipal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{contactoPrincipal.nombre}</span>}
+                              {jefeZonal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {jefeZonal.nombre}</span>}
+                              <span style={{display:"inline-flex",alignItems:"center",gap:4,color:"#5a7a9a"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Contacto referencial, sin acceso</span>
                             </div>
                           </div>
                           <div style={{display:"flex",gap:6,flexShrink:0}}>
@@ -5880,6 +6342,35 @@ function ChecklistApp() {
                     Cancelar
                   </button>
                 </div>
+              </div>
+            )}
+            {/* ── contenido pestaña CARGA MASIVA ── */}
+            {tpTab==="carga"&&(
+              <div style={{background:"#fff",borderRadius:"0 10px 10px 10px",padding:"20px",border:"1px solid #E2E8F0",borderTop:"none",marginTop:0}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                  <div style={{padding:14,borderRadius:14,border:"1px solid #e2e8f0",background:"#f8fafc"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:6}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9"/><line x1="9" y1="13" x2="9" y2="13"/><line x1="9" y1="17" x2="9" y2="17"/></svg>
+                      Directorio Tiendas 2026
+                    </div>
+                    <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.5,marginBottom:12}}>Carga precargada desde el Excel aprobado: zona, distrito, formato, horarios y contactos operativos. Los jefes/gerentes se guardan como contactos referenciales, no como usuarios con acceso.</div>
+                    <button onClick={()=>{const np=mergeDirectorioTiendas(tiendas);setTiendas(np);saveConfig({tiendas:np});setBulkImportLog({tipo:"directorio_contactos",total:DIRECTORIO_TIENDAS_2026.length,fecha:new Date().toISOString(),modo:"contactos_sin_usuarios"});showToast("Directorio 2026 aplicado sin crear usuarios");}}
+                      style={{width:"100%",padding:"11px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer"}}>
+                      Aplicar carga precargada
+                    </button>
+                  </div>
+                  <div style={{padding:14,borderRadius:14,border:"1px solid #e2e8f0",background:"#f8fafc"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:6}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      Calendarios operativos
+                    </div>
+                    <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.5}}>Administrativo, Operativo Trade y Tienda se calculan por perfil. Domingo ya no se bloquea para Operativo Trade si tiene ruta y la tienda opera.</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+                      {Object.values(CALENDARIO_PERFILES).map(c=><span key={c.id} style={{fontSize:10,fontWeight:800,padding:"3px 8px",borderRadius:20,background:c.id==="operativo_trade"?"#e0fafa":c.id==="tienda"?"#e8f4fd":"#f0f4f8",color:c.id==="operativo_trade"?"#085041":c.id==="tienda"?"#0C447C":"#5a7a9a"}}>{c.nombre}</span>)}
+                    </div>
+                  </div>
+                </div>
+                {bulkImportLog&&<div style={{fontSize:11,color:"#085041",background:"#e0fafa",border:"1px solid #99e6e6",borderRadius:10,padding:"9px 12px"}}>Última carga: {bulkImportLog.total} registros · {new Date(bulkImportLog.fecha).toLocaleString("es-PE")}</div>}
               </div>
             )}
           </div>
@@ -7377,7 +7868,7 @@ function ChecklistApp() {
               </div>
             ):(
               <div style={{marginBottom:10,padding:"8px 12px",background:"#fff8ec",borderRadius:8,border:"1px solid #FAC775"}}>
-                <div style={{fontSize:11,color:"#854F0B"}}>⚠️ La tienda no tiene email ni jefe zonal configurado. Puedes editar la tienda en Config → Tiendas.</div>
+                <div style={{fontSize:11,color:"#854F0B",display:"flex",alignItems:"center",gap:6}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>La tienda no tiene email ni jefe zonal configurado. Puedes editar la tienda en Config / Tiendas.</div>
               </div>
             )}
             <div style={{marginBottom:10,padding:"8px 12px",background:"#f8fafc",borderRadius:8}}>
