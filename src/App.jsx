@@ -697,6 +697,10 @@ function ChecklistApp() {
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
   const [showDetalleAccesos, setShowDetalleAccesos] = useState(false);
+  // FIX_LOG_ACCESOS_HOOKS_20260530: filtros del Log de accesos al nivel superior para evitar React #310 al cambiar módulos.
+  const [logAccesoFiltroUser,  setLogAccesoFiltroUser]  = useState("");
+  const [logAccesoFiltroEstado,setLogAccesoFiltroEstado]= useState("todos");
+  const [logAccesoFiltroDias,  setLogAccesoFiltroDias]  = useState(30);
   const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",editId:null};
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
@@ -4453,97 +4457,106 @@ function ChecklistApp() {
 
       {/* ══ LOG DE ACCESOS — usrTab="log" ══ */}
       {usrTab==="log"&&isAdmin&&(()=>{
-        const [logFiltroUser,  setLogFiltroUser]  = React.useState("");
-        const [logFiltroEstado,setLogFiltroEstado]= React.useState("todos");
-        const [logFiltroDias,  setLogFiltroDias]  = React.useState(30);
+        // FIX_LOG_ACCESOS_HOOKS_20260530: sin hooks dentro de render condicional; evita React minified error #310.
+        const logFiltroUser=logAccesoFiltroUser;
+        const setLogFiltroUser=setLogAccesoFiltroUser;
+        const logFiltroEstado=logAccesoFiltroEstado;
+        const setLogFiltroEstado=setLogAccesoFiltroEstado;
+        const logFiltroDias=logAccesoFiltroDias;
+        const setLogFiltroDias=setLogAccesoFiltroDias;
         const hoy=new Date();
         const cutoff=new Date(hoy.getTime()-logFiltroDias*24*60*60*1000);
-        const logFiltrado=authLog.filter(l=>{
-          if(logFiltroEstado!=="todos"&&String(l.exitoso)!==(logFiltroEstado==="ok"?"true":"false")) return false;
-          if(logFiltroUser&&!(l.nombre||"").toLowerCase().includes(logFiltroUser.toLowerCase())) return false;
-          if(l.timestamp&&new Date(l.timestamp)<cutoff) return false;
+        const normTxt=v=>String(v||"").toLowerCase();
+        const fechaLog=l=>l.timestamp?new Date(l.timestamp):null;
+        const horaCorta=d=>d?d.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit",hour12:false}):"--:--";
+        const fechaCorta=d=>d?d.toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit"}):"--/--";
+        const logFiltrado=(authLog||[]).filter(l=>{
+          const ok=l.exitoso===true;
+          if(logFiltroEstado!=="todos"&&ok!==(logFiltroEstado==="ok")) return false;
+          const needle=normTxt(logFiltroUser);
+          if(needle&&!(normTxt(l.nombre).includes(needle)||normTxt(l.userId).includes(needle)||normTxt(l.rol).includes(needle))) return false;
+          const dt=fechaLog(l);
+          if(dt&&dt<cutoff) return false;
           return true;
         });
-        const fallidos=logFiltrado.filter(l=>!l.exitoso).length;
+        const fallidos=logFiltrado.filter(l=>l.exitoso!==true);
+        const ultimoFallido=fallidos[0];
+        const ultimoFallidoDt=fechaLog(ultimoFallido||{});
         return(
-          <div style={{padding:"4px 0"}}>
-            {/* Header */}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-              </svg>
-              <span style={{fontWeight:700,fontSize:13,color:"#1a2f4a"}}>Log de accesos</span>
-              <span style={{fontSize:10,color:"#8aaabb"}}>{logFiltrado.length} registros</span>
-              {fallidos>0&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"#FCEBEB",color:"#791F1F"}}>⚠ {fallidos} fallido{fallidos>1?"s":""}</span>}
-            </div>
+          <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden",boxShadow:"0 2px 10px rgba(15,31,51,.03)"}}>
+            {fallidos.length>0&&(
+              <div style={{background:"#FFF3CD",borderBottom:"1px solid #FDE68A",padding:"9px 13px",fontSize:11,color:"#92400E",display:"flex",alignItems:"center",gap:8}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <strong>{fallidos.length} intento{fallidos.length>1?"s":""} fallido{fallidos.length>1?"s":""}</strong>
+                <span>detectado{fallidos.length>1?"s":""}{ultimoFallido?` — ${ultimoFallido.nombre||ultimoFallido.userId||"Usuario"} ${horaCorta(ultimoFallidoDt)}`:""}</span>
+              </div>
+            )}
 
-            {/* Filtros */}
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+            <div style={{display:"flex",gap:8,padding:"10px 12px",borderBottom:"1px solid #F0F4F8",flexWrap:"wrap"}}>
               <input value={logFiltroUser} onChange={e=>setLogFiltroUser(e.target.value)}
-                placeholder="Buscar usuario..." style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,flex:1,minWidth:120,fontFamily:"inherit"}}/>
+                placeholder="Buscar usuario..." style={{padding:"7px 10px",borderRadius:8,border:"1px solid #E2E8F0",fontSize:11,flex:1,minWidth:160,fontFamily:"inherit",outline:"none"}}/>
               <select value={logFiltroEstado} onChange={e=>setLogFiltroEstado(e.target.value)}
-                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                style={{padding:"7px 10px",borderRadius:8,border:"1px solid #E2E8F0",fontSize:11,fontFamily:"inherit",background:"#fff",color:"#5a7a9a"}}>
                 <option value="todos">Todos</option>
                 <option value="ok">✓ OK</option>
                 <option value="fallido">✗ Fallidos</option>
               </select>
               <select value={logFiltroDias} onChange={e=>setLogFiltroDias(Number(e.target.value))}
-                style={{padding:"6px 10px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:11,fontFamily:"inherit"}}>
+                style={{padding:"7px 10px",borderRadius:8,border:"1px solid #E2E8F0",fontSize:11,fontFamily:"inherit",background:"#fff",color:"#5a7a9a"}}>
                 <option value={7}>Últimos 7 días</option>
                 <option value={30}>Últimos 30 días</option>
                 <option value={90}>Últimos 90 días</option>
               </select>
             </div>
 
-            {/* Alerta de anomalías */}
-            {fallidos>=3&&(
-              <div style={{background:"#FFF3CD",border:"1px solid #FAC775",borderRadius:9,padding:"8px 12px",marginBottom:10,fontSize:11,color:"#633806",display:"flex",alignItems:"center",gap:8}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <strong>{fallidos} intentos fallidos</strong> detectados en el período — revisa si hay acceso no autorizado.
-              </div>
-            )}
-
-            {/* Tabla */}
             {logFiltrado.length===0&&(
               <div style={{padding:"32px",textAlign:"center",color:"#8aaabb",fontSize:12}}>Sin registros para los filtros seleccionados.</div>
             )}
             {logFiltrado.length>0&&(
-              <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #E2E8F0"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead>
-                    <tr style={{background:"#f8fafc"}}>
-                      {["Fecha/Hora","Usuario","Rol","Dispositivo","Estado"].map(h=>(
-                        <th key={h} style={{padding:"7px 10px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,borderBottom:"1.5px solid #e9eef5",whiteSpace:"nowrap"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logFiltrado.slice(0,50).map((l,i)=>(
-                      <tr key={i} style={{borderBottom:"0.5px solid #f5f7fa",background:!l.exitoso?"#FFF8F8":i%2===0?"#fff":"#fafcff"}}>
-                        <td style={{padding:"7px 10px",color:"#5a7a9a",whiteSpace:"nowrap",fontSize:10}}>{l.timestamp?new Date(l.timestamp).toLocaleString("es-PE"):"-"}</td>
-                        <td style={{padding:"7px 10px",fontWeight:600,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
-                        <td style={{padding:"7px 10px"}}>
-                          <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
-                            color:l.rol==="admin"?"#633806":l.rol==="auditor"?"#0984e3":"#085041",
-                            background:l.rol==="admin"?"#FAEEDA":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
-                            {l.rol||"-"}
-                          </span>
-                        </td>
-                        <td style={{padding:"7px 10px",color:"#8aaabb",fontSize:10}}>{l.dispositivo||"-"}</td>
-                        <td style={{padding:"7px 10px"}}>
-                          <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,
-                            color:l.exitoso?"#085041":"#791F1F",background:l.exitoso?"#E1F5EE":"#FCEBEB"}}>
-                            {l.exitoso?"✓ OK":"✗ Fallido"}
-                          </span>
-                        </td>
+              <>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr style={{background:"#fff"}}>
+                        {["FECHA/HORA","USUARIO","ROL","DISPOSITIVO","ESTADO"].map(h=>(
+                          <th key={h} style={{padding:"8px 12px",textAlign:"left",color:"#8aaabb",fontWeight:800,fontSize:9,letterSpacing:".04em",borderBottom:"1px solid #F0F4F8",whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{padding:"8px 12px",fontSize:10,color:"#8aaabb",borderTop:"0.5px solid #f0f4f8"}}>
-                  Mostrando {Math.min(logFiltrado.length,50)} de {logFiltrado.length} · Retención: 90 días activa
+                    </thead>
+                    <tbody>
+                      {logFiltrado.slice(0,50).map((l,i)=>{
+                        const dt=fechaLog(l);
+                        const ok=l.exitoso===true;
+                        return(
+                          <tr key={l.id||i} style={{borderBottom:"0.5px solid #F8FAFC",background:ok?"#fff":"#FFF8F8"}}>
+                            <td style={{padding:"8px 12px",color:"#1a2f4a",whiteSpace:"nowrap",fontSize:11}}>{dt?`${fechaCorta(dt)} ${horaCorta(dt)}`:"-"}</td>
+                            <td style={{padding:"8px 12px",fontWeight:700,color:"#1a2f4a"}}>{l.nombre||l.userId||"-"}</td>
+                            <td style={{padding:"8px 12px"}}>
+                              <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                                color:l.rol==="admin"?"#C08A00":l.rol==="auditor"?"#0984e3":"#085041",
+                                background:l.rol==="admin"?"#FFF8EC":l.rol==="auditor"?"#e6f1fb":"#E1F5EE"}}>
+                                {l.rol||"-"}
+                              </span>
+                            </td>
+                            <td style={{padding:"8px 12px",color:"#1a2f4a",fontSize:11}}>{l.dispositivo||"-"}</td>
+                            <td style={{padding:"8px 12px"}}>
+                              <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,
+                                color:ok?"#085041":"#791F1F",background:ok?"#E1F5EE":"#FCEBEB"}}>
+                                {ok?"✓ OK":"✗ Fallido"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+                <div style={{padding:"8px 12px",fontSize:10,color:"#8aaabb",borderTop:"0.5px solid #f0f4f8"}}>
+                  {Math.min(logFiltrado.length,50)} de {logFiltrado.length} registros · Retención: 90 días
+                </div>
+              </>
             )}
           </div>
         );
