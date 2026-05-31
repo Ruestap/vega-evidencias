@@ -657,6 +657,7 @@ function ChecklistApp() {
   const [cfgTab,  setCfgTab]  = useState(1);
   const [cfgMod,  setCfgMod]  = useState(null); // null | "evidencias" | "auditoria"
   const [ddOpen,  setDdOpen]  = useState(false); // dropdown Panel de control
+  const [ddUsrOpen, setDdUsrOpen] = useState(false); // FIX_RUTAACTIVA_PARAM_20260520_DEPLOY_OK dropdown Gestión de Usuarios — independiente de ddOpen
   const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva en módulo Tiendas
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
   /* ── auditoría config ── */
@@ -672,7 +673,7 @@ function ChecklistApp() {
   // Módulos activos usados en la auditoría en curso (IDs y escala reales)
   const [auditModulosActivos, setAuditModulosActivos] = useState([]);
   /* ── módulo usuarios ── */
-  const [usrTab,  setUsrTab]  = useState("usuarios"); // "usuarios" | "roles" | "areas"
+  const [usrTab,  setUsrTab]  = useState(null); // FIX_RUTA_MODULOS_MULTISELECT_20260520 null=dashboard | "usuarios" | "roles" | "areas" | "log"
   const [roles,   setRoles]   = useState([]);
   const [areas,   setAreas]   = useState([]);
   const [areaOpen,setAreaOpen]= useState(null);
@@ -4103,27 +4104,63 @@ function ChecklistApp() {
 
     return(
     <div style={{padding:"16px"}}>
-      {/* ── Tabs horizontales — sin dropdown ── */}
-      <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1.5px solid #E2E8F0",paddingBottom:0}}>
-        {USR_MODS.map(m=>(
-          <button key={m.id}
-            onClick={()=>{setUsrTab(m.id);setShowNUsuario(false);}}
-            style={{display:"flex",alignItems:"center",gap:6,padding:"9px 14px",
-              border:"none",borderBottom:usrTab===m.id?"2.5px solid #6C6EF5":"2.5px solid transparent",
-              background:"transparent",cursor:"pointer",
-              color:usrTab===m.id?"#6C6EF5":"#5a7a9a",
-              fontWeight:usrTab===m.id?700:500,fontSize:12,
-              marginBottom:"-1.5px",fontFamily:"inherit"}}>
-            {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#94A3B8",width:"14",height:"14"})}
-            {m.label}
+      {/* ── FIX_RUTA_MODULOS_MULTISELECT_20260520 — Dropdown ••• Gestión de Usuarios (reemplaza tabs horizontales) ── */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+        {/* Dropdown ••• */}
+        <div style={{position:"relative",display:"inline-block"}}>
+          <button
+            onClick={()=>setDdUsrOpen(o=>!o)}
+            style={{display:"inline-flex",alignItems:"center",gap:7,padding:"8px 15px",
+              borderRadius:50,border:ddUsrOpen||usrTab?"1.5px solid #6C6EF5":"1.5px solid #E2E8F0",
+              background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,
+              fontFamily:"inherit",color:ddUsrOpen||usrTab?"#6C6EF5":"#1a2f4a",transition:"all .15s"}}>
+            {/* ••• icon */}
+            <span style={{display:"flex",gap:3,alignItems:"center"}}>
+              {[0,1,2].map(i=>(<span key={i} style={{width:4,height:4,borderRadius:"50%",background:"currentColor",display:"block"}}/>))}
+            </span>
+            <span>{usrTab?USR_MODS.find(m=>m.id===usrTab)?.label||"Gestión de Usuarios":"Gestión de Usuarios"}</span>
+            <svg style={{transition:"transform .2s",transform:ddUsrOpen?"rotate(180deg)":"rotate(0deg)"}} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-        ))}
-        {/* Botón acción contextual alineado a la derecha */}
+          {/* Menú dropdown */}
+          {ddUsrOpen&&(
+            <div style={{position:"absolute",top:"calc(100% + 5px)",left:0,minWidth:210,
+              background:"#fff",borderRadius:11,border:"1.5px solid #E2E8F0",
+              boxShadow:"0 8px 28px rgba(0,0,0,.12)",zIndex:300,overflow:"hidden"}}>
+              <div style={{padding:"8px 13px 6px",fontSize:9,fontWeight:700,
+                color:"#8aaabb",letterSpacing:".07em",textTransform:"uppercase",
+                borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",gap:5}}>
+                Seleccione módulo
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              {USR_MODS.map(m=>(
+                <button key={m.id}
+                  onClick={()=>{setUsrTab(m.id);setDdUsrOpen(false);setShowNUsuario(false);}}
+                  style={{width:"100%",padding:"10px 14px",border:"none",
+                    borderBottom:"1px solid #F8FAFC",
+                    background:usrTab===m.id?"#F5F4FF":"#fff",
+                    display:"flex",alignItems:"center",justifyContent:"space-between",
+                    cursor:"pointer",fontSize:12,fontWeight:usrTab===m.id?700:500,
+                    color:usrTab===m.id?"#6C6EF5":"#1a2f4a",fontFamily:"inherit",transition:"background .1s"}}>
+                  {m.label}
+                  {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#8aaabb",width:"14",height:"14"})}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Click fuera cierra el dropdown — overlay transparente */}
+          {ddUsrOpen&&(
+            <div
+              style={{position:"fixed",inset:0,zIndex:299}}
+              onClick={()=>setDdUsrOpen(false)}
+            />
+          )}
+        </div>
+        {/* Botón acción contextual — aparece junto al dropdown según módulo */}
         {usrTab&&usrTab!=="log"&&(
           <button onClick={()=>setShowNUsuario(true)}
-            style={{marginLeft:"auto",padding:"7px 14px",borderRadius:50,border:"none",
+            style={{padding:"8px 14px",borderRadius:50,border:"none",
               background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,
-              fontSize:11,display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
+              fontSize:11,display:"inline-flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {usrTab==="usuarios"?"Nuevo usuario":usrTab==="roles"?"Nuevo rol":"Nueva área"}
           </button>
