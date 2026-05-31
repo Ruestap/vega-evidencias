@@ -5196,6 +5196,8 @@ function ChecklistApp() {
 
       {cfgTab===0&&(()=>{
         /* ══ CONSTANTES ══ */
+        // FIX_RUTA_MODULOS_MULTISELECT_20260520 — usrTab puede ser null (dashboard), usar "usuarios" como default en cfg
+        const usrTabEfectivo = usrTab||"usuarios";
         const ROL_CFG_U={
           admin:      {label:"Admin",       c:"#f6a623",bg:"#fff8ec"},
           coordinador:{label:"Coordinador", c:"#6C6EF5",bg:"#EEEFFE"},
@@ -5236,19 +5238,19 @@ function ChecklistApp() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:0}}>
             <div>
               <div style={{fontWeight:700,fontSize:14,color:"#1a2f4a"}}>
-                {usrTab==="usuarios"?"Usuarios":usrTab==="roles"?"Gestión de Roles":usrTab==="log"?"Log de accesos":"Gestión de Áreas"}
+                {usrTabEfectivo==="usuarios"?"Usuarios":usrTabEfectivo==="roles"?"Gestión de Roles":usrTabEfectivo==="log"?"Log de accesos":"Gestión de Áreas"}
               </div>
               <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>
-                {usrTab==="usuarios"?`${usrsCnt} activos · ${usuarios.length} totales`:
-                 usrTab==="log"?`${authLog.length} registros recientes`:
-                 usrTab==="roles"?`${roles.length} roles configurados`:
+                {usrTabEfectivo==="usuarios"?`${usrsCnt} activos · ${usuarios.length} totales`:
+                 usrTabEfectivo==="log"?`${authLog.length} registros recientes`:
+                 usrTabEfectivo==="roles"?`${roles.length} roles configurados`:
                  `${areas.filter(a=>a.activa!==false).length} áreas activas`}
               </div>
             </div>
             <button onClick={()=>setShowNUsuario(true)}
               style={{padding:"9px 16px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              {btnLabels[usrTab]}
+              {btnLabels[usrTabEfectivo]}
             </button>
           </div>
 
@@ -5257,18 +5259,18 @@ function ChecklistApp() {
             {TABS_USR.map(t=>(
               <button key={t.id} onClick={()=>{setUsrTab(t.id);setShowNUsuario(false);}}
                 style={{padding:"9px 16px",border:"none",background:"transparent",cursor:"pointer",
-                  fontSize:13,fontWeight:usrTab===t.id?700:500,
-                  color:usrTab===t.id?"#6C6EF5":"#64748B",
-                  borderBottom:`2px solid ${usrTab===t.id?"#6C6EF5":"transparent"}`,
+                  fontSize:13,fontWeight:usrTabEfectivo===t.id?700:500,
+                  color:usrTabEfectivo===t.id?"#6C6EF5":"#64748B",
+                  borderBottom:`2px solid ${usrTabEfectivo===t.id?"#6C6EF5":"transparent"}`,
                   display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                {React.cloneElement(t.ico,{stroke:usrTab===t.id?"#6C6EF5":"#94A3B8"})}
+                {React.cloneElement(t.ico,{stroke:usrTabEfectivo===t.id?"#6C6EF5":"#94A3B8"})}
                 {t.label}
               </button>
             ))}
           </div>
 
           {/* ════ TAB USUARIOS ════ */}
-          {usrTab==="usuarios"&&(()=>{
+          {usrTabEfectivo==="usuarios"&&(()=>{
             return(
             <div>
               <div style={{position:"relative",marginBottom:12}}>
@@ -5447,7 +5449,7 @@ function ChecklistApp() {
           })()}
 
           {/* ════ TAB ROLES ════ */}
-          {usrTab==="roles"&&(()=>{
+          {usrTabEfectivo==="roles"&&(()=>{
             return(
             <div>
               {showNUsuario&&(
@@ -5508,7 +5510,7 @@ function ChecklistApp() {
           })()}
 
           {/* ════ TAB ÁREAS ════ */}
-          {usrTab==="areas"&&(()=>{
+          {usrTabEfectivo==="areas"&&(()=>{
             return(
             <div>
               {showNUsuario&&(
