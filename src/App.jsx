@@ -4581,26 +4581,48 @@ function ChecklistApp() {
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
               {/* Usuarios activos */}
               <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
-                <div style={{fontSize:20,fontWeight:700,color:"#1a2f4a",lineHeight:1}}>{usuarios.filter(u=>u.activo!==false).length}</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:3}}>Usuarios activos</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <div style={{fontSize:20,fontWeight:700,color:"#1a2f4a",lineHeight:1}}>{usuarios.filter(u=>u.activo!==false).length}</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a2f4a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                  </svg>
+                </div>
+                <div style={{fontSize:10,color:"#8aaabb"}}>Usuarios activos</div>
                 <div style={{fontSize:9,color:"#059669",marginTop:3}}>↑ +2 esta semana</div>
               </div>
               {/* Roles */}
               <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
-                <div style={{fontSize:20,fontWeight:700,color:"#6C6EF5",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.rol).filter(Boolean))].length}</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:3}}>Roles</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <div style={{fontSize:20,fontWeight:700,color:"#6C6EF5",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.rol).filter(Boolean))].length}</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <div style={{fontSize:10,color:"#8aaabb"}}>Roles</div>
                 <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>— Sin cambios</div>
               </div>
               {/* Áreas activas */}
               <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
-                <div style={{fontSize:20,fontWeight:700,color:"#00b5b4",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.area).filter(Boolean))].length}</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:3}}>Áreas activas</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <div style={{fontSize:20,fontWeight:700,color:"#00b5b4",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.area).filter(Boolean))].length}</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                  </svg>
+                </div>
+                <div style={{fontSize:10,color:"#8aaabb"}}>Áreas activas</div>
                 <div style={{fontSize:9,color:"#059669",marginTop:3}}>↑ +1 este mes</div>
               </div>
               {/* Accesos hoy — tarjeta con botón Detalles */}
               <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8",position:"relative"}}>
-                <div style={{fontSize:20,fontWeight:700,color:fallHoy>0?"#d97706":"#059669",lineHeight:1}}>{accesosHoy.length}</div>
-                <div style={{fontSize:10,color:"#8aaabb",marginTop:3}}>Accesos hoy</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <div style={{fontSize:20,fontWeight:700,color:fallHoy>0?"#d97706":"#059669",lineHeight:1}}>{accesosHoy.length}</div>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fallHoy>0?"#d97706":"#059669"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                  </svg>
+                </div>
+                <div style={{fontSize:10,color:"#8aaabb"}}>Accesos hoy</div>
                 {fallHoy>0&&(
                   <div style={{fontSize:9,color:"#d97706",marginTop:3}}>⚠ {fallHoy} fallido{fallHoy>1?"s":""}</div>
                 )}
@@ -4766,7 +4788,7 @@ function ChecklistApp() {
                 {i:4, label:"Rangos Día"},
                 {i:5, label:"Cortes"},
               ];
-              if(!EV_TABS.find(t=>t.i===cfgTab)) setCfgTab(1);
+              if(!EV_TABS.find(t=>t.i===cfgTab)){ setTimeout(()=>setCfgTab(1),0); return null; } // FIX_RUTA_MODULOS_MULTISELECT_20260520 prevent setState-during-render #310
               return(
                 <div style={{background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",
                   borderTop:"1px solid #E2E8F0",marginTop:10,display:"flex",gap:4}}>
