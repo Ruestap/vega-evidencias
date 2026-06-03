@@ -6272,15 +6272,20 @@ function ChecklistApp() {
                   {ts.map(ti=>{
                     const contactoPrincipal=getContactoPrincipalTienda(ti);
                     const jefeZonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")||null;
+                    const zonalNombre=jefeZonal?.nombre||ti.jefeZonalNombre||"";
+                    const gerenteNombre=contactoPrincipal?.nombre||ti.gerenteTienda||"";
                     return(
                       <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.6}}>
                         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontWeight:700,fontSize:13,color:ti.activa?"#1a2f4a":"#94a3b8"}}>Vega {ti.n}</div>
+                            <div style={{fontWeight:700,fontSize:13,color:ti.activa?"#1a2f4a":"#94a3b8",display:"flex",alignItems:"center",gap:6}}>
+                              Vega {ti.n}
+                              {ti.idTienda&&<span style={{fontSize:9,fontWeight:600,color:"#8aaabb",background:"#f0f4f8",padding:"1px 5px",borderRadius:4}}>#{ti.idTienda}</span>}
+                            </div>
                             <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:8,flexWrap:"wrap",marginTop:2,alignItems:"center"}}>
-                              {ti.email&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.email}</span>}
-                              {contactoPrincipal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{contactoPrincipal.nombre}</span>}
-                              {jefeZonal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {jefeZonal.nombre}</span>}
+                              {(ti.emailTienda||ti.email)&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.emailTienda||ti.email}</span>}
+                              {gerenteNombre&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{gerenteNombre}</span>}
+                              {zonalNombre&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {zonalNombre}</span>}
                               <span style={{display:"inline-flex",alignItems:"center",gap:4,color:"#5a7a9a"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Contacto referencial, sin acceso</span>
                             </div>
                           </div>
@@ -7992,48 +7997,166 @@ function ChecklistApp() {
 
       {/* MODAL EDITAR TIENDA */}
       {tiendaEditModal&&(()=>{
-        const zonales=usuarios.filter(u=>u.activo!==false);
+        // FIX_TIENDA_EDIT_COMPLETO_20260602 — campos completos: nombre, ID, contactos, zonal, horarios
+        const toTitleCase=s=>String(s||"").replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
+        const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
         return(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}}
           onClick={()=>setTiendaEditModal(null)}>
           <div onClick={e=>e.stopPropagation()}
-            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:420,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"90vh",overflowY:"auto"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:16}}>✏️ Vega {tiendaEditModal.n}</div>
-            <div style={{marginBottom:12}}>
-              <label style={S.lbl}>EMAIL ENCARGADO</label>
-              <input type="email" value={tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,email:e.target.value}))}
-                placeholder="encargado@corporacionvega.pe" style={S.inp}/>
+            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"92vh",overflowY:"auto"}}>
+
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+              <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Editar tienda</div>
+              <button onClick={()=>setTiendaEditModal(null)} style={{border:"none",background:"none",cursor:"pointer",color:"#8aaabb",fontSize:18,lineHeight:1}}>✕</button>
             </div>
-            <div style={{marginBottom:12}}>
-              <label style={S.lbl}>WHATSAPP TIENDA (con código país)</label>
-              <input type="tel" value={tiendaEditModal.whatsapp||""} onChange={e=>setTiendaEditModal(p=>({...p,whatsapp:e.target.value.replace(/[^0-9]/g,"").slice(0,15)}))}
-                placeholder="51987654321" style={S.inp}/>
+
+            {/* Sección: Identificación */}
+            <div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",letterSpacing:".06em",marginBottom:8}}>IDENTIFICACIÓN</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 100px",gap:8,marginBottom:11}}>
+              <div>
+                <label style={S.lbl}>NOMBRE DE TIENDA</label>
+                <input value={tiendaEditModal.n||""} onChange={e=>setTiendaEditModal(p=>({...p,n:e.target.value}))}
+                  placeholder="COLLIQUE" style={S.inp}/>
+              </div>
+              <div>
+                <label style={S.lbl}>ID TIENDA</label>
+                <input value={tiendaEditModal.idTienda||""} onChange={e=>setTiendaEditModal(p=>({...p,idTienda:e.target.value.replace(/\D/g,"")}))}
+                  placeholder="20" style={S.inp}/>
+              </div>
             </div>
-            <div style={{marginBottom:16}}>
-              <label style={S.lbl}>JEFE ZONAL ASIGNADO</label>
-              <select value={tiendaEditModal.zonaId||""} onChange={e=>setTiendaEditModal(p=>({...p,zonaId:e.target.value}))}
-                style={{...S.inp,padding:"10px 12px"}}>
-                <option value="">— Sin asignar —</option>
-                {zonales.map(u=>(
-                  <option key={u.id} value={u.id}>{u.nombre} ({u.rol}){u.zona?` · ${u.zona}`:""}</option>
+            <F label="EMAIL TIENDA">
+              <input type="email" value={tiendaEditModal.emailTienda||tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,emailTienda:e.target.value,email:e.target.value}))}
+                placeholder="tiendasmcollique@corporacionvega.pe" style={S.inp}/>
+            </F>
+
+            {/* Sección: Gerente de tienda */}
+            <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
+            <F label="NOMBRE GERENTE">
+              <input value={tiendaEditModal.gerenteTienda||""} onChange={e=>setTiendaEditModal(p=>({...p,gerenteTienda:e.target.value}))}
+                placeholder="APELLIDO APELLIDO, Nombre" style={S.inp}/>
+            </F>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+              <div>
+                <label style={S.lbl}>DNI GERENTE</label>
+                <input value={tiendaEditModal.dniGerente||""} onChange={e=>setTiendaEditModal(p=>({...p,dniGerente:e.target.value.replace(/\D/g,"").slice(0,8)}))}
+                  placeholder="12345678" style={S.inp}/>
+              </div>
+              <div>
+                <label style={S.lbl}>CELULAR GERENTE</label>
+                <input value={tiendaEditModal.celular||""} onChange={e=>setTiendaEditModal(p=>({...p,celular:e.target.value.replace(/\D/g,"").slice(0,12)}))}
+                  placeholder="987654321" style={S.inp}/>
+              </div>
+            </div>
+
+            {/* Sección: Jefe zonal */}
+            <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
+            <F label="SELECCIONAR ZONAL (usuarios coordinador/admin)">
+              <select value={tiendaEditModal._zonalUserId||"__manual__"} onChange={e=>{
+                const uid=e.target.value;
+                if(uid==="__manual__"){setTiendaEditModal(p=>({...p,_zonalUserId:"__manual__"}));return;}
+                const u=usuarios.find(x=>x.id===uid);
+                if(u) setTiendaEditModal(p=>({...p,_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||p.emailJefeZonal}));
+              }} style={{...S.inp,padding:"10px 12px"}}>
+                <option value="__manual__">— Ingresar nombre manualmente —</option>
+                {usuarios.filter(u=>["coordinador","admin"].includes(u.rol)&&u.activo!==false).map(u=>(
+                  <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
                 ))}
               </select>
-            </div>
-            <div style={{display:"flex",gap:8}}>
+            </F>
+            <F label="NOMBRE JEFE ZONAL">
+              <input value={tiendaEditModal.jefeZonalNombre||""} onChange={e=>setTiendaEditModal(p=>({...p,jefeZonalNombre:e.target.value,_zonalUserId:"__manual__"}))}
+                placeholder="Apellido, Nombre" style={S.inp}/>
+            </F>
+            <F label="EMAIL JEFE ZONAL">
+              <input type="email" value={tiendaEditModal.emailJefeZonal||""} onChange={e=>setTiendaEditModal(p=>({...p,emailJefeZonal:e.target.value}))}
+                placeholder="apellido.n@corporacionvega.pe" style={S.inp}/>
+            </F>
+
+            {/* Sección: Ubicación */}
+            <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
+            <F label="DIRECCIÓN">
+              <input value={tiendaEditModal.dir||""} onChange={e=>setTiendaEditModal(p=>({...p,dir:e.target.value}))}
+                placeholder="Av. Principal 123" style={S.inp}/>
+            </F>
+            <F label="DISTRITO">
+              <input value={tiendaEditModal.dist||""} onChange={e=>setTiendaEditModal(p=>({...p,dist:e.target.value}))}
+                placeholder="Comas" style={S.inp}/>
+            </F>
+
+            {/* Horarios */}
+            <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
+            <F label="LUNES A JUEVES">
+              <input value={tiendaEditModal.horarioLunJue||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioLunJue:e.target.value}))}
+                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
+            </F>
+            <F label="VIERNES A SÁBADO">
+              <input value={tiendaEditModal.horarioVieSab||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioVieSab:e.target.value}))}
+                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
+            </F>
+            <F label="DOMINGOS">
+              <input value={tiendaEditModal.horarioDom||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioDom:e.target.value}))}
+                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
+            </F>
+
+            {/* Botones */}
+            <div style={{display:"flex",gap:8,marginTop:4}}>
               <button onClick={()=>{
+                const nombreFinal=(tiendaEditModal.n||"").trim().toUpperCase();
+                const gerenteFinal=toTitleCase(tiendaEditModal.gerenteTienda);
+                const zonalFinal=toTitleCase(tiendaEditModal.jefeZonalNombre);
+                // Actualizar también contactosTienda para mantener consistencia
+                const contactosActualizados=(tiendaEditModal.contactosTienda||[]).map(c=>{
+                  if(c.id==="gerente_tienda") return {...c,nombre:gerenteFinal,dni:tiendaEditModal.dniGerente||c.dni,celular:tiendaEditModal.celular||c.celular,email:tiendaEditModal.emailTienda||c.email};
+                  if(c.id==="jefe_zonal") return {...c,nombre:zonalFinal,email:tiendaEditModal.emailJefeZonal||c.email};
+                  return c;
+                });
+                // Si no existía contacto gerente, crearlo
+                if(!contactosActualizados.find(c=>c.id==="gerente_tienda")&&gerenteFinal){
+                  contactosActualizados.push({id:"gerente_tienda",tipo:"contacto_operativo",cargo:"Gerente de Tienda",nombre:gerenteFinal,dni:tiendaEditModal.dniGerente||"",celular:tiendaEditModal.celular||"",email:tiendaEditModal.emailTienda||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
+                }
+                if(!contactosActualizados.find(c=>c.id==="jefe_zonal")&&zonalFinal){
+                  contactosActualizados.push({id:"jefe_zonal",tipo:"contacto_operativo",cargo:"Jefe zonal",nombre:zonalFinal,email:tiendaEditModal.emailJefeZonal||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
+                }
                 setTiendas(p=>{
-                  const np=p.map(x=>x.id===tiendaEditModal.id?{...x,email:tiendaEditModal.email||"",whatsapp:tiendaEditModal.whatsapp||"",zonaId:tiendaEditModal.zonaId||""}:x);
+                  const np=p.map(x=>x.id!==tiendaEditModal.id?x:{
+                    ...x,
+                    n:nombreFinal,
+                    idTienda:tiendaEditModal.idTienda||x.idTienda,
+                    email:tiendaEditModal.emailTienda||tiendaEditModal.email||x.email,
+                    emailTienda:tiendaEditModal.emailTienda||x.emailTienda,
+                    gerenteTienda:gerenteFinal,
+                    dniGerente:tiendaEditModal.dniGerente||x.dniGerente||"",
+                    celular:tiendaEditModal.celular||x.celular||"",
+                    jefeZonalNombre:zonalFinal,
+                    emailJefeZonal:tiendaEditModal.emailJefeZonal||x.emailJefeZonal||"",
+                    usuarioZonalId:tiendaEditModal._zonalUserId&&tiendaEditModal._zonalUserId!=="__manual__"?tiendaEditModal._zonalUserId:(x.usuarioZonalId||null),
+                    dir:tiendaEditModal.dir||x.dir||"",
+                    dist:tiendaEditModal.dist||x.dist||"",
+                    horarioLunJue:tiendaEditModal.horarioLunJue||x.horarioLunJue||"",
+                    horarioVieSab:tiendaEditModal.horarioVieSab||x.horarioVieSab||"",
+                    horarioDom:tiendaEditModal.horarioDom||x.horarioDom||"",
+                    horario:{lunJue:tiendaEditModal.horarioLunJue||x.horarioLunJue||"",vieSab:tiendaEditModal.horarioVieSab||x.horarioVieSab||"",domingo:tiendaEditModal.horarioDom||x.horarioDom||""},
+                    contactosTienda:contactosActualizados,
+                    contactoTienda:contactosActualizados.find(c=>c.id==="gerente_tienda")||x.contactoTienda,
+                    editadoManualmente:true,editadoEn:new Date().toISOString(),
+                  });
                   saveConfig({tiendas:np});return np;
                 });
                 showToast("✅ Tienda actualizada");
                 setTiendaEditModal(null);
               }} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>
-                Guardar
+                Guardar cambios
               </button>
               <button onClick={()=>setTiendaEditModal(null)}
                 style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
                 Cancelar
               </button>
+            </div>
+
+            <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
+              <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. El gerente y jefe zonal se normalizan a Título (Primera Letra Mayúscula).</span>
             </div>
           </div>
         </div>
