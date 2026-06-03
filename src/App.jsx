@@ -6226,12 +6226,6 @@ function ChecklistApp() {
                   </svg>
                   Nueva
                 </button>
-                <button onClick={()=>setTpTab("carga")} style={tpTab==="carga"?PILL_ON:PILL_OFF}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="carga"?"#fff":"#6B7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Carga masiva
-                </button>
               </div>
 
               {/* ── subpestañas formato (solo en pestaña lista) ── */}
@@ -8052,24 +8046,20 @@ function ChecklistApp() {
 
             {/* Sección: Jefe zonal */}
             <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
-            <F label="SELECCIONAR ZONAL (usuarios coordinador/admin)">
+            <F label="ZONAL ASIGNADO">
               <select value={tiendaEditModal._zonalUserId||"__manual__"} onChange={e=>{
                 const uid=e.target.value;
-                if(uid==="__manual__"){setTiendaEditModal(p=>({...p,_zonalUserId:"__manual__"}));return;}
+                if(uid==="__manual__"){setTiendaEditModal(p=>({...p,_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""}));return;}
                 const u=usuarios.find(x=>x.id===uid);
-                if(u) setTiendaEditModal(p=>({...p,_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||p.emailJefeZonal}));
+                if(u) setTiendaEditModal(p=>({...p,_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""}));
               }} style={{...S.inp,padding:"10px 12px"}}>
-                <option value="__manual__">— Ingresar nombre manualmente —</option>
-                {usuarios.filter(u=>["coordinador","admin"].includes(u.rol)&&u.activo!==false).map(u=>(
-                  <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
+                <option value="__manual__">— Sin asignar —</option>
+                {usuarios.filter(u=>u.rol==="auditor"&&u.activo!==false).map(u=>(
+                  <option key={u.id} value={u.id}>{u.nombre}{u.zona?` · ${u.zona}`:""}</option>
                 ))}
               </select>
             </F>
-            <F label="NOMBRE JEFE ZONAL">
-              <input value={tiendaEditModal.jefeZonalNombre||""} onChange={e=>setTiendaEditModal(p=>({...p,jefeZonalNombre:e.target.value,_zonalUserId:"__manual__"}))}
-                placeholder="Apellido, Nombre" style={S.inp}/>
-            </F>
-            <F label="EMAIL JEFE ZONAL">
+            <F label="EMAIL ZONAL">
               <input type="email" value={tiendaEditModal.emailJefeZonal||""} onChange={e=>setTiendaEditModal(p=>({...p,emailJefeZonal:e.target.value}))}
                 placeholder="apellido.n@corporacionvega.pe" style={S.inp}/>
             </F>
