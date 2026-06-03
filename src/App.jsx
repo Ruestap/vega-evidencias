@@ -6294,6 +6294,19 @@ function ChecklistApp() {
                               style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                               {ti.activa?"Cerrar":"Activar"}
                             </button>
+                            {/* FIX_ELIMINAR_TIENDA_ADMIN_20260531 — solo admin puede eliminar físicamente una tienda */}
+                            {isAdmin&&(
+                              <button onClick={()=>{
+                                if(!window.confirm(`¿Eliminar permanentemente "Vega ${ti.n}"? Esta acción no se puede deshacer.`)) return;
+                                setTiendas(p=>{const np=p.filter(x=>x.id!==ti.id);saveConfig({tiendas:np});return np;});
+                                showToast(`🗑️ Vega ${ti.n} eliminada`);
+                              }}
+                                title="Eliminar tienda (solo admin)"
+                                style={{padding:"5px 10px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:3}}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                Eliminar
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
