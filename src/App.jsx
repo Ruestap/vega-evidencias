@@ -8058,10 +8058,10 @@ function ChecklistApp() {
         const toTitleCase=s=>String(s||"").replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
         const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
         return(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}}
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:90,padding:"16px",overflowY:"auto"}}
           onClick={()=>setTiendaEditModal(null)}>
           <div onClick={e=>e.stopPropagation()}
-            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",maxHeight:"92vh",overflowY:"auto"}}>
+            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"auto"}}>
 
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
