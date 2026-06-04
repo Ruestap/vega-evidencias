@@ -446,6 +446,44 @@ function mergeDirectorioTiendas(tiendasActuales, directorio=DIRECTORIO_TIENDAS_2
   return current;
 }
 
+// FIX_AUTONORM_TIENDAS_20260602 — normaliza tiendas sin idTienda cuyo nombre sucio matchea el directorio
+// Corre silenciosamente al cargar config. Solo toca n, idTienda y f — nunca borra registros.
+function autoNormalizeTiendasSucias(tiendas, directorio=DIRECTORIO_TIENDAS_2026){
+  const tokenes=s=>normalizeTxt(s).split(/\s+/).filter(w=>w.length>2);
+  const score=(a,b)=>{const ta=tokenes(a),tb=tokenes(b);const matches=ta.filter(w=>tb.includes(w));return matches.length/Math.max(ta.length,tb.length,1);};
+  let changed=false;
+  const result=tiendas.map(t=>{
+    if(t.idTienda||t.editadoManualmente) return t; // ya tiene ID o fue editado a mano
+    // buscar mejor match en directorio
+    let best=null,bestScore=0;
+    directorio.forEach(row=>{
+      if(!row.sucursal) return;
+      const s=score(t.n||"",compactStoreName(row.sucursal));
+      if(s>bestScore){bestScore=s;best=row;}
+    });
+    if(best&&bestScore>=0.5){ // ≥50% tokens coinciden → match confiable
+      changed=true;
+      const contactosTienda=buildContactosTiendaFromDirectorio(best);
+      const contactoPrincipal=contactosTienda.find(c=>c.id==="gerente_tienda")||null;
+      return{...t,
+        n:compactStoreName(best.sucursal),
+        idTienda:best.idTienda,
+        f:mapFormatoDirectorio(best.formato),
+        dir:best.direccion||t.dir||"",
+        dist:best.distrito||t.dist||"",
+        emailTienda:best.emailTienda||t.emailTienda||t.email||"",
+        email:best.emailTienda||t.email||"",
+        gerenteTienda:contactoPrincipal?.nombre||t.gerenteTienda||"",
+        contactosTienda,contactoTienda:contactoPrincipal,
+        jefeZonalNombre:contactosTienda.find(c=>c.id==="jefe_zonal")?.nombre||t.jefeZonalNombre||"",
+        autoNormalizado:true,autoNormalizadoEn:new Date().toISOString(),
+      };
+    }
+    return t;
+  });
+  return{result,changed};
+}
+
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS_N = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DIAS_C = ["D","L","M","MI","J","V","S"];
@@ -1042,7 +1080,15 @@ function ChecklistApp() {
       if(!snap.exists()) return;
       const d=snap.data();
       if(d.actividades) setActs(d.actividades);
-      if(d.tiendas)     setTiendas(d.tiendas);
+      if(d.tiendas){
+        // FIX_AUTONORM_TIENDAS_20260602 — corregir nombres sucios sin idTienda al cargar
+        const{result:tiendasNorm,changed}=autoNormalizeTiendasSucias(d.tiendas);
+        setTiendas(tiendasNorm);
+        if(changed){
+          // guardar silenciosamente la versión normalizada en Firestore
+          setDoc(doc(db,"config","app"),{...d,tiendas:tiendasNorm,updatedAt:new Date().toISOString()});
+        }
+      }
       if(d.pins)        setPins(d.pins);
       if(d.rangosDia)   setRangosDia(d.rangosDia);
       if(d.cortesSupervision) setCortesSupervision(d.cortesSupervision);
@@ -6284,7 +6330,24 @@ function ChecklistApp() {
                             </div>
                           </div>
                           <div style={{display:"flex",gap:6,flexShrink:0}}>
-                            <button onClick={()=>setTiendaEditModal({...ti})}
+                            <button onClick={()=>setTiendaEditModal({
+                              ...ti,
+                              n:ti.n||"",
+                              idTienda:ti.idTienda||"",
+                              emailTienda:ti.emailTienda||ti.email||"",
+                              email:ti.emailTienda||ti.email||"",
+                              gerenteTienda:ti.gerenteTienda||ti.contactoTienda?.nombre||"",
+                              dniGerente:ti.dniGerente||ti.contactoTienda?.dni||"",
+                              celular:ti.celular||ti.contactoTienda?.celular||"",
+                              jefeZonalNombre:ti.jefeZonalNombre||ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.nombre||"",
+                              emailJefeZonal:ti.emailJefeZonal||ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.email||"",
+                              _zonalUserId:ti.usuarioZonalId||"__manual__",
+                              dir:ti.dir||"",
+                              dist:ti.dist||"",
+                              horarioLunJue:ti.horarioLunJue||ti.horario?.lunJue||"",
+                              horarioVieSab:ti.horarioVieSab||ti.horario?.vieSab||"",
+                              horarioDom:ti.horarioDom||ti.horario?.domingo||"",
+                            })}
                               style={{padding:"5px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                               Editar
@@ -8054,8 +8117,8 @@ function ChecklistApp() {
                 if(u) setTiendaEditModal(p=>({...p,_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""}));
               }} style={{...S.inp,padding:"10px 12px"}}>
                 <option value="__manual__">— Sin asignar —</option>
-                {usuarios.filter(u=>u.rol==="auditor"&&u.activo!==false).map(u=>(
-                  <option key={u.id} value={u.id}>{u.nombre}{u.zona?` · ${u.zona}`:""}</option>
+                {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
+                  <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
                 ))}
               </select>
             </F>
