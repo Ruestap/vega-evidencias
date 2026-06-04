@@ -6330,6 +6330,8 @@ function ChecklistApp() {
                             </div>
                           </div>
                           <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            {/* Editar: admin siempre, coordinador solo si es el zonal asignado */}
+                            {(isAdmin||isCoord)&&(
                             <button onClick={()=>setTiendaEditModal({
                               ...ti,
                               n:ti.n||"",
@@ -6347,16 +6349,21 @@ function ChecklistApp() {
                               horarioLunJue:ti.horarioLunJue||ti.horario?.lunJue||"",
                               horarioVieSab:ti.horarioVieSab||ti.horario?.vieSab||"",
                               horarioDom:ti.horarioDom||ti.horario?.domingo||"",
+                              _readOnly: isCoord&&!isAdmin, // coordinador solo puede editar contactos
                             })}
                               style={{padding:"5px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                              Editar
+                              {isCoord&&!isAdmin?"Ver/Editar":"Editar"}
                             </button>
+                            )}
+                            {/* Cerrar/Activar: solo admin */}
+                            {isAdmin&&(
                             <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
                               style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                               {ti.activa?"Cerrar":"Activar"}
                             </button>
-                            {/* FIX_ELIMINAR_TIENDA_ADMIN_20260531 — solo admin puede eliminar físicamente una tienda */}
+                            )}
+                            {/* Eliminar: solo admin */}
                             {isAdmin&&(
                               <button onClick={()=>{
                                 if(!window.confirm(`¿Eliminar permanentemente "Vega ${ti.n}"? Esta acción no se puede deshacer.`)) return;
@@ -8058,10 +8065,8 @@ function ChecklistApp() {
         const toTitleCase=s=>String(s||"").replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
         const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
         return(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:90,padding:"16px",overflowY:"auto"}}
-          onClick={()=>setTiendaEditModal(null)}>
-          <div onClick={e=>e.stopPropagation()}
-            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"auto"}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:90,padding:"16px",overflowY:"auto"}}>
+          <div style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"auto"}}>
 
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
@@ -8074,13 +8079,14 @@ function ChecklistApp() {
             <div style={{display:"grid",gridTemplateColumns:"1fr 100px",gap:8,marginBottom:11}}>
               <div>
                 <label style={S.lbl}>NOMBRE DE TIENDA</label>
-                <input value={tiendaEditModal.n||""} onChange={e=>setTiendaEditModal(p=>({...p,n:e.target.value}))}
-                  placeholder="COLLIQUE" style={S.inp}/>
+                <input value={tiendaEditModal.n||""} onChange={e=>!tiendaEditModal._readOnly&&setTiendaEditModal(p=>({...p,n:e.target.value}))}
+                  readOnly={!!tiendaEditModal._readOnly}
+                  placeholder="COLLIQUE" style={{...S.inp,background:tiendaEditModal._readOnly?"#f0f4f8":"",color:tiendaEditModal._readOnly?"#8aaabb":""}}/>
               </div>
               <div>
                 <label style={S.lbl}>ID TIENDA</label>
-                <input value={tiendaEditModal.idTienda||""} onChange={e=>setTiendaEditModal(p=>({...p,idTienda:e.target.value.replace(/\D/g,"")}))}
-                  placeholder="20" style={S.inp}/>
+                <input value={tiendaEditModal.idTienda||""} readOnly
+                  style={{...S.inp,background:"#f0f4f8",color:"#8aaabb"}}/>
               </div>
             </div>
             <F label="EMAIL TIENDA">
