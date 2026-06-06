@@ -22,8 +22,8 @@ class AppErrorBoundary extends React.Component {
               Ocurrió un error inesperado. Por favor recarga la página.<br/>
               Si el error persiste, contacta al administrador.
             </div>
-            <div style={{fontSize:10,color:"#b2bec3",background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontFamily:"monospace",marginBottom:16,textAlign:"left",wordBreak:"break-all"}}>
-              {String(this.state.error?.message||this.state.error||"Unknown error")}
+            <div style={{fontSize:10,color:"#b2bec3",background:"#f8fafc",borderRadius:8,padding:"8px 12px",fontFamily:"monospace",marginBottom:16,textAlign:"center",wordBreak:"break-all"}}>
+              Código: RENDER_ERROR
             </div>
             <button onClick={()=>window.location.reload()}
               style={{padding:"12px 24px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
@@ -245,6 +245,62 @@ function getZonaIdTienda(t){
   return DISTRITO_ZONA[normalizeTxt(t?.dist||t?.Distrito||"")]||"";
 }
 function getZonaNombre(zid){return ZONAS_VEGA.find(z=>z.id===String(zid).padStart(2,"0"))?.nombre||"Sin zona";}
+
+// FIX_SECURITY_INPUT_HARDENING_20260606: normalizacion defensiva para campos editables y payloads Firestore.
+const SAFE_LIMITS={text:120,longText:260,email:120,phone:12,dni:8,horario:40};
+function stripControlChars(value){
+  return String(value??"").replace(/[\u0000-\u001F\u007F]/g,"");
+}
+function sanitizeTextInput(value,max=SAFE_LIMITS.text){
+  return stripControlChars(value).replace(/[<>`]/g,"").replace(/\s{2,}/g," ").slice(0,max);
+}
+function sanitizeEmailInput(value){
+  return stripControlChars(value).toLowerCase().replace(/\s+/g,"").replace(/[^a-z0-9._%+@-]/g,"").slice(0,SAFE_LIMITS.email);
+}
+function sanitizeDigits(value,max=12){
+  return String(value??"").replace(/\D/g,"").slice(0,max);
+}
+function sanitizeHorarioInput(value){
+  return stripControlChars(value).toUpperCase().replace(/[^0-9APM:\- A]/g,"").replace(/\s{2,}/g," ").slice(0,SAFE_LIMITS.horario);
+}
+function normalizeNameInput(value){
+  return sanitizeTextInput(value,SAFE_LIMITS.text).replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ,.'-]/g,"");
+}
+function toTitleCase(s){
+  return sanitizeTextInput(s,SAFE_LIMITS.text).toLowerCase().replace(/(^|\s|,|-)([a-záéíóúüñ])/g,(m,p,c)=>p+c.toUpperCase()).trim();
+}
+function isValidCorpEmail(value){
+  const email=sanitizeEmailInput(value);
+  return !email || /^[a-z0-9._%+-]+@corporacionvega\.pe$/.test(email);
+}
+function cleanStoreEditDraft(draft){
+  return {
+    ...draft,
+    n:sanitizeTextInput(draft?.n,80),
+    idTienda:sanitizeDigits(draft?.idTienda,6),
+    emailTienda:sanitizeEmailInput(draft?.emailTienda||draft?.email),
+    email:sanitizeEmailInput(draft?.emailTienda||draft?.email),
+    gerenteTienda:normalizeNameInput(draft?.gerenteTienda),
+    dniGerente:sanitizeDigits(draft?.dniGerente,SAFE_LIMITS.dni),
+    celular:sanitizeDigits(draft?.celular,SAFE_LIMITS.phone),
+    jefeZonalNombre:normalizeNameInput(draft?.jefeZonalNombre),
+    emailJefeZonal:sanitizeEmailInput(draft?.emailJefeZonal),
+    dir:sanitizeTextInput(draft?.dir,SAFE_LIMITS.longText),
+    dist:sanitizeTextInput(draft?.dist,80),
+    horarioLunJue:sanitizeHorarioInput(draft?.horarioLunJue),
+    horarioVieSab:sanitizeHorarioInput(draft?.horarioVieSab),
+    horarioDom:sanitizeHorarioInput(draft?.horarioDom),
+  };
+}
+function validateStoreEditDraft(draft){
+  const d=cleanStoreEditDraft(draft);
+  if(!d.n) return {ok:false,msg:"Ingresa el nombre de tienda."};
+  if(d.emailTienda&&!isValidCorpEmail(d.emailTienda)) return {ok:false,msg:"El email de tienda debe ser corporativo: @corporacionvega.pe"};
+  if(d.emailJefeZonal&&!isValidCorpEmail(d.emailJefeZonal)) return {ok:false,msg:"El email zonal debe ser corporativo: @corporacionvega.pe"};
+  if(d.dniGerente&&d.dniGerente.length!==8) return {ok:false,msg:"El DNI del gerente debe tener 8 dígitos."};
+  if(d.celular&&d.celular.length<9) return {ok:false,msg:"El celular del gerente debe tener al menos 9 dígitos."};
+  return {ok:true,draft:d};
+}
 function getRouteMetaFromTiendas(lista){
   const zonas=[...new Set((lista||[]).map(getZonaIdTienda).filter(Boolean))];
   const distritos=[...new Set((lista||[]).map(t=>t.dist).filter(Boolean))].sort();
@@ -821,7 +877,7 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
       // Filtrar las evidencias que NO están seleccionadas
       const newEvs = reg.evidencias.filter((_, i) => !evIdxs.includes(i));
       if(newEvs.length === 0) {
-        return deleteDoc(doc(db, "registros", docId));
+        return setDoc(doc(db, "registros", docId), {...reg, evidencias: [], activo:false, deletedAt:new Date().toISOString(), deletedBy:"admin_ui", deleteReason:"seleccion_masiva"});
       } else {
         return setDoc(doc(db, "registros", docId), {...reg, evidencias: newEvs, updatedAt: new Date().toISOString()});
       }
@@ -883,6 +939,113 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
           </tbody>
         </table>
         {filtered.length>200&&<div style={{fontSize:10,color:"#8aaabb",textAlign:"center",padding:10}}>Mostrando 200 de {filtered.length}</div>}
+      </div>
+    </div>
+  );
+}
+
+
+function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
+  const [draft,setDraft]=useState(()=>cleanStoreEditDraft(initial||{}));
+  const [error,setError]=useState("");
+  useEffect(()=>{setDraft(cleanStoreEditDraft(initial||{}));setError("");},[initial]);
+  const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
+  const patch=(obj)=>setDraft(p=>cleanStoreEditDraft({...p,...obj}));
+  const inputStyle=(extra={})=>({...S.inp,...extra});
+  const guardar=()=>{
+    const v=validateStoreEditDraft(draft);
+    if(!v.ok){setError(v.msg);return;}
+    setError("");
+    onSave(v.draft);
+  };
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+      onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:"#fff",borderRadius:18,width:"100%",maxWidth:760,maxHeight:"90vh",overflowY:"auto",padding:22,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
+          </div>
+          <button onClick={onClose} style={{border:"none",background:"none",cursor:"pointer",color:"#8aaabb",fontSize:18,lineHeight:1}}>✕</button>
+        </div>
+        {error&&<div style={{padding:"9px 12px",borderRadius:10,background:"#fff1f2",border:"1px solid #fecaca",color:"#dc2626",fontSize:12,fontWeight:700,marginBottom:12}}>{error}</div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 150px",gap:10,marginBottom:11}}>
+          <div>
+            <label style={S.lbl}>NOMBRE TIENDA</label>
+            <input value={draft.n||""} onChange={e=>!draft._readOnly&&patch({n:e.target.value})}
+              readOnly={!!draft._readOnly} placeholder="COLLIQUE"
+              autoComplete="off" spellCheck={false}
+              style={inputStyle({background:draft._readOnly?"#f0f4f8":"#f8fafc",color:draft._readOnly?"#8aaabb":"#1a2f4a"})}/>
+          </div>
+          <div>
+            <label style={S.lbl}>ID TIENDA</label>
+            <input value={draft.idTienda||""} readOnly style={inputStyle({background:"#f0f4f8",color:"#8aaabb"})}/>
+          </div>
+        </div>
+        <F label="EMAIL TIENDA">
+          <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
+            placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
+        </F>
+        <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
+        <F label="NOMBRE GERENTE">
+          <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
+            placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={S.inp}/>
+        </F>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+          <div>
+            <label style={S.lbl}>DNI GERENTE</label>
+            <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:e.target.value})}
+              placeholder="12345678" inputMode="numeric" autoComplete="off" style={S.inp}/>
+          </div>
+          <div>
+            <label style={S.lbl}>CELULAR GERENTE</label>
+            <input value={draft.celular||""} onChange={e=>patch({celular:e.target.value})}
+              placeholder="987654321" inputMode="tel" autoComplete="off" style={S.inp}/>
+          </div>
+        </div>
+        <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
+        <F label="ZONAL ASIGNADO">
+          <select value={draft._zonalUserId||"__manual__"} onChange={e=>{
+            const uid=e.target.value;
+            if(uid==="__manual__"){patch({_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""});return;}
+            const u=usuarios.find(x=>x.id===uid);
+            if(u) patch({_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""});
+          }} style={{...S.inp,padding:"10px 12px"}}>
+            <option value="__manual__">— Sin asignar —</option>
+            {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
+              <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
+            ))}
+          </select>
+        </F>
+        <F label="EMAIL ZONAL">
+          <input type="email" value={draft.emailJefeZonal||""} onChange={e=>patch({emailJefeZonal:e.target.value})}
+            placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
+        </F>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
+        <F label="DIRECCIÓN">
+          <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={S.inp}/>
+        </F>
+        <F label="DISTRITO">
+          <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={S.inp}/>
+        </F>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
+        <F label="LUNES A JUEVES">
+          <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+        </F>
+        <F label="VIERNES A SÁBADO">
+          <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+        </F>
+        <F label="DOMINGOS">
+          <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+        </F>
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button onClick={guardar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar cambios</button>
+          <button onClick={onClose} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
+        </div>
+        <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
+          <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar.</span>
+        </div>
       </div>
     </div>
   );
@@ -1790,8 +1953,8 @@ function ChecklistApp() {
 
   const eliminarRegistro = async (docId) => {
     try {
-      await deleteDoc(doc(db,"registros",docId));
-      showToast("🗑️ Registro eliminado");
+      await setDoc(doc(db,"registros",docId), {...(regs[docId]||{}), evidencias: [], activo:false, deletedAt:new Date().toISOString(), deletedBy:uDni||uName||"admin_ui", deleteReason:"eliminacion_manual"});
+      showToast("🗑️ Registro eliminado con trazabilidad");
     } catch(e) {
       console.error("eliminarRegistro error:", e?.code||e?.message||"unknown");
       showToast("❌ Error al eliminar. Verifica tu conexión.");
@@ -6576,7 +6739,7 @@ function ChecklistApp() {
                               </button>
                               {isAdmin&&<button onClick={async()=>{
                                 if(!window.confirm(`¿Eliminar auditoría de Vega ${tiendas.find(t=>t.id===a.tiendaId)?.n||a.tiendaNombre} del ${a.fecha}?`)) return;
-                                try{await deleteDoc(doc(db,"auditorias",a.id));if(auditDetalle?.id===a.id)setAuditDetalle(null);showToast("🗑️ Auditoría eliminada");}
+                                try{await setDoc(doc(db,"auditorias",a.id), {...a, activo:false, estado:"anulada", deletedAt:new Date().toISOString(), deletedBy:uDni||uName||"admin_ui"});if(auditDetalle?.id===a.id)setAuditDetalle(null);showToast("🗑️ Auditoría anulada con trazabilidad");}
                                 catch(e){showToast("❌ Error al eliminar");}
                               }} style={{padding:"3px 8px",borderRadius:8,border:"none",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700}}>🗑️</button>}
                             </div>
@@ -8060,169 +8223,60 @@ function ChecklistApp() {
       )}
 
       {/* MODAL EDITAR TIENDA */}
-      {tiendaEditModal&&(()=>{
-        // FIX_TIENDA_EDIT_COMPLETO_20260602 — campos completos: nombre, ID, contactos, zonal, horarios
-        const toTitleCase=s=>String(s||"").replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
-        const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
-        return(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:90,padding:"16px",overflowY:"auto"}}
-          onMouseDown={e=>{if(e.target===e.currentTarget)setTiendaEditModal(null);}}>
-          <div onMouseDown={e=>e.stopPropagation()}
-            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:500,boxShadow:"0 8px 40px rgba(0,0,0,.25)",margin:"auto"}}>
-
-            {/* Header */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-              <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a"}}>Editar tienda</div>
-              <button onClick={()=>setTiendaEditModal(null)} style={{border:"none",background:"none",cursor:"pointer",color:"#8aaabb",fontSize:18,lineHeight:1}}>✕</button>
-            </div>
-
-            {/* Sección: Identificación */}
-            <div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",letterSpacing:".06em",marginBottom:8}}>IDENTIFICACIÓN</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 100px",gap:8,marginBottom:11}}>
-              <div>
-                <label style={S.lbl}>NOMBRE DE TIENDA</label>
-                <input value={tiendaEditModal.n||""} onChange={e=>!tiendaEditModal._readOnly&&setTiendaEditModal(p=>({...p,n:e.target.value}))}
-                  readOnly={!!tiendaEditModal._readOnly}
-                  placeholder="COLLIQUE" style={{...S.inp,background:tiendaEditModal._readOnly?"#f0f4f8":"",color:tiendaEditModal._readOnly?"#8aaabb":""}}/>
-              </div>
-              <div>
-                <label style={S.lbl}>ID TIENDA</label>
-                <input value={tiendaEditModal.idTienda||""} readOnly
-                  style={{...S.inp,background:"#f0f4f8",color:"#8aaabb"}}/>
-              </div>
-            </div>
-            <F label="EMAIL TIENDA">
-              <input type="email" value={tiendaEditModal.emailTienda||tiendaEditModal.email||""} onChange={e=>setTiendaEditModal(p=>({...p,emailTienda:e.target.value,email:e.target.value}))}
-                placeholder="tiendasmcollique@corporacionvega.pe" style={S.inp}/>
-            </F>
-
-            {/* Sección: Gerente de tienda */}
-            <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
-            <F label="NOMBRE GERENTE">
-              <input value={tiendaEditModal.gerenteTienda||""} onChange={e=>setTiendaEditModal(p=>({...p,gerenteTienda:e.target.value}))}
-                placeholder="APELLIDO APELLIDO, Nombre" style={S.inp}/>
-            </F>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
-              <div>
-                <label style={S.lbl}>DNI GERENTE</label>
-                <input value={tiendaEditModal.dniGerente||""} onChange={e=>setTiendaEditModal(p=>({...p,dniGerente:e.target.value.replace(/\D/g,"").slice(0,8)}))}
-                  placeholder="12345678" style={S.inp}/>
-              </div>
-              <div>
-                <label style={S.lbl}>CELULAR GERENTE</label>
-                <input value={tiendaEditModal.celular||""} onChange={e=>setTiendaEditModal(p=>({...p,celular:e.target.value.replace(/\D/g,"").slice(0,12)}))}
-                  placeholder="987654321" style={S.inp}/>
-              </div>
-            </div>
-
-            {/* Sección: Jefe zonal */}
-            <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
-            <F label="ZONAL ASIGNADO">
-              <select value={tiendaEditModal._zonalUserId||"__manual__"} onChange={e=>{
-                const uid=e.target.value;
-                if(uid==="__manual__"){setTiendaEditModal(p=>({...p,_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""}));return;}
-                const u=usuarios.find(x=>x.id===uid);
-                if(u) setTiendaEditModal(p=>({...p,_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""}));
-              }} style={{...S.inp,padding:"10px 12px"}}>
-                <option value="__manual__">— Sin asignar —</option>
-                {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
-                  <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
-                ))}
-              </select>
-            </F>
-            <F label="EMAIL ZONAL">
-              <input type="email" value={tiendaEditModal.emailJefeZonal||""} onChange={e=>setTiendaEditModal(p=>({...p,emailJefeZonal:e.target.value}))}
-                placeholder="apellido.n@corporacionvega.pe" style={S.inp}/>
-            </F>
-
-            {/* Sección: Ubicación */}
-            <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
-            <F label="DIRECCIÓN">
-              <input value={tiendaEditModal.dir||""} onChange={e=>setTiendaEditModal(p=>({...p,dir:e.target.value}))}
-                placeholder="Av. Principal 123" style={S.inp}/>
-            </F>
-            <F label="DISTRITO">
-              <input value={tiendaEditModal.dist||""} onChange={e=>setTiendaEditModal(p=>({...p,dist:e.target.value}))}
-                placeholder="Comas" style={S.inp}/>
-            </F>
-
-            {/* Horarios */}
-            <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
-            <F label="LUNES A JUEVES">
-              <input value={tiendaEditModal.horarioLunJue||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioLunJue:e.target.value}))}
-                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
-            </F>
-            <F label="VIERNES A SÁBADO">
-              <input value={tiendaEditModal.horarioVieSab||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioVieSab:e.target.value}))}
-                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
-            </F>
-            <F label="DOMINGOS">
-              <input value={tiendaEditModal.horarioDom||""} onChange={e=>setTiendaEditModal(p=>({...p,horarioDom:e.target.value}))}
-                placeholder="7:00 AM A 9:00 PM" style={S.inp}/>
-            </F>
-
-            {/* Botones */}
-            <div style={{display:"flex",gap:8,marginTop:4}}>
-              <button onClick={()=>{
-                const nombreFinal=(tiendaEditModal.n||"").trim().toUpperCase();
-                const gerenteFinal=toTitleCase(tiendaEditModal.gerenteTienda);
-                const zonalFinal=toTitleCase(tiendaEditModal.jefeZonalNombre);
-                // Actualizar también contactosTienda para mantener consistencia
-                const contactosActualizados=(tiendaEditModal.contactosTienda||[]).map(c=>{
-                  if(c.id==="gerente_tienda") return {...c,nombre:gerenteFinal,dni:tiendaEditModal.dniGerente||c.dni,celular:tiendaEditModal.celular||c.celular,email:tiendaEditModal.emailTienda||c.email};
-                  if(c.id==="jefe_zonal") return {...c,nombre:zonalFinal,email:tiendaEditModal.emailJefeZonal||c.email};
-                  return c;
-                });
-                // Si no existía contacto gerente, crearlo
-                if(!contactosActualizados.find(c=>c.id==="gerente_tienda")&&gerenteFinal){
-                  contactosActualizados.push({id:"gerente_tienda",tipo:"contacto_operativo",cargo:"Gerente de Tienda",nombre:gerenteFinal,dni:tiendaEditModal.dniGerente||"",celular:tiendaEditModal.celular||"",email:tiendaEditModal.emailTienda||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
-                }
-                if(!contactosActualizados.find(c=>c.id==="jefe_zonal")&&zonalFinal){
-                  contactosActualizados.push({id:"jefe_zonal",tipo:"contacto_operativo",cargo:"Jefe zonal",nombre:zonalFinal,email:tiendaEditModal.emailJefeZonal||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
-                }
-                setTiendas(p=>{
-                  const np=p.map(x=>x.id!==tiendaEditModal.id?x:{
-                    ...x,
-                    n:nombreFinal,
-                    idTienda:tiendaEditModal.idTienda||x.idTienda,
-                    email:tiendaEditModal.emailTienda||tiendaEditModal.email||x.email,
-                    emailTienda:tiendaEditModal.emailTienda||x.emailTienda,
-                    gerenteTienda:gerenteFinal,
-                    dniGerente:tiendaEditModal.dniGerente||x.dniGerente||"",
-                    celular:tiendaEditModal.celular||x.celular||"",
-                    jefeZonalNombre:zonalFinal,
-                    emailJefeZonal:tiendaEditModal.emailJefeZonal||x.emailJefeZonal||"",
-                    usuarioZonalId:tiendaEditModal._zonalUserId&&tiendaEditModal._zonalUserId!=="__manual__"?tiendaEditModal._zonalUserId:(x.usuarioZonalId||null),
-                    dir:tiendaEditModal.dir||x.dir||"",
-                    dist:tiendaEditModal.dist||x.dist||"",
-                    horarioLunJue:tiendaEditModal.horarioLunJue||x.horarioLunJue||"",
-                    horarioVieSab:tiendaEditModal.horarioVieSab||x.horarioVieSab||"",
-                    horarioDom:tiendaEditModal.horarioDom||x.horarioDom||"",
-                    horario:{lunJue:tiendaEditModal.horarioLunJue||x.horarioLunJue||"",vieSab:tiendaEditModal.horarioVieSab||x.horarioVieSab||"",domingo:tiendaEditModal.horarioDom||x.horarioDom||""},
-                    contactosTienda:contactosActualizados,
-                    contactoTienda:contactosActualizados.find(c=>c.id==="gerente_tienda")||x.contactoTienda,
-                    editadoManualmente:true,editadoEn:new Date().toISOString(),
-                  });
-                  saveConfig({tiendas:np});return np;
-                });
-                showToast("✅ Tienda actualizada");
-                setTiendaEditModal(null);
-              }} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>
-                Guardar cambios
-              </button>
-              <button onClick={()=>setTiendaEditModal(null)}
-                style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
-                Cancelar
-              </button>
-            </div>
-
-            <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
-              <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. El gerente y jefe zonal se normalizan a Título (Primera Letra Mayúscula).</span>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
+      {tiendaEditModal&&(
+        <TiendaEditModal
+          initial={tiendaEditModal}
+          usuarios={usuarios}
+          S={S}
+          onClose={()=>setTiendaEditModal(null)}
+          onSave={(draft)=>{
+            // FIX_TIENDA_EDIT_LOCAL_DRAFT_20260606: el modal escribe localmente para evitar lag por render global.
+            // FIX_SECURITY_INPUT_HARDENING_20260606: payload limpio y validado antes de Firestore.
+            const clean=cleanStoreEditDraft(draft);
+            const nombreFinal=(clean.n||"").trim().toUpperCase();
+            const gerenteFinal=toTitleCase(clean.gerenteTienda);
+            const zonalFinal=toTitleCase(clean.jefeZonalNombre);
+            const contactosActualizados=(clean.contactosTienda||[]).map(c=>{
+              if(c.id==="gerente_tienda") return {...c,nombre:gerenteFinal,dni:clean.dniGerente||c.dni,celular:clean.celular||c.celular,email:clean.emailTienda||c.email,accesoApp:false};
+              if(c.id==="jefe_zonal") return {...c,nombre:zonalFinal,email:clean.emailJefeZonal||c.email,accesoApp:false};
+              return c;
+            });
+            if(!contactosActualizados.find(c=>c.id==="gerente_tienda")&&gerenteFinal){
+              contactosActualizados.push({id:"gerente_tienda",tipo:"contacto_operativo",cargo:"Gerente de Tienda",nombre:gerenteFinal,dni:clean.dniGerente||"",celular:clean.celular||"",email:clean.emailTienda||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
+            }
+            if(!contactosActualizados.find(c=>c.id==="jefe_zonal")&&zonalFinal){
+              contactosActualizados.push({id:"jefe_zonal",tipo:"contacto_operativo",cargo:"Jefe zonal",nombre:zonalFinal,email:clean.emailJefeZonal||"",accesoApp:false,usuarioId:null,activo:true,fuente:"edicion_manual"});
+            }
+            setTiendas(p=>{
+              const np=p.map(x=>x.id!==clean.id?x:{
+                ...x,
+                n:nombreFinal,
+                idTienda:clean.idTienda||x.idTienda,
+                email:clean.emailTienda||clean.email||x.email,
+                emailTienda:clean.emailTienda||x.emailTienda,
+                gerenteTienda:gerenteFinal,
+                dniGerente:clean.dniGerente||x.dniGerente||"",
+                celular:clean.celular||x.celular||"",
+                jefeZonalNombre:zonalFinal,
+                emailJefeZonal:clean.emailJefeZonal||x.emailJefeZonal||"",
+                usuarioZonalId:clean._zonalUserId&&clean._zonalUserId!=="__manual__"?clean._zonalUserId:(x.usuarioZonalId||null),
+                dir:clean.dir||x.dir||"",
+                dist:clean.dist||x.dist||"",
+                horarioLunJue:clean.horarioLunJue||x.horarioLunJue||"",
+                horarioVieSab:clean.horarioVieSab||x.horarioVieSab||"",
+                horarioDom:clean.horarioDom||x.horarioDom||"",
+                horario:{lunJue:clean.horarioLunJue||x.horarioLunJue||"",vieSab:clean.horarioVieSab||x.horarioVieSab||"",domingo:clean.horarioDom||x.horarioDom||""},
+                contactosTienda:contactosActualizados,
+                contactoTienda:contactosActualizados.find(c=>c.id==="gerente_tienda")||x.contactoTienda,
+                editadoManualmente:true,editadoEn:new Date().toISOString(),
+              });
+              saveConfig({tiendas:np});return np;
+            });
+            showToast("✅ Tienda actualizada");
+            setTiendaEditModal(null);
+          }}
+        />
+      )}
 
       {/* MODAL WHATSAPP */}
       {waModal&&(
