@@ -945,18 +945,12 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 }
 
 
-// FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606: componente estable fuera del modal; evita remount y perdida de foco en cada tecla.
-function TiendaEditField({S,label,children}){
-  return <div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>;
-}
-
 function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   const [draft,setDraft]=useState(()=>cleanStoreEditDraft(initial||{}));
   const [error,setError]=useState("");
   useEffect(()=>{setDraft(cleanStoreEditDraft(initial||{}));setError("");},[initial]);
-  // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
-  // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
-  const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
+  const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
+  const patch=(obj)=>setDraft(p=>cleanStoreEditDraft({...p,...obj}));
   const inputStyle=(extra={})=>({...S.inp,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
@@ -989,29 +983,29 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             <input value={draft.idTienda||""} readOnly style={inputStyle({background:"#f0f4f8",color:"#8aaabb"})}/>
           </div>
         </div>
-        <TiendaEditField S={S} label="EMAIL TIENDA">
+        <F label="EMAIL TIENDA">
           <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
             placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
+        </F>
         <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
-        <TiendaEditField S={S} label="NOMBRE GERENTE">
+        <F label="NOMBRE GERENTE">
           <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
             placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
+        </F>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
           <div>
             <label style={S.lbl}>DNI GERENTE</label>
-            <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:sanitizeDigits(e.target.value,SAFE_LIMITS.dni)})}
+            <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:e.target.value})}
               placeholder="12345678" inputMode="numeric" autoComplete="off" style={S.inp}/>
           </div>
           <div>
             <label style={S.lbl}>CELULAR GERENTE</label>
-            <input value={draft.celular||""} onChange={e=>patch({celular:sanitizeDigits(e.target.value,SAFE_LIMITS.phone)})}
+            <input value={draft.celular||""} onChange={e=>patch({celular:e.target.value})}
               placeholder="987654321" inputMode="tel" autoComplete="off" style={S.inp}/>
           </div>
         </div>
         <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
-        <TiendaEditField S={S} label="ZONAL ASIGNADO">
+        <F label="ZONAL ASIGNADO">
           <select value={draft._zonalUserId||"__manual__"} onChange={e=>{
             const uid=e.target.value;
             if(uid==="__manual__"){patch({_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""});return;}
@@ -1023,34 +1017,34 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
               <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
             ))}
           </select>
-        </TiendaEditField>
-        <TiendaEditField S={S} label="EMAIL ZONAL">
+        </F>
+        <F label="EMAIL ZONAL">
           <input type="email" value={draft.emailJefeZonal||""} onChange={e=>patch({emailJefeZonal:e.target.value})}
             placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
+        </F>
         <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
-        <TiendaEditField S={S} label="DIRECCIÓN">
+        <F label="DIRECCIÓN">
           <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
-        <TiendaEditField S={S} label="DISTRITO">
+        </F>
+        <F label="DISTRITO">
           <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
+        </F>
         <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
-        <TiendaEditField S={S} label="LUNES A JUEVES">
+        <F label="LUNES A JUEVES">
           <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
-        <TiendaEditField S={S} label="VIERNES A SÁBADO">
+        </F>
+        <F label="VIERNES A SÁBADO">
           <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
-        <TiendaEditField S={S} label="DOMINGOS">
+        </F>
+        <F label="DOMINGOS">
           <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </TiendaEditField>
+        </F>
         <div style={{display:"flex",gap:8,marginTop:4}}>
           <button onClick={guardar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar cambios</button>
           <button onClick={onClose} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
         </div>
         <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
-          <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar. FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606</span>
+          <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar.</span>
         </div>
       </div>
     </div>
