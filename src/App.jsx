@@ -945,12 +945,18 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 }
 
 
+// FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606: componente estable fuera del modal; evita remount y perdida de foco en cada tecla.
+function TiendaEditField({S,label,children}){
+  return <div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>;
+}
+
 function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   const [draft,setDraft]=useState(()=>cleanStoreEditDraft(initial||{}));
   const [error,setError]=useState("");
   useEffect(()=>{setDraft(cleanStoreEditDraft(initial||{}));setError("");},[initial]);
-  const F=({label,children})=>(<div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>);
-  const patch=(obj)=>setDraft(p=>cleanStoreEditDraft({...p,...obj}));
+  // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
+  // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
+  const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
   const inputStyle=(extra={})=>({...S.inp,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
@@ -983,29 +989,29 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             <input value={draft.idTienda||""} readOnly style={inputStyle({background:"#f0f4f8",color:"#8aaabb"})}/>
           </div>
         </div>
-        <F label="EMAIL TIENDA">
+        <TiendaEditField S={S} label="EMAIL TIENDA">
           <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
             placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
-        </F>
+        </TiendaEditField>
         <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
-        <F label="NOMBRE GERENTE">
+        <TiendaEditField S={S} label="NOMBRE GERENTE">
           <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
             placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={S.inp}/>
-        </F>
+        </TiendaEditField>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
           <div>
             <label style={S.lbl}>DNI GERENTE</label>
-            <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:e.target.value})}
+            <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:sanitizeDigits(e.target.value,SAFE_LIMITS.dni)})}
               placeholder="12345678" inputMode="numeric" autoComplete="off" style={S.inp}/>
           </div>
           <div>
             <label style={S.lbl}>CELULAR GERENTE</label>
-            <input value={draft.celular||""} onChange={e=>patch({celular:e.target.value})}
+            <input value={draft.celular||""} onChange={e=>patch({celular:sanitizeDigits(e.target.value,SAFE_LIMITS.phone)})}
               placeholder="987654321" inputMode="tel" autoComplete="off" style={S.inp}/>
           </div>
         </div>
         <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
-        <F label="ZONAL ASIGNADO">
+        <TiendaEditField S={S} label="ZONAL ASIGNADO">
           <select value={draft._zonalUserId||"__manual__"} onChange={e=>{
             const uid=e.target.value;
             if(uid==="__manual__"){patch({_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""});return;}
@@ -1017,34 +1023,34 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
               <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
             ))}
           </select>
-        </F>
-        <F label="EMAIL ZONAL">
+        </TiendaEditField>
+        <TiendaEditField S={S} label="EMAIL ZONAL">
           <input type="email" value={draft.emailJefeZonal||""} onChange={e=>patch({emailJefeZonal:e.target.value})}
             placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
-        </F>
+        </TiendaEditField>
         <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
-        <F label="DIRECCIÓN">
+        <TiendaEditField S={S} label="DIRECCIÓN">
           <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={S.inp}/>
-        </F>
-        <F label="DISTRITO">
+        </TiendaEditField>
+        <TiendaEditField S={S} label="DISTRITO">
           <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={S.inp}/>
-        </F>
+        </TiendaEditField>
         <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
-        <F label="LUNES A JUEVES">
+        <TiendaEditField S={S} label="LUNES A JUEVES">
           <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </F>
-        <F label="VIERNES A SÁBADO">
+        </TiendaEditField>
+        <TiendaEditField S={S} label="VIERNES A SÁBADO">
           <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </F>
-        <F label="DOMINGOS">
+        </TiendaEditField>
+        <TiendaEditField S={S} label="DOMINGOS">
           <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
-        </F>
+        </TiendaEditField>
         <div style={{display:"flex",gap:8,marginTop:4}}>
           <button onClick={guardar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar cambios</button>
           <button onClick={onClose} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
         </div>
         <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
-          <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar.</span>
+          <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar. FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606</span>
         </div>
       </div>
     </div>
@@ -1097,6 +1103,11 @@ function ChecklistApp() {
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
   /* ── auditoría config ── */
   const [audCfgTab,  setAudCfgTab]  = useState("score");
+  // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
+  const [odtSubTab,  setOdtSubTab]  = useState("reporte"); // "nueva"|"reporte"|"dashboard"
+  const [odtDashLvl, setOdtDashLvl] = useState("direccion"); // "direccion"|"gerencia"|"operativo"
+  const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"Material POP",desc:"",fechaInicio:"",fechaEntrega:"",disenador:""});
+  const [odtFormDraft, setOdtFormDraft] = useState({}); // draft local para evitar re-renders en inputs
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
   const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});
@@ -5166,9 +5177,13 @@ function ChecklistApp() {
             <line x1="12" y1="17" x2="12" y2="21" stroke={active?"#fff":"#94A3B8"} strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         );
+        const IcoDiseñoCfg=({active})=>(
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active?"#fff":"#94A3B8"} strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        );
         const MODS=[
           {id:"evidencias", label:"Evidencias", Ico:IcoEvCfg},
           {id:"auditoria",  label:"Auditoría",  Ico:IcoAudCfg},
+          {id:"diseno",     label:"Diseño",     Ico:IcoDiseñoCfg},
         ];
         const TAB_PILL_A={padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
         const TAB_PILL_I={padding:"9px 20px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
@@ -5861,6 +5876,130 @@ function ChecklistApp() {
                       );
                     })()}
 
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── PASO 2c: Diseño/ODT — Configuración ── FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 */}
+            {cfgMod==="diseno"&&(()=>{
+              const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
+              const TIPOS_TRABAJO=[
+                {id:"pop",   label:"Material POP",      hh:3,  color:"#e17055", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>},
+                {id:"cat",   label:"Catálogo",           hh:8,  color:"#f6a623", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>},
+                {id:"dig",   label:"Digital / RRSS",    hh:2,  color:"#6C6EF5", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>},
+                {id:"vol",   label:"Volante / Afiche",  hh:2.5,color:"#0984e3", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>},
+                {id:"prec",  label:"Marcador Precio",   hh:1.5,color:"#00b5b4", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>},
+                {id:"gond",  label:"Góndola / Exhibidor",hh:4, color:"#607d9d", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M3 10h18"/><path d="M5 10l2-6h10l2 6"/><path d="M6 10v10M18 10v10M4 20h16"/></svg>},
+                {id:"crea",  label:"Creativo (brief)",  hh:10, color:"#6C6EF5", svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M12 2l2.9 6.1 6.7.9-4.8 4.7 1.1 6.6L12 17.2 6.1 20.3l1.1-6.6L2.4 9l6.7-.9z"/></svg>},
+              ];
+              const S2={padding:"12px 16px",background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",marginBottom:14};
+              const secTitle={display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12};
+              return(
+                <div style={{paddingTop:16}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                    {/* Columna izquierda: Equipo */}
+                    <div style={S2}>
+                      <div style={secTitle}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                        Equipo de diseño
+                      </div>
+                      <div style={{fontSize:10,color:"#8aaabb",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        Usuarios con rol <b style={{color:"#6C6EF5",marginLeft:3}}>Ejecutor</b> y cargo <b style={{color:"#6C6EF5",marginLeft:3}}>Diseñador</b>
+                      </div>
+                      {disenadores.length===0&&(
+                        <div style={{textAlign:"center",padding:"20px 0",color:"#b2bec3",fontSize:12}}>
+                          Sin diseñadores asignados.<br/>Crea usuarios con rol Ejecutor y cargo Diseñador.
+                        </div>
+                      )}
+                      {disenadores.map(u=>(
+                        <div key={u.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,border:"1px solid #E2E8F0",background:"#f8fafc",borderRadius:12,padding:10,marginBottom:9}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"white",flexShrink:0}}>
+                              {(u.nombre||"?").slice(0,2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{u.nombre||u.id}</div>
+                              <div style={{fontSize:10,color:"#8aaabb",marginTop:1}}>DNI ···{String(u.id||"").slice(-3)} · {u.email||""}</div>
+                            </div>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <select style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:11,color:"#1a2f4a",background:"white"}}>
+                              <option>Team Diseño</option><option>Freelance</option>
+                            </select>
+                            <span style={{padding:"3px 10px",background:"rgba(108,110,245,.12)",color:"#6C6EF5",borderRadius:20,fontSize:11,fontWeight:800}}>40h/sem</span>
+                          </div>
+                        </div>
+                      ))}
+                      {/* Freelance excepcional — sin crear usuario */}
+                      <div style={{borderTop:"1px solid #F1F5F9",paddingTop:10,marginTop:4}}>
+                        <button onClick={()=>{const f=document.getElementById("odt-free");if(f)f.style.display=f.style.display==="none"?"block":"none";}}
+                          style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 13px",border:"1.5px dashed #E2E8F0",borderRadius:12,color:"#8aaabb",fontSize:12,fontWeight:700,background:"white",cursor:"pointer"}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                          Agregar freelance excepcional
+                          <span style={{fontSize:9,fontWeight:400,marginLeft:4}}>— sin acceso permanente</span>
+                        </button>
+                        <div id="odt-free" style={{display:"none",marginTop:12,padding:12,border:"1.5px dashed rgba(246,166,35,.55)",background:"#fffaf0",borderRadius:12}}>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                            <div><label style={{fontSize:10,fontWeight:700,color:"#8aaabb",display:"block",marginBottom:4}}>NOMBRE</label>
+                              <input style={{width:"100%",padding:"9px 11px",border:"1.5px solid #E2E8F0",borderRadius:8,fontSize:12,fontFamily:"inherit"}} placeholder="Nombre freelance"/></div>
+                            <div><label style={{fontSize:10,fontWeight:700,color:"#8aaabb",display:"block",marginBottom:4}}>CONTACTO</label>
+                              <input style={{width:"100%",padding:"9px 11px",border:"1.5px solid #E2E8F0",borderRadius:8,fontSize:12,fontFamily:"inherit"}} placeholder="email o celular"/></div>
+                          </div>
+                          <div style={{fontSize:10,color:"#b2a06a",marginTop:8}}>Este registro es solo referencial. No crea acceso a la app.</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Columna derecha: Tipos HH + Reglas */}
+                    <div>
+                      <div style={{...S2,marginBottom:14}}>
+                        <div style={secTitle}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                          Tipos de trabajo y HH estimadas
+                        </div>
+                        {TIPOS_TRABAJO.map(t=>(
+                          <div key={t.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid #F1F5F9"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:10,fontSize:12,fontWeight:600,color:"#1a2f4a"}}>
+                              <span style={{color:t.color}}>{t.svg}</span>
+                              {t.label}
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <input defaultValue={t.hh} type="number" min="0.5" step="0.5"
+                                style={{width:60,padding:"5px 8px",border:"1.5px solid #E2E8F0",borderRadius:8,fontSize:12,textAlign:"center",fontFamily:"inherit"}}/>
+                              <span style={{fontSize:11,color:"#8aaabb"}}>h est.</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={S2}>
+                        <div style={secTitle}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                          Reglas del flujo
+                        </div>
+                        {[
+                          {label:"Notificar al asignar ODT",sub:"Enviar notificación al diseñador al crear ODT"},
+                          {label:"Requiere aprobación antes de entregado",sub:"El coordinador debe aprobar antes de marcar como entregado"},
+                          {label:"Alertar retraso automático",sub:"Marcar como retrasado si pasa la hora de corte"},
+                        ].map((r,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:i<2?"1px solid #F1F5F9":"none",gap:12}}>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{r.label}</div>
+                              <div style={{fontSize:11,color:"#8aaabb",marginTop:3}}>{r.sub}</div>
+                            </div>
+                            <div style={{width:38,height:22,background:"#00b5b4",borderRadius:11,position:"relative",flexShrink:0,cursor:"pointer"}}>
+                              <div style={{position:"absolute",width:18,height:18,borderRadius:"50%",background:"white",right:2,top:2,boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}>
+                    <button style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #E2E8F0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"white",cursor:"pointer"}}>Descartar</button>
+                    <button onClick={()=>showToast("✅ Configuración de Diseño guardada")}
+                      style={{padding:"10px 18px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar configuración</button>
                   </div>
                 </div>
               );
@@ -7840,6 +7979,7 @@ function ChecklistApp() {
   const HOME_MAIN_TABS = [
     {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
+    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","ejecutor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
@@ -7852,8 +7992,13 @@ function ChecklistApp() {
     {i:6,label:"Dashboard"},
   ];
 
-  const homeMainActive = tab>=4 ? "auditoria" : "actividades";
-  const homeSubTabs = homeMainActive==="auditoria" ? SUB_AUDITORIA : SUB_EVIDENCIAS;
+  const homeMainActive = tab>=7 ? "diseno" : tab>=4 ? "auditoria" : "actividades";
+  const SUB_DISENO = [
+    {i:7, label:"Nueva ODT"},
+    {i:8, label:"Reporte"},
+    {i:9, label:"Dashboard"},
+  ];
+  const homeSubTabs = homeMainActive==="auditoria" ? SUB_AUDITORIA : homeMainActive==="diseno" ? SUB_DISENO : SUB_EVIDENCIAS;
 
   // Sidebar menu items
   const SIDEBAR_ITEMS = [
@@ -7953,7 +8098,8 @@ function ChecklistApp() {
                 const active=homeMainActive===m.id;
                 return(
                   <button key={m.id} onClick={()=>setTab(m.defaultTab)} style={active?TAB_PILL_ACTIVE:TAB_PILL_INACTIVE}>
-                    {m.id==="actividades"?<IcoEvidenciasTab active={active}/>:<IcoAuditoriaTab active={active}/>}
+                    {m.id==="actividades"?<IcoEvidenciasTab active={active}/>:m.id==="auditoria"?<IcoAuditoriaTab active={active}/>:
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active?"#fff":"#6B7280"} strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>}
                     {m.label}
                   </button>
                 );
@@ -7989,6 +8135,296 @@ function ChecklistApp() {
       {modulo===3&&isAdmin&&renderConfig()}
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
+      {/* FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 — Módulo Diseño/ODT tabs 7-9 */}
+      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","ejecutor"].includes(role))&&(()=>{
+        const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
+        const ODT_MUESTRA=[
+          {id:1,tipo:"POP",titulo:"Stopper Vega MARKET Campaña Día Padre 2026",area:"Trade Marketing",subtipo:"Auditoría · Retail",disenador:"PA",dnomre:"Paul Albrecht",entrega:"10/06/2026",estado:"diseño",color:"#6C6EF5"},
+          {id:2,tipo:"Cat.",titulo:"Catálogo Mayorista Julio 2026 — 32 páginas",area:"Comercial",subtipo:"Comercial · Mayorista",disenador:"AQ",dnomre:"Abel Quispe",entrega:"20/06/2026",estado:"retrasado",color:"#e17055"},
+          {id:3,tipo:"Precio",titulo:"Marcadores Precio — Promo Feria EXPOVEGA",area:"Trade Marketing",subtipo:"Trade Marketing · Market",disenador:"CH",dnomre:"Cesar Huapaya",entrega:"08/06/2026",estado:"entregado",color:"#00b894"},
+          {id:4,tipo:"Góndola",titulo:"Exhibidor Cabecera Gondola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Trade Marketing · Mayorista",disenador:"PA",dnomre:"Paul Albrecht",entrega:"15/06/2026",estado:"aprobacion",color:"#0984e3"},
+          {id:5,tipo:"Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Marketing · Market",disenador:"AQ",dnomre:"Abel Quispe",entrega:"12/06/2026",estado:"pendiente",color:"#f6a623"},
+        ];
+        const pillEstado=(e)=>{
+          if(e==="diseño")    return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"● En diseño"};
+          if(e==="retrasado") return{bg:"#ffeae6",col:"#e17055",txt:"⚠ Retrasado"};
+          if(e==="entregado") return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"✓ Entregado"};
+          if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"👀 En aprobación"};
+          return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"◯ Pendiente"};
+        };
+        const TIPOS_TRABAJO=["Material POP","Catálogo","Digital / RRSS","Volante / Afiche","Marcador Precio","Góndola / Exhibidor","Creativo (brief)"];
+        const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
+        const SH={background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",boxShadow:"0 2px 8px rgba(0,0,0,.05)"};
+        const STAT=[
+          {v:24,l:"Total",c:"#6C6EF5"},
+          {v:11,l:"Terminadas",c:"#00b894"},
+          {v:7, l:"En proceso",c:"#0984e3"},
+          {v:4, l:"Pendientes",c:"#f6a623"},
+          {v:2, l:"Con retraso",c:"#e17055"},
+        ];
+
+        return(
+          <div style={{padding:"20px 24px 48px",background:"#F5F7FB",minHeight:"100%"}}>
+
+            {/* ── TAB 7: NUEVA ODT ── */}
+            {subT==="nueva"&&(
+              <div style={{...SH,maxWidth:900,padding:22}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:17,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>Nueva ODT</div>
+                <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>Solicitud de diseño · el equipo lo recibirá automáticamente</div>
+                {/* Stepper */}
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+                  {["Brief","Asignación","Confirmar"].map((s,i)=>(
+                    <React.Fragment key={s}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:800,color:i===0?"#1a2f4a":"#8aaabb"}}>
+                        <div style={{width:28,height:28,borderRadius:"50%",display:"grid",placeItems:"center",background:i===0?"#1a2f4a":"#dce6ee",color:i===0?"#fff":"#8aaabb",fontSize:12,fontWeight:800}}>{i+1}</div>
+                        {s}
+                      </div>
+                      {i<2&&<div style={{flex:1,height:1,background:"#E2E8F0"}}/>}
+                    </React.Fragment>
+                  ))}
+                </div>
+                {/* Form secciones */}
+                {[
+                  {num:"1",title:"Información general",children:(
+                    <>
+                      <label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>TÍTULO *</label>
+                      <input key="odt-titulo" defaultValue="" onBlur={e=>setOdtFormDraft(p=>({...p,titulo:e.target.value}))}
+                        placeholder="Ej: Catálogo Verano 2026"
+                        style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",marginBottom:12}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>SOLICITANTE</label>
+                          <input readOnly value={uName||"Coordinador"} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #E2E8F0",background:"#f0f4f8",color:"#8aaabb",fontSize:14}}/></div>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>ÁREA *</label>
+                          <select style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none"}}>
+                            <option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option>
+                          </select></div>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>FECHA INICIO</label>
+                          <input type="date" style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none"}}/></div>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>FECHA ENTREGA *</label>
+                          <input type="date" style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none"}}/></div>
+                      </div>
+                    </>
+                  )},
+                  {num:"2",title:"Tipo de trabajo",children:(
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {TIPOS_TRABAJO.map(t=>(
+                        <button key={t} onClick={e=>{e.currentTarget.classList.toggle("odt-tag-on");}}
+                          style={{padding:"7px 13px",border:"1.5px solid #E2E8F0",borderRadius:999,color:"#8aaabb",fontSize:11,fontWeight:700,background:"white",cursor:"pointer",transition:"all .15s"}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  )},
+                  {num:"3",title:"Brief de diseño",children:(
+                    <>
+                      <label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>DESCRIPCIÓN / OBJETIVO</label>
+                      <textarea placeholder="¿Qué debe comunicar esta pieza? ¿Cuál es el objetivo del material?"
+                        style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",minHeight:80,resize:"vertical",fontFamily:"inherit"}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>DISEÑADOR ASIGNADO *</label>
+                          <select style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none"}}>
+                            <option value="">— Seleccionar —</option>
+                            {disenadores.map(u=><option key={u.id} value={u.id}>{u.nombre}</option>)}
+                            {disenadores.length===0&&<option disabled>Sin diseñadores configurados</option>}
+                          </select></div>
+                        <div><label style={{fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",display:"block",marginBottom:5}}>HH ESTIMADAS</label>
+                          <input type="number" min="0.5" step="0.5" placeholder="3"
+                            style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none"}}/></div>
+                      </div>
+                    </>
+                  )},
+                ].map(sec=>(
+                  <div key={sec.num} style={{border:"1.5px solid #E2E8F0",borderRadius:14,padding:15,marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".02em",marginBottom:13}}>
+                      <span style={{width:25,height:25,borderRadius:"50%",display:"grid",placeItems:"center",background:"#6C6EF5",color:"#fff",fontSize:11,fontWeight:800,flexShrink:0}}>{sec.num}</span>
+                      {sec.title}
+                    </div>
+                    {sec.children}
+                  </div>
+                ))}
+                <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
+                  <button style={{padding:"11px 18px",borderRadius:11,border:"1.5px solid #E2E8F0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"white",cursor:"pointer"}}>Cancelar</button>
+                  <button onClick={()=>showToast("✅ ODT creada y enviada al equipo de diseño")}
+                    style={{padding:"11px 18px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Enviar ODT
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 8: REPORTE ── */}
+            {subT==="reporte"&&(
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
+                  {STAT.map(s=>(
+                    <div key={s.l} style={{...SH,padding:"16px 14px",textAlign:"center",borderTop:`3px solid ${s.c}`}}>
+                      <div style={{fontFamily:"'Syne',sans-serif",fontSize:30,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
+                      <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,letterSpacing:".05em",marginTop:6,textTransform:"uppercase"}}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{...SH,overflow:"hidden"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"90px 1fr 160px 150px 110px 120px",padding:"9px 12px",background:"#eaf0f6"}}>
+                    {["Tipo","ODT / Título","Área","Diseñador","Entrega","Estado"].map(h=>(
+                      <div key={h} style={{fontSize:9,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase"}}>{h}</div>
+                    ))}
+                  </div>
+                  {ODT_MUESTRA.map(o=>{const p=pillEstado(o.estado);return(
+                    <div key={o.id} style={{display:"grid",gridTemplateColumns:"90px 1fr 160px 150px 110px 120px",padding:"11px 12px",borderTop:"1px solid #f5f7fa",fontSize:12,alignItems:"center",cursor:"pointer",transition:"background .1s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=""}>
+                      <div><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:"#f2f6fb"}}>{o.tipo}</span></div>
+                      <div style={{paddingRight:10}}>
+                        <div style={{fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
+                        <div style={{fontSize:10,color:"#8aaabb",marginTop:1}}>{o.subtipo}</div>
+                      </div>
+                      <div style={{color:"#8aaabb"}}>{o.area}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:"50%",background:o.color,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"white"}}>{o.disenador}</div>
+                        <span style={{fontSize:11}}>{o.dnomre}</span>
+                      </div>
+                      <div style={{color:"#8aaabb"}}>{o.entrega}</div>
+                      <div><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:p.bg,color:p.col}}>{p.txt}</span></div>
+                    </div>
+                  );})}
+                </div>
+              </>
+            )}
+
+            {/* ── TAB 9: DASHBOARD ── */}
+            {subT==="dashboard"&&(
+              <>
+                {/* Nivel selector */}
+                <div style={{display:"flex",gap:8,marginBottom:16}}>
+                  {[{id:"direccion",label:"Dirección",sub:"Visión ejecutiva",svg:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-8"/></svg>},
+                    {id:"gerencia",label:"Gerencia",sub:"Análisis y causas",svg:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
+                    {id:"operativo",label:"Operativo",sub:"Seguimiento diario",svg:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>},
+                  ].map(lv=>(
+                    <button key={lv.id} onClick={()=>setOdtDashLvl(lv.id)}
+                      style={{flex:1,padding:"12px 10px",borderRadius:12,border:`2px solid ${odtDashLvl===lv.id?"#6C6EF5":"#E2E8F0"}`,
+                        background:odtDashLvl===lv.id?"#1a2f4a":"#fff",color:odtDashLvl===lv.id?"#fff":"#8aaabb",
+                        textAlign:"center",cursor:"pointer",transition:"all .15s"}}>
+                      <div style={{margin:"0 auto 5px",display:"flex",justifyContent:"center"}}>{lv.svg}</div>
+                      <div style={{fontWeight:700,fontSize:11}}>{lv.label}</div>
+                      <div style={{fontSize:9,opacity:.72,marginTop:2}}>{lv.sub}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dirección */}
+                {odtDashLvl==="direccion"&&(
+                  <>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
+                      {STAT.map(s=>(
+                        <div key={s.l} style={{...SH,padding:"16px 14px",textAlign:"center",borderTop:`3px solid ${s.c}`}}>
+                          <div style={{fontFamily:"'Syne',sans-serif",fontSize:30,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
+                          <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,letterSpacing:".05em",marginTop:6,textTransform:"uppercase"}}>{s.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{...SH,padding:"16px 20px",marginBottom:14}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:13,fontWeight:800,color:"#1a2f4a"}}>Avance global</span>
+                        <span style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#00b894"}}>86%</span>
+                      </div>
+                      <div style={{height:12,borderRadius:8,overflow:"hidden",display:"flex",background:"#E2E8F0",margin:"10px 0"}}>
+                        <div style={{width:"46%",background:"#00b894"}}/>
+                        <div style={{width:"29%",background:"#0984e3"}}/>
+                        <div style={{width:"17%",background:"#f6a623"}}/>
+                        <div style={{width:"8%",background:"#e17055"}}/>
+                      </div>
+                      <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                        {[["#00b894","11 Terminadas"],["#0984e3","7 En proceso"],["#f6a623","4 Pendientes"],["#e17055","2 Con retraso"]].map(([c,t])=>(
+                          <span key={t} style={{fontSize:11,color:"#8aaabb",display:"flex",gap:5,alignItems:"center"}}>
+                            <i style={{width:9,height:9,borderRadius:2,background:c,display:"inline-block"}}/>
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div style={{...SH,padding:"16px 18px"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                          Rendimiento por diseñador
+                        </div>
+                        {[{av:"PA",n:"Paul Albrecht",c:"#0984e3",p:75},{av:"AQ",n:"Abel Quispe",c:"#6C6EF5",p:58},{av:"CH",n:"Cesar Huapaya",c:"#00b5b4",p:90}].map(d=>(
+                          <div key={d.av} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                            <div style={{width:26,height:26,borderRadius:"50%",background:d.c,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"white",flexShrink:0}}>{d.av}</div>
+                            <div style={{fontSize:12,fontWeight:600,color:"#1a2f4a",minWidth:100}}>{d.n}</div>
+                            <div style={{flex:1,height:6,background:"#E2E8F0",borderRadius:3,overflow:"hidden"}}><div style={{width:`${d.p}%`,height:"100%",background:d.c,borderRadius:3}}/></div>
+                            <div style={{fontSize:11,fontWeight:700,color:"#8aaabb",minWidth:34,textAlign:"right"}}>{d.p}%</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{...SH,padding:"16px 18px"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e17055" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                          Alertas
+                        </div>
+                        {[{bg:"#fff8e6",c:"#f6a623",v:3,l:"Vencen en 7 días",s:"3 ODTs próximas a vencer"},
+                          {bg:"#ffeae6",c:"#e17055",v:2,l:"Con retraso",s:"2 ODTs vencidas sin entregar"}].map((a,i)=>(
+                          <div key={i} style={{padding:"10px 12px",borderRadius:10,background:a.bg,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                            <div><div style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{a.l}</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{a.s}</div></div>
+                            <div style={{fontSize:20,fontWeight:800,color:a.c}}>{a.v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Gerencia */}
+                {odtDashLvl==="gerencia"&&(
+                  <div style={{...SH,padding:"16px 20px"}}>
+                    <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:14}}>Causa raíz de retrasos</div>
+                    {[{c:"#e17055",pct:45,l:"Brief incompleto al solicitar"},
+                      {c:"#f6a623",pct:30,l:"Cambios en el brief durante producción"},
+                      {c:"#0984e3",pct:25,l:"Recursos insuficientes de diseño"}].map((r,i)=>(
+                      <div key={i} style={{marginBottom:12}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600,color:"#1a2f4a",marginBottom:4}}>
+                          <span>{r.l}</span><span style={{color:r.c,fontWeight:800}}>{r.pct}%</span>
+                        </div>
+                        <div style={{height:8,background:"#E2E8F0",borderRadius:4,overflow:"hidden"}}>
+                          <div style={{width:`${r.pct}%`,height:"100%",background:r.c,borderRadius:4}}/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Operativo */}
+                {odtDashLvl==="operativo"&&(
+                  <>
+                    <div style={{fontSize:11,fontWeight:700,color:"#8aaabb",marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>HOY — {new Date().toLocaleDateString("es-PE",{weekday:"long",year:"numeric",month:"long",day:"numeric"}).toUpperCase()}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:14}}>
+                      {[{c:"#6C6EF5",l:"EN PROCESO",v:7},{c:"#e17055",l:"VENCEN HOY",v:1},{c:"#00b894",l:"ENTREGADOS HOY",v:2}].map(k=>(
+                        <div key={k.l} style={{...SH,padding:"14px 16px",borderLeft:`3px solid ${k.c}`}}>
+                          <div style={{fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,color:k.c}}>{k.v}</div>
+                          <div style={{fontSize:9,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginTop:4}}>{k.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{...SH,padding:"16px 20px"}}>
+                      <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12}}>Trabajos activos</div>
+                      {ODT_MUESTRA.filter(o=>o.estado==="diseño"||o.estado==="aprobacion").map(o=>{const p=pillEstado(o.estado);return(
+                        <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f5f7fa"}}>
+                          <div style={{width:26,height:26,borderRadius:"50%",background:o.color,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"white",flexShrink:0}}>{o.disenador}</div>
+                          <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div><div style={{fontSize:10,color:"#8aaabb"}}>{o.area}</div></div>
+                          <div style={{fontSize:11,color:"#8aaabb"}}>{o.entrega}</div>
+                          <span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:p.bg,color:p.col,whiteSpace:"nowrap"}}>{p.txt}</span>
+                        </div>
+                      );})}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
       {modulo===0&&tab===4&&isAuditor&&(
         <>
         {/* Dashboard personal auditor — visible cuando no está en una auditoría activa */}
