@@ -5999,7 +5999,33 @@ function ChecklistApp() {
                       </div>
                     </div>
                   </div>
-                  <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}>
+                  {/* Materiales configurables */}
+                  <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:16,marginTop:14,boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:8}}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                      Materiales configurables para Nueva ODT
+                    </div>
+                    <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>No reemplaza la lista aprobada: permite agregar nuevos materiales y activar/desactivar los precargados.</div>
+                    <div style={{display:"grid",gap:8,marginBottom:12}}>
+                      {[...MATERIALES_BASE,...odtMaterialesExtra].map((m,idx)=>{
+                        const esPre=idx<MATERIALES_BASE.length;
+                        return(
+                          <div key={m} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,border:"1px solid #e2e8f0",borderRadius:10,background:"#f8fafc",padding:"9px 12px"}}>
+                            <span><b style={{fontSize:12}}>{m}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>{esPre?"Precargado":"Agregado"}</small></span>
+                            <button onClick={e=>{const b=e.currentTarget;const on=b.dataset.on==="1";b.dataset.on=on?"0":"1";b.style.background=on?"#fff":"rgba(0,181,180,.12)";b.style.borderColor=on?"#c8d8e8":"rgba(0,181,180,.32)";b.style.color=on?"#8aaabb":"#00b5b4";b.textContent=on?"Inactivo":"Activo";}} data-on="1"
+                              style={{padding:"6px 12px",borderRadius:20,border:"1px solid rgba(0,181,180,.32)",background:"rgba(0,181,180,.12)",color:"#00b5b4",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>Activo</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:8}}>
+                      <input id="odt-cfg-mat-name" style={{padding:"10px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",fontSize:13,color:"#1a2f4a",outline:"none"}} placeholder="Nuevo material"/>
+                      <input id="odt-cfg-mat-cat" style={{padding:"10px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",fontSize:13,color:"#1a2f4a",outline:"none"}} placeholder="Categoría"/>
+                      <button onClick={()=>{const n=(document.getElementById("odt-cfg-mat-name")||{}).value?.trim();if(!n){showToast("Ingresa el nombre del material");return;}setOdtMaterialesExtra(p=>[...p,n]);if(document.getElementById("odt-cfg-mat-name"))document.getElementById("odt-cfg-mat-name").value="";showToast("Material agregado");}} style={{padding:"10px 16px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Agregar</button>
+                    </div>
+                    <div style={{fontSize:10,color:"#8aaabb",marginTop:6,lineHeight:1.4}}>Los materiales se leerán desde Nueva ODT sin modificar los históricos ya creados.</div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:14}}>
                     <button style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #E2E8F0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"white",cursor:"pointer"}}>Descartar</button>
                     <button onClick={()=>showToast("✅ Configuración de Diseño guardada")}
                       style={{padding:"10px 18px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar configuración</button>
@@ -8190,14 +8216,14 @@ function ChecklistApp() {
                 <div style={{fontSize:11,color:"#8aaabb",marginBottom:18}}>Solicitud de diseño · el equipo lo recibirá automáticamente</div>
 
                 {/* STEPPER */}
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
-                  {["Brief","Tipo de actividad","Materiales y medidas","Estilo y referencias"].map((s,i)=>(
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                  {["Brief","Asignación","Confirmar"].map((s,i)=>(
                     <React.Fragment key={s}>
-                      <div style={{display:"flex",alignItems:"center",gap:7,fontSize:11,fontWeight:700,color:i===0?"#1a2f4a":"#b2bec3"}}>
-                        <div style={{width:26,height:26,borderRadius:"50%",display:"grid",placeItems:"center",background:i===0?"#6C6EF5":"#e2e8f0",color:i===0?"#fff":"#b2bec3",fontSize:11,fontWeight:800,flexShrink:0}}>{i+1}</div>
-                        <span style={{display:"none"}}>{s}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:800,color:i===0?"#1a2f4a":"#8aaabb"}}>
+                        <div style={{width:28,height:28,borderRadius:"50%",display:"grid",placeItems:"center",background:i===0?"#1a2f4a":"#dce6ee",color:i===0?"#fff":"#8aaabb",fontSize:12,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                        {s}
                       </div>
-                      {i<3&&<div style={{flex:1,height:2,background:"#e2e8f0",borderRadius:2}}/>}
+                      {i<2&&<div style={{flex:1,height:1,background:"#e2e8f0"}}/>}
                     </React.Fragment>
                   ))}
                 </div>
@@ -8240,52 +8266,63 @@ function ChecklistApp() {
                     <div/>
                   </div>
 
-                  {/* RESPONSABLE — solo admin asigna; regla: disponible si máx 1 entregable activo */}
-                  {(isAdmin||role==="coordinador")&&(
-                    <div style={{marginTop:14}}>
-                      <label style={{...lbl,marginBottom:10}}>RESPONSABLE <span style={{fontSize:9,fontWeight:500,color:"#b2bec3"}}>({isAdmin?"solo admin":"coordinador"} — asigna al diseñador)</span></label>
-                      {/* Sin asignar */}
-                      <div onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))}
-                        style={{padding:"12px 16px",borderRadius:12,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,
-                          background:!odtForm.disenadorId?"rgba(108,110,245,.06)":"#fff",cursor:"pointer",marginBottom:8,
-                          display:"flex",alignItems:"center",gap:10}}>
-                        <div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${!odtForm.disenadorId?"#6C6EF5":"#c8d8e8"}`,
-                          display:"grid",placeItems:"center"}}>
-                          {!odtForm.disenadorId&&<div style={{width:10,height:10,borderRadius:"50%",background:"#6C6EF5"}}/>}
-                        </div>
-                        <span style={{fontSize:13,fontWeight:700,color:"#6C6EF5"}}>Sin asignar</span>
+                </div>
+
+                {/* SECCIÓN 5: RESPONSABLE */}
+                {(isAdmin||role==="coordinador")&&(
+                  <div style={{border:"1.5px solid #e2e8f0",borderRadius:14,padding:18,marginBottom:18}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".04em",marginBottom:12}}>
+                      <span style={{width:26,height:26,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontSize:11,fontWeight:800}}>5</span>
+                      Responsable <small style={{fontSize:10,color:"#8aaabb",textTransform:"none",fontWeight:500,marginLeft:4}}>— desde Usuarios: rol Ejecutor + cargo Diseñador</small>
+                    </div>
+                    <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#5a7a9a",lineHeight:1.5,marginBottom:12}}>
+                      Aquí no se crean diseñadores. La lista se alimenta de Usuarios activos con rol <b>Ejecutor</b> y cargo <b>Diseñador</b>. El diseñador queda habilitado si tiene al menos <b>1 entregable disponible antes del día y hora de corte solicitados</b>.
+                    </div>
+                    {/* Sin asignar */}
+                    <div onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))}
+                      style={{padding:"11px 14px",borderRadius:12,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,
+                        background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer",marginBottom:8,
+                        display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",fontSize:12,color:"#6C6EF5",fontWeight:800}}>—</div>
+                        <div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Sin asignar</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>Admin podrá asignar después</div></div>
                       </div>
-                      {disenadores.length===0&&<div style={{padding:"12px 14px",background:"#f0f4f8",borderRadius:10,fontSize:12,color:"#8aaabb"}}>Sin diseñadores configurados. Agrega usuarios con rol Ejecutor y cargo Diseñador.</div>}
-                      {disenadores.map(u=>{
-                        const disponible=disDisponible(u);
-                        const sel=odtForm.disenadorId===u.id;
-                        return(
-                          <div key={u.id} onClick={()=>disponible&&setOdtForm(p=>({...p,disenadorId:u.id}))}
-                            style={{padding:"12px 16px",borderRadius:12,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,
-                              background:sel?"rgba(108,110,245,.06)":"#fff",cursor:disponible?"pointer":"not-allowed",
-                              opacity:disponible?1:.55,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
-                            <div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${sel?"#6C6EF5":"#c8d8e8"}`,
-                              display:"grid",placeItems:"center",flexShrink:0}}>
-                              {sel&&<div style={{width:10,height:10,borderRadius:"50%",background:"#6C6EF5"}}/>}
-                            </div>
-                            <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",
-                              display:"grid",placeItems:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0,position:"relative"}}>
+                      <span style={{fontSize:10,fontWeight:800,padding:"3px 8px",borderRadius:999,background:"#fff8ec",color:"#f6a623"}}>Pendiente</span>
+                      <div style={{width:18,height:18,borderRadius:"50%",border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#b7c7d7"}`,display:"grid",placeItems:"center",flexShrink:0}}>
+                        {!odtForm.disenadorId&&<div style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}
+                      </div>
+                    </div>
+                    {disenadores.length===0&&<div style={{padding:"12px 14px",background:"#f0f4f8",borderRadius:10,fontSize:12,color:"#8aaabb"}}>Sin diseñadores configurados. Agrega usuarios con rol Ejecutor y cargo Diseñador.</div>}
+                    {disenadores.map(u=>{
+                      const disponible=disDisponible(u);
+                      const sel=odtForm.disenadorId===u.id;
+                      return(
+                        <div key={u.id} onClick={()=>disponible&&setOdtForm(p=>({...p,disenadorId:u.id}))}
+                          style={{padding:"11px 14px",borderRadius:12,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,
+                            background:sel?"rgba(108,110,245,.08)":"#fff",cursor:disponible?"pointer":"not-allowed",
+                            opacity:disponible?1:.55,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
+                            <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",
+                              display:"grid",placeItems:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>
                               {(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
-                              <div style={{position:"absolute",bottom:-2,right:-2,width:10,height:10,borderRadius:"50%",
-                                background:disponible?"#00b894":"#e17055",border:"2px solid #fff"}}/>
                             </div>
-                            <div style={{flex:1}}>
+                            <div>
                               <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>{u.nombre}</div>
-                              <div style={{fontSize:11,color:disponible?"#00b894":"#e17055",fontWeight:600}}>
-                                {disponible?"Disponible · sin tareas activas":"Ocupado · revisar carga"}
-                              </div>
+                              <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>Ejecutor · Diseñador · {disponible?"entregables disponibles":"sin disponibilidad en el corte"}</div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                          <span style={{fontSize:10,fontWeight:800,padding:"3px 8px",borderRadius:999,whiteSpace:"nowrap",
+                            background:disponible?"#e8faf5":"#ffeae6",color:disponible?"#00b894":"#dc2626"}}>
+                            {disponible?"Disponible":"No disponible"}
+                          </span>
+                          <div style={{width:18,height:18,borderRadius:"50%",border:`1.5px solid ${sel?"#6C6EF5":"#b7c7d7"}`,display:"grid",placeItems:"center",flexShrink:0}}>
+                            {sel&&<div style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* SECCIÓN 2: TIPO DE ACTIVIDAD */}
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:14,padding:18,marginBottom:14}}>
@@ -8508,19 +8545,70 @@ function ChecklistApp() {
                   </>
                 )}
                 {odtDashLvl==="gerencia"&&(
-                  <div style={{...SH,padding:"20px"}}>
-                    <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:16}}>Causa raíz de retrasos</div>
-                    {[{c:"#e17055",p:45,l:"Brief incompleto al solicitar"},{c:"#f6a623",p:30,l:"Cambios en brief durante producción"},{c:"#0984e3",p:25,l:"Recursos insuficientes de diseño"}].map((r,i)=>(
-                      <div key={i} style={{marginBottom:14}}>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600,color:"#1a2f4a",marginBottom:5}}>
-                          <span>{r.l}</span><span style={{color:r.c,fontWeight:800}}>{r.p}%</span>
-                        </div>
-                        <div style={{height:8,background:"#e2e8f0",borderRadius:4,overflow:"hidden"}}>
-                          <div style={{width:`${r.p}%`,height:"100%",background:r.c,borderRadius:4}}/>
+                  <>
+                    {/* Gantt mensual */}
+                    <div style={{...SH,marginBottom:14,overflow:"hidden"}}>
+                      <div style={{padding:"12px 16px",borderBottom:"1px solid #f0f4f8"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",textAlign:"center",marginBottom:8}}>JUNIO 2026</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {[{label:"Todos los responsables"},{label:"Todos los tipos"},{label:"Todos los estados"}].map(f=>(
+                            <select key={f.label} style={{padding:"5px 9px",fontSize:11,borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",outline:"none"}}>
+                              <option>{f.label}</option>
+                            </select>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      <div style={{overflowX:"auto"}}>
+                        <div style={{minWidth:950}}>
+                          {/* Header días */}
+                          <div style={{display:"grid",gridTemplateColumns:"260px repeat(30,1fr)",background:"#f8fafc",borderBottom:"2px solid #e2e8f0"}}>
+                            <div style={{fontSize:9,fontWeight:800,color:"#5a7a9a",padding:"7px 12px",textAlign:"left"}}>ACTIVIDAD</div>
+                            {Array.from({length:30},(_,i)=>(
+                              <div key={i} style={{fontSize:9,textAlign:"center",color:"#8aaabb",fontWeight:800,padding:"7px 0"}}>{i+1}</div>
+                            ))}
+                          </div>
+                          {/* Filas Gantt */}
+                          {[
+                            {titulo:"Stopper POP Día Padre",col:3,span:6,bg:"#6C6EF5",txt:"En diseño"},
+                            {titulo:"Catálogo Mayorista Julio",col:5,span:10,bg:"#e17055",txt:"Retraso"},
+                            {titulo:"Marcadores EXPOVEGA",col:9,span:3,bg:"#00b894",txt:"Entregado"},
+                          ].map(r=>(
+                            <div key={r.titulo} style={{display:"grid",gridTemplateColumns:"260px repeat(30,1fr)",minHeight:42,borderBottom:"1px solid #f5f7fa",alignItems:"center"}}>
+                              <div style={{padding:"8px 12px",fontSize:11,fontWeight:700,color:"#1a2f4a"}}>{r.titulo}</div>
+                              <div style={{gridColumn:`${r.col}/${r.col+r.span}`,height:18,borderRadius:20,background:r.bg,fontSize:9,fontWeight:700,color:"#fff",display:"flex",alignItems:"center",paddingLeft:8,overflow:"hidden",whiteSpace:"nowrap"}}>{r.txt}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Causa raíz + rendimiento */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                      <div style={{...SH,padding:"16px 18px"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12}}>Causa raíz de retrasos</div>
+                        {[{c:"#e17055",p:45,l:"Brief incompleto al solicitar"},{c:"#f6a623",p:30,l:"Cambios en brief durante producción"},{c:"#0984e3",p:25,l:"Recursos insuficientes de diseño"}].map((r,i)=>(
+                          <div key={i} style={{marginBottom:12}}>
+                            <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600,color:"#1a2f4a",marginBottom:4}}>
+                              <span>{r.l}</span><span style={{color:r.c,fontWeight:800}}>{r.p}%</span>
+                            </div>
+                            <div style={{height:8,background:"#e2e8f0",borderRadius:4,overflow:"hidden"}}>
+                              <div style={{width:`${r.p}%`,height:"100%",background:r.c,borderRadius:4}}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{...SH,padding:"16px 18px"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12}}>Rendimiento por diseñador</div>
+                        {[{av:"PA",n:"Paul Albrecht",c:"#0984e3",p:75},{av:"AQ",n:"Abel Quispe",c:"#6c5ce7",p:58},{av:"CH",n:"Cesar Huapaya",c:"#00b5b4",p:90}].map(d=>(
+                          <div key={d.av} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                            <div style={{width:26,height:26,borderRadius:"50%",background:d.c,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff",flexShrink:0}}>{d.av}</div>
+                            <div style={{fontSize:12,fontWeight:600,color:"#1a2f4a",minWidth:100}}>{d.n}</div>
+                            <div style={{flex:1,height:6,background:"#e2e8f0",borderRadius:3,overflow:"hidden"}}><div style={{width:`${d.p}%`,height:"100%",background:d.c}}/></div>
+                            <div style={{fontSize:11,fontWeight:700,color:"#8aaabb",minWidth:34,textAlign:"right"}}>{d.p}%</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 )}
                 {odtDashLvl==="operativo"&&(
                   <>
@@ -8586,6 +8674,15 @@ function ChecklistApp() {
                       <div style={{fontSize:11,color:"#00b894"}}>Abre WhatsApp con mensaje listo</div>
                     </div>
                   </a>
+                  {/* Grupo Cartelería */}
+                  <button onClick={()=>showToast("Reenvío al grupo Cartelería")}
+                    style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #e2e8f0",background:"#fff",textDecoration:"none",marginBottom:8,cursor:"pointer"}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    <div style={{textAlign:"left"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Grupo Cartelería</div>
+                      <div style={{fontSize:11,color:"#00b5b4"}}>Reenvío al grupo operativo</div>
+                    </div>
+                  </button>
                   {/* Email */}
                   <a href={`mailto:${odtNotifyModal.disenador.email||""}?subject=Nueva ODT asignada: ${odtNotifyModal.odt.titulo||""}&body=Tienes una nueva actividad de diseño asignada:%0A%0ATarea: ${odtNotifyModal.odt.titulo||""}%0AEntrega: ${odtNotifyModal.odt.fechaEntrega||""}%0AHora de corte: ${odtNotifyModal.odt.horaCorte||""}%0ATipo: ${odtNotifyModal.odt.tipo||""}%0AÁrea: ${odtNotifyModal.odt.area||""}`}
                     style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",textDecoration:"none",marginBottom:16}}>
