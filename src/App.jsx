@@ -1112,6 +1112,7 @@ function ChecklistApp() {
   const [odtViewModal,   setOdtViewModal]   = useState(null); // popup vista detalle ODT
   const [odtAssignModal, setOdtAssignModal] = useState(null); // popup reasignar responsable
   const [odtEditModal,   setOdtEditModal]   = useState(null); // popup editar ODT - admin
+  const [odtDeletedIds,  setOdtDeletedIds]  = useState([]); // soft delete visual/demo ODT reporte
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
   const [rutas,      setRutas]      = useState([]);
@@ -8207,6 +8208,7 @@ function ChecklistApp() {
           {id:4,tipo:"Góndola",titulo:"Exhibidor Cabecera Gondola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Trade Marketing · Mayorista",did:"PA",dnombre:"Paul Albrecht",entrega:"15/06/2026",estado:"aprobacion",colorD:"#0984e3"},
           {id:5,tipo:"Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Marketing · Market",did:"AQ",dnombre:"Abel Quispe",entrega:"12/06/2026",estado:"pendiente",colorD:"#6c5ce7"},
         ];
+        const ODT_REPORTE=ODT_MUESTRA.filter(o=>!odtDeletedIds.includes(o.id));
         const pillE=(e)=>{
           if(e==="diseño")    return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"};
           if(e==="retrasado") return{bg:"#ffeae6",col:"#e17055",txt:"Retrasado"};
@@ -8467,22 +8469,22 @@ function ChecklistApp() {
                   <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los estados</option><option>Pendiente</option><option>En diseño</option><option>En aprobación</option><option>Entregado</option><option>Retrasado</option></select>
                   <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los tipos</option><option>Material POP</option><option>Catálogo</option><option>Digital / RRSS</option><option>Volante / Afiche</option></select>
                   <select style={{...inp,width:240,height:46,cursor:"pointer"}}><option>Todos los responsables</option><option>Paul Albrecht</option><option>Abel Quispe</option><option>Cesar Huapaya</option></select>
-                  <div style={{marginLeft:"auto",padding:"12px 16px",borderRadius:999,background:"rgba(108,110,245,.10)",color:"#6C6EF5",fontSize:12,fontWeight:800}}>{ODT_MUESTRA.length} actividades</div>
+                  <div style={{marginLeft:"auto",padding:"12px 16px",borderRadius:999,background:"rgba(108,110,245,.10)",color:"#6C6EF5",fontSize:12,fontWeight:800}}>{ODT_REPORTE.length} actividades</div>
                 </div>
 
-                <div style={{...SH,overflow:"auto"}}>
-                  <div style={{minWidth:1180}}>
-                    <div style={{display:"grid",gridTemplateColumns:"120px 1fr 150px 150px 110px 100px 120px 120px 90px 100px 120px",padding:"13px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}>
-                      {["Tipo","Actividad","Área solicitante","Responsable","F. entrega","H. cierre","Estatus","Alerta","HH","Días","Acciones"].map(h=>(
+                <div style={{...SH,overflowX:"auto",overflowY:"hidden"}}>
+                  <div style={{minWidth:1760}}>
+                    <div style={{display:"grid",gridTemplateColumns:"170px 340px 190px 220px 135px 125px 145px 210px 80px 175px 100px 210px",padding:"13px 18px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
+                      {["Tipo","Actividad","Área solicitante","Responsable","F. entrega","H. cierre","Estatus","Alerta","HH","Tiempo","Días","Acciones"].map(h=>(
                         <div key={h} style={{fontSize:9,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",textTransform:"uppercase"}}>{h}</div>
                       ))}
                     </div>
-                    {ODT_MUESTRA.map((o,idx)=>{const p=pillE(o.estado);const isLate=o.estado==="retrasado";return(
-                      <div key={o.id} style={{display:"grid",gridTemplateColumns:"120px 1fr 150px 150px 110px 100px 120px 120px 90px 100px 120px",alignItems:"center",padding:"16px 14px",borderTop:idx?"1px solid #f0f4f8":"none",fontSize:12,background:"#fff"}}>
-                        <div><span style={{display:"inline-flex",alignItems:"center",gap:7,padding:"8px 10px",borderRadius:11,fontSize:11,fontWeight:800,background:"#fff8ec",color:"#f6a623",border:"1px solid #fee2b3"}}>
+                    {ODT_REPORTE.map((o,idx)=>{const p=pillE(o.estado);const isLate=o.estado==="retrasado";return(
+                      <div key={o.id} style={{display:"grid",gridTemplateColumns:"170px 340px 190px 220px 135px 125px 145px 210px 80px 175px 100px 210px",alignItems:"center",padding:"18px 18px",borderTop:idx?"1px solid #f0f4f8":"none",fontSize:12,background:"#fff",minHeight:86}}>
+                        <div><span style={{display:"inline-flex",alignItems:"center",gap:7,padding:"9px 12px",borderRadius:11,fontSize:11,fontWeight:800,background:"#fff8ec",color:"#f6a623",border:"1px solid #fee2b3",whiteSpace:"nowrap"}}>
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>{o.tipo}
                         </span></div>
-                        <div style={{paddingRight:12,minWidth:0}}><div style={{fontWeight:800,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#1a2f4a"}}>{o.titulo}</div><div style={{fontSize:10,color:"#8aaabb",marginTop:5}}>#{761275-o.id} · 2026-06-0{Math.min(8,o.id+3)}</div></div>
+                        <div style={{paddingRight:18,minWidth:0}}><div style={{fontWeight:800,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#1a2f4a"}}>{o.titulo}</div><div style={{fontSize:10,color:"#8aaabb",marginTop:5}}>#{761275-o.id} · 2026-06-0{Math.min(8,o.id+3)}</div></div>
                         <div style={{color:"#5a7a9a",fontSize:11}}>{o.area}</div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{width:28,height:28,borderRadius:"50%",background:o.colorD,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff"}}>{o.did}</span><span style={{padding:"7px 10px",borderRadius:999,background:"#fff8ec",color:"#f6a623",fontSize:10,fontWeight:800,whiteSpace:"nowrap"}}>{o.dnombre}</span></div>
                         <div><span style={{padding:"6px 11px",borderRadius:999,background:"#eef5fb",color:"#4b6f95",fontSize:11,fontWeight:800}}>{o.entrega}</span></div>
@@ -8490,12 +8492,13 @@ function ChecklistApp() {
                         <div><span style={{padding:"5px 10px",borderRadius:999,fontSize:10,fontWeight:800,background:p.bg,color:p.col}}>{p.txt}</span></div>
                         <div><span style={{padding:"5px 10px",borderRadius:999,fontSize:10,fontWeight:800,background:isLate?"#ffeae6":"#fff8ec",color:isLate?"#dc2626":"#f6a623"}}>{isLate?"Retraso 0d":"Hoy · vence"}</span></div>
                         <div style={{color:"#8aaabb",fontWeight:800}}>—</div>
-                        <div><div style={{fontSize:11,fontWeight:800,color:"#1a2f4a"}}>0d/1d lab</div><div style={{height:6,borderRadius:999,background:"#edf2f7",marginTop:6,overflow:"hidden"}}><div style={{width:"0%",height:"100%",background:"#6C6EF5"}}/></div><div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",marginTop:3}}>0% · &lt;1d</div></div>
-                        <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"flex-start"}}>
+                        <div><div style={{fontSize:11,fontWeight:800,color:"#1a2f4a"}}>0d/1d lab</div><div style={{height:6,borderRadius:999,background:"#edf2f7",marginTop:6,overflow:"hidden"}}><div style={{width:"0%",height:"100%",background:"#6C6EF5"}}/></div><div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",marginTop:3}}>0%</div></div>
+                        <div style={{fontSize:11,fontWeight:800,color:"#1a2f4a"}}>&lt;1d</div>
+                        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-start",whiteSpace:"nowrap"}}>
                           <button title="Vista" onClick={()=>setOdtViewModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
                           {isAdmin&&<button title="Editar orden" onClick={()=>setOdtEditModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #6C6EF5",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>}
                           {isAdmin&&<button title="Asignar" onClick={()=>setOdtAssignModal(o)} style={{height:28,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontSize:11,fontWeight:800,cursor:"pointer"}}>Asignar</button>}
-                          {isAdmin&&<button title="Eliminar" onClick={()=>showToast("Eliminación restringida: usar anulación con trazabilidad")} style={{width:32,height:28,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>}
+                          {isAdmin&&<button title="Eliminar" onClick={()=>{if(window.confirm(`¿Eliminar la ODT: ${o.titulo}?`)){setOdtDeletedIds(ids=>ids.includes(o.id)?ids:[...ids,o.id]);showToast("ODT eliminada con trazabilidad");}}} style={{width:32,height:28,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>}
                         </div>
                       </div>
                     );})}
@@ -8650,7 +8653,7 @@ function ChecklistApp() {
                     </div>
                     <div style={{...SH,padding:"16px 20px"}}>
                       <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:12}}>Trabajos activos</div>
-                      {ODT_MUESTRA.filter(o=>o.estado==="diseño"||o.estado==="aprobacion").map(o=>{const p=pillE(o.estado);return(
+                      {ODT_REPORTE.filter(o=>o.estado==="diseño"||o.estado==="aprobacion").map(o=>{const p=pillE(o.estado);return(
                         <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f5f7fa"}}>
                           <div style={{width:26,height:26,borderRadius:"50%",background:o.colorD,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff"}}>{o.did}</div>
                           <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div><div style={{fontSize:10,color:"#8aaabb"}}>{o.area}</div></div>
