@@ -16,7 +16,7 @@ class AppErrorBoundary extends React.Component {
       return(
         <div style={{fontFamily:"system-ui,sans-serif",background:"#f0f4f8",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
           <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:420,width:"100%",boxShadow:"0 4px 24px rgba(0,0,0,.1)",textAlign:"center"}}>
-            <div style={{fontSize:40,marginBottom:12}}>⚠️</div>
+            <div style={{width:54,height:54,borderRadius:16,background:"#fff8ec",display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12}}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
             <div style={{fontWeight:800,fontSize:16,color:"#1a2f4a",marginBottom:8}}>Error de aplicación</div>
             <div style={{fontSize:12,color:"#5a7a9a",marginBottom:20,lineHeight:1.6}}>
               Ocurrió un error inesperado. Por favor recarga la página.<br/>
@@ -27,7 +27,7 @@ class AppErrorBoundary extends React.Component {
             </div>
             <button onClick={()=>window.location.reload()}
               style={{padding:"12px 24px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-              🔄 Recargar página
+              <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Recargar página</span>
             </button>
           </div>
         </div>
@@ -1109,6 +1109,9 @@ function ChecklistApp() {
   const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
   const [odtFormDraft, setOdtFormDraft] = useState({});
   const [odtNotifyModal, setOdtNotifyModal] = useState(null); // {disenador, odt}
+  const [odtViewModal,   setOdtViewModal]   = useState(null); // popup vista detalle ODT
+  const [odtAssignModal, setOdtAssignModal] = useState(null); // popup reasignar responsable
+  const [odtEditModal,   setOdtEditModal]   = useState(null); // popup editar ODT - admin
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
   const [rutas,      setRutas]      = useState([]);
@@ -5975,6 +5978,23 @@ function ChecklistApp() {
                             </div>
                           </div>
                         ))}
+                        <div style={{borderTop:"1px solid #F1F5F9",marginTop:10,paddingTop:12}}>
+                          <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,lineHeight:1.35}}>Agregar tipo de trabajo sin borrar los precargados. Las HH estimadas alimentan disponibilidad, planificación y dashboard.</div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 96px auto",gap:8,alignItems:"center"}}>
+                            <input id="odt-cfg-tipo-name" style={{padding:"10px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",fontSize:13,color:"#1a2f4a",outline:"none"}} placeholder="Nuevo tipo de trabajo"/>
+                            <input id="odt-cfg-tipo-hh" type="number" min="0.5" step="0.5" style={{padding:"10px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",fontSize:13,color:"#1a2f4a",outline:"none"}} placeholder="HH"/>
+                            <button onClick={()=>{
+                              const n=(document.getElementById("odt-cfg-tipo-name")||{}).value?.trim();
+                              const h=Number((document.getElementById("odt-cfg-tipo-hh")||{}).value||0);
+                              if(!n){showToast("Ingresa el tipo de trabajo");return;}
+                              if(!h||h<=0){showToast("Ingresa HH estimadas válidas");return;}
+                              setOdtTiposExtra(p=>[...p,{id:`extra-${Date.now()}`,label:n,hh:h,color:"#00b5b4",svg:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>}]);
+                              if(document.getElementById("odt-cfg-tipo-name"))document.getElementById("odt-cfg-tipo-name").value="";
+                              if(document.getElementById("odt-cfg-tipo-hh"))document.getElementById("odt-cfg-tipo-hh").value="";
+                              showToast("Tipo de trabajo agregado");
+                            }} style={{padding:"10px 16px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Agregar</button>
+                          </div>
+                        </div>
                       </div>
                       <div style={S2}>
                         <div style={secTitle}>
@@ -6027,7 +6047,7 @@ function ChecklistApp() {
                   </div>
                   <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:14}}>
                     <button style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #E2E8F0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"white",cursor:"pointer"}}>Descartar</button>
-                    <button onClick={()=>showToast("✅ Configuración de Diseño guardada")}
+                    <button onClick={()=>showToast("Configuración de Diseño guardada")}
                       style={{padding:"10px 18px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"white",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar configuración</button>
                   </div>
                 </div>
@@ -8045,7 +8065,7 @@ function ChecklistApp() {
 
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
@@ -8212,7 +8232,7 @@ function ChecklistApp() {
             {/* ══ TAB 7: NUEVA ODT ══ */}
             {subT==="nueva"&&(
               <div style={{...SH,maxWidth:860,padding:24}}>
-                <div style={{fontFamily:"'Syne',sans-serif",fontSize:17,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Nueva orden de trabajo</div>
+                <div style={{fontFamily:"DM Sans, sans-serif",fontSize:17,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Nueva orden de trabajo</div>
                 <div style={{fontSize:11,color:"#8aaabb",marginBottom:18}}>Solicitud de diseño · el equipo lo recibirá automáticamente</div>
 
                 {/* STEPPER */}
@@ -8324,11 +8344,11 @@ function ChecklistApp() {
                   </div>
                 )}
 
-                {/* SECCIÓN 2: TIPO DE ACTIVIDAD */}
+                {/* SECCIÓN 2: TIPO DE TRABAJO */}
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:14,padding:18,marginBottom:14}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".04em",marginBottom:14}}>
                     <span style={{width:26,height:26,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontSize:11,fontWeight:800}}>2</span>
-                    Tipo de actividad
+                    Tipo de trabajo
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
                     {TIPOS_TRABAJO.map(t=>{
@@ -8424,12 +8444,8 @@ function ChecklistApp() {
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
                   <button style={{padding:"11px 20px",borderRadius:11,border:"1.5px solid #e2e8f0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"#fff",cursor:"pointer"}}>Cancelar</button>
                   <button onClick={()=>{
-                    const d=disenadores.find(u=>u.id===odtForm.disenadorId);
-                    if(d){
-                      setOdtNotifyModal({disenador:d,odt:{...odtForm,...odtFormDraft}});
-                    } else {
-                      showToast("ODT guardada. Asigna un diseñador para notificar.");
-                    }
+                    const d=disenadores.find(u=>u.id===odtForm.disenadorId) || {id:"sin",nombre:"Sin asignar",dni:"Pendiente",email:"",celular:"51"};
+                    setOdtNotifyModal({disenador:d,odt:{...odtForm,...odtFormDraft}});
                   }}
                     style={{padding:"11px 22px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",
                       color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
@@ -8443,38 +8459,47 @@ function ChecklistApp() {
             {/* ══ TAB 8: REPORTE ══ */}
             {subT==="reporte"&&(
               <>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
-                  {STAT.map(s=>(
-                    <div key={s.l} style={{...SH,padding:"14px 16px",textAlign:"center",borderTop:`3px solid ${s.c}`}}>
-                      <div style={{fontFamily:"'Syne',sans-serif",fontSize:30,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
-                      <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,letterSpacing:".05em",marginTop:6,textTransform:"uppercase"}}>{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{...SH,overflow:"hidden"}}>
-                  <div style={{display:"grid",gridTemplateColumns:"90px 1fr 150px 140px 110px 120px",padding:"9px 14px",background:"#eaf0f6"}}>
-                    {["Tipo","ODT / Título","Área","Diseñador","Entrega","Estado"].map(h=>(
-                      <div key={h} style={{fontSize:9,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase"}}>{h}</div>
-                    ))}
+                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
+                  <div style={{height:46,minWidth:250,display:"flex",alignItems:"center",gap:10,padding:"0 14px",border:"1px solid #c8d8e8",borderRadius:12,background:"#fff",color:"#5a7a9a"}}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input placeholder="Buscar actividad..." style={{border:"none",outline:"none",background:"transparent",fontSize:13,color:"#1a2f4a",width:"100%"}}/>
                   </div>
-                  {ODT_MUESTRA.map(o=>{const p=pillE(o.estado);return(
-                    <div key={o.id} style={{display:"grid",gridTemplateColumns:"90px 1fr 150px 140px 110px 120px",
-                      padding:"11px 14px",borderTop:"1px solid #f5f7fa",fontSize:12,alignItems:"center",cursor:"pointer"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"} onMouseLeave={e=>e.currentTarget.style.background=""}>
-                      <div><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:"#f2f6fb"}}>{o.tipo}</span></div>
-                      <div style={{paddingRight:10}}>
-                        <div style={{fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
-                        <div style={{fontSize:10,color:"#8aaabb",marginTop:1}}>{o.subtipo}</div>
-                      </div>
-                      <div style={{color:"#8aaabb",fontSize:11}}>{o.area}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:"50%",background:o.colorD,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff"}}>{o.did}</div>
-                        <span style={{fontSize:11}}>{o.dnombre}</span>
-                      </div>
-                      <div style={{color:"#8aaabb",fontSize:11}}>{o.entrega}</div>
-                      <div><span style={{padding:"2px 9px",borderRadius:20,fontSize:10,fontWeight:700,background:p.bg,color:p.col}}>{p.txt}</span></div>
+                  <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los estados</option><option>Pendiente</option><option>En diseño</option><option>En aprobación</option><option>Entregado</option><option>Retrasado</option></select>
+                  <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los tipos</option><option>Material POP</option><option>Catálogo</option><option>Digital / RRSS</option><option>Volante / Afiche</option></select>
+                  <select style={{...inp,width:240,height:46,cursor:"pointer"}}><option>Todos los responsables</option><option>Paul Albrecht</option><option>Abel Quispe</option><option>Cesar Huapaya</option></select>
+                  <div style={{marginLeft:"auto",padding:"12px 16px",borderRadius:999,background:"rgba(108,110,245,.10)",color:"#6C6EF5",fontSize:12,fontWeight:800}}>{ODT_MUESTRA.length} actividades</div>
+                </div>
+
+                <div style={{...SH,overflow:"auto"}}>
+                  <div style={{minWidth:1180}}>
+                    <div style={{display:"grid",gridTemplateColumns:"120px 1fr 150px 150px 110px 100px 120px 120px 90px 100px 120px",padding:"13px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}>
+                      {["Tipo","Actividad","Área solicitante","Responsable","F. entrega","H. cierre","Estatus","Alerta","HH","Días","Acciones"].map(h=>(
+                        <div key={h} style={{fontSize:9,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",textTransform:"uppercase"}}>{h}</div>
+                      ))}
                     </div>
-                  );})}
+                    {ODT_MUESTRA.map((o,idx)=>{const p=pillE(o.estado);const isLate=o.estado==="retrasado";return(
+                      <div key={o.id} style={{display:"grid",gridTemplateColumns:"120px 1fr 150px 150px 110px 100px 120px 120px 90px 100px 120px",alignItems:"center",padding:"16px 14px",borderTop:idx?"1px solid #f0f4f8":"none",fontSize:12,background:"#fff"}}>
+                        <div><span style={{display:"inline-flex",alignItems:"center",gap:7,padding:"8px 10px",borderRadius:11,fontSize:11,fontWeight:800,background:"#fff8ec",color:"#f6a623",border:"1px solid #fee2b3"}}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>{o.tipo}
+                        </span></div>
+                        <div style={{paddingRight:12,minWidth:0}}><div style={{fontWeight:800,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#1a2f4a"}}>{o.titulo}</div><div style={{fontSize:10,color:"#8aaabb",marginTop:5}}>#{761275-o.id} · 2026-06-0{Math.min(8,o.id+3)}</div></div>
+                        <div style={{color:"#5a7a9a",fontSize:11}}>{o.area}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{width:28,height:28,borderRadius:"50%",background:o.colorD,display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff"}}>{o.did}</span><span style={{padding:"7px 10px",borderRadius:999,background:"#fff8ec",color:"#f6a623",fontSize:10,fontWeight:800,whiteSpace:"nowrap"}}>{o.dnombre}</span></div>
+                        <div><span style={{padding:"6px 11px",borderRadius:999,background:"#eef5fb",color:"#4b6f95",fontSize:11,fontWeight:800}}>{o.entrega}</span></div>
+                        <div><span style={{padding:"6px 11px",borderRadius:999,background:"#eef5fb",color:"#4b6f95",fontSize:11,fontWeight:800}}>{o.horaCorte||"—"}</span></div>
+                        <div><span style={{padding:"5px 10px",borderRadius:999,fontSize:10,fontWeight:800,background:p.bg,color:p.col}}>{p.txt}</span></div>
+                        <div><span style={{padding:"5px 10px",borderRadius:999,fontSize:10,fontWeight:800,background:isLate?"#ffeae6":"#fff8ec",color:isLate?"#dc2626":"#f6a623"}}>{isLate?"Retraso 0d":"Hoy · vence"}</span></div>
+                        <div style={{color:"#8aaabb",fontWeight:800}}>—</div>
+                        <div><div style={{fontSize:11,fontWeight:800,color:"#1a2f4a"}}>0d/1d lab</div><div style={{height:6,borderRadius:999,background:"#edf2f7",marginTop:6,overflow:"hidden"}}><div style={{width:"0%",height:"100%",background:"#6C6EF5"}}/></div><div style={{fontSize:10,fontWeight:800,color:"#6C6EF5",marginTop:3}}>0% · &lt;1d</div></div>
+                        <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"flex-start"}}>
+                          <button title="Vista" onClick={()=>setOdtViewModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                          {isAdmin&&<button title="Editar orden" onClick={()=>setOdtEditModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #6C6EF5",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>}
+                          {isAdmin&&<button title="Asignar" onClick={()=>setOdtAssignModal(o)} style={{height:28,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontSize:11,fontWeight:800,cursor:"pointer"}}>Asignar</button>}
+                          {isAdmin&&<button title="Eliminar" onClick={()=>showToast("Eliminación restringida: usar anulación con trazabilidad")} style={{width:32,height:28,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>}
+                        </div>
+                      </div>
+                    );})}
+                  </div>
                 </div>
               </>
             )}
@@ -8498,7 +8523,7 @@ function ChecklistApp() {
                     <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
                       {STAT.map(s=>(
                         <div key={s.l} style={{...SH,padding:"14px",textAlign:"center",borderTop:`3px solid ${s.c}`}}>
-                          <div style={{fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
+                          <div style={{fontFamily:"DM Sans, sans-serif",fontSize:28,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
                           <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,letterSpacing:".05em",marginTop:5,textTransform:"uppercase"}}>{s.l}</div>
                         </div>
                       ))}
@@ -8506,7 +8531,7 @@ function ChecklistApp() {
                     <div style={{...SH,padding:"16px 20px",marginBottom:14}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{fontSize:13,fontWeight:800,color:"#1a2f4a"}}>Avance global</span>
-                        <span style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#00b894"}}>86%</span>
+                        <span style={{fontFamily:"DM Sans, sans-serif",fontSize:26,fontWeight:800,color:"#00b894"}}>86%</span>
                       </div>
                       <div style={{height:12,borderRadius:8,overflow:"hidden",display:"flex",background:"#e2e8f0",margin:"10px 0"}}>
                         <div style={{width:"46%",background:"#00b894"}}/><div style={{width:"29%",background:"#0984e3"}}/>
@@ -8618,7 +8643,7 @@ function ChecklistApp() {
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:14}}>
                       {[{c:"#6C6EF5",l:"EN PROCESO",v:7},{c:"#e17055",l:"VENCEN HOY",v:1},{c:"#00b894",l:"ENTREGADOS HOY",v:2}].map(k=>(
                         <div key={k.l} style={{...SH,padding:"14px 16px",borderLeft:`3px solid ${k.c}`}}>
-                          <div style={{fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,color:k.c}}>{k.v}</div>
+                          <div style={{fontFamily:"DM Sans, sans-serif",fontSize:28,fontWeight:800,color:k.c}}>{k.v}</div>
                           <div style={{fontSize:9,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginTop:4}}>{k.l}</div>
                         </div>
                       ))}
@@ -8648,7 +8673,7 @@ function ChecklistApp() {
                       {(odtNotifyModal.disenador.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
                     </div>
                     <div>
-                      <div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>Notificar a {odtNotifyModal.disenador.nombre}</div>
+                      <div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.disenador.id==="sin"?"ODT sin diseñador asignado":`Notificar a ${odtNotifyModal.disenador.nombre}`}</div>
                       <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador.dni||"DNI xxxxxx"}</div>
                     </div>
                   </div>
@@ -8670,7 +8695,7 @@ function ChecklistApp() {
                     style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",textDecoration:"none",marginBottom:8}}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg>
                     <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>WA directo a {odtNotifyModal.disenador.nombre?.split(" ")[0]}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>{odtNotifyModal.disenador.id==="sin"?"WhatsApp directo pendiente":`WA directo a ${odtNotifyModal.disenador.nombre?.split(" ")[0]}`}</div>
                       <div style={{fontSize:11,color:"#00b894"}}>Abre WhatsApp con mensaje listo</div>
                     </div>
                   </a>
@@ -8688,14 +8713,87 @@ function ChecklistApp() {
                     style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",textDecoration:"none",marginBottom:16}}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
                     <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Email a {odtNotifyModal.disenador.nombre?.split(" ")[0]}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>{odtNotifyModal.disenador.id==="sin"?"Correo pendiente":`Email a ${odtNotifyModal.disenador.nombre?.split(" ")[0]}`}</div>
                       <div style={{fontSize:11,color:"#0984e3"}}>Abre cliente de correo listo para enviar</div>
                     </div>
                   </a>
-                  <button onClick={()=>{setOdtNotifyModal(null);showToast("ODT creada. Diseñador notificado.");}}
+                  <button onClick={()=>{setOdtNotifyModal(null);showToast(odtNotifyModal.disenador.id==="sin"?"ODT creada sin diseñador asignado":"ODT creada. Diseñador notificado.");}}
                     style={{width:"100%",padding:"13px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                     Listo — cerrar
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ══ POPUP VISTA DETALLE ODT ══ */}
+            {odtViewModal&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.62)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:20}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(760px,96vw)",maxHeight:"86vh",overflow:"auto",boxShadow:"0 18px 54px rgba(0,0,0,.24)",border:"1px solid #e2e8f0"}}>
+                  <div style={{position:"sticky",top:0,background:"#fff",zIndex:2,padding:"16px 20px",borderBottom:"1px solid #f0f4f8",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                    <div><div style={{fontSize:17,fontWeight:800,color:"#1a2f4a"}}>Detalle de orden de trabajo</div><div style={{fontSize:11,color:"#5a7a9a",marginTop:3}}>{odtViewModal.titulo}</div></div>
+                    <button onClick={()=>setOdtViewModal(null)} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cerrar</button>
+                  </div>
+                  <div style={{padding:20,display:"grid",gap:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      {[['Área',odtViewModal.area],['Tipo de trabajo',odtViewModal.tipo],['Responsable',odtViewModal.dnombre],['Fecha entrega',odtViewModal.entrega],['Hora de corte',odtViewModal.horaCorte||'—'],['HH estimadas','—h']].map(([k,v])=>(
+                        <div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:12}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",marginBottom:6}}>{k}</div><div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>{v}</div></div>
+                      ))}
+                    </div>
+                    <div style={{border:"1px solid #e2e8f0",borderRadius:14,padding:14}}><div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:8}}>Materiales y medidas</div><div style={{fontSize:12,color:"#5a7a9a",lineHeight:1.7}}><b>Materiales:</b> Feed Instagram (1080×1080)<br/><b>Medidas:</b> No especificado</div></div>
+                    <div style={{border:"1px solid #e2e8f0",borderRadius:14,padding:14}}><div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:8}}>Estilo y brief</div><div style={{fontSize:12,color:"#5a7a9a",lineHeight:1.7}}><b>Tonalidad:</b> Promocional<br/><b>Mecánica / dinámica:</b> Resumen visible para el diseñador con todo lo solicitado desde Nueva ODT.</div></div>
+                    <div style={{border:"1px solid #e2e8f0",borderRadius:14,padding:14}}><div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:8}}>Productos, restricciones y referencias</div><div style={{fontSize:12,color:"#5a7a9a",lineHeight:1.7}}><b>Productos:</b> No especificado<br/><b>Restricciones:</b> No especificado<br/><b>Comentarios / referencias:</b> No especificado</div></div>
+                    {isAdmin&&(
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                        <button onClick={()=>showToast("Abrir WhatsApp con resumen completo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2"><path d="M21 11.5a8.5 8.5 0 01-12.7 7.4L3 20l1.2-5.1A8.5 8.5 0 1121 11.5z"/><path d="M8 8c1 4 4 7 8 8"/></svg><span>Enviar WhatsApp<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Mensaje con resumen completo</small></span></button>
+                        <button onClick={()=>showToast("Abrir correo con brief completo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Enviar correo<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Asunto + brief completo</small></span></button>
+                        <button onClick={()=>showToast("Enviar por WhatsApp y correo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M4 4h16v12H7l-3 3V4z"/><path d="M8 9h8M8 13h5"/></svg><span>Enviar ambos<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>WhatsApp + correo</small></span></button>
+                        <button onClick={()=>showToast("Reenvío al grupo Cartelería")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span>Grupo Cartelería<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Reenvío operativo</small></span></button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══ POPUP REASIGNAR RESPONSABLE - ADMIN ══ */}
+            {isAdmin&&odtAssignModal&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.62)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:101,padding:20}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(520px,94vw)",boxShadow:"0 18px 54px rgba(0,0,0,.24)",padding:22}}>
+                  <div style={{fontSize:17,fontWeight:800,color:"#1a2f4a",marginBottom:8}}>Asignar responsable</div>
+                  <div style={{fontSize:12,color:"#5a7a9a",marginBottom:18}}>{odtAssignModal.titulo}</div>
+                  {disenadores.map(d=>(
+                    <button key={d.id} onClick={()=>{setOdtAssignModal(null);showToast(`Responsable reasignado a ${d.nombre}`);}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",marginBottom:8,cursor:"pointer",textAlign:"left"}}>
+                      <span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontSize:11,fontWeight:800}}>{(d.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}</span>
+                      <span><b style={{fontSize:12,color:'#1a2f4a'}}>{d.nombre}</b><br/><small style={{color:'#8aaabb'}}>diseñador · h/sem</small></span>
+                    </button>
+                  ))}
+                  <button onClick={()=>setOdtAssignModal(null)} style={{width:"100%",padding:"11px",borderRadius:11,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {/* ══ POPUP EDITAR ORDEN - ADMIN ══ */}
+            {isAdmin&&odtEditModal&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.62)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:101,padding:20}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(760px,96vw)",maxHeight:"86vh",overflow:"auto",boxShadow:"0 18px 54px rgba(0,0,0,.24)",border:"1px solid #e2e8f0"}}>
+                  <div style={{position:"sticky",top:0,background:"#fff",zIndex:2,padding:"16px 20px",borderBottom:"1px solid #f0f4f8",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                    <div style={{fontSize:18,fontWeight:800,color:"#1a2f4a"}}>Editar orden de trabajo</div>
+                    <button onClick={()=>setOdtEditModal(null)} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cerrar</button>
+                  </div>
+                  <div style={{padding:20}}>
+                    <div style={{border:"1.5px solid #e2e8f0",borderRadius:14,padding:18,marginBottom:14}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:14}}>Información general</div>
+                      <label style={lbl}>Título</label><input defaultValue={odtEditModal.titulo} style={{...inp,marginBottom:12}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><div><label style={lbl}>Área</label><select defaultValue={odtEditModal.area} style={{...inp,cursor:'pointer'}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option></select></div><div><label style={lbl}>Tipo de trabajo</label><select defaultValue={odtEditModal.tipo} style={{...inp,cursor:'pointer'}}><option>Material POP</option><option>Catálogo</option><option>Digital / RRSS</option><option>Volante / Afiche</option><option>Marcador Precio</option><option>Góndola / Exhibidor</option></select></div></div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={lbl}>Fecha entrega</label><input type="date" style={inp}/></div><div><label style={lbl}>Hora de corte</label><input type="time" style={inp}/></div></div>
+                    </div>
+                    <div style={{border:"1.5px solid #e2e8f0",borderRadius:14,padding:18,marginBottom:14}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:14}}>Brief</div>
+                      <label style={lbl}>Objetivo y público</label><textarea defaultValue="Resumen visible para el diseñador con todo lo solicitado desde Nueva ODT." style={{...inp,minHeight:90,marginBottom:12}}/>
+                      <label style={lbl}>Mensaje principal</label><textarea style={{...inp,minHeight:80}} placeholder="Frase clave, claim o copy principal de la pieza"/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button onClick={()=>setOdtEditModal(null)} style={{padding:"11px 18px",borderRadius:11,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancelar</button><button onClick={()=>{setOdtEditModal(null);showToast('Orden de trabajo actualizada');}} style={{padding:"11px 18px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer"}}>Guardar cambios</button></div>
+                  </div>
                 </div>
               </div>
             )}
@@ -10154,7 +10252,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#b8c8d8 0%,#8aaabb 40%,#5a7a9a 100%)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <div style={{width:"90%",maxWidth:360,background:"#fff",borderRadius:20,padding:"32px 28px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
         {/* Logo */}
         <div style={{width:65,height:65,borderRadius:16,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 22px rgba(0,0,0,.14)"}}>
@@ -10255,7 +10353,7 @@ function PinModal({pins,onSave,onClose}){
       <div style={{background:"#fff",borderRadius:20,padding:30,width:"90%",maxWidth:400,boxShadow:"0 24px 60px rgba(0,0,0,.3)"}}>
         <div style={{textAlign:"center",marginBottom:22}}>
           <div style={{fontSize:32,marginBottom:8}}>🔑</div>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#1a2f4a"}}>Gestionar Códigos de Acceso</div>
+          <div style={{fontFamily:"DM Sans, sans-serif",fontWeight:800,fontSize:17,color:"#1a2f4a"}}>Gestionar Códigos de Acceso</div>
         </div>
         {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"auditor",label:"Código Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
           <div key={f.k} style={{marginBottom:14}}>
