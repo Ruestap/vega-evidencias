@@ -1106,6 +1106,7 @@ function ChecklistApp() {
   // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
   const [odtSubTab,  setOdtSubTab]  = useState("reporte");
   const [odtDashLvl, setOdtDashLvl] = useState("direccion");
+  const [odtDashView, setOdtDashView] = useState("kanban"); // Kanban | Panel interno del Dashboard Diseño/ODT
   const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
   const [odtFormDraft, setOdtFormDraft] = useState({});
   const [odtNotifyModal, setOdtNotifyModal] = useState(null); // {disenador, odt}
@@ -8521,6 +8522,82 @@ function ChecklistApp() {
             {/* ══ TAB 9: DASHBOARD ══ */}
             {subT==="dashboard"&&(
               <>
+
+                <div style={{...SH,padding:"16px",marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:14}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                      {[
+                        {id:"kanban",label:"Kanban",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="10" rx="2"/></svg>},
+                        {id:"panel",label:"Panel",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-8"/></svg>}
+                      ].map(v=>(
+                        <button key={v.id} onClick={()=>setOdtDashView(v.id)}
+                          style={{display:"flex",alignItems:"center",gap:7,padding:"10px 14px",border:"none",borderBottom:`3px solid ${odtDashView===v.id?"#6C6EF5":"transparent"}`,background:odtDashView===v.id?"rgba(108,110,245,.08)":"transparent",color:odtDashView===v.id?"#6C6EF5":"#5a7a9a",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+                          {v.icon}{v.label}
+                        </button>
+                      ))}
+                    </div>
+                    {odtDashView==="kanban"&&(
+                      <select style={{width:42,height:34,borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#1a2f4a",outline:"none"}} defaultValue="todos">
+                        <option value="todos">Todos</option>
+                        <option value="pa">PA</option>
+                        <option value="aq">AQ</option>
+                        <option value="ch">CH</option>
+                      </select>
+                    )}
+                  </div>
+                  {odtDashView==="kanban"&&(
+                    <>
+                      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+                        {[{id:"PA",c:"#0984e3"},{id:"AQ",c:"#6C6EF5"},{id:"CH",c:"#00b5b4"}].map(d=>(
+                          <span key={d.id} style={{width:38,height:38,borderRadius:"50%",background:d.c,color:"#fff",display:"grid",placeItems:"center",fontSize:12,fontWeight:800}}>{d.id}</span>
+                        ))}
+                        <span style={{fontSize:12,color:"#5a7a9a",fontWeight:600}}>3 diseñadores activos</span>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(230px,1fr))",gap:16,alignItems:"start",overflowX:"auto",paddingBottom:6}}>
+                        {[
+                          {id:"pendiente",label:"PENDIENTE",c:"#f6a623"},
+                          {id:"diseño",label:"EN DISEÑO",c:"#6C6EF5"},
+                          {id:"aprobacion",label:"EN APROBACIÓN",c:"#0984e3"},
+                          {id:"entregado",label:"ENTREGADO",c:"#00b894"}
+                        ].map(col=>{
+                          const items=ODT_REPORTE.filter(o=>o.estado===col.id);
+                          return(
+                            <div key={col.id} style={{minWidth:230}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                                <span style={{width:8,height:8,borderRadius:"50%",background:col.c}}/>
+                                <span style={{fontSize:11,fontWeight:900,color:"#1a2f4a",letterSpacing:".02em"}}>{col.label}</span>
+                                <span style={{marginLeft:"auto",minWidth:22,height:20,borderRadius:999,background:"#e2e8f0",color:"#4b6f95",display:"grid",placeItems:"center",fontSize:10,fontWeight:800}}>{items.length}</span>
+                              </div>
+                              <div style={{display:"grid",gap:10}}>
+                                {items.length?items.map(o=>{
+                                  const isLate=o.estado==="retrasado";
+                                  return(
+                                    <div key={o.id} onClick={()=>setOdtViewModal(o)} style={{...SH,padding:"13px 14px",cursor:"pointer"}}>
+                                      <div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",lineHeight:1.25,marginBottom:6}}>{o.titulo}</div>
+                                      <div style={{fontSize:10,color:"#4b6f95",marginBottom:12}}>{o.tipo} · {o.area}</div>
+                                      {(o.estado==="diseño"||o.estado==="retrasado")&&(
+                                        <div style={{height:5,borderRadius:999,background:"#e2e8f0",overflow:"hidden",marginBottom:10}}><div style={{width:o.estado==="retrasado"?"42%":"65%",height:"100%",background:isLate?"#e17055":"linear-gradient(90deg,#00b5b4,#6C6EF5)"}}/></div>
+                                      )}
+                                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                                        <span style={{width:28,height:28,borderRadius:"50%",background:o.colorD,color:"#fff",display:"grid",placeItems:"center",fontSize:9,fontWeight:800}}>{o.did}</span>
+                                        <span style={{fontSize:10,fontWeight:800,color:isLate?"#dc2626":col.c}}>{o.entrega}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }):(
+                                  <div style={{border:"1px dashed #c8d8e8",borderRadius:12,padding:"18px 12px",fontSize:11,color:"#8aaabb",textAlign:"center",background:"#f8fafc"}}>Sin ODTs</div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {odtDashView==="panel"&&(
+                  <>
+
                 <div style={{display:"flex",gap:8,marginBottom:16}}>
                   {[{id:"direccion",label:"Dirección",sub:"Visión ejecutiva"},{id:"gerencia",label:"Gerencia",sub:"Análisis y causas"},{id:"operativo",label:"Operativo",sub:"Seguimiento diario"}].map(lv=>(
                     <button key={lv.id} onClick={()=>setOdtDashLvl(lv.id)}
@@ -8673,6 +8750,9 @@ function ChecklistApp() {
                         </div>
                       );})}
                     </div>
+                  </>
+                )}
+
                   </>
                 )}
               </>
