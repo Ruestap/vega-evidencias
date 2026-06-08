@@ -1115,6 +1115,8 @@ function ChecklistApp() {
   const [odtDeletedIds,  setOdtDeletedIds]  = useState([]); // soft delete visual/demo ODT reporte
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
+  const [odtReportFilters, setOdtReportFilters] = useState({q:"",estado:"todos",tipo:"todos",responsable:"todos"}); // filtros reporte Diseño/ODT
+  const ODT_MATERIALES_BASE = ["Feed Instagram (1080×1080)","Historia Instagram (1080×1920)","Banner WhatsApp","Banner Web","Pieza física (afiche/vinil)","Diseño góndola/cabecera","Reel / Video","Otro"];
   const [rutas,      setRutas]      = useState([]);
   const [modulosAud, setModulosAud] = useState([]);
   const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});
@@ -6028,8 +6030,8 @@ function ChecklistApp() {
                     </div>
                     <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>No reemplaza la lista aprobada: permite agregar nuevos materiales y activar/desactivar los precargados.</div>
                     <div style={{display:"grid",gap:8,marginBottom:12}}>
-                      {[...MATERIALES_BASE,...odtMaterialesExtra].map((m,idx)=>{
-                        const esPre=idx<MATERIALES_BASE.length;
+                      {[...ODT_MATERIALES_BASE,...odtMaterialesExtra].map((m,idx)=>{
+                        const esPre=idx<ODT_MATERIALES_BASE.length;
                         return(
                           <div key={m} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,border:"1px solid #e2e8f0",borderRadius:10,background:"#f8fafc",padding:"9px 12px"}}>
                             <span><b style={{fontSize:12}}>{m}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>{esPre?"Precargado":"Agregado"}</small></span>
@@ -8208,7 +8210,15 @@ function ChecklistApp() {
           {id:4,tipo:"Góndola",titulo:"Exhibidor Cabecera Gondola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Trade Marketing · Mayorista",did:"PA",dnombre:"Paul Albrecht",entrega:"15/06/2026",estado:"aprobacion",colorD:"#0984e3"},
           {id:5,tipo:"Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Marketing · Market",did:"AQ",dnombre:"Abel Quispe",entrega:"12/06/2026",estado:"pendiente",colorD:"#6c5ce7"},
         ];
-        const ODT_REPORTE=ODT_MUESTRA.filter(o=>!odtDeletedIds.includes(o.id));
+        const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!odtDeletedIds.includes(o.id));
+        const ODT_REPORTE=ODT_REPORTE_BASE.filter(o=>{
+          const q=(odtReportFilters.q||"").trim().toLowerCase();
+          const estadoOk=odtReportFilters.estado==="todos"||o.estado===odtReportFilters.estado;
+          const tipoOk=odtReportFilters.tipo==="todos"||o.tipo===odtReportFilters.tipo;
+          const respOk=odtReportFilters.responsable==="todos"||o.dnombre===odtReportFilters.responsable;
+          const qOk=!q||[o.titulo,o.area,o.tipo,o.subtipo,o.dnombre,`#${761275-o.id}`].join(" ").toLowerCase().includes(q);
+          return estadoOk&&tipoOk&&respOk&&qOk;
+        });
         const pillE=(e)=>{
           if(e==="diseño")    return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"};
           if(e==="retrasado") return{bg:"#ffeae6",col:"#e17055",txt:"Retrasado"};
@@ -8464,23 +8474,24 @@ function ChecklistApp() {
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
                   <div style={{height:46,minWidth:250,display:"flex",alignItems:"center",gap:10,padding:"0 14px",border:"1px solid #c8d8e8",borderRadius:12,background:"#fff",color:"#5a7a9a"}}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <input placeholder="Buscar actividad..." style={{border:"none",outline:"none",background:"transparent",fontSize:13,color:"#1a2f4a",width:"100%"}}/>
+                    <input value={odtReportFilters.q} onChange={e=>setOdtReportFilters(p=>({...p,q:e.target.value}))} placeholder="Buscar actividad..." style={{border:"none",outline:"none",background:"transparent",fontSize:13,color:"#1a2f4a",width:"100%"}}/>
                   </div>
-                  <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los estados</option><option>Pendiente</option><option>En diseño</option><option>En aprobación</option><option>Entregado</option><option>Retrasado</option></select>
-                  <select style={{...inp,width:220,height:46,cursor:"pointer"}}><option>Todos los tipos</option><option>Material POP</option><option>Catálogo</option><option>Digital / RRSS</option><option>Volante / Afiche</option></select>
-                  <select style={{...inp,width:240,height:46,cursor:"pointer"}}><option>Todos los responsables</option><option>Paul Albrecht</option><option>Abel Quispe</option><option>Cesar Huapaya</option></select>
+                  <select value={odtReportFilters.estado} onChange={e=>setOdtReportFilters(p=>({...p,estado:e.target.value}))} style={{...inp,width:220,height:46,cursor:"pointer"}}><option value="todos">Todos los estados</option><option value="pendiente">Pendiente</option><option value="diseño">En diseño</option><option value="aprobacion">En aprobación</option><option value="entregado">Entregado</option><option value="retrasado">Retrasado</option></select>
+                  <select value={odtReportFilters.tipo} onChange={e=>setOdtReportFilters(p=>({...p,tipo:e.target.value}))} style={{...inp,width:220,height:46,cursor:"pointer"}}><option value="todos">Todos los tipos</option><option value="POP">POP</option><option value="Cat.">Catálogo</option><option value="Precio">Marcador Precio</option><option value="Góndola">Góndola / Exhibidor</option><option value="Afiche">Volante / Afiche</option></select>
+                  <select value={odtReportFilters.responsable} onChange={e=>setOdtReportFilters(p=>({...p,responsable:e.target.value}))} style={{...inp,width:240,height:46,cursor:"pointer"}}><option value="todos">Todos los responsables</option><option value="Paul Albrecht">Paul Albrecht</option><option value="Abel Quispe">Abel Quispe</option><option value="Cesar Huapaya">Cesar Huapaya</option></select>
+                  <button type="button" onClick={()=>setOdtReportFilters({q:"",estado:"todos",tipo:"todos",responsable:"todos"})} style={{height:46,padding:"0 14px",borderRadius:12,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",fontSize:12,fontWeight:800,cursor:"pointer"}}>Limpiar</button>
                   <div style={{marginLeft:"auto",padding:"12px 16px",borderRadius:999,background:"rgba(108,110,245,.10)",color:"#6C6EF5",fontSize:12,fontWeight:800}}>{ODT_REPORTE.length} actividades</div>
                 </div>
 
                 <div style={{...SH,overflowX:"auto",overflowY:"hidden"}}>
-                  <div style={{minWidth:1760}}>
-                    <div style={{display:"grid",gridTemplateColumns:"170px 340px 190px 220px 135px 125px 145px 210px 80px 175px 100px 210px",padding:"13px 18px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
+                  <div style={{minWidth:1925}}>
+                    <div style={{display:"grid",gridTemplateColumns:"130px 360px 180px 210px 135px 115px 135px 170px 70px 150px 80px 190px",padding:"13px 18px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
                       {["Tipo","Actividad","Área solicitante","Responsable","F. entrega","H. cierre","Estatus","Alerta","HH","Tiempo","Días","Acciones"].map(h=>(
                         <div key={h} style={{fontSize:9,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",textTransform:"uppercase"}}>{h}</div>
                       ))}
                     </div>
                     {ODT_REPORTE.map((o,idx)=>{const p=pillE(o.estado);const isLate=o.estado==="retrasado";return(
-                      <div key={o.id} style={{display:"grid",gridTemplateColumns:"170px 340px 190px 220px 135px 125px 145px 210px 80px 175px 100px 210px",alignItems:"center",padding:"18px 18px",borderTop:idx?"1px solid #f0f4f8":"none",fontSize:12,background:"#fff",minHeight:86}}>
+                      <div key={o.id} style={{display:"grid",gridTemplateColumns:"130px 360px 180px 210px 135px 115px 135px 170px 70px 150px 80px 190px",alignItems:"center",padding:"18px 18px",borderTop:idx?"1px solid #f0f4f8":"none",fontSize:12,background:"#fff",minHeight:86}}>
                         <div><span style={{display:"inline-flex",alignItems:"center",gap:7,padding:"9px 12px",borderRadius:11,fontSize:11,fontWeight:800,background:"#fff8ec",color:"#f6a623",border:"1px solid #fee2b3",whiteSpace:"nowrap"}}>
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>{o.tipo}
                         </span></div>
