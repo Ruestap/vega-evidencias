@@ -8259,19 +8259,31 @@ function ChecklistApp() {
           const mail=buildOdtBriefEmail(odt,disenador);
           abrirEmailWebOdt(disenador?.email||"",mail.subject,mail.body);
         };
+        const getOdtDeletedList=()=>{
+          const fromState=Array.isArray(odtDeletedIds)?odtDeletedIds:[];
+          try{
+            const raw=window.localStorage?.getItem("et_odt_deleted_ids");
+            const fromStorage=raw?JSON.parse(raw):[];
+            return Array.from(new Set([...(Array.isArray(fromStorage)?fromStorage:[]),...fromState].map(String).filter(Boolean)));
+          }catch{
+            return Array.from(new Set(fromState.map(String).filter(Boolean)));
+          }
+        };
         const eliminarOdtAdmin=(o)=>{
           if(!isAdmin) return;
+          const id=String(o?.id||"");
+          if(!id){showToast("No se encontró el ID de la ODT");return;}
           if(!window.confirm(`¿Eliminar la ODT: ${o.titulo}? Esta acción ocultará el registro del reporte.`)) return;
-          setOdtDeletedIds(ids=>{
-            const id=String(o.id);
-            const actuales=(Array.isArray(ids)?ids:[]).map(String);
-            const next=actuales.includes(id)?actuales:[...actuales,id];
-            try{window.localStorage?.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{}
-            return next;
-          });
+          const next=Array.from(new Set([...getOdtDeletedList(),id]));
+          try{window.localStorage?.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{}
+          setOdtDeletedIds(next);
+          if(odtViewModal&&String(odtViewModal.id)===id)setOdtViewModal(null);
+          if(odtEditModal&&String(odtEditModal.id)===id)setOdtEditModal(null);
+          if(odtAssignModal&&String(odtAssignModal.id)===id)setOdtAssignModal(null);
           showToast("ODT eliminada con trazabilidad");
         };
-        const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!(Array.isArray(odtDeletedIds)?odtDeletedIds:[]).map(String).includes(String(o.id)));
+        const ODT_DELETED_SET=new Set(getOdtDeletedList());
+        const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!ODT_DELETED_SET.has(String(o.id)));
         const ODT_REPORTE=ODT_REPORTE_BASE.filter(o=>{
           const q=(odtReportFilters.q||"").trim().toLowerCase();
           const estadoOk=odtReportFilters.estado==="todos"||o.estado===odtReportFilters.estado;
