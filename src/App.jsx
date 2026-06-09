@@ -8167,7 +8167,10 @@ function ChecklistApp() {
                     color:tab===tb.i?"#5B6CF7":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                  {tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                  {tb.i===7?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 12v6M9 15h6"/></svg>
+                  :tb.i===8?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  :tb.i===9?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  :tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
                   :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
                   :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                   {tb.label}
@@ -8211,17 +8214,64 @@ function ChecklistApp() {
           {id:4,tipo:"Góndola",titulo:"Exhibidor Cabecera Gondola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Trade Marketing · Mayorista",did:"PA",dnombre:"Paul Albrecht",entrega:"15/06/2026",estado:"aprobacion",colorD:"#0984e3"},
           {id:5,tipo:"Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Marketing · Market",did:"AQ",dnombre:"Abel Quispe",entrega:"12/06/2026",estado:"pendiente",colorD:"#6c5ce7"},
         ];
+        const buildOdtBriefEmail=(odt,disenador)=>{
+          const subject=`Nueva ODT asignada: ${odt?.titulo||"Sin título"}`;
+          const body=[
+            `Hola ${disenador?.nombre?.split(" ")?.[0]||"equipo"},`,
+            "",
+            "Tienes una nueva orden de trabajo asignada.",
+            "",
+            `Tarea: ${odt?.titulo||"Sin título"}`,
+            `Área: ${odt?.area||"—"}`,
+            `Tipo de trabajo: ${odt?.tipo||"—"}`,
+            `Fecha de entrega: ${odt?.fechaEntrega||odt?.entrega||"—"}`,
+            `Hora de corte: ${odt?.horaCorte||"—"}`,
+            "",
+            "Brief:",
+            `Objetivo y público: ${odt?.objetivo||"No especificado"}`,
+            `Mensaje principal: ${odt?.mensaje||"No especificado"}`,
+            `Materiales: ${odt?.materiales||"No especificado"}`,
+            `Medidas: ${odt?.medidas||"No especificado"}`,
+            `Productos: ${odt?.productos||"No especificado"}`,
+            `Restricciones: ${odt?.restricciones||"No especificado"}`,
+            `Referencias: ${odt?.referencias||"No especificado"}`,
+            "",
+            "Gracias."
+          ].join("\n");
+          return {subject,body};
+        };
+        const abrirEmailWebOdt=(to,subject,body)=>{
+          if(!to){showToast("El diseñador no tiene correo configurado");return;}
+          const cuerpoLimpio=String(body||"").replace(/<br\s*[/]?>/gi,"\n").replace(/<a[^>]*>([^<]*)<[/]a>/gi,"$1").replace(/<[^>]+>/g,"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+          const url="https://outlook.office365.com/mail/deeplink/compose?to="
+            +encodeURIComponent(to||"")
+            +"&subject="+encodeURIComponent(subject||"")
+            +"&body="+encodeURIComponent(cuerpoLimpio);
+          const win=window.open(url,"_blank","noopener,noreferrer");
+          if(!win){
+            const a=document.createElement("a");
+            a.href=url; a.target="_blank"; a.rel="noopener noreferrer";
+            document.body.appendChild(a); a.click();
+            setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);
+          }
+        };
+        const enviarCorreoOdt=(odt,disenador)=>{
+          const mail=buildOdtBriefEmail(odt,disenador);
+          abrirEmailWebOdt(disenador?.email||"",mail.subject,mail.body);
+        };
         const eliminarOdtAdmin=(o)=>{
           if(!isAdmin) return;
           if(!window.confirm(`¿Eliminar la ODT: ${o.titulo}? Esta acción ocultará el registro del reporte.`)) return;
           setOdtDeletedIds(ids=>{
-            const next=ids.includes(o.id)?ids:[...ids,o.id];
+            const id=String(o.id);
+            const actuales=(Array.isArray(ids)?ids:[]).map(String);
+            const next=actuales.includes(id)?actuales:[...actuales,id];
             try{window.localStorage?.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{}
             return next;
           });
           showToast("ODT eliminada con trazabilidad");
         };
-        const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!odtDeletedIds.includes(o.id));
+        const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!(Array.isArray(odtDeletedIds)?odtDeletedIds:[]).map(String).includes(String(o.id)));
         const ODT_REPORTE=ODT_REPORTE_BASE.filter(o=>{
           const q=(odtReportFilters.q||"").trim().toLowerCase();
           const estadoOk=odtReportFilters.estado==="todos"||o.estado===odtReportFilters.estado;
@@ -8803,24 +8853,15 @@ function ChecklistApp() {
                       <div style={{fontSize:11,color:"#00b894"}}>Abre WhatsApp con mensaje listo</div>
                     </div>
                   </a>
-                  {/* Grupo Cartelería */}
-                  <button onClick={()=>showToast("Reenvío al grupo Cartelería")}
-                    style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #e2e8f0",background:"#fff",textDecoration:"none",marginBottom:8,cursor:"pointer"}}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                    <div style={{textAlign:"left"}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Grupo Cartelería</div>
-                      <div style={{fontSize:11,color:"#00b5b4"}}>Reenvío al grupo operativo</div>
-                    </div>
-                  </button>
-                  {/* Email */}
-                  <a href={`mailto:${odtNotifyModal.disenador.email||""}?subject=Nueva ODT asignada: ${odtNotifyModal.odt.titulo||""}&body=Tienes una nueva actividad de diseño asignada:%0A%0ATarea: ${odtNotifyModal.odt.titulo||""}%0AEntrega: ${odtNotifyModal.odt.fechaEntrega||""}%0AHora de corte: ${odtNotifyModal.odt.horaCorte||""}%0ATipo: ${odtNotifyModal.odt.tipo||""}%0AÁrea: ${odtNotifyModal.odt.area||""}`}
-                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",textDecoration:"none",marginBottom:16}}>
+                  {/* Email — reutiliza apertura Outlook 365 usada en auditoría */}
+                  <button onClick={()=>enviarCorreoOdt(odtNotifyModal.odt,odtNotifyModal.disenador)}
+                    style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",textDecoration:"none",marginBottom:16,cursor:"pointer",textAlign:"left"}}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
                     <div>
                       <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>{odtNotifyModal.disenador.id==="sin"?"Correo pendiente":`Email a ${odtNotifyModal.disenador.nombre?.split(" ")[0]}`}</div>
-                      <div style={{fontSize:11,color:"#0984e3"}}>Abre cliente de correo listo para enviar</div>
+                      <div style={{fontSize:11,color:"#0984e3"}}>Abre Outlook 365 con el brief listo</div>
                     </div>
-                  </a>
+                  </button>
                   <button onClick={()=>{setOdtNotifyModal(null);showToast(odtNotifyModal.disenador.id==="sin"?"ODT creada sin diseñador asignado":"ODT creada. Diseñador notificado.");}}
                     style={{width:"100%",padding:"13px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                     Listo — cerrar
@@ -8848,10 +8889,8 @@ function ChecklistApp() {
                     <div style={{border:"1px solid #e2e8f0",borderRadius:14,padding:14}}><div style={{fontSize:12,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",marginBottom:8}}>Productos, restricciones y referencias</div><div style={{fontSize:12,color:"#5a7a9a",lineHeight:1.7}}><b>Productos:</b> No especificado<br/><b>Restricciones:</b> No especificado<br/><b>Comentarios / referencias:</b> No especificado</div></div>
                     {isAdmin&&(
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                        <button onClick={()=>showToast("Abrir WhatsApp con resumen completo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2"><path d="M21 11.5a8.5 8.5 0 01-12.7 7.4L3 20l1.2-5.1A8.5 8.5 0 1121 11.5z"/><path d="M8 8c1 4 4 7 8 8"/></svg><span>Enviar WhatsApp<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Mensaje con resumen completo</small></span></button>
-                        <button onClick={()=>showToast("Abrir correo con brief completo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Enviar correo<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Asunto + brief completo</small></span></button>
-                        <button onClick={()=>showToast("Enviar por WhatsApp y correo")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M4 4h16v12H7l-3 3V4z"/><path d="M8 9h8M8 13h5"/></svg><span>Enviar ambos<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>WhatsApp + correo</small></span></button>
-                        <button onClick={()=>showToast("Reenvío al grupo Cartelería")} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span>Grupo Cartelería<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Reenvío operativo</small></span></button>
+                        <a href={`https://wa.me/?text=${encodeURIComponent(`ODT asignada\n${odtViewModal.titulo||""}\nResponsable: ${odtViewModal.dnombre||""}\nEntrega: ${odtViewModal.entrega||""}\nTipo: ${odtViewModal.tipo||""}\nÁrea: ${odtViewModal.area||""}`)}`} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer",textDecoration:"none"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2"><path d="M21 11.5a8.5 8.5 0 01-12.7 7.4L3 20l1.2-5.1A8.5 8.5 0 1121 11.5z"/><path d="M8 8c1 4 4 7 8 8"/></svg><span>Enviar WhatsApp<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Mensaje al diseñador asignado</small></span></a>
+                        <button onClick={()=>enviarCorreoOdt({titulo:odtViewModal.titulo,area:odtViewModal.area,tipo:odtViewModal.tipo,fechaEntrega:odtViewModal.entrega,horaCorte:odtViewModal.horaCorte},disenadores.find(d=>d.nombre===odtViewModal.dnombre)||{nombre:odtViewModal.dnombre,email:""})} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 14px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#1a2f4a",fontSize:12,fontWeight:800,cursor:"pointer",textAlign:"left"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Enviar correo<br/><small style={{fontWeight:600,color:'#5a7a9a'}}>Outlook 365 con brief completo</small></span></button>
                       </div>
                     )}
                   </div>
