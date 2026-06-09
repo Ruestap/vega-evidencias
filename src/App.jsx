@@ -1113,7 +1113,7 @@ function ChecklistApp() {
   const [odtViewModal,   setOdtViewModal]   = useState(null); // popup vista detalle ODT
   const [odtAssignModal, setOdtAssignModal] = useState(null); // popup reasignar responsable
   const [odtEditModal,   setOdtEditModal]   = useState(null); // popup editar ODT - admin
-  const [odtDeletedIds,  setOdtDeletedIds]  = useState([]); // soft delete visual/demo ODT reporte
+  const [odtDeletedIds,  setOdtDeletedIds]  = useState(()=>{try{return JSON.parse((typeof window!=="undefined"&&window.localStorage?.getItem("et_odt_deleted_ids"))||"[]");}catch{return [];}}); // soft delete persistente ODT reporte
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
   const [odtReportFilters, setOdtReportFilters] = useState({q:"",estado:"todos",tipo:"todos",responsable:"todos"}); // filtros reporte Diseño/ODT
@@ -8211,6 +8211,16 @@ function ChecklistApp() {
           {id:4,tipo:"Góndola",titulo:"Exhibidor Cabecera Gondola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Trade Marketing · Mayorista",did:"PA",dnombre:"Paul Albrecht",entrega:"15/06/2026",estado:"aprobacion",colorD:"#0984e3"},
           {id:5,tipo:"Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Marketing · Market",did:"AQ",dnombre:"Abel Quispe",entrega:"12/06/2026",estado:"pendiente",colorD:"#6c5ce7"},
         ];
+        const eliminarOdtAdmin=(o)=>{
+          if(!isAdmin) return;
+          if(!window.confirm(`¿Eliminar la ODT: ${o.titulo}? Esta acción ocultará el registro del reporte.`)) return;
+          setOdtDeletedIds(ids=>{
+            const next=ids.includes(o.id)?ids:[...ids,o.id];
+            try{window.localStorage?.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{}
+            return next;
+          });
+          showToast("ODT eliminada con trazabilidad");
+        };
         const ODT_REPORTE_BASE=ODT_MUESTRA.filter(o=>!odtDeletedIds.includes(o.id));
         const ODT_REPORTE=ODT_REPORTE_BASE.filter(o=>{
           const q=(odtReportFilters.q||"").trim().toLowerCase();
@@ -8510,7 +8520,7 @@ function ChecklistApp() {
                           <button title="Vista" onClick={()=>setOdtViewModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
                           {isAdmin&&<button title="Editar orden" onClick={()=>setOdtEditModal(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #6C6EF5",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>}
                           {isAdmin&&<button title="Asignar" onClick={()=>setOdtAssignModal(o)} style={{height:28,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontSize:11,fontWeight:800,cursor:"pointer"}}>Asignar</button>}
-                          {isAdmin&&<button title="Eliminar" onClick={()=>{if(window.confirm(`¿Eliminar la ODT: ${o.titulo}?`)){setOdtDeletedIds(ids=>ids.includes(o.id)?ids:[...ids,o.id]);showToast("ODT eliminada con trazabilidad");}}} style={{width:32,height:28,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>}
+                          {isAdmin&&<button title="Eliminar" onClick={()=>eliminarOdtAdmin(o)} style={{width:32,height:28,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>}
                         </div>
                       </div>
                     );})}
