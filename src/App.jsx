@@ -10527,6 +10527,5 @@ function PinModal({pins,onSave,onClose}){
           <button onClick={validarYGuardar} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar</button>
         </div>
       </div>
-    </div>
-  );
+    </div>  );
 }
