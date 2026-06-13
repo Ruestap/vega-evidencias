@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import React from "react";
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
+/* ET_FIRESTORE_ONLY_MAIL_PLAIN_20260613_1635 */
 import {
   collection, doc, onSnapshot,
   setDoc, deleteDoc, addDoc, updateDoc, query, where, orderBy
@@ -1113,10 +1114,10 @@ function ChecklistApp() {
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
   const ODT_MATERIALES_BASE = ["Feed Instagram (1080×1080)","Historia Instagram (1080×1920)","Banner WhatsApp","Banner Web","Pieza física (afiche/vinil)","Diseño góndola/cabecera","Reel / Video","Otro"];
-  // Firestore-backed ODTs — fallback a localStorage durante migración
+  // ODT 100% Firestore — no localStorage, no mocks, no datos por dispositivo
   const [odtFirestore, setOdtFirestore] = useState([]);
-  const [odtDeletedIds, setOdtDeletedIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("et_odt_deleted_ids")||"[]");}catch{return[];}});
-  const [odtCreated, setOdtCreated] = useState(()=>{try{return JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{return[];}});
+  const [odtDeletedIds, setOdtDeletedIds] = useState([]);
+  const [odtCreated, setOdtCreated] = useState([]);
   const [odtReporteSearch, setOdtReporteSearch] = useState("");
   const [odtReporteEstado, setOdtReporteEstado] = useState("todos");
   const [odtReporteTipo, setOdtReporteTipo] = useState("todos");
@@ -1351,6 +1352,13 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
+  // Limpieza de llaves antiguas: las ODT ya no se guardan por navegador/dispositivo
+  useEffect(()=>{
+    try{
+      ["et_odt_items","et_odt_deleted_ids","disenoODTs","odts","designODTs"].forEach(k=>localStorage.removeItem(k));
+    }catch{}
+  },[]);
+
   // Sync diseno_odts desde Firestore — fuente de verdad para ODTs
   useEffect(()=>{
     const q=query(collection(db,"diseno_odts"),orderBy("creadoEn","desc"));
@@ -1358,8 +1366,9 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>data.push({id:d.id,...d.data()}));
       setOdtFirestore(data);
-    },()=>{
-      // Fallback silencioso si no hay permiso o índice — usa localStorage
+    },(e)=>{
+      console.warn("[ODT Firestore sync]", e?.message || e);
+      setOdtFirestore([]);
     });
     return()=>unsub();
   },[]);
@@ -8219,23 +8228,12 @@ function ChecklistApp() {
         const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
         const usuarioIniciales=(uName||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
         const designerByInitial=(ini)=>disenadores.find(d=>(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase()===ini);
-        const ODT_BASE=[
-          {id:"odt-761274",tipo:"POP",tipoTrabajo:"Material POP",titulo:"Stopper Vega MARKET Campaña Día Padre 2026",area:"Trade Marketing",subtipo:"POP · Trade Marketing",did:"PA",disenadorId:designerByInitial("PA")?.id||"pa",dnombre:"Paul Albrecht",demail:designerByInitial("PA")?.email||"paul.albrecht@corporacionvega.pe",dcel:designerByInitial("PA")?.celular||"51999999999",fechaInicio:"2026-06-04",fechaEntrega:"2026-06-10",entrega:"10/06/2026",horaCorte:"18:00",estado:"diseño",alerta:"Hoy · vence",colorD:"#0984e3",hh:"3",tiempo:"0d/1d lab",dias:"<1d",avance:65,objetivo:"Comunicar campaña Día del Padre en punto de venta.",mensaje:"Promoción principal para shoppers de Vega Market.",materiales:["Pieza física (afiche/vinil)"],medidas:"A3 vertical",tonalidad:"Promocional",mecanica:"Diseño de stopper para góndola y cabecera.",productos:"Productos de campaña Día del Padre",restricciones:"Respetar manual de marca Vega",referencias:"Campaña Día del Padre 2026"},
-          {id:"odt-761273",tipo:"Cat.",tipoTrabajo:"Catálogo",titulo:"Catálogo Mayorista Julio 2026 — 32 páginas",area:"Comercial",subtipo:"Catálogo · Comercial",did:"AQ",disenadorId:designerByInitial("AQ")?.id||"aq",dnombre:"Abel Quispe",demail:designerByInitial("AQ")?.email||"abel.quispe@corporacionvega.pe",dcel:designerByInitial("AQ")?.celular||"51999999998",fechaInicio:"2026-06-05",fechaEntrega:"2026-06-20",entrega:"20/06/2026",horaCorte:"18:00",estado:"retrasado",alerta:"Retraso 0d",colorD:"#6C6EF5",hh:"8",tiempo:"0d/1d lab",dias:"<1d",avance:20,objetivo:"Catálogo mayorista para julio.",mensaje:"Ofertas principales por categoría.",materiales:["Catálogo"],medidas:"32 páginas",tonalidad:"Corporativo",mecanica:"Diseño editorial con productos y precios.",productos:"Abarrotes, bebidas, limpieza",restricciones:"No usar paletas externas",referencias:"Catálogo anterior"},
-          {id:"odt-761272",tipo:"Precio",tipoTrabajo:"Marcador Precio",titulo:"Marcadores Precio — Promo Feria EXPOVEGA",area:"Trade Marketing",subtipo:"Precio · Trade",did:"CH",disenadorId:designerByInitial("CH")?.id||"ch",dnombre:"Cesar Huapaya",demail:designerByInitial("CH")?.email||"cesar.huapaya@corporacionvega.pe",dcel:designerByInitial("CH")?.celular||"51999999997",fechaInicio:"2026-06-06",fechaEntrega:"2026-06-08",entrega:"08/06/2026",horaCorte:"12:00",estado:"entregado",alerta:"Hoy · vence",colorD:"#00b5b4",hh:"1.5",tiempo:"0d/1d lab",dias:"<1d",avance:100,objetivo:"Marcadores de precio para ExpoVega.",mensaje:"Precios destacados por familia.",materiales:["Marcador Precio"],medidas:"10x15 cm",tonalidad:"Promocional",mecanica:"Marcadores por SKU.",productos:"SKUs feria",restricciones:"Precios legibles",referencias:"Plantilla precio"},
-          {id:"odt-761271",tipo:"Góndola",tipoTrabajo:"Góndola / Exhibidor",titulo:"Exhibidor Cabecera Góndola Vega COLLIQUE",area:"Trade Marketing",subtipo:"Góndola · Trade",did:"PA",disenadorId:designerByInitial("PA")?.id||"pa",dnombre:"Paul Albrecht",demail:designerByInitial("PA")?.email||"paul.albrecht@corporacionvega.pe",dcel:designerByInitial("PA")?.celular||"51999999999",fechaInicio:"2026-06-08",fechaEntrega:"2026-06-15",entrega:"15/06/2026",horaCorte:"18:00",estado:"aprobacion",alerta:"Hoy · vence",colorD:"#0984e3",hh:"4",tiempo:"0d/1d lab",dias:"<1d",avance:85,objetivo:"Diseño de exhibidor para Collique.",mensaje:"Cabecera promocional de alto impacto.",materiales:["Diseño góndola/cabecera"],medidas:"Según plano tienda",tonalidad:"Impactante",mecanica:"Arte para producción de exhibidor.",productos:"Categoría foco",restricciones:"No tapar precio",referencias:"Foto góndola"},
-          {id:"odt-761270",tipo:"Afiche",tipoTrabajo:"Volante / Afiche",titulo:"Afiche A3 Liquidación Fin Temporada — Lima Sur",area:"Marketing",subtipo:"Afiche · Marketing",did:"AQ",disenadorId:designerByInitial("AQ")?.id||"aq",dnombre:"Abel Quispe",demail:designerByInitial("AQ")?.email||"abel.quispe@corporacionvega.pe",dcel:designerByInitial("AQ")?.celular||"51999999998",fechaInicio:"2026-06-08",fechaEntrega:"2026-06-12",entrega:"12/06/2026",horaCorte:"18:00",estado:"pendiente",alerta:"Hoy · vence",colorD:"#6C6EF5",hh:"2.5",tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:"Liquidación de temporada Lima Sur.",mensaje:"Aprovecha precios de cierre.",materiales:["Pieza física (afiche/vinil)"],medidas:"A3",tonalidad:"Promocional",mecanica:"Afiche para tiendas seleccionadas.",productos:"Liquidación",restricciones:"Usar rojo Vega",referencias:"Arte de liquidación"},
-        ];
-        let odtDeletedIdsStored=[];
-        try{odtDeletedIdsStored=JSON.parse(localStorage.getItem("et_odt_deleted_ids")||"[]");}catch{}
-        const deletedSet=new Set([...(odtDeletedIds||[]),...(odtDeletedIdsStored||[])].map(String));
-        let odtCreatedStoredNow=[];
-        try{odtCreatedStoredNow=JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{}
+        const ODT_BASE=[]; // sin ODT de prueba/mock; Firestore es el único origen
         const odtsMap=new Map();
-        // Merge: ODT_BASE (mocks) < localStorage < Firestore (source of truth)
-        [...ODT_BASE,...(odtCreatedStoredNow||[]),...(odtCreated||[]),...(odtFirestore||[])].forEach(o=>{ if(o&&o.id) odtsMap.set(String(o.id),o); });
+        // Firestore es el único origen: no mocks, no localStorage, no merge por dispositivo
+        [...(odtFirestore||[])].forEach(o=>{ if(o&&o.id) odtsMap.set(String(o.id),o); });
         const odtsTodos=[...odtsMap.values()];
-        const odtsBaseFiltradas=odtsTodos.filter(o=>!deletedSet.has(String(o.id))&&o.activo!==false);
+        const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false);
         const odtsRol=role==="ejecutor"?odtsBaseFiltradas.filter(o=>String(o.disenadorId)===String(uDni)||o.did===usuarioIniciales||o.dnombre===uName):odtsBaseFiltradas;
         const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const estadoLabel=(e)=>pillE(e).txt;
@@ -8282,15 +8280,15 @@ function ChecklistApp() {
             <p>Saludos.</p>
           </div>`;
         };
-        const openOutlookOdt=(o)=>{const to=o.demail||"";const subject=`Nueva ODT asignada: ${o.titulo||""}`;const htmlBody=buildOdtMailHtml(o);const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(htmlBody||"");const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
+        const openOutlookOdt=(o)=>{const to=o.demail||"";const subject=`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o);const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
         const openWhatsOdt=(o)=>{const tel=String(o.dcel||"").replace(/\D/g,"");window.open(`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o))}`,'_blank','noopener,noreferrer');};
-        const persistOdtCreated=(items)=>{setOdtCreated(items);try{localStorage.setItem("et_odt_items",JSON.stringify(items));}catch{}};
+        const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
-        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated={...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra};const currentItems=(()=>{try{return JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{return odtCreated||[];}})();const exists=currentItems.some(x=>String(x.id)===String(o.id));const nextItems=exists?currentItems.map(x=>String(x.id)===String(o.id)?updated:x):[updated,...currentItems];persistOdtCreated(nextItems);await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra});setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
-        const deleteOdtInFirestore=async(id)=>{try{await setDoc(doc(db,"diseno_odts",id),{activo:false,deletedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
-        const createOdtAndNotify=()=>{const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",alerta:"Hoy · vence",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true};let currentItems=[];try{currentItems=JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{}const nextItems=[nueva,...(currentItems||[]).filter(x=>String(x.id)!==String(nowId))];persistOdtCreated(nextItems);saveOdtToFirestore(nueva);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");const nextDeleted=(odtDeletedIds||[]).map(String).filter(x=>x!==String(nowId));setOdtDeletedIds(nextDeleted);try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(nextDeleted));}catch{}if(d){setOdtNotifyModal({disenador:d,odt:nueva});}else{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}showToast("ODT creada correctamente");};
-        const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar la ODT ${o.id}?`))return; const id=String(o.id); const nextCreated=(odtCreated||[]).map(x=>String(x.id)===id?{...x,activo:false,deletedAt:new Date().toISOString(),deletedBy:uName||uDni||"admin"}:x); persistOdtCreated(nextCreated); deleteOdtInFirestore(id); const next=[...new Set([...(odtDeletedIds||[]).map(String),id])]; setOdtDeletedIds(next); try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{} setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada con trazabilidad"); };
+        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated={...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra};await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
+        const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
+        const createOdtAndNotify=()=>{const d=selectedDesigner||null;if(!d){showToast("Selecciona un diseñador para asignar la ODT");return;}const ini=(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",alerta:"Hoy · vence",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");};
+        const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
         const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 260px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
         const IcoEdit=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
