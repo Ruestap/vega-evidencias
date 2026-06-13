@@ -4,6 +4,7 @@ import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
 /* ET_FIRESTORE_ONLY_MAIL_PLAIN_20260613_1635 */
 /* ET_ODT_STATUS_MAIL_STEPPER_20260613_1710 */
+/* ET_EDIT_ASSIGN_STATUS_20260613_1735 */
 import {
   collection, doc, onSnapshot,
   setDoc, deleteDoc, addDoc, updateDoc, query, where, orderBy
@@ -8262,10 +8263,10 @@ function ChecklistApp() {
               else alerta="Finalizado (a tiempo)";
             }else alerta="Finalizado";
           }else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)){
-            const d=fe?hoy-fe:null;
+            const d=fe?diffDays(hoy,fe):null;
             alerta=!fe?"En ejecución":d<0?`En ejecución (+${Math.abs(d)}d)`:d===0?"En ejecución (Hoy)":`Con retraso (-${d}d)`;
           }else if(estado==="pendiente"){
-            const d=fe?hoy-fe:null;
+            const d=fe?diffDays(hoy,fe):null;
             alerta=!fe?"Pendiente":d<0?`Pendiente (+${Math.abs(d)}d)`:d===0?"Con retraso (Hoy)":`Con retraso (-${d}d)`;
           }else if(estado==="retrasado") alerta=o?.alerta||"Con retraso";
           else alerta=o?.alerta||"—";
@@ -8722,6 +8723,109 @@ Saludos.`;
               })()}
               <button onClick={()=>setOdtViewModal(null)} style={{padding:"11px 22px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontWeight:700,cursor:"pointer"}}>Cerrar</button>
             </div>}</div></div>}
+            {/* ET_EDIT_ASSIGN_MODAL_RENDER_20260613_1735 */}
+
+            {odtAssignModal&&adminOnly&&(()=>{
+              const current=odtAssignModal||{};
+              const selectedId=odtAssignModal._newDesignerId||current.disenadorId||"";
+              const sel=disenadores.find(d=>String(d.id)===String(selectedId));
+              const saveAssign=async()=>{
+                if(!sel){showToast("Selecciona un diseñador");return;}
+                const ini=(sel.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();
+                const patch={disenadorId:sel.id,dnombre:sel.nombre,demail:sel.email||"",dcel:sel.celular||"",did:ini,colorD:sel.color||current.colorD||"#6C6EF5",asignadoPor:uName||uDni,asignadoEn:new Date().toISOString()};
+                await updateOdtInFirestore(current.id,patch);
+                setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(current.id)?calcOdtPlan({...x,...patch}):x));
+                setOdtAssignModal(null);
+                showToast("ODT reasignada correctamente");
+              };
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(520px,100%)",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                    <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Asignar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{current.titulo}</div></div>
+                    <button onClick={()=>setOdtAssignModal(null)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                  </div>
+                  <div style={{padding:20}}>
+                    <label style={{...lbl}}>Diseñador responsable</label>
+                    <select value={selectedId} onChange={e=>setOdtAssignModal(p=>({...p,_newDesignerId:e.target.value}))} style={{...inp,background:"#fff",marginBottom:14}}>
+                      <option value="">Seleccionar diseñador</option>
+                      {disenadores.map(d=><option key={d.id} value={d.id}>{d.nombre}</option>)}
+                    </select>
+                    {sel&&<div style={{padding:"10px 12px",borderRadius:12,background:"#f0f6ff",border:"1px solid #c8d8e8",fontSize:12,color:"#5a7a9a",marginBottom:16}}>Se asignará a <b style={{color:"#1a2f4a"}}>{sel.nombre}</b>{sel.email?` · ${sel.email}`:""}</div>}
+                    <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
+                      <button onClick={()=>setOdtAssignModal(null)} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
+                      <button onClick={saveAssign} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar asignación</button>
+                    </div>
+                  </div>
+                </div>
+              </div>;
+            })()}
+            {odtEditModal&&adminOnly&&(()=>{
+              const cur=odtEditModal||{};
+              const val=(k)=>odtEditForm[k]!==undefined?odtEditForm[k]:(cur[k]??"");
+              const setF=(k,v)=>setOdtEditForm(p=>({...p,[k]:v}));
+              const saveEdit=async()=>{
+                const patch={
+                  titulo:String(val("titulo")||"").trim()||cur.titulo,
+                  area:val("area")||"Trade Marketing",
+                  tipoTrabajo:val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo,
+                  tipo:(val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",
+                  fechaInicio:val("fechaInicio")||"",
+                  fechaEntrega:val("fechaEntrega")||"",
+                  entrega:val("fechaEntrega")||"—",
+                  horaCorte:val("horaCorte")||"",
+                  hh:String(val("hh")||""),
+                  medidas:val("medidas")||"",
+                  tonalidad:val("tonalidad")||"",
+                  objetivo:val("objetivo")||"",
+                  mensaje:val("mensaje")||"",
+                  mecanica:val("mecanica")||"",
+                  productos:val("productos")||"",
+                  restricciones:val("restricciones")||"",
+                  referencias:val("referencias")||"",
+                  editadoPor:uName||uDni,
+                  editadoEn:new Date().toISOString()
+                };
+                const tipoObj=TIPOS_TRABAJO.find(t=>t.label===patch.tipoTrabajo);
+                if(tipoObj&&!patch.hh)patch.hh=String(tipoObj.hh||"");
+                await updateOdtInFirestore(cur.id,patch);
+                setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(cur.id)?calcOdtPlan({...x,...patch}):x));
+                setOdtEditModal(null);setOdtEditForm({});showToast("ODT actualizada correctamente");
+              };
+              const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={3} style={{...inp,resize:"vertical"}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(900px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
+                    <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{cur.id}</div></div>
+                    <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                  </div>
+                  <div style={{padding:20,overflowY:"auto",minHeight:0}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+                      {field("Título", "titulo")}
+                      <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
+                      <div><label style={{...lbl}}>Tipo de trabajo</label><select value={val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo||""} onChange={e=>{const t=TIPOS_TRABAJO.find(x=>x.label===e.target.value);setOdtEditForm(p=>({...p,tipoTrabajo:e.target.value,hh:p.hh!==undefined?p.hh:String(t?.hh||"")}));}} style={{...inp}}><option value="">Seleccionar</option>{TIPOS_TRABAJO.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}</select></div>
+                      {field("Fecha inicio", "fechaInicio", "date")}
+                      {field("Fecha entrega", "fechaEntrega", "date")}
+                      {field("Hora de corte", "horaCorte", "time")}
+                      {field("HH estimadas", "hh", "number")}
+                      {field("Medidas", "medidas")}
+                      <div><label style={{...lbl}}>Tonalidad</label><select value={val("tonalidad")} onChange={e=>setF("tonalidad",e.target.value)} style={{...inp}}><option value="">No especificado</option><option>Promocional</option><option>Institucional</option><option>Informativo</option><option>Urgente</option><option>Premium</option></select></div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,marginTop:14}}>
+                      {field("Objetivo y público","objetivo","textarea")}
+                      {field("Mensaje principal","mensaje","textarea")}
+                      {field("Mecánica / dinámica","mecanica","textarea")}
+                      {field("Productos","productos","textarea")}
+                      {field("Restricciones","restricciones","textarea")}
+                      {field("Referencias","referencias","textarea")}
+                    </div>
+                  </div>
+                  <div style={{padding:"14px 20px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0}}>
+                    <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
+                    <button onClick={saveEdit} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar cambios</button>
+                  </div>
+                </div>
+              </div>;
+            })()}
             {odtNotifyModal&&adminOnly&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:123,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(860px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0,background:"linear-gradient(135deg,#1a2f4a,#0f1f33)"}}><div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",fontSize:15,fontWeight:800,color:"#fff",flexShrink:0}}>{(odtNotifyModal.disenador?.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:14,color:"#fff"}}>ODT lista — Notificar a {odtNotifyModal.disenador?.nombre}</div><div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo"} · {odtNotifyModal.disenador?.celular||"Sin celular"}</div></div><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",flex:1,overflow:"hidden",minHeight:0}}><div style={{overflowY:"auto",padding:"16px 20px",borderRight:"1px solid #e2e8f0"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Brief de la ODT</span></div><div style={{background:"#EEEFFE",borderRadius:10,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>Título</div><div style={{fontSize:14,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.odt?.titulo}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>{[["Tipo",odtNotifyModal.odt?.tipoTrabajo||odtNotifyModal.odt?.tipo],["Área",odtNotifyModal.odt?.area],["F. Entrega",odtNotifyModal.odt?.fechaEntrega],["H. Corte",odtNotifyModal.odt?.horaCorte],["HH",odtNotifyModal.odt?.hh?odtNotifyModal.odt.hh+"h":null],["Materiales",(odtNotifyModal.odt?.materiales||[]).join(", ")||null],["Medidas",odtNotifyModal.odt?.medidas],["Tonalidad",odtNotifyModal.odt?.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtNotifyModal.odt?.objetivo],["Mensaje principal",odtNotifyModal.odt?.mensaje],["Mecánica / dinámica",odtNotifyModal.odt?.mecanica],["Restricciones",odtNotifyModal.odt?.restricciones]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:6}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:4}}>{k}</div><div style={{fontSize:12,color:"#1a2f4a",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div><div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12,background:"#f8fafc"}}><div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Notificar al diseñador</div><div style={{fontSize:11,color:"#8aaabb",lineHeight:1.6,marginBottom:4}}>Elige el canal. El diseñador recibirá el brief completo de la orden.</div><button onClick={()=>openWhatsOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:odtNotifyModal.disenador?.celular})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #d4f1e4",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>WhatsApp directo</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.celular||"Sin número registrado"}</div></div></button><button onClick={()=>openOutlookOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:odtNotifyModal.disenador?.celular})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #c8d8e8",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Correo electrónico</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo registrado"}</div></div></button><div style={{borderTop:"1px solid #e2e8f0",margin:"4px 0"}}/><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{padding:"14px 18px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Listo — ir al Dashboard</button><div style={{fontSize:10,color:"#b2bec3",textAlign:"center",lineHeight:1.5}}>ODT guardada. Puedes notificar ahora o más tarde desde el Reporte.</div></div></div></div></div>}
           </div>
         );
