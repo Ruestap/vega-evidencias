@@ -3,6 +3,7 @@ import React from "react";
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
 /* ET_FIRESTORE_ONLY_MAIL_PLAIN_20260613_1635 */
+/* ET_ODT_STATUS_MAIL_STEPPER_20260613_1710 */
 import {
   collection, doc, onSnapshot,
   setDoc, deleteDoc, addDoc, updateDoc, query, where, orderBy
@@ -8233,9 +8234,47 @@ function ChecklistApp() {
         // Firestore es el único origen: no mocks, no localStorage, no merge por dispositivo
         [...(odtFirestore||[])].forEach(o=>{ if(o&&o.id) odtsMap.set(String(o.id),o); });
         const odtsTodos=[...odtsMap.values()];
-        const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false);
+        const isOdtFinalizada=(o)=>["entregado","finalizado","terminado"].includes(String(o?.estado||"").toLowerCase());
+        const toLocalDate=(v)=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const d=new Date(v);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+        const toDueDateTime=(o)=>{const d=toLocalDate(o?.fechaEntrega||o?.entrega);if(!d)return null;const hm=String(o?.horaCorte||"23:59").match(/^(\d{1,2}):(\d{2})/);d.setHours(hm?Number(hm[1]):23,hm?Number(hm[2]):59,0,0);return d;};
+        const toFinishDateTime=(o)=>{const raw=o?.finalizadoEn||o?.fechaCierre||o?.entregadoEn||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
+        const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
+        const calcOdtPlan=(o)=>{
+          const estado=String(o?.estado||"pendiente").toLowerCase();
+          const finalizada=isOdtFinalizada(o);
+          const hoy=toLocalDate(todayStr());
+          const fi=toLocalDate(o?.fechaInicio)||hoy;
+          const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
+          const total=fi&&fe?Math.max(1,Math.round((fe-fi)/86400000)):1;
+          const trans=finalizada?total:Math.min(total,Math.max(0,hoy&&fi?Math.round((hoy-fi)/86400000):0));
+          const tiempo=finalizada?`${total}/${total} lab`:`${trans}/${total} lab`;
+          let alerta="";
+          if(finalizada){
+            const due=toDueDateTime(o);
+            const fin=toFinishDateTime(o);
+            const cierre=fin||due;
+            if(due&&cierre){
+              const dayDelta=diffDays(cierre,due);
+              const minDelta=Math.round((cierre-due)/60000);
+              if(dayDelta>0) alerta=`Finalizado (retraso -${dayDelta}d)`;
+              else if(dayDelta<0) alerta=`Finalizado (adelanto +${Math.abs(dayDelta)}d)`;
+              else if(minDelta>0){const h=Math.floor(minDelta/60),m=minDelta%60;alerta=`Finalizado (retraso ${h?`${h}h `:""}${m}m)`;}
+              else alerta="Finalizado (a tiempo)";
+            }else alerta="Finalizado";
+          }else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)){
+            const d=fe?hoy-fe:null;
+            alerta=!fe?"En ejecución":d<0?`En ejecución (+${Math.abs(d)}d)`:d===0?"En ejecución (Hoy)":`Con retraso (-${d}d)`;
+          }else if(estado==="pendiente"){
+            const d=fe?hoy-fe:null;
+            alerta=!fe?"Pendiente":d<0?`Pendiente (+${Math.abs(d)}d)`:d===0?"Con retraso (Hoy)":`Con retraso (-${d}d)`;
+          }else if(estado==="retrasado") alerta=o?.alerta||"Con retraso";
+          else alerta=o?.alerta||"—";
+          const avance=finalizada?100:(Number(o?.avance)||0);
+          return {...o,alerta,tiempo,avance,estadoUi:finalizada?"finalizado":estado};
+        };
+        const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
         const odtsRol=role==="ejecutor"?odtsBaseFiltradas.filter(o=>String(o.disenadorId)===String(uDni)||o.did===usuarioIniciales||o.dnombre===uName):odtsBaseFiltradas;
-        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Finalizado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const estadoLabel=(e)=>pillE(e).txt;
         const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         const odtsReporte=odtsRol.filter(o=>{
@@ -8246,7 +8285,7 @@ function ChecklistApp() {
           const matchR=odtReporteResp==="todos"||o.dnombre===odtReporteResp;
           return matchQ&&matchE&&matchT&&matchR;
         });
-        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>o.estado==="entregado").length,l:"Terminadas",c:"#00b894"},{v:odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado)).length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
+        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>isOdtFinalizada(o)).length,l:"Finalizadas",c:"#00b894"},{v:odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado)).length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.alerta?.startsWith("Con retraso")||o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
         const inp={width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,fontFamily:"inherit",outline:"none"};
         const lbl={fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",display:"block",marginBottom:5};
         const SH={background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.05)"};
@@ -8256,38 +8295,16 @@ function ChecklistApp() {
         const APP_URL=typeof window!=="undefined"?window.location.origin:"https://vega-evidencias.vercel.app";
         /* ET_FIX_MAIL_LINK_20260613_1615 */
         const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-        const buildOdtMail=(o)=>`Tienes una nueva orden de trabajo asignada:\n\nTítulo: ${o.titulo||"—"}\nTipo de trabajo: ${o.tipoTrabajo||o.tipo||"—"}\nÁrea: ${o.area||"—"}\nFecha entrega: ${o.fechaEntrega||o.entrega||"—"}\nHora de corte: ${o.horaCorte||"—"}\n\nObjetivo y público:\n${o.objetivo||"No especificado"}\n\nMensaje principal:\n${o.mensaje||"No especificado"}\n\nMateriales: ${(o.materiales||[]).join(", ")||"No especificado"}\nMedidas: ${o.medidas||"No especificado"}\nTonalidad: ${o.tonalidad||"No especificado"}\nMecánica / dinámica: ${o.mecanica||"No especificado"}\nProductos: ${o.productos||"No especificado"}\nRestricciones: ${o.restricciones||"No especificado"}\nReferencias: ${o.referencias||"No especificado"}\n\nIngresa con tu credencial: ${APP_URL}\n\nSaludos.`;
-        const buildOdtMailHtml=(o)=>{
-          const materiales=(o.materiales||[]).join(", ")||"No especificado";
-          return `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1a2f4a;line-height:1.55">
-            <p>Tienes una nueva orden de trabajo asignada:</p>
-            <p><b>Título:</b> ${escapeHtml(o.titulo||"—")}<br>
-            <b>Tipo de trabajo:</b> ${escapeHtml(o.tipoTrabajo||o.tipo||"—")}<br>
-            <b>Área:</b> ${escapeHtml(o.area||"—")}<br>
-            <b>Fecha entrega:</b> ${escapeHtml(o.fechaEntrega||o.entrega||"—")}<br>
-            <b>Hora de corte:</b> ${escapeHtml(o.horaCorte||"—")}</p>
-            <p><b>Objetivo y público:</b><br>${escapeHtml(o.objetivo||"No especificado")}</p>
-            <p><b>Mensaje principal:</b><br>${escapeHtml(o.mensaje||"No especificado")}</p>
-            <p><b>Materiales:</b> ${escapeHtml(materiales)}<br>
-            <b>Medidas:</b> ${escapeHtml(o.medidas||"No especificado")}<br>
-            <b>Tonalidad:</b> ${escapeHtml(o.tonalidad||"No especificado")}<br>
-            <b>Mecánica / dinámica:</b> ${escapeHtml(o.mecanica||"No especificado")}<br>
-            <b>Productos:</b> ${escapeHtml(o.productos||"No especificado")}<br>
-            <b>Restricciones:</b> ${escapeHtml(o.restricciones||"No especificado")}<br>
-            <b>Referencias:</b> ${escapeHtml(o.referencias||"No especificado")}</p>
-            <p><b>Ingresa con tu credencial:</b><br>
-            <a href="${escapeHtml(APP_URL)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;font-weight:700">${escapeHtml(APP_URL)}</a></p>
-            <p>Saludos.</p>
-          </div>`;
-        };
+        const buildOdtMail=(o)=>`Tienes una nueva orden de trabajo asignada:\n\nTítulo: ${o.titulo||"—"}\nTipo de trabajo: ${o.tipoTrabajo||o.tipo||"—"}\nÁrea: ${o.area||"—"}\nFecha entrega: ${o.fechaEntrega||o.entrega||"—"}\nHora de corte: ${o.horaCorte||"—"}\n\nObjetivo y público:\n${o.objetivo||"No especificado"}\n\nMensaje principal:\n${o.mensaje||"No especificado"}\n\nMateriales: ${(o.materiales||[]).join(", ")||"No especificado"}\nMedidas: ${o.medidas||"No especificado"}\nTonalidad: ${o.tonalidad||"No especificado"}\nMecánica / dinámica: ${o.mecanica||"No especificado"}\nProductos: ${o.productos||"No especificado"}\nRestricciones: ${o.restricciones||"No especificado"}\nReferencias: ${o.referencias||"No especificado"}\n\nIngresa con tu credencial:\n${APP_URL}\n\nSaludos.`;
+        // Correo y WhatsApp usan texto limpio para evitar que Outlook muestre HTML crudo.
         const openOutlookOdt=(o)=>{const to=o.demail||"";const subject=`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o);const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
         const openWhatsOdt=(o)=>{const tel=String(o.dcel||"").replace(/\D/g,"");window.open(`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o))}`,'_blank','noopener,noreferrer');};
         const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
-        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated={...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra};await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
+        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{finalizadoEn:extra.finalizadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Terminado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated=calcOdtPlan({...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
         const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
-        const createOdtAndNotify=()=>{const d=selectedDesigner||null;if(!d){showToast("Selecciona un diseñador para asignar la ODT");return;}const ini=(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",alerta:"Hoy · vence",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");};
+        const createOdtAndNotify=()=>{const d=selectedDesigner||null;if(!d){showToast("Selecciona un diseñador para asignar la ODT");return;}const ini=(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");};
         const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
         const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 260px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -8300,11 +8317,11 @@ function ChecklistApp() {
               <div style={{...SH,maxWidth:1040,padding:24,margin:"0 auto"}}>
                 <div style={{textAlign:"center",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:8}}>Nueva orden de trabajo</div>
                 <div style={{textAlign:"center",fontSize:13,color:"#8aaabb",marginBottom:26}}>Solicitud de diseño · el equipo lo recibirá automáticamente</div>
-                {(()=>{const stepActive=odtForm.titulo?1:0;const step2ok=odtForm.titulo&&odtForm.fechaEntrega;const step3ok=step2ok&&odtForm.tipo;return(
+                {(()=>{const hasBrief=Boolean((odtFormDraft.titulo||odtForm.titulo||"").trim()&&odtForm.fechaInicio&&odtForm.fechaEntrega&&odtForm.horaCorte);const hasAsignacion=Boolean(hasBrief&&odtForm.disenadorId);const hasConfirmar=Boolean(hasAsignacion&&odtForm.tipo);return(
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:28}}>
                     {["Brief","Asignación","Confirmar"].map((s,i)=>{
-                      const active=i===0||(i===1&&odtForm.titulo)||(i===2&&step2ok);
-                      const cur=i===0;
+                      const active=i===0||(i===1&&hasBrief)||(i===2&&hasConfirmar);
+                      const cur=(i===0&&!hasBrief)||(i===1&&hasBrief&&!hasConfirmar)||(i===2&&hasConfirmar);
                       return <React.Fragment key={s}>
                         <div onClick={()=>{}} style={{display:"flex",alignItems:"center",gap:9,fontSize:14,fontWeight:800,
                           color:cur?"#1a2f4a":active?"#6C6EF5":"#8aaabb",cursor:active&&!cur?"pointer":"default"}}
@@ -8349,7 +8366,7 @@ function ChecklistApp() {
                   <option value="pendiente">Pendiente</option>
                   <option value="diseño">En diseño</option>
                   <option value="aprobacion">En aprobación</option>
-                  <option value="entregado">Entregado</option>
+                  <option value="entregado">Finalizado</option>
                   <option value="retrasado">Retrasado</option>
                 </select>
                 <select value={odtReporteTipo} onChange={e=>setOdtReporteTipo(e.target.value)} style={{...inp,width:"auto",padding:"8px 11px"}}>
@@ -8393,7 +8410,7 @@ function ChecklistApp() {
                     {odtsReporte.map(o=>{
                       const p=pillE(o.estado);
                       const isHL=odtHighlighted===o.id;
-                      const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado);
+                      const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                       return(
                         <tr key={o.id}
                           style={{borderBottom:"1px solid #f0f4f8",background:isHL?"rgba(108,110,245,.08)":"#fff",transition:"background .4s"}}
@@ -8436,7 +8453,7 @@ function ChecklistApp() {
                                 <option value="diseño">En diseño</option>
                                 <option value="aprobacion">En aprobación</option>
                                 <option value="aprobado">Aprobado</option>
-                                <option value="entregado">Entregado</option>
+                                <option value="entregado">Finalizado</option>
                                 <option value="retrasado">Retrasado</option>
                                 <option value="cancelado">Cancelado</option>
                               </select>
@@ -8444,7 +8461,7 @@ function ChecklistApp() {
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:o.estado==="retrasado"?"#dc2626":"#f6a623",background:o.estado==="retrasado"?"#ffeae6":"#fff8ec",whiteSpace:"nowrap"}}>{o.alerta}</span>
+                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:o.alerta?.startsWith("Finalizado")?"#00b894":o.alerta?.startsWith("Con retraso")?"#dc2626":o.alerta?.startsWith("En ejecución")?"#0984e3":"#f6a623",background:o.alerta?.startsWith("Finalizado")?"#e8faf5":o.alerta?.startsWith("Con retraso")?"#ffeae6":o.alerta?.startsWith("En ejecución")?"#eaf5ff":"#fff8ec",whiteSpace:"nowrap"}}>{o.alerta}</span>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
@@ -8526,7 +8543,7 @@ function ChecklistApp() {
                     {id:"pendiente",  label:"Pendiente",     c:"#f6a623", estados:["pendiente"]},
                     {id:"diseno",     label:"En diseño",     c:"#6C6EF5", estados:["diseño","en_diseno"]},
                     {id:"aprobacion", label:"En aprobación", c:"#0984e3", estados:["aprobacion","aprobado"]},
-                    {id:"entregado",  label:"Entregado",     c:"#00b894", estados:["entregado"]},
+                    {id:"entregado",  label:"Finalizado",    c:"#00b894", estados:["entregado"]},
                   ].map(col=>{
                     const colItems=odtsRol.filter(o=>{
                       const matchEstado=col.estados.some(e=>o.estado===e)||col.estados.some(e=>o.stat===e);
@@ -8544,7 +8561,7 @@ function ChecklistApp() {
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {colItems.map(o=>{
                             const isHL=odtHighlighted===o.id;
-                            const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado||o.stat);
+                            const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                             return(
                               <div key={o.id} style={{background:isHL?"rgba(108,110,245,.07)":"#fff",borderRadius:12,border:"1px solid #e2e8f0",borderLeft:`3px solid ${col.c}`,padding:12,boxShadow:"0 1px 4px rgba(0,0,0,.05)",transition:"background .4s"}}>
                                 <div style={{fontWeight:700,color:"#1a2f4a",fontSize:12,marginBottom:5,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
@@ -8615,10 +8632,10 @@ function ChecklistApp() {
                 <div style={{...SH,padding:18}}>
                   <div style={{fontWeight:800,color:"#1a2f4a",marginBottom:10}}>Avance global</div>
                   <div style={{height:12,borderRadius:8,overflow:"hidden",display:"flex",background:"#e2e8f0"}}>
-                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>o.estado==="entregado").length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
+                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>isOdtFinalizada(o)).length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
                   </div>
                   <div style={{display:"flex",gap:14,marginTop:8,flexWrap:"wrap"}}>
-                    {[{c:"#00b894",l:"Entregado"},{c:"#0984e3",l:"En proceso"},{c:"#f6a623",l:"Pendiente"},{c:"#dc2626",l:"Con retraso"}].map(x=><span key={x.l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#5a7a9a"}}><span style={{width:8,height:8,borderRadius:"50%",background:x.c}}/>{x.l}</span>)}
+                    {[{c:"#00b894",l:"Finalizado"},{c:"#0984e3",l:"En proceso"},{c:"#f6a623",l:"Pendiente"},{c:"#dc2626",l:"Con retraso"}].map(x=><span key={x.l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#5a7a9a"}}><span style={{width:8,height:8,borderRadius:"50%",background:x.c}}/>{x.l}</span>)}
                   </div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
@@ -8626,31 +8643,31 @@ function ChecklistApp() {
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       <span style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Vencen en 7 días</span>
-                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length}</span>
+                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length}</span>
                     </div>
-                    {odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).slice(0,5).map(o=>(
+                    {odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).slice(0,5).map(o=>(
                       <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #f5f7fa"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
                         <span style={{flex:1,fontSize:11,color:"#1a2f4a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</span>
                         <span style={{padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{Math.ceil((new Date(o.fechaEntrega)-new Date(todayStr()))/86400000)===0?"Hoy":Math.ceil((new Date(o.fechaEntrega)-new Date(todayStr()))/86400000)+"d"}</span>
                       </div>
                     ))}
-                    {odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin vencimientos próximos</div>}
+                    {odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin vencimientos próximos</div>}
                   </div>
                   <div style={{...SH,padding:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                       <span style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Con retraso</span>
-                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).length}</span>
+                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).length}</span>
                     </div>
-                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).slice(0,5).map(o=>(
+                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).slice(0,5).map(o=>(
                       <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #f5f7fa"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                         <span style={{flex:1,fontSize:11,color:"#1a2f4a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</span>
                         <span style={{padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:700,fontSize:9}}>RETRASO</span>
                       </div>
                     ))}
-                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin retrasos</div>}
+                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin retrasos</div>}
                   </div>
                   <div style={{...SH,padding:16,gridColumn:"1/-1"}}>
                     <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:7}}>
@@ -8659,7 +8676,7 @@ function ChecklistApp() {
                     </div>
                     {disenadores.map(d=>{
                       const asigs=odtsRol.filter(o=>o.disenadorId===d.id||o.did===((d.nombre||"").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()));
-                      const entregadas=asigs.filter(o=>o.estado==="entregado").length;
+                      const entregadas=asigs.filter(o=>isOdtFinalizada(o)).length;
                       const pct=asigs.length>0?Math.round(entregadas/asigs.length*100):0;
                       const colors=["#6C6EF5","#0984e3","#00b5b4"];
                       const ci=disenadores.indexOf(d)%colors.length;
@@ -8678,7 +8695,7 @@ function ChecklistApp() {
                 </div>
               </>}
             </>)}
-            {odtViewModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(860px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid #e2e8f0",flexShrink:0}}><div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg></div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{odtViewModal.titulo}</div><div style={{fontSize:11,color:"#8aaabb",marginTop:2,display:"flex",gap:8,flexWrap:"wrap"}}><span>#{odtViewModal.id}</span><span style={{color:"#e2e8f0"}}>·</span><span>{odtViewModal.area||"—"}</span><span style={{color:"#e2e8f0"}}>·</span><span style={{color:odtViewModal.estado==="retrasado"?"#dc2626":odtViewModal.estado==="entregado"?"#00b894":"#6C6EF5",fontWeight:700}}>{odtViewModal.estado||"pendiente"}</span></div></div><button onClick={()=>setOdtViewModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:9,marginBottom:12}}>{[["Tipo de trabajo",odtViewModal.tipoTrabajo||odtViewModal.tipo],["Responsable",odtViewModal.dnombre||"Sin asignar"],["Fecha inicio",odtViewModal.fechaInicio],["Fecha entrega",odtViewModal.fechaEntrega],["Hora de corte",odtViewModal.horaCorte],["HH estimadas",(odtViewModal.hh?odtViewModal.hh+"h":null)],["Prioridad",odtViewModal.prioridad],["Materiales",(odtViewModal.materiales||[]).join(", ")||null],["Medidas",odtViewModal.medidas],["Tonalidad",odtViewModal.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 12px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:12,fontWeight:600,color:"#1a2f4a"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtViewModal.objetivo],["Mensaje principal",odtViewModal.mensaje],["Mecánica / dinámica",odtViewModal.mecanica],["Productos",odtViewModal.productos],["Restricciones",odtViewModal.restricciones],["Comentarios / referencias",odtViewModal.referencias]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 14px",marginBottom:8}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:5}}>{k}</div><div style={{fontSize:13,color:"#1a2f4a",fontWeight:500,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div>{adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:10,background:"#fff"}}><button onClick={()=>{openWhatsOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><span>WhatsApp</span></button><button onClick={()=>{openOutlookOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Correo</span></button><button onClick={()=>setOdtViewModal(null)} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontWeight:700,cursor:"pointer",fontSize:13,whiteSpace:"nowrap"}}>Cerrar</button></div>}{!adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px",flexShrink:0,
+            {odtViewModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(860px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid #e2e8f0",flexShrink:0}}><div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg></div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{odtViewModal.titulo}</div><div style={{fontSize:11,color:"#8aaabb",marginTop:2,display:"flex",gap:8,flexWrap:"wrap"}}><span>#{odtViewModal.id}</span><span style={{color:"#e2e8f0"}}>·</span><span>{odtViewModal.area||"—"}</span><span style={{color:"#e2e8f0"}}>·</span><span style={{color:odtViewModal.estado==="retrasado"?"#dc2626":isOdtFinalizada(odtViewModal)?"#00b894":"#6C6EF5",fontWeight:700}}>{pillE(odtViewModal.estado).txt||"Pendiente"}</span></div></div><button onClick={()=>setOdtViewModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:9,marginBottom:12}}>{[["Tipo de trabajo",odtViewModal.tipoTrabajo||odtViewModal.tipo],["Responsable",odtViewModal.dnombre||"Sin asignar"],["Fecha inicio",odtViewModal.fechaInicio],["Fecha entrega",odtViewModal.fechaEntrega],["Hora de corte",odtViewModal.horaCorte],["HH estimadas",(odtViewModal.hh?odtViewModal.hh+"h":null)],["Prioridad",odtViewModal.prioridad],["Materiales",(odtViewModal.materiales||[]).join(", ")||null],["Medidas",odtViewModal.medidas],["Tonalidad",odtViewModal.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 12px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:12,fontWeight:600,color:"#1a2f4a"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtViewModal.objetivo],["Mensaje principal",odtViewModal.mensaje],["Mecánica / dinámica",odtViewModal.mecanica],["Productos",odtViewModal.productos],["Restricciones",odtViewModal.restricciones],["Comentarios / referencias",odtViewModal.referencias]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 14px",marginBottom:8}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:5}}>{k}</div><div style={{fontSize:13,color:"#1a2f4a",fontWeight:500,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div>{adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:10,background:"#fff"}}><button onClick={()=>{openWhatsOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><span>WhatsApp</span></button><button onClick={()=>{openOutlookOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Correo</span></button><button onClick={()=>setOdtViewModal(null)} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontWeight:700,cursor:"pointer",fontSize:13,whiteSpace:"nowrap"}}>Cerrar</button></div>}{!adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px",flexShrink:0,
               display:"flex",gap:10,justifyContent:"flex-end",background:"#fff",flexWrap:"wrap"}}>
               {isSolicitante&&(()=>{
                 // Find marketing coordinator email from usuarios
