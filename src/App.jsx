@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import React from "react";
-/* ET_ODT_BUSINESS_TIME_RESPONSIVE_20260613_1815 */
+/* ET_REPORTE_SIN_DETALLE_ICONOS_20260613_1845 */
 /* ET_ENTREGADO_FLOW_RESPONSIVE_20260613_1755 */
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
@@ -8169,6 +8169,12 @@ function ChecklistApp() {
         {modulo===0&&(()=>{
           const TAB_PILL_ACTIVE={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
           const TAB_PILL_INACTIVE={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const renderSubTabIcon=(i)=>{
+            const common={width:14,height:14,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"};
+            if([0,4,7].includes(i)) return <svg {...common}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>;
+            if([1,5,8].includes(i)) return <svg {...common}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+            return <svg {...common}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+          };
           return(
           <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
@@ -8192,12 +8198,7 @@ function ChecklistApp() {
                     color:tab===tb.i?"#5B6CF7":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                  {tb.i===7?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
-                  :tb.i===8?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                  :tb.i===9?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  :tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
-                  :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
-                  :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                  {renderSubTabIcon(tb.i)}
                   {tb.label}
                 </button>
               ))}
@@ -8480,16 +8481,16 @@ Saludos.`;
                   })}
               </div>
               <div style={{...SH,overflowX:"auto",maxWidth:"100%"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1320}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1220}}>
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
-                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","PROGRESO","DETALLE","HH","TIEMPO TRANSCURRIDO","DÍAS TB","ACCIONES"].map(h=>(
+                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","PROGRESO","HH","TIEMPO TRANSCURRIDO","DÍAS TB","ACCIONES"].map(h=>(
                         <th key={h} style={{padding:"10px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,letterSpacing:".06em",borderBottom:"1px solid #e2e8f0",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {odtsReporte.length===0&&<tr><td colSpan={13} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
+                    {odtsReporte.length===0&&<tr><td colSpan={12} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
                     {odtsReporte.map(o=>{
                       const p=pillE(o.estado);
                       const isHL=odtHighlighted===o.id;
@@ -8544,10 +8545,7 @@ Saludos.`;
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:p.col,background:p.col+"18",whiteSpace:"nowrap"}}>{o.progreso||p.txt}</span>
-                          </td>
-                          <td style={{padding:"12px 10px"}}>
-                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:o.detalle?.startsWith("Entregado")?"#00b894":o.detalle?.startsWith("Con retraso")||o.detalle?.startsWith("Retraso")?"#dc2626":o.detalle?.startsWith("En ejecución")?"#0984e3":"#f6a623",background:o.detalle?.startsWith("Entregado")?"#e8faf5":o.detalle?.startsWith("Con retraso")||o.detalle?.startsWith("Retraso")?"#ffeae6":o.detalle?.startsWith("En ejecución")?"#eaf5ff":"#fff8ec",whiteSpace:"nowrap"}}>{o.detalle}</span>
+                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:p.col,background:p.col+"18",whiteSpace:"nowrap"}}>{p.txt}</span>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
@@ -8559,7 +8557,7 @@ Saludos.`;
                             </div>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
-                            <span style={{fontSize:11,fontWeight:700,color:"#1a2f4a"}}>{o.dias}</span>
+                            <span style={{fontSize:11,fontWeight:800,color:String(o.dias||"").toLowerCase().includes("retraso")?"#dc2626":String(o.dias||"").toLowerCase().includes("adelanto")||String(o.dias||"").toLowerCase().includes("a tiempo")?"#00b894":"#1a2f4a",whiteSpace:"nowrap"}}>{o.dias}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
