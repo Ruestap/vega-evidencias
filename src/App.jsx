@@ -2316,7 +2316,7 @@ function ChecklistApp() {
 
   if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
     onAcceso={(id)=>registrarAcceso(id)}
-    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="visor"?1:0);setModulo(0);}}/>;
+    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab((r==="ejecutor"||r==="coordinador")?9:(r==="visor"?1:0));setModulo(0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -8042,7 +8042,7 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","visor"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
     {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","ejecutor"]},
   ].filter(m=>m.roles.includes(role||""));
@@ -8237,7 +8237,7 @@ function ChecklistApp() {
         const odtsTodos=[...odtsMap.values()];
         const odtsBaseFiltradas=odtsTodos.filter(o=>!deletedSet.has(String(o.id))&&o.activo!==false);
         const odtsRol=role==="ejecutor"?odtsBaseFiltradas.filter(o=>String(o.disenadorId)===String(uDni)||o.did===usuarioIniciales||o.dnombre===uName):odtsBaseFiltradas;
-        const pillE=(e)=>{ if(e==="diseño")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const estadoLabel=(e)=>pillE(e).txt;
         const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         const odtsReporte=odtsRol.filter(o=>{
@@ -8248,7 +8248,7 @@ function ChecklistApp() {
           const matchR=odtReporteResp==="todos"||o.dnombre===odtReporteResp;
           return matchQ&&matchE&&matchT&&matchR;
         });
-        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>o.estado==="entregado").length,l:"Terminadas",c:"#00b894"},{v:odtsRol.filter(o=>o.estado==="diseño"||o.estado==="aprobacion").length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
+        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>o.estado==="entregado").length,l:"Terminadas",c:"#00b894"},{v:odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado)).length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
         const inp={width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,fontFamily:"inherit",outline:"none"};
         const lbl={fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",display:"block",marginBottom:5};
         const SH={background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.05)"};
@@ -8262,6 +8262,7 @@ function ChecklistApp() {
         const persistOdtCreated=(items)=>{setOdtCreated(items);try{localStorage.setItem("et_odt_items",JSON.stringify(items));}catch{}};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
+        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated={...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra};const currentItems=(()=>{try{return JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{return odtCreated||[];}})();const exists=currentItems.some(x=>String(x.id)===String(o.id));const nextItems=exists?currentItems.map(x=>String(x.id)===String(o.id)?updated:x):[updated,...currentItems];persistOdtCreated(nextItems);await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra});setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
         const deleteOdtInFirestore=async(id)=>{try{await setDoc(doc(db,"diseno_odts",id),{activo:false,deletedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
         const createOdtAndNotify=()=>{const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",alerta:"Hoy · vence",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true};let currentItems=[];try{currentItems=JSON.parse(localStorage.getItem("et_odt_items")||"[]");}catch{}const nextItems=[nueva,...(currentItems||[]).filter(x=>String(x.id)!==String(nowId))];persistOdtCreated(nextItems);saveOdtToFirestore(nueva);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");const nextDeleted=(odtDeletedIds||[]).map(String).filter(x=>x!==String(nowId));setOdtDeletedIds(nextDeleted);try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(nextDeleted));}catch{}if(d){setOdtNotifyModal({disenador:d,odt:nueva});}else{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}showToast("ODT creada correctamente");};
         const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar la ODT ${o.id}?`))return; const id=String(o.id); const nextCreated=(odtCreated||[]).map(x=>String(x.id)===id?{...x,activo:false,deletedAt:new Date().toISOString(),deletedBy:uName||uDni||"admin"}:x); persistOdtCreated(nextCreated); deleteOdtInFirestore(id); const next=[...new Set([...(odtDeletedIds||[]).map(String),id])]; setOdtDeletedIds(next); try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{} setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada con trazabilidad"); };
@@ -8402,21 +8403,16 @@ function ChecklistApp() {
                             <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:"#5a7a9a",background:"#f0f4f8"}}>{o.horaCorte||"—"}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {(adminOnly||(isEjecutor&&(String(o.disenadorId)===String(uDni)||o.dnombre===uName)))
+                            {adminOnly
                               ?<select value={o.estado} onChange={async e=>{
                                   const nuevoEstado=e.target.value;
-                                  const updated={...o,estado:nuevoEstado};
-                                  const nextCreated=(odtCreated||[]).map(x=>String(x.id)===String(o.id)?updated:x);
-                                  const isBase=!nextCreated.some(x=>String(x.id)===String(o.id));
-                                  if(isBase){persistOdtCreated([updated,...(odtCreated||[])]);}else{persistOdtCreated(nextCreated);}
-                                  await updateOdtInFirestore(o.id,{estado:nuevoEstado});
-                                  setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);
-                                  showToast("Estado actualizado");
+                                  await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role});
                                 }}
                                 style={{padding:"3px 9px",borderRadius:20,border:"none",background:p.col+"18",color:p.col,fontWeight:700,fontSize:10,cursor:"pointer",outline:"none",whiteSpace:"nowrap",fontFamily:"'DM Sans',system-ui,sans-serif",appearance:"none",WebkitAppearance:"none"}}>
                                 <option value="pendiente">Pendiente</option>
                                 <option value="diseño">En diseño</option>
                                 <option value="aprobacion">En aprobación</option>
+                                <option value="aprobado">Aprobado</option>
                                 <option value="entregado">Entregado</option>
                                 <option value="retrasado">Retrasado</option>
                                 <option value="cancelado">Cancelado</option>
@@ -8447,6 +8443,8 @@ function ChecklistApp() {
                                 <button onClick={()=>setOdtAssignModal(o)} style={{height:34,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontWeight:700,fontSize:11,cursor:"pointer"}}>Asignar</button>
                                 <button title="Eliminar" onClick={()=>deleteOdt(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoTrash/></button>
                               </>}
+                              {(isAdmin||isSolicitante)&&o.estado==="aprobacion"&&<button onClick={()=>updateOdtEstado(o,"aprobado",{aprobadoPor:uName||uDni,aprobadoRol:role,aprobadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#0984e3",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar aprobación</button>}
+                              {isEjecutor&&(String(o.disenadorId)===String(uDni)||o.dnombre===uName)&&o.estado==="aprobado"&&<button onClick={()=>updateOdtEstado(o,"entregado",{finalizadoPor:uName||uDni,finalizadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#00b894",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar trabajo finalizado</button>}
                             </div>
                           </td>
                         </tr>
@@ -8504,7 +8502,7 @@ function ChecklistApp() {
                   {[
                     {id:"pendiente",  label:"Pendiente",     c:"#f6a623", estados:["pendiente"]},
                     {id:"diseno",     label:"En diseño",     c:"#6C6EF5", estados:["diseño","en_diseno"]},
-                    {id:"aprobacion", label:"En aprobación", c:"#0984e3", estados:["aprobacion"]},
+                    {id:"aprobacion", label:"En aprobación", c:"#0984e3", estados:["aprobacion","aprobado"]},
                     {id:"entregado",  label:"Entregado",     c:"#00b894", estados:["entregado"]},
                   ].map(col=>{
                     const colItems=odtsRol.filter(o=>{
@@ -8549,19 +8547,16 @@ function ChecklistApp() {
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                                   Asignar
                                 </button>}
+                                {(isAdmin||isSolicitante)&&o.estado==="aprobacion"&&<button onClick={()=>updateOdtEstado(o,"aprobado",{aprobadoPor:uName||uDni,aprobadoRol:role,aprobadoEn:new Date().toISOString()})} style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  Marcar aprobación
+                                </button>}
                                 {isEjecutor&&(String(o.disenadorId)===String(uDni)||o.dnombre===uName)&&(()=>{
-                                  const NEXT={pendiente:{label:"Iniciar trabajo",c:"#f6a623",nc:"diseño"},diseño:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},aprobacion:{label:"Marcar entregado",c:"#00b894",nc:"entregado"}};
+                                  const NEXT={pendiente:{label:"Iniciar trabajo",c:"#f6a623",nc:"diseño"},diseño:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},en_diseno:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},aprobado:{label:"Marcar trabajo finalizado",c:"#00b894",nc:"entregado"}};
                                   const nx=NEXT[o.estado];
+                                  if(o.estado==="aprobacion")return <button disabled style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#8aaabb",fontSize:11,fontWeight:800,cursor:"not-allowed"}}>Esperando aprobación</button>;
                                   if(!nx)return null;
-                                  return <button onClick={async()=>{
-                                    const updated={...o,estado:nx.nc};
-                                    const nextCreated=(odtCreated||[]).map(x=>String(x.id)===String(o.id)?updated:x);
-                                    const isBase=!nextCreated.some(x=>String(x.id)===String(o.id));
-                                    if(isBase){persistOdtCreated([updated,...(odtCreated||[])]);}else{persistOdtCreated(nextCreated);}
-                                    await updateOdtInFirestore(o.id,{estado:nx.nc});
-                                    setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);
-                                    showToast("Estado actualizado: "+nx.nc);
-                                  }} style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"none",background:nx.c,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                                  return <button onClick={()=>updateOdtEstado(o,nx.nc,{actualizadoPor:uName||uDni,actualizadoRol:role})} style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"none",background:nx.c,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                                     {nx.label}
                                   </button>;
@@ -8597,7 +8592,7 @@ function ChecklistApp() {
                 <div style={{...SH,padding:18}}>
                   <div style={{fontWeight:800,color:"#1a2f4a",marginBottom:10}}>Avance global</div>
                   <div style={{height:12,borderRadius:8,overflow:"hidden",display:"flex",background:"#e2e8f0"}}>
-                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>o.estado==="entregado").length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
+                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>o.estado==="entregado").length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
                   </div>
                   <div style={{display:"flex",gap:14,marginTop:8,flexWrap:"wrap"}}>
                     {[{c:"#00b894",l:"Entregado"},{c:"#0984e3",l:"En proceso"},{c:"#f6a623",l:"Pendiente"},{c:"#dc2626",l:"Con retraso"}].map(x=><span key={x.l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#5a7a9a"}}><span style={{width:8,height:8,borderRadius:"50%",background:x.c}}/>{x.l}</span>)}
