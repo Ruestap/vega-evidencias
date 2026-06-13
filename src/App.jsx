@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import React from "react";
+/* ET_ODT_BUSINESS_TIME_RESPONSIVE_20260613_1815 */
 /* ET_ENTREGADO_FLOW_RESPONSIVE_20260613_1755 */
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
@@ -8238,41 +8239,57 @@ function ChecklistApp() {
         const odtsTodos=[...odtsMap.values()];
         const isOdtFinalizada=(o)=>["entregado","finalizado","terminado"].includes(String(o?.estado||"").toLowerCase());
         const toLocalDate=(v)=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const d=new Date(v);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());};
-        const toDueDateTime=(o)=>{const d=toLocalDate(o?.fechaEntrega||o?.entrega);if(!d)return null;const hm=String(o?.horaCorte||"23:59").match(/^(\d{1,2}):(\d{2})/);d.setHours(hm?Number(hm[1]):23,hm?Number(hm[2]):59,0,0);return d;};
-        const toFinishDateTime=(o)=>{const raw=o?.finalizadoEn||o?.fechaCierre||o?.entregadoEn||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
+        const parseHora=(v,fb="18:30")=>{const raw=String(v||fb).trim().toLowerCase().replace(/\s+/g,"");let m=raw.match(/^(\d{1,2}):(\d{2})$/);if(m)return[Number(m[1]),Number(m[2])];m=raw.match(/^(\d{1,2}):(\d{2})(a\.m\.|am|p\.m\.|pm)$/);if(m){let h=Number(m[1]);const mm=Number(m[2]);const ap=m[3];if(ap.startsWith("p")&&h<12)h+=12;if(ap.startsWith("a")&&h===12)h=0;return[h,mm];}return parseHora(fb,"18:30");};
+        const makeDateTime=(fecha,hora="00:00")=>{const d=toLocalDate(fecha);if(!d)return null;const [h,m]=parseHora(hora,"00:00");d.setHours(h,m,0,0);return d;};
+        const ODT_WORK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["08:00","11:30"]};
+        const daySchedule=(d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null;
+        const isWorkDayOdt=(d)=>!!daySchedule(d);
+        const countWorkDaysInclusive=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let ini=da<=db?da:db,fin=da<=db?db:da,c=0;for(let d=new Date(ini);d<=fin;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return Math.max(1,c);};
+        const countWorkDaysBefore=(start,ref)=>{const ini=toLocalDate(start),r=toLocalDate(ref);if(!ini||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<ini)return 0;let c=0;for(let d=new Date(ini);d<=end;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return c;};
+        const businessMinutesBetween=(start,end)=>{if(!start||!end||isNaN(start)||isNaN(end))return 0;let a=start<=end?new Date(start):new Date(end),b=start<=end?new Date(end):new Date(start),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=daySchedule(d);if(!sch)continue;const [sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
+        const formatHm=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));const h=Math.floor(n/60),m=n%60;if(h&&m)return`${h}h ${m}m`;if(h)return`${h}h`;return`${m}m`;};
+        const formatDiasTb=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));if(n<=0)return"0d";const full=Math.floor(n/600);return full<1?"<1d":`${full}d`;};
+        const toDueDateTime=(o)=>makeDateTime(o?.fechaEntrega||o?.entrega,o?.horaCorte||"18:30");
+        const toFinishDateTime=(o)=>{const raw=o?.entregadoEn||o?.finalizadoEn||o?.fechaCierre||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
         const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
         const calcOdtPlan=(o)=>{
           const estado=String(o?.estado||"pendiente").toLowerCase();
-          const finalizada=isOdtFinalizada(o);
+          const entregada=isOdtFinalizada(o);
+          const now=new Date();
           const hoy=toLocalDate(todayStr());
           const fi=toLocalDate(o?.fechaInicio)||hoy;
           const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
-          const total=fi&&fe?Math.max(1,Math.round((fe-fi)/86400000)):1;
-          const trans=finalizada?total:Math.min(total,Math.max(0,hoy&&fi?Math.round((hoy-fi)/86400000):0));
-          const tiempo=finalizada?`${total}/${total} lab`:`${trans}/${total} lab`;
-          let alerta="";
-          if(finalizada){
-            const due=toDueDateTime(o);
-            const fin=toFinishDateTime(o);
+          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),o?.horaInicio||"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
+          const due=toDueDateTime(o);
+          const fin=toFinishDateTime(o);
+          const ref=entregada?(fin||due||now):now;
+          const totalLab=fi&&fe?countWorkDaysInclusive(fi,fe):1;
+          const transLab=entregada?Math.min(totalLab,countWorkDaysInclusive(fi,ref)):Math.min(totalLab,countWorkDaysBefore(fi,hoy));
+          const tiempo=`${transLab}/${totalLab} lab`;
+          const usedBusinessMinutes=businessMinutesBetween(inicioDT,ref);
+          const dias=entregada?formatDiasTb(usedBusinessMinutes):(usedBusinessMinutes>0?formatDiasTb(usedBusinessMinutes):"<1d");
+          let detalle="";
+          let diasTb=dias;
+          if(entregada){
             const cierre=fin||due;
             if(due&&cierre){
-              const dayDelta=diffDays(cierre,due);
-              const minDelta=Math.round((cierre-due)/60000);
-              if(dayDelta>0) alerta=`Entregado con retraso ${dayDelta}d`;
-              else if(dayDelta<0) alerta=`Entregado con adelanto +${Math.abs(dayDelta)}d`;
-              else if(minDelta>0){const h=Math.floor(minDelta/60),m=minDelta%60;alerta=`Entregado con retraso ${h?`${h}h `:""}${m}m`;}
-              else alerta="Entregado a tiempo";
-            }else alerta="Entregado";
-          }else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)){
+              const deltaMin=Math.round((cierre-due)/60000);
+              const deltaDay=diffDays(cierre,due);
+              if(deltaMin>0){detalle=`Entregado con retraso ${formatHm(deltaMin)}`;diasTb=`Retraso ${formatHm(deltaMin)}`;}
+              else if(deltaMin<0&&deltaDay<0){detalle=`Entregado con adelanto +${Math.abs(deltaDay)}d`;diasTb=`Adelanto +${Math.abs(deltaDay)}d`;}
+              else {detalle="Entregado a tiempo";diasTb="A tiempo";}
+            }else{detalle="Entregado";diasTb=dias;}
+          }else{
             const d=fe?diffDays(hoy,fe):null;
-            alerta=!fe?"En ejecución":d<0?`En ejecución (+${Math.abs(d)}d)`:d===0?"En ejecución (Hoy)":`Con retraso (-${d}d)`;
-          }else if(estado==="pendiente"){
-            const d=fe?diffDays(hoy,fe):null;
-            alerta=!fe?"Pendiente":d<0?`Pendiente (+${Math.abs(d)}d)`:d===0?"Con retraso (Hoy)":`Con retraso (-${d}d)`;
-          }else if(estado==="retrasado") alerta=o?.alerta||"Con retraso";
-          else alerta=o?.alerta||"—";
-          const avance=finalizada?100:(Number(o?.avance)||0);
-          return {...o,alerta,tiempo,avance,estadoUi:finalizada?"finalizado":estado};
+            if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) detalle=!fe?"En ejecución":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="retrasado") detalle=o?.detalle||o?.alerta||"Con retraso";
+            else detalle=o?.detalle||o?.alerta||"—";
+            diasTb=dias;
+          }
+          const avance=entregada?100:(Number(o?.avance)||0);
+          const progresoMap={pendiente:"Pendiente",diseño:"En proceso",en_diseno:"En proceso",aprobacion:"En aprobación",aprobado:"Aprobado",entregado:"Entregado",finalizado:"Entregado",terminado:"Entregado",cancelado:"Cancelado",retrasado:"Retrasado"};
+          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso:progresoMap[estado]||"Pendiente"};
         };
         const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
         const normOdt=(v)=>String(v??"").trim().toLowerCase();
@@ -8316,7 +8333,7 @@ Responsable: ${o.dnombre||"—"}
 Estatus: Entregado
 Detalle: ${plan.alerta||"Entregado"}
 Fecha de entrega: ${o.fechaCierre||todayStr()}
-Hora de entrega: ${new Date(o.finalizadoEn||o.entregadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
+Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 
 Ingresa con tu credencial para revisar, aprobar o solicitar ajustes:
 ${APP_URL}
@@ -8356,7 +8373,7 @@ Saludos.`;
         const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
-        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{finalizadoEn:extra.finalizadoEn||new Date().toISOString(),entregadoEn:extra.entregadoEn||extra.finalizadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const updated=calcOdtPlan({...o,estado:nuevoEstado,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:nuevoEstado,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(nuevoEstado).txt);};
+        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{entregadoEn:extra.entregadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const estadoFirestore=(nuevoEstado==="finalizado"||nuevoEstado==="terminado")?"entregado":nuevoEstado;const updated=calcOdtPlan({...o,estado:estadoFirestore,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:estadoFirestore,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);showToast("Estado actualizado: "+pillE(estadoFirestore).txt);};
         const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
         const createOdtAndNotify=()=>{const d=selectedDesigner||null;if(!d){showToast("Selecciona un diseñador para asignar la ODT");return;}const ini=(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d.id,disenadorDni:d.dni||d.documento||d.usuario||d.id,responsableId:d.id,responsableDni:d.dni||d.documento||d.usuario||d.id,dnombre:d.nombre,demail:d.email||"",dcel:d.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");};
         const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
@@ -8450,7 +8467,7 @@ Saludos.`;
                 {reportStats.map(s=>{
                     const kpiIco={
                       "Total":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
-                      "Terminadas":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Entregadas":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
                       "En proceso":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
                       "Pendientes":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
                       "Con retraso":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
@@ -8463,16 +8480,16 @@ Saludos.`;
                   })}
               </div>
               <div style={{...SH,overflowX:"auto",maxWidth:"100%"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1200}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1320}}>
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
-                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","ALERTA","HH","TIEMPO","DÍAS","ACCIONES"].map(h=>(
+                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","PROGRESO","DETALLE","HH","TIEMPO TRANSCURRIDO","DÍAS TB","ACCIONES"].map(h=>(
                         <th key={h} style={{padding:"10px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,letterSpacing:".06em",borderBottom:"1px solid #e2e8f0",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {odtsReporte.length===0&&<tr><td colSpan={12} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
+                    {odtsReporte.length===0&&<tr><td colSpan={13} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
                     {odtsReporte.map(o=>{
                       const p=pillE(o.estado);
                       const isHL=odtHighlighted===o.id;
@@ -8527,7 +8544,10 @@ Saludos.`;
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:(o.alerta?.startsWith("Entregado")||o.alerta?.startsWith("Entregado"))?"#00b894":o.alerta?.startsWith("Con retraso")?"#dc2626":o.alerta?.startsWith("En ejecución")?"#0984e3":"#f6a623",background:(o.alerta?.startsWith("Entregado")||o.alerta?.startsWith("Entregado"))?"#e8faf5":o.alerta?.startsWith("Con retraso")?"#ffeae6":o.alerta?.startsWith("En ejecución")?"#eaf5ff":"#fff8ec",whiteSpace:"nowrap"}}>{o.alerta}</span>
+                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:p.col,background:p.col+"18",whiteSpace:"nowrap"}}>{o.progreso||p.txt}</span>
+                          </td>
+                          <td style={{padding:"12px 10px"}}>
+                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:o.detalle?.startsWith("Entregado")?"#00b894":o.detalle?.startsWith("Con retraso")||o.detalle?.startsWith("Retraso")?"#dc2626":o.detalle?.startsWith("En ejecución")?"#0984e3":"#f6a623",background:o.detalle?.startsWith("Entregado")?"#e8faf5":o.detalle?.startsWith("Con retraso")||o.detalle?.startsWith("Retraso")?"#ffeae6":o.detalle?.startsWith("En ejecución")?"#eaf5ff":"#fff8ec",whiteSpace:"nowrap"}}>{o.detalle}</span>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
@@ -8550,7 +8570,7 @@ Saludos.`;
                               </>}
                               {adminOnly&&<button title="Eliminar" onClick={()=>deleteOdt(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoTrash/></button>}
                               {(isAdmin||isSolicitante)&&o.estado==="aprobacion"&&<button onClick={()=>updateOdtEstado(o,"aprobado",{aprobadoPor:uName||uDni,aprobadoRol:role,aprobadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#0984e3",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar aprobación</button>}
-                              {isEjecutor&&isAssignedOdt(o)&&o.estado==="aprobado"&&<button onClick={()=>updateOdtEstado(o,"entregado",{entregadoPor:uName||uDni,finalizadoPor:uName||uDni,entregadoEn:new Date().toISOString(),finalizadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#00b894",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar entregado</button>}
+                              {isEjecutor&&isAssignedOdt(o)&&o.estado==="aprobado"&&<button onClick={()=>updateOdtEstado(o,"entregado",{entregadoPor:uName||uDni,entregadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#00b894",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar entregado</button>}
                             </div>
                           </td>
                         </tr>
