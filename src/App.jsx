@@ -1,3 +1,4 @@
+/* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
 // ET_FIX_EDIT_MODAL_COMPACT_150_20260614
 // ET_FIX_EDIT_MODAL_VIEWER_APPROVED_20260614
 // ET_FIX_ODT_NOTIF_SOLICITANTE_20260614
@@ -8074,7 +8075,7 @@ function ChecklistApp() {
   const HOME_MAIN_TABS = [
     {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","visor"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
-    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","ejecutor"]},
+    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","solicitante","ejecutor","visor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
@@ -8235,7 +8236,7 @@ function ChecklistApp() {
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {/* FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 — Módulo Diseño/ODT tabs 7-9 */}
-      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","ejecutor"].includes(role))&&(()=>{
+      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","solicitante","ejecutor","visor"].includes(role))&&(()=>{
         const TIPOS_BASE=[
           {id:"pop",label:"Material POP",hh:3,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e17055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>},
           {id:"cat",label:"Catálogo",hh:8,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>},
@@ -8310,16 +8311,45 @@ function ChecklistApp() {
           return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso:progresoMap[estado]||"Pendiente"};
         };
         const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
-        const normOdt=(v)=>String(v??"").trim().toLowerCase();
+        const KANBAN_ENTREGADOS_DIAS=7;
+        const getOdtDeliveredDate=(o)=>{
+          const raw=o?.entregadoEn||o?.fechaCierre||o?.finalizadoEn||o?.updatedAt||o?.fechaEntrega||o?.entrega;
+          if(!raw)return null;
+          const d=new Date(raw);
+          if(!isNaN(d))return d;
+          return toLocalDate(raw);
+        };
+        const isOdtDeliveredVisibleInKanban=(o)=>{
+          if(!isOdtFinalizada(o))return true;
+          const d=getOdtDeliveredDate(o);
+          if(!d)return true;
+          const age=(Date.now()-d.getTime())/86400000;
+          return age<=KANBAN_ENTREGADOS_DIAS;
+        };
+        const normOdt=(v)=>String(v??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+        const normDigits=(v)=>String(v??"").replace(/\D/g,"");
+        const sameAny=(a,b)=>a.filter(Boolean).some(x=>b.filter(Boolean).includes(x));
         const isAssignedOdt=(o)=>{
-          const me=[uDni,uName,usuarioIniciales].map(normOdt).filter(Boolean);
-          const vals=[o?.disenadorId,o?.disenadorDni,o?.responsableDni,o?.responsableId,o?.did,o?.dnombre,o?.demail].map(normOdt).filter(Boolean);
-          return me.some(m=>vals.includes(m));
+          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
+          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
+          const myNames=[uName,loggedUser?.nombre].map(normOdt);
+          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
+          const odtIds=[o?.disenadorId,o?.disenadorDni,o?.responsableDni,o?.responsableId].map(normOdt);
+          const odtDigits=[o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId].map(normDigits);
+          const odtNames=[o?.dnombre,o?.disenadorNombre,o?.responsableNombre].map(normOdt);
+          const odtEmails=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt);
+          return sameAny(myIds,odtIds)||sameAny(myDigits,odtDigits)||sameAny(myEmails,odtEmails)||sameAny(myNames,odtNames);
         };
         const isRequesterOdt=(o)=>{
-          const me=[uDni,uName,loggedUser?.email].map(normOdt).filter(Boolean);
-          const vals=[o?.creadoPor,o?.solicitanteId,o?.solicitanteDni,o?.solicitanteNombre,o?.solicitanteEmail].map(normOdt).filter(Boolean);
-          return me.some(m=>vals.includes(m));
+          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
+          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
+          const myNames=[uName,loggedUser?.nombre].map(normOdt);
+          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
+          const reqIds=[o?.creadoPor,o?.solicitanteId,o?.solicitanteDni].map(normOdt);
+          const reqDigits=[o?.solicitanteDni,o?.solicitanteId].map(normDigits);
+          const reqNames=[o?.solicitanteNombre,o?.creadoPorNombre,o?.creadoPor].map(normOdt);
+          const reqEmails=[o?.solicitanteEmail,o?.creadoPorEmail].map(normOdt);
+          return sameAny(myIds,reqIds)||sameAny(myDigits,reqDigits)||sameAny(myEmails,reqEmails)||sameAny(myNames,reqNames);
         };
         const canViewOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||isRequesterOdt(o)||isAssignedOdt(o)||(isDisenoViewer&&(isRequesterOdt(o)||isAssignedOdt(o)));
         const canCreateOdt=isDisenoAdmin||isDisenoCoordinator||isSolicitante;
@@ -8329,7 +8359,17 @@ function ChecklistApp() {
         const canApproveOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
         const canDeliverOdt=(o)=>isDisenoAdmin||(isDisenoExecutor&&isAssignedOdt(o)&&String(o?.estado||"").toLowerCase()==="aprobado");
         const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
-        const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator;
+        const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
+        const odtStateOptions=(o)=>{
+          const estado=String(o?.estado||"pendiente").toLowerCase();
+          const all=["pendiente","diseño","aprobacion","aprobado","entregado","retrasado","cancelado"];
+          let allowed=[];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=all;
+          else if(isDisenoExecutor&&isAssignedOdt(o)) allowed=["diseño","aprobacion",...(estado==="aprobado"?["entregado"]:[])];
+          else if(isSolicitante&&isRequesterOdt(o)) allowed=["aprobacion","aprobado","cancelado"];
+          if(estado&&!allowed.includes(estado)) allowed=[estado,...allowed];
+          return [...new Set(allowed)];
+        };
         const canManageOdt=canCreateOdt;
         const odtsRol=odtsBaseFiltradas.filter(canViewOdt);
         const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
@@ -8366,7 +8406,7 @@ Estatus: En aprobación
 Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
 Hora de corte: ${o.horaCorte||"—"}
 
-Ingresa a EstrategiaTrade:
+Link de acceso directo a EstrategiaTrade:
 ${APP_URL}
 
 Saludos.`;
@@ -8381,7 +8421,7 @@ Detalle: ${plan.alerta||"Entregado"}
 Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 
-Ingresa a EstrategiaTrade:
+Link de acceso directo a EstrategiaTrade:
 ${APP_URL}
 
 Saludos.`;
@@ -8408,14 +8448,16 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Ingresa a EstrategiaTrade:
+Link de acceso directo a EstrategiaTrade:
 ${APP_URL}
 
 Saludos.`;
         };
         // Correo y WhatsApp: siempre abren en pestaña nueva para no sacar al usuario del dashboard.
         const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);const body=buildOdtMail(o,modo);const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");openExternalBlank(url);};
+        const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");openExternalBlank(url);};
+        const openMailtoOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);openExternalBlank("mailto:"+encodeURIComponent(to||"")+"?subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||""));};
         const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
         const maybeNotifyRequesterAfterState=(o,nuevoEstado,updated)=>{const estado=String(nuevoEstado||"").toLowerCase();if(!(isDisenoExecutor&&isAssignedOdt(o)))return;if(estado!=="aprobacion"&&estado!=="entregado"&&estado!=="finalizado"&&estado!=="terminado")return;const solicitante=getOdtRequesterContact(o);setOdtSolicitanteNotifyModal({odt:{...o,...(updated||{}),demail:solicitante.email,dcel:solicitante.celular},modo:estado==="aprobacion"?"revision":"entrega",solicitante});};
@@ -8558,13 +8600,7 @@ Saludos.`;
                                   await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role});
                                 }}
                                 style={{padding:"3px 9px",borderRadius:20,border:"none",background:p.col+"18",color:p.col,fontWeight:700,fontSize:10,cursor:"pointer",outline:"none",whiteSpace:"nowrap",fontFamily:"'DM Sans',system-ui,sans-serif",appearance:"none",WebkitAppearance:"none"}}>
-                                <option value="pendiente">Pendiente</option>
-                                <option value="diseño">En diseño</option>
-                                <option value="aprobacion">En aprobación</option>
-                                <option value="aprobado">Aprobado</option>
-                                <option value="entregado">Entregado</option>
-                                <option value="retrasado">Retrasado</option>
-                                <option value="cancelado">Cancelado</option>
+                                {odtStateOptions(o).map(st=><option key={st} value={st}>{pillE(st).txt}</option>)}
                               </select>
                               :<span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:p.col,background:p.col+"18",whiteSpace:"nowrap"}}>{p.txt}</span>
                             }
@@ -8656,13 +8692,15 @@ Saludos.`;
                       const matchEstado=col.estados.some(e=>o.estado===e)||col.estados.some(e=>o.stat===e);
                       const matchResp=odtKanbanFiltro.resp==="todos"||o.disenadorId===odtKanbanFiltro.resp||o.did===odtKanbanFiltro.resp;
                       const matchTipo=odtKanbanFiltro.tipo==="todos"||o.tipoTrabajo===odtKanbanFiltro.tipo||o.tipo===odtKanbanFiltro.tipo;
-                      return matchEstado&&matchResp&&matchTipo;
+                      const matchEntregadoReciente=col.id!=="entregado"||isOdtDeliveredVisibleInKanban(o);
+                      return matchEstado&&matchResp&&matchTipo&&matchEntregadoReciente;
                     });
                     return(
                       <div key={col.id}>
                         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10,padding:"0 4px"}}>
                           <span style={{width:8,height:8,borderRadius:"50%",background:col.c,flexShrink:0}}/>
                           <span style={{fontSize:10,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",textTransform:"uppercase"}}>{col.label}</span>
+                          {col.id==="entregado"&&<span style={{fontSize:9,color:"#8aaabb",fontWeight:700,textTransform:"none",letterSpacing:0}}>últimos {KANBAN_ENTREGADOS_DIAS}d</span>}
                           <span style={{marginLeft:"auto",padding:"1px 8px",borderRadius:20,fontSize:9,fontWeight:700,background:col.c+"18",color:col.c}}>{colItems.length}</span>
                         </div>
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
