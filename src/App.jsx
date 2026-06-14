@@ -1,3 +1,4 @@
+/* ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 */
 /* ET_CIERRE_DISENO_MOCKUP_MANUAL_CALC_20260614 */
 /* ET_FIX_ODT_ESTADO_CORRECCION_NOTIFY_20260614 */
 /* ET_FIX_VIEW_MODAL_ACTIONS_HEADER_ROW_20260614 */
@@ -8424,6 +8425,31 @@ function ChecklistApp() {
         };
         const canManageOdt=canCreateOdt;
         const odtsRol=odtsBaseFiltradas.filter(canViewOdt);
+        // ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 — Dashboard por rol/cargo sin cambiar secciones aprobadas.
+        // Admin ve Dirección + Gerencia + Operativo. Visor con cargo gerencia ve Dirección/Gerencia.
+        // Ejecutor/Solicitante ve Operativo con sus ODT filtradas.
+        const normRoleCargo=(v)=>normTxt(v||"");
+        const isGerenciaViewer=isDisenoViewer && ["gerencia","gerente","gerencial","direccion","director"].some(x=>normRoleCargo(uCargo).includes(x));
+        const odtDashLevelsAllowed=(isDisenoAdmin||isDisenoCoordinator)
+          ? ["direccion","gerencia","operativo"]
+          : isGerenciaViewer
+            ? ["direccion","gerencia"]
+            : ["operativo"];
+        const odtDashLevelActive=odtDashLevelsAllowed.includes(odtDashLvl)?odtDashLvl:odtDashLevelsAllowed[0];
+        const odtDashLevelItems=[
+          {id:"direccion",t:"Dirección",d:"Visión ejecutiva",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5M8 19v-8M12 19V7M16 19v-5M20 19V9"/></svg>},
+          {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
+          {id:"operativo",t:"Operativo",d:"Seguimiento diario",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
+        ].filter(x=>odtDashLevelsAllowed.includes(x.id));
+        const odtGanttItems=odtsRol.slice(0,8).map((o,idx)=>{
+          const ini=toLocalDate(o.fechaInicio)||toLocalDate(todayStr());
+          const fin=toLocalDate(o.fechaEntrega||o.entrega)||ini;
+          const start=Math.max(1,Math.min(30,ini?ini.getDate():1));
+          const end=Math.max(start,Math.min(30,fin?fin.getDate():start+1));
+          const st=String(o.estado||o.stat||"pendiente").toLowerCase();
+          const col=st==="retrasado"||((o.fechaEntrega||o.entrega)&&todayStr()>(o.fechaEntrega||o.entrega)&&!isOdtFinalizada(o))?"#dc2626":isOdtFinalizada(o)?"#00b894":st==="aprobacion"?"#0984e3":st==="correccion"?"#f6a623":"#6C6EF5";
+          return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
+        });
         const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const estadoLabel=(e)=>pillE(e).txt;
         const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
@@ -8846,6 +8872,15 @@ Saludos.`;
               </>}
 
               {odtDashView==="panel"&&<>
+                <div style={{display:"grid",gridTemplateColumns:`repeat(${odtDashLevelItems.length},1fr)`,gap:10,marginBottom:14}}>
+                  {odtDashLevelItems.map(l=>{const on=odtDashLevelActive===l.id;return(
+                    <button key={l.id} onClick={()=>setOdtDashLvl(l.id)} style={{...SH,padding:"14px 10px",minHeight:68,textAlign:"center",border:on?"2px solid #6C6EF5":"1px solid #e2e8f0",background:on?"#1a2f4a":"#fff",color:on?"#fff":"#5a7a9a",cursor:"pointer"}}>
+                      <div style={{display:"flex",justifyContent:"center",marginBottom:5,color:on?"#fff":"#5a7a9a"}}>{l.ico}</div>
+                      <div style={{fontSize:12,fontWeight:900,color:on?"#fff":"#1a2f4a"}}>{l.t}</div>
+                      <div style={{fontSize:9,color:on?"rgba(255,255,255,.75)":"#8aaabb",marginTop:2}}>{l.d}</div>
+                    </button>
+                  )})}
+                </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
                   {reportStats.map(s=>{
                     const kpiIco2={
@@ -8873,6 +8908,29 @@ Saludos.`;
                     {[{c:"#00b894",l:"Entregado"},{c:"#0984e3",l:"En proceso"},{c:"#f6a623",l:"Pendiente"},{c:"#dc2626",l:"Con retraso"}].map(x=><span key={x.l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#5a7a9a"}}><span style={{width:8,height:8,borderRadius:"50%",background:x.c}}/>{x.l}</span>)}
                   </div>
                 </div>
+                {odtDashLevelActive==="gerencia"&&<div style={{...SH,padding:16,marginTop:12}}>
+                  <div style={{fontWeight:900,fontSize:13,color:"#1a2f4a",textAlign:"center",marginBottom:12}}>JUNIO 2026</div>
+                  <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los responsables</option></select>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los tipos</option></select>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los estados</option></select>
+                  </div>
+                  <div style={{overflowX:"auto",border:"1px solid #e2e8f0",borderRadius:10}}>
+                    <div style={{minWidth:900}}>
+                      <div style={{display:"grid",gridTemplateColumns:"230px repeat(30,1fr)",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
+                        <div style={{padding:"8px 10px",fontSize:9,fontWeight:900,color:"#5a7a9a",textTransform:"uppercase"}}>Actividad</div>
+                        {Array.from({length:30},(_,i)=><div key={i} style={{textAlign:"center",fontSize:9,fontWeight:800,color:"#8aaabb"}}>{i+1}</div>)}
+                      </div>
+                      {odtGanttItems.map(it=>(
+                        <div key={it.id} style={{display:"grid",gridTemplateColumns:"230px repeat(30,1fr)",minHeight:40,borderBottom:"1px solid #f5f7fa",alignItems:"center"}}>
+                          <div style={{padding:"8px 10px",fontSize:11,fontWeight:800,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.titulo}</div>
+                          <div style={{gridColumn:`${it.start+1}/${Math.min(it.end+2,32)}`,height:18,borderRadius:18,background:it.color,color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",paddingLeft:9,whiteSpace:"nowrap"}}>{it.label}</div>
+                        </div>
+                      ))}
+                      {odtGanttItems.length===0&&<div style={{padding:18,textAlign:"center",fontSize:11,color:"#8aaabb"}}>Sin ODT visibles para graficar.</div>}
+                    </div>
+                  </div>
+                </div>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
                   <div style={{...SH,padding:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
