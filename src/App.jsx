@@ -3,6 +3,7 @@ import React from "react";
 /* ET_REPORTE_SIN_DETALLE_ICONOS_20260613_1845 */
 /* ET_CIERRE_DISENO_ROLES_CONFIG_20260614 */
 /* ET_STEPPER_ODT_FUNCIONAL_20260614 */
+/* ET_FIX_LOGIN_DEVICE_LOCK_20260614 */
 /* ET_ENTREGADO_FLOW_RESPONSIVE_20260613_1755 */
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
@@ -8102,7 +8103,7 @@ function ChecklistApp() {
 
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
@@ -10307,19 +10308,28 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   const[bloqueo,setBloqueo]=useState(null);
   const[intentos,setIntentos]=useState(0);
   const MAX_INTENTOS=5, BLOQUEO_MIN=10;
-  // Verificar bloqueo persistente en Firestore al montar (anti-bypass recarga)
+  const normCred=v=>String(v||"").replace(/[^a-zA-Z0-9]/g,"").trim().toUpperCase();
+  const deviceKey=()=>{
+    try{
+      const k="et_device_id";
+      let v=localStorage.getItem(k);
+      if(!v){v=`dev_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;localStorage.setItem(k,v);}
+      return v;
+    }catch{return "dev_session";}
+  };
+  const AUTH_ATTEMPT_KEY=`et_auth_attempts_${deviceKey()}`;
+  const readAttemptState=()=>{
+    try{return JSON.parse(localStorage.getItem(AUTH_ATTEMPT_KEY)||"{}");}catch{return {};}
+  };
+  const writeAttemptState=v=>{try{localStorage.setItem(AUTH_ATTEMPT_KEY,JSON.stringify(v||{}));}catch{}};
+  const clearAttemptState=()=>{try{localStorage.removeItem(AUTH_ATTEMPT_KEY);}catch{}};
+  // Bloqueo local por dispositivo. No se usa auth_attempts/_last porque bloqueaba globalmente a todos los usuarios.
   useEffect(()=>{
-    import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,getDoc})=>{
-      getDoc(doc(db,"auth_attempts","_last")).then(snap=>{
-        if(!snap.exists()) return;
-        const d=snap.data();
-        if(d.bloqueadoHasta){
-          const hasta=new Date(d.bloqueadoHasta).getTime();
-          const rest=Math.ceil((hasta-Date.now())/1000);
-          if(rest>0){setBloqueo({hasta,restante:rest});setErr("Dispositivo bloqueado por intentos fallidos.");}
-        }
-      }).catch(()=>{});
-    });});
+    const d=readAttemptState();
+    const hasta=d?.bloqueadoHasta?new Date(d.bloqueadoHasta).getTime():0;
+    const rest=Math.ceil((hasta-Date.now())/1000);
+    if(rest>0){setBloqueo({hasta,restante:rest});setErr("Dispositivo bloqueado por intentos fallidos.");}
+    else {clearAttemptState();setIntentos(0);}
   },[]);
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
@@ -10329,9 +10339,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       const rest=Math.ceil((bloqueo.hasta-Date.now())/1000);
       if(rest<=0){
           setBloqueo(null);setIntentos(0);setErr("");
-          import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{
-            setDoc(doc(db,"auth_attempts","_last"),{bloqueadoHasta:null,intentos:0},{merge:true}).catch(()=>{});
-          });});
+          clearAttemptState();
         }
       else setBloqueo(b=>({...b,restante:rest}));
     },1000);
@@ -10339,17 +10347,20 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   },[bloqueo]);
 
   const registrarFallo=()=>{
-    const n=intentos+1; setIntentos(n);
+    const prev=readAttemptState();
+    const n=(Number(prev?.intentos)||0)+1;
+    setIntentos(n);
+    writeAttemptState({intentos:n,ultimoIntento:new Date().toISOString()});
     // SECURITY: registrar intento fallido en Firestore para trazabilidad (sin exponer la credencial)
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
-      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n});
+      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n,deviceKey:deviceKey().slice(-8)});
     });});}catch{}
     if(n>=MAX_INTENTOS){
       const hasta=Date.now()+BLOQUEO_MIN*60*1000;
       setBloqueo({hasta,restante:BLOQUEO_MIN*60});
       setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
-      try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{setDoc(doc(db,"auth_attempts","_last"),{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ts:new Date().toISOString()},{merge:true});});});}catch{}
+      writeAttemptState({intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ultimoIntento:new Date().toISOString()});
     } else {
       setErr(`Credencial incorrecta · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
       setTimeout(()=>setErr(""),3000);
@@ -10357,7 +10368,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   const registrarExito=(id,nombre,rol,tiendaId,cargo)=>{
-    setIntentos(0); setBloqueo(null);
+    setIntentos(0); setBloqueo(null); clearAttemptState();
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
       // SECURITY: no loguear credencial ni DNI completo — solo rol y dispositivo
@@ -10369,13 +10380,15 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   const tryAcceso=()=>{
     if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=cred.trim().toUpperCase();
+    const clean=normCred(cred);
     if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
     // SECURITY: no revelar en el mensaje de error si el usuario existe o no
-    const clean_cmp=cred.trim();
 
-    // 1. Buscar en usuarios activos por credencial (dni)
-    const found=usuariosActivos.find(u=>u.dni&&u.dni.toUpperCase()===clean);
+    // 1. Buscar en usuarios activos por credencial (DNI/RUC/CE/código normalizado)
+    const found=usuariosActivos.find(u=>{
+      const vals=[u.dni,u.credencial,u.id,u.userId].map(normCred).filter(Boolean);
+      return vals.includes(clean);
+    });
     if(found){
       onAcceso?.(found.id);
       registrarExito(found.id,found.nombre,found.rol,found.tiendaId,found.cargo);
@@ -10391,7 +10404,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
     // 3. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>a.dni&&a.dni.toUpperCase()===clean);
+    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id].map(normCred).filter(Boolean).includes(clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
     registrarFallo();
@@ -10399,7 +10412,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#b8c8d8 0%,#8aaabb 40%,#5a7a9a 100%)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <div style={{width:"90%",maxWidth:360,background:"#fff",borderRadius:20,padding:"32px 28px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
         {/* Logo */}
         <div style={{width:65,height:65,borderRadius:16,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 22px rgba(0,0,0,.14)"}}>
