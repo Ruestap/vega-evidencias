@@ -1,3 +1,4 @@
+/* ET_FIX_ODT_NO_MAILTO_SVG_CLEAN_20260614 */
 /* ET_FINAL_DISENO_PRIORITY_SVG_20260614 */
 /* ET_FIX_VIEW_MODAL_COMPACT_ACTIONS_20260614 */
 /* ET_FIX_LOGIN_WAIT_USERS_NO_FALSE_ATTEMPT_20260614 */
@@ -8265,15 +8266,20 @@ function ChecklistApp() {
         const odtPriorityMeta=(v)=>ODT_PRIORIDADES.find(p=>normOdt(p.id)===normOdt(v)||normOdt(p.label)===normOdt(v))||ODT_PRIORIDADES[0];
         const odtTypeMeta=(v)=>{
           const raw=normOdt(v);
-          if(raw.includes("precio")||raw.includes("marcador"))return{label:v||"Marcador Precio",col:"#f6a623",bg:"#fff8ec",ico:"tag"};
-          if(raw.includes("volante")||raw.includes("afiche"))return{label:v||"Volante / Afiche",col:"#0984e3",bg:"#e8f4fd",ico:"file"};
+          if(raw.includes("precio")||raw.includes("marcador"))return{label:v||"Marcador Precio",col:"#f6a623",bg:"#fff8ec",ico:"barcode"};
+          if(raw.includes("volante")||raw.includes("afiche"))return{label:v||"Volante / Afiche",col:"#0984e3",bg:"#e8f4fd",ico:"poster"};
           if(raw.includes("catalog"))return{label:v||"Catálogo",col:"#00b5b4",bg:"#e8faf5",ico:"book"};
           if(raw.includes("digital")||raw.includes("rrss")||raw.includes("feed")||raw.includes("post"))return{label:v||"Digital / RRSS",col:"#6C6EF5",bg:"#EEEFFE",ico:"phone"};
           if(raw.includes("gondola")||raw.includes("exhibidor"))return{label:v||"Góndola / Exhibidor",col:"#1a2f4a",bg:"#f0f4f8",ico:"stand"};
-          return{label:v||"ODT",col:"#5a7a9a",bg:"#f8fafc",ico:"clip"};
+          if(raw.includes("pop")||raw.includes("material"))return{label:v||"Material POP",col:"#1a2f4a",bg:"#f0f4f8",ico:"display"};
+          return{label:v||"ODT",col:"#5a7a9a",bg:"#f8fafc",ico:"clipboard"};
         };
         const OdtSvgIcon=({kind="file",color="#0984e3",size=14})=>{
           const base={width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"};
+          if(kind==="barcode")return <svg {...base}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M10 9v6M13 9v6M17 9v6"/></svg>;
+          if(kind==="poster")return <svg {...base}><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>;
+          if(kind==="clipboard")return <svg {...base}><path d="M9 3h6l1 2h3v16H5V5h3l1-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>;
+          if(kind==="display")return <svg {...base}><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4M8 9h8M8 12h5"/></svg>;
           if(kind==="tag")return <svg {...base}><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg>;
           if(kind==="book")return <svg {...base}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
           if(kind==="phone")return <svg {...base}><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg>;
@@ -8414,7 +8420,7 @@ function ChecklistApp() {
         const estadoLabel=(e)=>pillE(e).txt;
         const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
         const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
-        const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:compact?"2px 7px":"6px 10px",borderRadius:compact?20:10,border:`1px solid ${tm.col}22`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/>{tm.label}</span>;};
+        const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:7,padding:compact?"3px 8px":"7px 11px",borderRadius:compact?20:11,border:`1px solid ${tm.col}26`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><span style={{width:compact?16:20,height:compact?16:20,borderRadius:6,background:"#fff",border:`1px solid ${tm.col}33`,display:"inline-grid",placeItems:"center",flexShrink:0}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/></span>{tm.label}</span>;};
         const renderStateChip=(estado,compact=false)=>{const st=odtStateMeta(estado);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:st.col,background:st.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={st.ico} color={st.col} size={compact?9:10}/>{st.txt}</span>;};
         const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         const odtsReporte=odtsRol.filter(o=>{
@@ -8501,9 +8507,8 @@ Saludos.`;
         // Correo y WhatsApp: siempre abren en pestaña nueva para no sacar al usuario del dashboard.
         const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
         const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
-        const buildOdtMailtoUrl=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);return "mailto:"+encodeURIComponent(to||"")+"?subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");};
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const fallbackUrl=buildOdtMailtoUrl(o,modo);try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){showToast("Outlook fue bloqueado. Abriendo correo alternativo.");openExternalBlank(fallbackUrl);}else{try{w.opener=null;}catch(_){}}}catch(e){showToast("No se pudo abrir Outlook. Abriendo correo alternativo.");openExternalBlank(fallbackUrl);}};
-        const openMailtoOdt=(o,modo="asignacion")=>{openExternalBlank(buildOdtMailtoUrl(o,modo));};
+        const copyOdtMailText=async(o,modo="asignacion")=>{try{await navigator.clipboard.writeText(buildOdtMail(o,modo));showToast("Texto copiado. Pégalo en tu correo si Outlook no abrió.");return true;}catch(e){showToast("No se pudo abrir correo. Copia el texto desde el detalle de la ODT.");return false;}};
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){copyOdtMailText(o,modo);}else{try{w.opener=null;}catch(_){}}}catch(e){copyOdtMailText(o,modo);}};
         const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
         const maybeNotifyRequesterAfterState=(o,nuevoEstado,updated)=>{const estado=String(nuevoEstado||"").toLowerCase();if(!(isDisenoExecutor&&isAssignedOdt(o)))return;if(estado!=="aprobacion"&&estado!=="entregado"&&estado!=="finalizado"&&estado!=="terminado")return;const solicitante=getOdtRequesterContact(o);setOdtSolicitanteNotifyModal({odt:{...o,...(updated||{}),demail:solicitante.email,dcel:solicitante.celular},modo:estado==="aprobacion"?"revision":"entrega",solicitante});};
