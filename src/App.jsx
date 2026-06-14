@@ -4,6 +4,8 @@ import React from "react";
 /* ET_CIERRE_DISENO_ROLES_CONFIG_20260614 */
 /* ET_STEPPER_ODT_FUNCIONAL_20260614 */
 /* ET_FIX_ODT_SIN_STEPPER_SIN_BOTONES_MAIL_20260614 */
+/* ET_FIX_ODT_EXTERNAL_LINKS_20260614 */
+/* ET_FIX_EDIT_MODAL_ADMIN_VISIBLE_20260614 */
 /* ET_FIX_LOGIN_DEVICE_LOCK_20260614 */
 /* ET_ENTREGADO_FLOW_RESPONSIVE_20260613_1755 */
 import { db } from "./firebase";
@@ -8344,7 +8346,7 @@ function ChecklistApp() {
         const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
         const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
-        const APP_URL=typeof window!=="undefined"?window.location.origin:"https://vega-evidencias.vercel.app";
+        const APP_URL="https://vega-evidencias.vercel.app/";
         /* ET_FIX_MAIL_LINK_20260613_1615 */
         const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
         const buildOdtMail=(o,modo="asignacion")=>{
@@ -8360,7 +8362,7 @@ Detalle: ${plan.alerta||"Entregado"}
 Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 
-Link de acceso a EstrategiaTrade:
+Ingresa a EstrategiaTrade:
 ${APP_URL}
 
 Saludos.`;
@@ -8387,14 +8389,15 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Link de acceso a EstrategiaTrade:
+Ingresa a EstrategiaTrade:
 ${APP_URL}
 
 Saludos.`;
         };
-        // Correo y WhatsApp usan texto limpio: Outlook/WhatsApp detectan mejor la URL en línea independiente.
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=(isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o,modo);const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const isFirefox=typeof navigator!=="undefined"&&/firefox/i.test(navigator.userAgent||"");if(isFirefox){window.location.href=url;return;}const win=window.open(url,"_blank","noopener,noreferrer");if(!win){window.location.href=url;}};
-        const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");window.open(`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`,'_blank','noopener,noreferrer');};
+        // Correo y WhatsApp: siempre abren en pestaña nueva para no sacar al usuario del dashboard.
+        const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=(isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o,modo);const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");openExternalBlank(url);};
+        const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
@@ -8794,10 +8797,7 @@ Quedo pendiente de su respuesta.
 
 Saludos.`;
                   const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
-                  const isFirefox=typeof navigator!=="undefined"&&/firefox/i.test(navigator.userAgent||"");
-                  if(isFirefox){window.location.href=url;return;}
-                  const win=window.open(url,"_blank","noopener,noreferrer");
-                  if(!win){window.location.href=url;}
+                  openExternalBlank(url);
                 }} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderRadius:12,
                   border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#0984e3",fontSize:12}}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
@@ -8876,12 +8876,16 @@ Saludos.`;
               };
               const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={3} style={{...inp,resize:"vertical"}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
               return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
-                <div style={{background:"#fff",borderRadius:18,width:"min(900px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
-                  <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(900px,calc(100vw - 28px))",height:"min(92vh,calc(100vh - 28px))",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"14px 18px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
                     <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{cur.id}</div></div>
-                    <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"10px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
+                      <button onClick={saveEdit} style={{padding:"10px 16px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                    </div>
                   </div>
-                  <div style={{padding:20,overflowY:"auto",minHeight:0,maxHeight:"calc(92vh - 132px)"}}>
+                  <div style={{padding:20,overflowY:"auto",minHeight:0,flex:1,paddingBottom:96}}>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
                       {field("Título", "titulo")}
                       <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
@@ -8902,9 +8906,9 @@ Saludos.`;
                       {field("Referencias","referencias","textarea")}
                     </div>
                   </div>
-                  <div style={{padding:"14px 20px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0,background:"#fff",position:"sticky",bottom:0,zIndex:2,boxShadow:"0 -8px 22px rgba(26,47,74,.08)"}}>
+                  <div style={{padding:"12px 18px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0,background:"#fff",zIndex:5,boxShadow:"0 -8px 22px rgba(26,47,74,.08)"}}>
                     <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
-                    <button onClick={saveEdit} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar cambios</button>
+                    <button onClick={saveEdit} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
                   </div>
                 </div>
               </div>;
