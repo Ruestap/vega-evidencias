@@ -1,3 +1,4 @@
+// ET_FIX_EDIT_MODAL_VIEWER_APPROVED_20260614
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import React from "react";
 /* ET_REPORTE_SIN_DETALLE_ICONOS_20260613_1845 */
@@ -8876,8 +8877,8 @@ Saludos.`;
               };
               const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={3} style={{...inp,resize:"vertical"}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
               return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
-                <div style={{background:"#fff",borderRadius:18,width:"min(900px,calc(100vw - 28px))",height:"min(92vh,calc(100vh - 28px))",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
-                  <div style={{padding:"14px 18px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(980px,calc(100vw - 28px))",height:"min(90vh,calc(100vh - 28px))",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"14px 18px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,flexWrap:"wrap"}}>
                     <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{cur.id}</div></div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                       <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"10px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
@@ -8885,7 +8886,7 @@ Saludos.`;
                       <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
                     </div>
                   </div>
-                  <div style={{padding:20,overflowY:"auto",minHeight:0,flex:1,paddingBottom:96}}>
+                  <div style={{padding:20,overflowY:"auto",minHeight:0,flex:1,paddingBottom:24}}>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
                       {field("Título", "titulo")}
                       <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
@@ -8905,10 +8906,6 @@ Saludos.`;
                       {field("Restricciones","restricciones","textarea")}
                       {field("Referencias","referencias","textarea")}
                     </div>
-                  </div>
-                  <div style={{padding:"12px 18px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0,background:"#fff",zIndex:5,boxShadow:"0 -8px 22px rgba(26,47,74,.08)"}}>
-                    <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
-                    <button onClick={saveEdit} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
                   </div>
                 </div>
               </div>;
