@@ -1,4 +1,4 @@
-/* ET_FIX_MAIL_HYPERLINK_AND_FALLBACK_20260614 */
+/* ET_FIX_LOGIN_WAIT_USERS_NO_FALSE_ATTEMPT_20260614 */
 /* ET_FIX_LOGIN_NO_GLOBAL_PER_CRED_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
 // ET_FIX_EDIT_MODAL_COMPACT_150_20260614
@@ -1088,6 +1088,7 @@ function ChecklistApp() {
   const [pinMod,  setPinMod]  = useState(false);
   const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
+  const [usuariosLoaded, setUsuariosLoaded] = useState(false); // FIX: no contar intentos si usuarios aún no cargó desde Firestore
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
@@ -1355,6 +1356,10 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
       setUsuarios(data);
+      setUsuariosLoaded(true);
+    }, err=>{
+      console.error("usuarios snapshot failed:", err?.code||err?.message||"unknown");
+      setUsuariosLoaded(true);
     });
     return ()=>unsub();
   },[]);
@@ -2347,7 +2352,7 @@ function ChecklistApp() {
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
-  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
+  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios} usuariosLoaded={usuariosLoaded}
     onAcceso={(id)=>registrarAcceso(id)}
     onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab((r==="ejecutor"||r==="coordinador")?9:(r==="visor"?1:0));setModulo(0);}}/>;
 
@@ -8393,14 +8398,13 @@ function ChecklistApp() {
         const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
         const APP_URL="https://vega-evidencias.vercel.app/";
+        /* ET_FIX_MAIL_URL_BRACKETS_FALLBACK_20260614 */
         /* ET_FIX_MAIL_LINK_20260613_1615 */
         const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
         const buildOdtMail=(o,modo="asignacion")=>{
           const entregada=isOdtFinalizada(o)||modo==="entrega";
           const revision=modo==="revision"||modo==="aprobacion";
           const plan=calcOdtPlan(o||{});
-          // FIX_HYPERLINK_20260614: formato <URL> es reconocido y convertido en hipervínculo
-          // por Outlook, Gmail, Apple Mail y clientes móviles — funciona en texto plano.
           if(revision){
             return `Hola, la ODT fue enviada a aprobación.
 
@@ -8410,13 +8414,10 @@ Estatus: En aprobación
 Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
 Hora de corte: ${o.horaCorte||"—"}
 
-Ingresa a EstrategiaTrade para revisar tus ODT pendientes:
-${APP_URL}
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
 
-(Copia y pega el enlace en tu navegador si no abre automáticamente)
-
-Saludos.
-Equipo Trade Marketing`;
+Saludos.`;
           }
           if(entregada){
             return `Hola, la ODT ya fue entregada y queda lista para revisión.
@@ -8428,15 +8429,12 @@ Detalle: ${plan.alerta||"Entregado"}
 Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 
-Ingresa a EstrategiaTrade para revisar tus ODT pendientes:
-${APP_URL}
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
 
-(Copia y pega el enlace en tu navegador si no abre automáticamente)
-
-Saludos.
-Equipo Trade Marketing`;
+Saludos.`;
           }
-          return `Tienes una nueva orden de trabajo asignada en EstrategiaTrade.
+          return `Tienes una nueva orden de trabajo asignada:
 
 Título: ${o.titulo||"—"}
 Tipo de trabajo: ${o.tipoTrabajo||o.tipo||"—"}
@@ -8458,35 +8456,17 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Ingresa con tu DNI para ver y gestionar tus ODT asignadas:
-${APP_URL}
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
 
-(Copia y pega el enlace en tu navegador si no abre automáticamente)
-
-Saludos.
-Equipo Trade Marketing`;
+Saludos.`;
         };
         // Correo y WhatsApp: siempre abren en pestaña nueva para no sacar al usuario del dashboard.
         const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
         const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
-        // FIX_MAIL_FALLBACK_20260614: intenta Outlook 365, si falla por bloqueador usa mailto:
-        // Esto garantiza que el correo se abra en CUALQUIER cliente (Gmail, Hotmail, Apple Mail, etc.)
-        const openOutlookOdt=(o,modo="asignacion")=>{
-          const to=o.demail||"";
-          const subject=odtMailSubject(o,modo);
-          const body=buildOdtMail(o,modo);
-          const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");
-          const mailtoUrl="mailto:"+encodeURIComponent(to||"")+"?subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");
-          // Intenta Outlook primero; si la ventana es bloqueada, cae a mailto:
-          try{
-            const win=window.open(outlookUrl,"_blank","noopener,noreferrer");
-            if(!win||win.closed||typeof win.closed==="undefined"){
-              // Bloqueado por popup blocker — usar mailto como fallback universal
-              openExternalBlank(mailtoUrl);
-            }
-          }catch{openExternalBlank(mailtoUrl);}
-        };
-        const openMailtoOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);openExternalBlank("mailto:"+encodeURIComponent(to||"")+"?subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||""));};
+        const buildOdtMailtoUrl=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);return "mailto:"+encodeURIComponent(to||"")+"?subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");};
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const fallbackUrl=buildOdtMailtoUrl(o,modo);try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){showToast("Outlook fue bloqueado. Abriendo correo alternativo.");openExternalBlank(fallbackUrl);}else{try{w.opener=null;}catch(_){}}}catch(e){showToast("No se pudo abrir Outlook. Abriendo correo alternativo.");openExternalBlank(fallbackUrl);}};
+        const openMailtoOdt=(o,modo="asignacion")=>{openExternalBlank(buildOdtMailtoUrl(o,modo));};
         const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
         const maybeNotifyRequesterAfterState=(o,nuevoEstado,updated)=>{const estado=String(nuevoEstado||"").toLowerCase();if(!(isDisenoExecutor&&isAssignedOdt(o)))return;if(estado!=="aprobacion"&&estado!=="entregado"&&estado!=="finalizado"&&estado!=="terminado")return;const solicitante=getOdtRequesterContact(o);setOdtSolicitanteNotifyModal({odt:{...o,...(updated||{}),demail:solicitante.email,dcel:solicitante.celular},modo:estado==="aprobacion"?"revision":"entrega",solicitante});};
@@ -10354,7 +10334,7 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
+function LoginScreen({pins,auditores,usuarios,usuariosLoaded,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
   const[err,setErr]=useState("");
@@ -10446,13 +10426,23 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const attemptState=readAttemptState(clean);
     const hasta=attemptState?.bloqueadoHasta?new Date(attemptState.bloqueadoHasta).getTime():0;
     const rest=Math.ceil((hasta-Date.now())/1000);
-    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
+    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada para esta credencial en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
     if(attemptState?.bloqueadoHasta){clearAttemptState(clean);setBloqueo(null);setIntentos(0);}
     // SECURITY: no revelar en el mensaje de error si el usuario existe o no
+    // FIX: validar pins legacy primero y NO contar intentos si usuarios todavía no cargó desde Firestore.
+    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
+    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
+    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
+    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
+
+    if(usuariosLoaded===false){
+      setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");
+      return;
+    }
 
     // 1. Buscar en usuarios activos por credencial (DNI/RUC/CE/código normalizado)
     const found=usuariosActivos.find(u=>{
-      const vals=[u.dni,u.credencial,u.id,u.userId].map(normCred).filter(Boolean);
+      const vals=[u.dni,u.credencial,u.id,u.userId,u.codigo,u.codigoInterno].map(normCred).filter(Boolean);
       return vals.includes(clean);
     });
     if(found){
@@ -10461,16 +10451,9 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       return;
     }
 
-    // 2. Pins legacy (admin / viewer) para retrocompatibilidad
-    // SECURITY: comparación con tiempo constante para evitar timing attacks
-    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
-    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
-    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
-    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
-
-    // 3. Auditores legacy
+    // 2. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id].map(normCred).filter(Boolean).includes(clean));
+    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.codigo,a.codigoInterno].map(normCred).filter(Boolean).includes(clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
     registrarFallo(clean);
