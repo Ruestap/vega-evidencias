@@ -1,3 +1,4 @@
+// ET_FIX_EDIT_MODAL_COMPACT_150_20260614
 // ET_FIX_EDIT_MODAL_VIEWER_APPROVED_20260614
 // ET_FIX_ODT_NOTIF_SOLICITANTE_20260614
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
@@ -8845,7 +8846,7 @@ Saludos.`;
                 <div style={{background:"#fff",borderRadius:18,width:"min(520px,100%)",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
                   <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
                     <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Asignar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{current.titulo}</div></div>
-                    <button onClick={()=>setOdtAssignModal(null)} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                    <button onClick={()=>setOdtAssignModal(null)} style={{width:30,height:30,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900,flexShrink:0}}>×</button>
                   </div>
                   <div style={{padding:20}}>
                     <label style={{...lbl}}>Diseñador responsable</label>
@@ -8894,19 +8895,19 @@ Saludos.`;
                 setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(cur.id)?calcOdtPlan({...x,...patch}):x));
                 setOdtEditModal(null);setOdtEditForm({});showToast("ODT actualizada correctamente");
               };
-              const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={3} style={{...inp,resize:"vertical"}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
-              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
-                <div style={{background:"#fff",borderRadius:18,width:"min(980px,calc(100vw - 28px))",height:"min(90vh,calc(100vh - 28px))",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
-                  <div style={{padding:"14px 18px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,flexWrap:"wrap"}}>
-                    <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{cur.id}</div></div>
+              const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={2} style={{...inp,resize:"vertical",minHeight:68}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,2vw,22px)",overflow:"hidden"}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(860px,calc(100vw - 44px))",maxHeight:"calc(100vh - 44px)",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"10px 14px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexShrink:0,flexWrap:"nowrap"}}>
+                    <div style={{minWidth:0}}><div style={{fontSize:14,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:10,color:"rgba(255,255,255,.65)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220}}>{cur.id}</div></div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"10px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
-                      <button onClick={saveEdit} style={{padding:"10px 16px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
-                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"8px 12px",borderRadius:10,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:12}}>Cancelar</button>
+                      <button onClick={saveEdit} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",fontSize:12,boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:30,height:30,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900,flexShrink:0}}>×</button>
                     </div>
                   </div>
-                  <div style={{padding:20,overflowY:"auto",minHeight:0,flex:1,paddingBottom:24}}>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+                  <div style={{padding:"14px 16px",overflowY:"auto",minHeight:0,flex:1,paddingBottom:16}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
                       {field("Título", "titulo")}
                       <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
                       <div><label style={{...lbl}}>Tipo de trabajo</label><select value={val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo||""} onChange={e=>{const t=TIPOS_TRABAJO.find(x=>x.label===e.target.value);setOdtEditForm(p=>({...p,tipoTrabajo:e.target.value,hh:p.hh!==undefined?p.hh:String(t?.hh||"")}));}} style={{...inp}}><option value="">Seleccionar</option>{TIPOS_TRABAJO.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}</select></div>
@@ -8917,7 +8918,7 @@ Saludos.`;
                       {field("Medidas", "medidas")}
                       <div><label style={{...lbl}}>Tonalidad</label><select value={val("tonalidad")} onChange={e=>setF("tonalidad",e.target.value)} style={{...inp}}><option value="">No especificado</option><option>Promocional</option><option>Institucional</option><option>Informativo</option><option>Urgente</option><option>Premium</option></select></div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,marginTop:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginTop:10}}>
                       {field("Objetivo y público","objetivo","textarea")}
                       {field("Mensaje principal","mensaje","textarea")}
                       {field("Mecánica / dinámica","mecanica","textarea")}
