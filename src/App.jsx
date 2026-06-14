@@ -1,3 +1,4 @@
+/* ET_FIX_LOGIN_NO_GLOBAL_PER_CRED_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
 // ET_FIX_EDIT_MODAL_COMPACT_150_20260614
 // ET_FIX_EDIT_MODAL_VIEWER_APPROVED_20260614
@@ -10342,20 +10343,27 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       return v;
     }catch{return "dev_session";}
   };
-  const AUTH_ATTEMPT_KEY=`et_auth_attempts_${deviceKey()}`;
-  const readAttemptState=()=>{
-    try{return JSON.parse(localStorage.getItem(AUTH_ATTEMPT_KEY)||"{}");}catch{return {};}
+  const credHash=(v)=>{
+    const str=normCred(v);
+    let h=0;
+    for(let i=0;i<str.length;i++) h=((h<<5)-h)+str.charCodeAt(i), h|=0;
+    return Math.abs(h).toString(36);
   };
-  const writeAttemptState=v=>{try{localStorage.setItem(AUTH_ATTEMPT_KEY,JSON.stringify(v||{}));}catch{}};
-  const clearAttemptState=()=>{try{localStorage.removeItem(AUTH_ATTEMPT_KEY);}catch{}};
-  // Bloqueo local por dispositivo. No se usa auth_attempts/_last porque bloqueaba globalmente a todos los usuarios.
-  useEffect(()=>{
-    const d=readAttemptState();
-    const hasta=d?.bloqueadoHasta?new Date(d.bloqueadoHasta).getTime():0;
-    const rest=Math.ceil((hasta-Date.now())/1000);
-    if(rest>0){setBloqueo({hasta,restante:rest});setErr("Dispositivo bloqueado por intentos fallidos.");}
-    else {clearAttemptState();setIntentos(0);}
-  },[]);
+  const attemptKeyFor=(v)=>`et_auth_cred_attempts_${deviceKey()}_${credHash(v)}`;
+  const readAttemptState=(v)=>{
+    try{return JSON.parse(localStorage.getItem(attemptKeyFor(v))||"{}");}catch{return {};}
+  };
+  const writeAttemptState=(v,data)=>{try{localStorage.setItem(attemptKeyFor(v),JSON.stringify(data||{}));}catch{}};
+  const clearAttemptState=(v)=>{try{localStorage.removeItem(attemptKeyFor(v));}catch{}};
+  const clearLegacyAttemptState=()=>{
+    try{
+      Object.keys(localStorage)
+        .filter(k=>k==="et_auth_attempts"||k==="auth_attempts"||k.startsWith("et_auth_attempts_"))
+        .forEach(k=>localStorage.removeItem(k));
+    }catch{}
+  };
+  // Bloqueo por credencial + dispositivo. No hay documento global ni bloqueo al cargar la pantalla.
+  useEffect(()=>{clearLegacyAttemptState();setBloqueo(null);setIntentos(0);setErr("");},[]);
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
   useEffect(()=>{
@@ -10371,29 +10379,30 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     return()=>clearInterval(iv);
   },[bloqueo]);
 
-  const registrarFallo=()=>{
-    const prev=readAttemptState();
+  const registrarFallo=(credential)=>{
+    const prev=readAttemptState(credential);
     const n=(Number(prev?.intentos)||0)+1;
     setIntentos(n);
-    writeAttemptState({intentos:n,ultimoIntento:new Date().toISOString()});
-    // SECURITY: registrar intento fallido en Firestore para trazabilidad (sin exponer la credencial)
+    writeAttemptState(credential,{intentos:n,ultimoIntento:new Date().toISOString()});
+    // SECURITY: registrar intento fallido en Firestore para trazabilidad sin guardar la credencial digitada.
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
-      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n,deviceKey:deviceKey().slice(-8)});
+      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n,deviceKey:deviceKey().slice(-8),credHash:credHash(credential)});
     });});}catch{}
     if(n>=MAX_INTENTOS){
       const hasta=Date.now()+BLOQUEO_MIN*60*1000;
-      setBloqueo({hasta,restante:BLOQUEO_MIN*60});
-      setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
-      writeAttemptState({intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ultimoIntento:new Date().toISOString()});
+      setBloqueo({hasta,restante:BLOQUEO_MIN*60,credHash:credHash(credential)});
+      setErr(`Credencial bloqueada en este dispositivo por ${BLOQUEO_MIN} minutos.`);
+      writeAttemptState(credential,{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ultimoIntento:new Date().toISOString()});
     } else {
+      setBloqueo(null);
       setErr(`Credencial incorrecta · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
       setTimeout(()=>setErr(""),3000);
     }
   };
 
   const registrarExito=(id,nombre,rol,tiendaId,cargo)=>{
-    setIntentos(0); setBloqueo(null); clearAttemptState();
+    setIntentos(0); setBloqueo(null); clearAttemptState(cred);
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
       // SECURITY: no loguear credencial ni DNI completo — solo rol y dispositivo
@@ -10404,9 +10413,13 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   const tryAcceso=()=>{
-    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
     const clean=normCred(cred);
     if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
+    const attemptState=readAttemptState(clean);
+    const hasta=attemptState?.bloqueadoHasta?new Date(attemptState.bloqueadoHasta).getTime():0;
+    const rest=Math.ceil((hasta-Date.now())/1000);
+    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
+    if(attemptState?.bloqueadoHasta){clearAttemptState(clean);setBloqueo(null);setIntentos(0);}
     // SECURITY: no revelar en el mensaje de error si el usuario existe o no
 
     // 1. Buscar en usuarios activos por credencial (DNI/RUC/CE/código normalizado)
@@ -10432,7 +10445,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id].map(normCred).filter(Boolean).includes(clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
-    registrarFallo();
+    registrarFallo(clean);
   };
 
   return(
@@ -10462,7 +10475,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           <div style={{padding:"20px 16px",background:"#fff1f2",borderRadius:14,border:"2px solid #fecaca",marginBottom:16}}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" style={{marginBottom:8}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             <div style={{fontWeight:700,fontSize:14,color:"#dc2626",marginBottom:4}}>Acceso bloqueado</div>
-            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:10}}>Demasiados intentos fallidos</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:10}}>Demasiados intentos fallidos para esta credencial</div>
             <div style={{fontSize:32,fontWeight:800,color:"#dc2626",fontFamily:"monospace",letterSpacing:4}}>
               {Math.floor(bloqueo.restante/60)}:{String(bloqueo.restante%60).padStart(2,"0")}
             </div>
