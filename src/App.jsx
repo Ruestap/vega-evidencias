@@ -1,3 +1,4 @@
+/* ET_FIX_LOGIN_WAIT_USERS_NO_FALSE_ATTEMPT_20260614 */
 /* ET_FIX_LOGIN_NO_GLOBAL_PER_CRED_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
 // ET_FIX_EDIT_MODAL_COMPACT_150_20260614
@@ -1087,6 +1088,7 @@ function ChecklistApp() {
   const [pinMod,  setPinMod]  = useState(false);
   const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
+  const [usuariosLoaded, setUsuariosLoaded] = useState(false); // FIX: no contar intentos si usuarios aún no cargó desde Firestore
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
@@ -1354,6 +1356,10 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
       setUsuarios(data);
+      setUsuariosLoaded(true);
+    }, err=>{
+      console.error("usuarios snapshot failed:", err?.code||err?.message||"unknown");
+      setUsuariosLoaded(true);
     });
     return ()=>unsub();
   },[]);
@@ -2346,7 +2352,7 @@ function ChecklistApp() {
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
-  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
+  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios} usuariosLoaded={usuariosLoaded}
     onAcceso={(id)=>registrarAcceso(id)}
     onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab((r==="ejecutor"||r==="coordinador")?9:(r==="visor"?1:0));setModulo(0);}}/>;
 
@@ -10326,7 +10332,7 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
+function LoginScreen({pins,auditores,usuarios,usuariosLoaded,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
   const[err,setErr]=useState("");
@@ -10418,13 +10424,23 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const attemptState=readAttemptState(clean);
     const hasta=attemptState?.bloqueadoHasta?new Date(attemptState.bloqueadoHasta).getTime():0;
     const rest=Math.ceil((hasta-Date.now())/1000);
-    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
+    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada para esta credencial en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
     if(attemptState?.bloqueadoHasta){clearAttemptState(clean);setBloqueo(null);setIntentos(0);}
     // SECURITY: no revelar en el mensaje de error si el usuario existe o no
+    // FIX: validar pins legacy primero y NO contar intentos si usuarios todavía no cargó desde Firestore.
+    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
+    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
+    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
+    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
+
+    if(usuariosLoaded===false){
+      setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");
+      return;
+    }
 
     // 1. Buscar en usuarios activos por credencial (DNI/RUC/CE/código normalizado)
     const found=usuariosActivos.find(u=>{
-      const vals=[u.dni,u.credencial,u.id,u.userId].map(normCred).filter(Boolean);
+      const vals=[u.dni,u.credencial,u.id,u.userId,u.codigo,u.codigoInterno].map(normCred).filter(Boolean);
       return vals.includes(clean);
     });
     if(found){
@@ -10433,16 +10449,9 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       return;
     }
 
-    // 2. Pins legacy (admin / viewer) para retrocompatibilidad
-    // SECURITY: comparación con tiempo constante para evitar timing attacks
-    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
-    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
-    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
-    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
-
-    // 3. Auditores legacy
+    // 2. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id].map(normCred).filter(Boolean).includes(clean));
+    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.codigo,a.codigoInterno].map(normCred).filter(Boolean).includes(clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
     registrarFallo(clean);
