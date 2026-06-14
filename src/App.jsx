@@ -10,6 +10,7 @@ import { db } from "./firebase";
 /* ET_FIRESTORE_ONLY_MAIL_PLAIN_20260613_1635 */
 /* ET_ODT_STATUS_MAIL_STEPPER_20260613_1710 */
 /* ET_EDIT_ASSIGN_STATUS_20260613_1735 */
+/* ET_FIX_REPORTE_ACCIONES_MAIL_20260614 */
 import {
   collection, doc, onSnapshot,
   setDoc, deleteDoc, addDoc, updateDoc, query, where, orderBy
@@ -2645,7 +2646,7 @@ function ChecklistApp() {
                 background:franjaActiva===i?f.bg:"#fff",
                 transition:"all .2s"
               }}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end",minWidth:210}}>
                   <span style={{fontSize:16}}>{f.icon}</span>
                   <div>
                     <div style={{fontSize:11,fontWeight:800,color:franjaActiva===i?f.c:"#5a7a9a"}}>{f.label}</div>
@@ -8358,8 +8359,10 @@ Detalle: ${plan.alerta||"Entregado"}
 Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 
-Ingresa con tu credencial para revisar, aprobar o solicitar ajustes:
+Acceso directo a la app:
 ${APP_URL}
+
+Copia y pega este enlace en el navegador si Outlook no lo muestra como hipervínculo.
 
 Saludos.`;
           }
@@ -8385,13 +8388,15 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Ingresa con tu credencial:
+Acceso directo a la app:
 ${APP_URL}
+
+Copia y pega este enlace en el navegador si Outlook no lo muestra como hipervínculo.
 
 Saludos.`;
         };
         // Correo y WhatsApp usan texto limpio: Outlook/WhatsApp detectan mejor la URL en línea independiente.
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=(isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o,modo);const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=(isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o,modo);const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");const isFirefox=typeof navigator!=="undefined"&&/firefox/i.test(navigator.userAgent||"");if(isFirefox){window.location.href=url;return;}const win=window.open(url,"_blank","noopener,noreferrer");if(!win){window.location.href=url;}};
         const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");window.open(`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`,'_blank','noopener,noreferrer');};
         const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
@@ -8601,7 +8606,6 @@ Saludos.`;
                               </>}
                               {canDeleteOdt(o)&&<button title="Eliminar" onClick={()=>deleteOdt(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoTrash/></button>}
                               {canApproveOdt(o)&&o.estado==="aprobacion"&&<button onClick={()=>updateOdtEstado(o,"aprobado",{aprobadoPor:uName||uDni,aprobadoRol:role,aprobadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#0984e3",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar aprobación</button>}
-                              {canDeliverOdt(o)&&<button onClick={()=>updateOdtEstado(o,"entregado",{entregadoPor:uName||uDni,entregadoEn:new Date().toISOString()})} style={{height:34,padding:"0 12px",borderRadius:9,border:"none",background:"#00b894",color:"#fff",fontWeight:800,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Marcar entregado</button>}
                             </div>
                           </td>
                         </tr>
@@ -8831,8 +8835,11 @@ ${buildOdtMail(odtViewModal)}
 Quedo pendiente de su respuesta.
 
 Saludos.`;
-                  const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
-                  window.open(url,"_blank","noopener,noreferrer");
+                  const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
+                  const isFirefox=typeof navigator!=="undefined"&&/firefox/i.test(navigator.userAgent||"");
+                  if(isFirefox){window.location.href=url;return;}
+                  const win=window.open(url,"_blank","noopener,noreferrer");
+                  if(!win){window.location.href=url;}
                 }} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderRadius:12,
                   border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#0984e3",fontSize:12}}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
@@ -8916,7 +8923,7 @@ Saludos.`;
                     <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{cur.id}</div></div>
                     <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900}}>×</button>
                   </div>
-                  <div style={{padding:20,overflowY:"auto",minHeight:0}}>
+                  <div style={{padding:20,overflowY:"auto",minHeight:0,maxHeight:"calc(92vh - 132px)"}}>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
                       {field("Título", "titulo")}
                       <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
@@ -8937,7 +8944,7 @@ Saludos.`;
                       {field("Referencias","referencias","textarea")}
                     </div>
                   </div>
-                  <div style={{padding:"14px 20px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0}}>
+                  <div style={{padding:"14px 20px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"flex-end",gap:10,flexShrink:0,background:"#fff",position:"sticky",bottom:0,zIndex:2,boxShadow:"0 -8px 22px rgba(26,47,74,.08)"}}>
                     <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
                     <button onClick={saveEdit} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar cambios</button>
                   </div>
@@ -9091,7 +9098,7 @@ Saludos.`;
                   .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
                 // Un solo botón inteligente: siempre abre el cliente web configurado
                 // Para Outlook 365 (corporativo) — sin mailto, sin Zoom
-                const url="https://outlook.office.com/mail/0/deeplink/compose?to="
+                const url="https://outlook.office365.com/mail/0/deeplink/compose?to="
                   +encodeURIComponent(to||"")
                   +"&subject="+encodeURIComponent(asunto||"")
                   +"&body="+encodeURIComponent(cuerpoLimpio);
