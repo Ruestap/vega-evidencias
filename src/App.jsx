@@ -1,3 +1,4 @@
+/* ET_FIX_ODT_ICONOS_REPORTE_MATCH_NUEVA_20260614 */
 /* ET_FIX_VIEW_MODAL_ACTIONS_TOP_20260614 */
 /* ET_FIX_ODT_NO_MAILTO_SVG_CLEAN_20260614 */
 /* ET_FINAL_DISENO_PRIORITY_SVG_20260614 */
@@ -8267,16 +8268,17 @@ function ChecklistApp() {
         const odtPriorityMeta=(v)=>ODT_PRIORIDADES.find(p=>normOdt(p.id)===normOdt(v)||normOdt(p.label)===normOdt(v))||ODT_PRIORIDADES[0];
         const odtTypeMeta=(v)=>{
           const raw=normOdt(v);
-          if(raw.includes("precio")||raw.includes("marcador"))return{label:v||"Marcador Precio",col:"#f6a623",bg:"#fff8ec",ico:"barcode"};
+          if(raw.includes("precio")||raw.includes("marcador"))return{label:v||"Marcador Precio",col:"#00b5b4",bg:"#e8faf5",ico:"display"};
           if(raw.includes("volante")||raw.includes("afiche"))return{label:v||"Volante / Afiche",col:"#0984e3",bg:"#e8f4fd",ico:"poster"};
           if(raw.includes("catalog"))return{label:v||"Catálogo",col:"#00b5b4",bg:"#e8faf5",ico:"book"};
           if(raw.includes("digital")||raw.includes("rrss")||raw.includes("feed")||raw.includes("post"))return{label:v||"Digital / RRSS",col:"#6C6EF5",bg:"#EEEFFE",ico:"phone"};
           if(raw.includes("gondola")||raw.includes("exhibidor"))return{label:v||"Góndola / Exhibidor",col:"#1a2f4a",bg:"#f0f4f8",ico:"stand"};
-          if(raw.includes("pop")||raw.includes("material"))return{label:v||"Material POP",col:"#1a2f4a",bg:"#f0f4f8",ico:"display"};
+          if(raw.includes("pop")||raw.includes("material"))return{label:v||"Material POP",col:"#e17055",bg:"#fff1e8",ico:"play"};
           return{label:v||"ODT",col:"#5a7a9a",bg:"#f8fafc",ico:"clipboard"};
         };
         const OdtSvgIcon=({kind="file",color="#0984e3",size=14})=>{
           const base={width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"};
+          if(kind==="play")return <svg {...base}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>;
           if(kind==="barcode")return <svg {...base}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M10 9v6M13 9v6M17 9v6"/></svg>;
           if(kind==="poster")return <svg {...base}><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>;
           if(kind==="clipboard")return <svg {...base}><path d="M9 3h6l1 2h3v16H5V5h3l1-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>;
