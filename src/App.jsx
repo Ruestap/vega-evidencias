@@ -1,3 +1,4 @@
+/* ET_FIX_RENDER_PILLE_ORDER_20260614 */
 /* ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 */
 /* ET_CIERRE_DISENO_MOCKUP_MANUAL_CALC_20260614 */
 /* ET_FIX_ODT_ESTADO_CORRECCION_NOTIFY_20260614 */
@@ -8441,6 +8442,7 @@ function ChecklistApp() {
           {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
           {id:"operativo",t:"Operativo",d:"Seguimiento diario",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
         ].filter(x=>odtDashLevelsAllowed.includes(x.id));
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const odtGanttItems=odtsRol.slice(0,8).map((o,idx)=>{
           const ini=toLocalDate(o.fechaInicio)||toLocalDate(todayStr());
           const fin=toLocalDate(o.fechaEntrega||o.entrega)||ini;
@@ -8450,7 +8452,6 @@ function ChecklistApp() {
           const col=st==="retrasado"||((o.fechaEntrega||o.entrega)&&todayStr()>(o.fechaEntrega||o.entrega)&&!isOdtFinalizada(o))?"#dc2626":isOdtFinalizada(o)?"#00b894":st==="aprobacion"?"#0984e3":st==="correccion"?"#f6a623":"#6C6EF5";
           return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
         });
-        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const estadoLabel=(e)=>pillE(e).txt;
         const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
         const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
