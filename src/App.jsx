@@ -1,3 +1,4 @@
+// ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
 /* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
 /* ET_FIX_FINAL_ROLES_DASH_CORRECCION_MOTIVOS_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
@@ -50,74 +51,9 @@ class AppErrorBoundary extends React.Component {
 
 /* ══ DATOS ══════════════════════════════════════════════ */
 // Fallback local — Firestore es la fuente de verdad (ver useEffect de sync config/app)
-const TIENDAS_INIT = [
-  {id:"t01",n:"Collique",f:"Mayorista",lat:-11.9130710881406,lng:-77.0315240586426,dir:"Av. Andrés Avelino Cáceres N°236, Mz K, Lt.1, 2da. Zona (Mcdo. 12 de Octubre)",dist:"Comas",maps:"https://goo.gl/maps/WMx9abr8jDP7hFmr6",activa:true},
-  {id:"t02",n:"Infantas",f:"Mayorista",lat:-11.9452993788987,lng:-77.0666678245644,dir:"Av.  Av Gerardo Unger 6531(Ref Media  Cuadra Comisaria de Infantas)",dist:"S.M.P.",maps:"https://goo.gl/maps/CEEaDF5Vb8tA6gaz6",activa:true},
-  {id:"t03",n:"Productores",f:"Mayorista",lat:-12.0406048829501,lng:-76.947559418012,dir:"Av. La Cultura s/n Psje. B Puesto 13 Santa Anita - Mercado Productores",dist:"Santa Anita",maps:"https://goo.gl/maps/EzcjFuixKH8UFF229",activa:true},
-  {id:"t04",n:"Belaunde",f:"Mayorista",lat:-11.9394642199328,lng:-77.05063230274,dir:"Av Belaunde Oeste 198",dist:"Comas",maps:"https://goo.gl/maps/gXxPQDmHDeiTeCxU8",activa:true},
-  {id:"t05",n:"Santa Clara",f:"Supermayorista",lat:-12.0179693921418,lng:-76.8835553504947,dir:"Av. Estrella 286 Urb. Santa Clara  Distrito de Ate Vitarte",dist:"Ate Vitarte",maps:"https://g.page/QhatuPlazaSantaClara?share",activa:true},
-  {id:"t06",n:"San Antonio",f:"Supermayorista",lat:-11.862040061358,lng:-77.0096919246391,dir:"Fundación Punchauca Caudivilla Mz \"D\" Lt - 01 San Antonio Alt. km 22 de la Tupac Amaru",dist:"Carabayllo",maps:"https://goo.gl/maps/eUm25P5MX24Svq8p6",activa:true},
-  {id:"t07",n:"Chorrillos",f:"Supermayorista",lat:-12.16797675312,lng:-77.0239126189426,dir:"Jr. Genaro Numa Llona N° 200 (Ref Alt 2 de Estacion de Bomberos )",dist:"Chorrillos",maps:"https://goo.gl/maps/QUB3Q4uRu3qfSyZM9",activa:true},
-  {id:"t08",n:"Año Nuevo",f:"Supermayorista",lat:-11.9239747733092,lng:-77.0409121709185,dir:"Urb. Villa Collique Zonal 4 Jr. Jupiter Mz 6 Lote 68",dist:"Comas",maps:"https://maps.app.goo.gl/hotaB65hVzXaS78E6",activa:true},
-  {id:"t09",n:"Colonial",f:"Supermayorista",lat:-12.0465295077811,lng:-77.0474716086143,dir:"Av Colonial  679 - Int 103 - Cruce Carcamo (Cercado de Lima)",dist:"Lima Cercado",maps:"https://maps.app.goo.gl/Y116zBpWoAV9AhEK6",activa:true},
-  {id:"t10",n:"Huamantanga",f:"Supermayorista",lat:-11.8642606553917,lng:-77.0740240854907,dir:"Av. Puente Piedra 200(Ref - Frente al Puesto Regular)",dist:"Puente Piedra",maps:"https://goo.gl/maps/CeHBhbQTBW2nyqzU9",activa:true},
-  {id:"t11",n:"Filomeno",f:"Supermayorista",lat:-12.0240887249942,lng:-77.0286662025572,dir:"Urb. Ciudad  y Campo - Av Armando Filomeno 105",dist:"Rimac",maps:"https://goo.gl/maps/BqP9A8KqRkjeXnCY8",activa:true},
-  {id:"t12",n:"Naranjal",f:"Supermayorista",lat:-11.9676870957647,lng:-77.0948968735974,dir:"Av. Pacasmayo Mz. A Lt -01 Ref. (Ovalo de Canta Callao / Av Sol de Naranjal)",dist:"S.M.P.",maps:"https://goo.gl/maps/ErHSirU7eiiRkFH78",activa:true},
-  {id:"t13",n:"San Diego",f:"Supermayorista",lat:-11.9457045229958,lng:-77.0875688429728,dir:"Mza. Ñ1 Lote 3 Urb. San Diego Vipol",dist:"S.M.P.",maps:"https://goo.gl/maps/RZDLeRfs1UNU9wFU8",activa:true},
-  {id:"t14",n:"Surco",f:"Supermayorista",lat:-12.145287970169,lng:-76.9877465027067,dir:"Urb Prolongacion  Benavides - Av Tomas Marsano Mz \"G-4\" Lt 23",dist:"Surco",maps:"https://goo.gl/maps/EEMTkD2mhiFYQALG7",activa:true},
-  {id:"t15",n:"Lima VES",f:"Supermayorista",lat:-12.2306606786337,lng:-76.9091952188438,dir:"Av. Lima Lt \"A - 02\" (Ref Ex Electra) Villa El Salvador",dist:"V.E.S.",maps:"https://goo.gl/maps/F4hWVzVsuy7z2Kup8",activa:true},
-  {id:"t16",n:"Minka",f:"Supermayorista",lat:-12.0479673671,lng:-77.111423924141,dir:"Av. Argentina N°3093 - Pabellón 7 - Int 97",dist:"Callao",maps:"https://goo.gl/maps/V5hVoRQKTatTS2VLA",activa:true},
-  {id:"t17",n:"Nestor Gambetta",f:"Supermayorista",lat:-11.8380137768696,lng:-77.1106039375981,dir:"Via Leocio Prado  Mz G Lt.96 (Ref 2 Cuadras de PRECIO UNO)",dist:"Puente Piedra",maps:"https://goo.gl/maps/UUSR9Y2VNy8odHYm8",activa:true},
-  {id:"t18",n:"Tres Regiones",f:"Supermayorista",lat:-11.8473268750784,lng:-77.0909708230882,dir:"Panamericana norte km. 33.5, Zapallal - Puente Piedra (mercado las tres regiones)",dist:"Puente Piedra",maps:"https://goo.gl/maps/YAVyCgNzwEEJvNRN9",activa:true},
-  {id:"t19",n:"Bocanegra",f:"Market",lat:-12.0066909878997,lng:-77.0993521687059,dir:"Av. Bocanegra Mz, A Lote N° 30, Urb. Albino Herrera, Primera Etapa",dist:"Callao",maps:"https://goo.gl/maps/z2iuTStL7i5uv7ig8",activa:true},
-  {id:"t20",n:"Canta Callao",f:"Market",lat:-11.9979508014858,lng:-77.1139514644159,dir:"Parcela 2-A, Ex Fundo Taboada – Valle de Boca Negra, Local Comercial Nº 110",dist:"Callao",maps:"https://goo.gl/maps/VkpsQ26Jjmbvckoh6",activa:true},
-  {id:"t21",n:"Mi Perú",f:"Market",lat:-11.8540475368831,lng:-77.1251839301726,dir:"Av. Ayacucho  Mz \"A9\" Lt -22 Gr \"A\" - Mi Perú",dist:"Ventanilla",maps:"https://goo.gl/maps/7u4tMquY7RYg4BsFA",activa:true},
-  {id:"t22",n:"Santo Domingo",f:"Market",lat:-11.8870300194622,lng:-77.0355570041254,dir:"Av Mariano Condorcanqui Mz T",dist:"Carabayllo",maps:"https://goo.gl/maps/EjFhHNvZZS8yND9M7",activa:true},
-  {id:"t23",n:"Amaranto",f:"Market",lat:-11.8997588873418,lng:-77.0369269423487,dir:"Jr. Amaranto 108 - 110, Urb. Santa Isabel",dist:"Carabayllo",maps:"https://goo.gl/maps/ytZxPSFqPEfiKd8bA",activa:true},
-  {id:"t24",n:"Malvinas",f:"Market",lat:-12.0440597372605,lng:-77.0499197423462,dir:"Av Argentina cdra 6 Int \"L\" . CC Via Mix",dist:"Lima Cercado",maps:"https://goo.gl/maps/Xy2UwwzUedBynGqu6",activa:true},
-  {id:"t25",n:"Husares De Junin",f:"Market",lat:-12.0770426523306,lng:-77.0514508478503,dir:"Av. Husares De Junin Nro. 366 Int. 1 Fnd. Oyague",dist:"Jesus María",maps:"https://goo.gl/maps/ccvd1ncnuqtXzKqV7",activa:true},
-  {id:"t26",n:"Santa Catalina",f:"Market",lat:-12.089545803654,lng:-77.0197852198942,dir:"Av. Carlos Villaran 500 - C.C. Santa",dist:"La Victoria",maps:"https://goo.gl/maps/GaghBoXhkURDfcfR8",activa:true},
-  {id:"t27",n:"Canevaro",f:"Market",lat:-12.0850888511931,lng:-77.0454268337727,dir:"Av. Canevaro N°1405 (Ref. frente al Parque de bomberos)",dist:"Lince",maps:"https://goo.gl/maps/hp2vVXvyzvgNFcCA6",activa:true},
-  {id:"t28",n:"Alayza",f:"Market",lat:-12.0837799669684,lng:-77.0359517108937,dir:"Av. General Cesar Canevaro Nro. 213 Lima - Lima - Lince",dist:"Lince",maps:"https://goo.gl/maps/CYdkDWM6LYRW6bMq8",activa:true},
-  {id:"t29",n:"Huandoy",f:"Market",lat:-11.9755420632121,lng:-77.0823099152715,dir:"Av Huandoy N° 5032",dist:"Los Olivos",maps:"https://goo.gl/maps/GkbaaSvJoAaRA6F67",activa:true},
-  {id:"t30",n:"Las Palmeras",f:"Market",lat:-11.9732419484427,lng:-77.0722909907347,dir:"Av Las Palmeras 5345",dist:"Los Olivos",maps:"https://goo.gl/maps/j7P16D6Qcw9rGHx78",activa:true},
-  {id:"t31",n:"Benavides",f:"Market",lat:-12.1262277453332,lng:-77.0147340280236,dir:"Av. Alfredo Benavides Nro. 1615 Urb. San Jorge Lima - Lima - Miraflores",dist:"Miraflores",maps:"https://goo.gl/maps/aL4v5TUUuwT8f3Rk9",activa:true},
-  {id:"t32",n:"Clement",f:"Market",lat:-12.0752479997504,lng:-77.0633833684983,dir:"Av. José Leguía y Meléndez Nro. 1040",dist:"Pueblo Libre",maps:"https://goo.gl/maps/kW82Ut3NSVm5opW87",activa:true},
-  {id:"t33",n:"Aviación",f:"Market",lat:-12.1074414800023,lng:-77.0005866261898,dir:"Av. Aviacion N° 3540",dist:"San Borja",maps:"https://g.page/vega-market-aviacion?share",activa:true},
-  {id:"t34",n:"La Cultura",f:"Market",lat:-12.0846341748754,lng:-77.0047722978547,dir:"Av. Aviación N° 2347",dist:"San Borja",maps:"https://goo.gl/maps/6jseYX4BqrCXu3hY8",activa:true},
-  {id:"t35",n:"Chimu",f:"Market",lat:-12.0981034965201,lng:-76.9623006042263,dir:"Av Gran Chimu 1641 Urb. Zarate",dist:"S.J.L.",maps:"https://goo.gl/maps/Fwj6B5aD9TYCMseP8",activa:true},
-  {id:"t36",n:"Montenegro",f:"Market",lat:-11.9362598875811,lng:-76.9719465484801,dir:"Jr. Mar de flores. Oeste 127 MZ Q1 - Lt 2B",dist:"S.J.L.",maps:"https://goo.gl/maps/s2yVQLymmw8bReCg9",activa:true},
-  {id:"t37",n:"Izaguirre",f:"Market",lat:-11.989557202557,lng:-77.0977567584093,dir:"Av Carlos Izaguirre MZ \"A\", Lt 30",dist:"S.M.P.",maps:"https://maps.app.goo.gl/HrSB3aakKn897whe8",activa:true},
-  {id:"t38",n:"Riobamba",f:"Market",lat:-12.0331715698591,lng:-77.0589855334734,dir:"Urb. Perú, Jr. Riobamba 501, San Martín de Porres",dist:"S.M.P.",maps:"https://goo.gl/maps/PZhCDig7d99rRtme6",activa:true},
-  {id:"t39",n:"Escardó",f:"Market",lat:-12.0779047089124,lng:-77.0927689647178,dir:"Av. Rafael Escardo Salazar Nº 454 urbanización Maranga",dist:"San Miguel",maps:"https://goo.gl/maps/Sur3ctj6KP9dCobF7",activa:true},
-  {id:"t40",n:"Maranga",f:"Market",lat:-12.0697705428756,lng:-77.0919306022064,dir:"Av. Los Precursores N° 362-366 - San Miguel",dist:"San Miguel",maps:"https://goo.gl/maps/31WiaYd6BZrxyj5V9",activa:true},
-  {id:"t41",n:"Universal",f:"Market",lat:-12.0436282626762,lng:-76.9794604832883,dir:"Jr. César Vallejo 356- 360 Urb. Universal",dist:"Santa Anita",maps:"https://goo.gl/maps/MLcUYojHz5R5VrTx8",activa:true},
-  {id:"t42",n:"Roosevelt",f:"Market",lat:-12.1467620468921,lng:-77.0124804800025,dir:"Jr. Franklin Roosevelt 812",dist:"Surco",maps:"https://goo.gl/maps/wau8L8pp8KizFXCS8",activa:true},
-  {id:"t43",n:"Higuereta",f:"Market",lat:-12.1294650401685,lng:-77.0009571492134,dir:"Av. Santiago De Surco Nro. 3004 Int. 101 Urb. La Castellana Lima",dist:"Surco",maps:"https://maps.app.goo.gl/4Ks7i6CXbmjsb27h6",activa:true},
-  {id:"t44",n:"Mareategui",f:"Market",lat:-12.1545753990258,lng:-76.9525443717441,dir:"Jose Carlos Mareategui N° 798",dist:"V.M.T.",maps:"https://goo.gl/maps/baJNRwMns6FCkXJy7",activa:true},
-  {id:"t45",n:"Salamanca",f:"Market",lat:-12.0745836007826,lng:-76.9881374448751,dir:"Urb. Salamanca de Monterrico Av. Los Aymaras 349",dist:"Ate Vitarte",maps:"https://goo.gl/maps/4wtQfhdqaPF7cQYGA",activa:true},
-  {id:"t46",n:"Olimpo",f:"Market",lat:-12.0745301492371,lng:-76.9772683225455,dir:"Calle Efestos Mz W Lt 4 Urb Olimpo (Ref frente al Merc Olimpo)",dist:"Ate Vitarte",maps:"https://goo.gl/maps/Fqk1StEsUFMRodJh9",activa:true},
-  {id:"t47",n:"Nueva Esperanza",f:"Market",lat:-12.1673239484862,lng:-76.9204274410753,dir:"Av. 26 de Noviembre N° 1993, Virgen de Lourdes - VMT",dist:"V.M.T.",maps:"https://goo.gl/maps/V15954Ve1mUcvwx5A",activa:true},
-  {id:"t48",n:"Alisos",f:"Market",lat:-11.9832041997733,lng:-77.0789397745201,dir:"Av. Los Alisos Mz. R Lote 45 Urb. Los Jazmines de Naranjal",dist:"Los Olivos",maps:"https://goo.gl/maps/AymktEnhAKKF4xf48",activa:true},
-  {id:"t49",n:"Ignacio Merino",f:"Market",lat:-12.0840366270314,lng:-77.0315598469307,dir:"Av. Ignacio Merino 1999",dist:"Lince",maps:"https://maps.app.goo.gl/TqfoSCZG4EV9niXp9",activa:true},
-  {id:"t50",n:"Rospigliosi",f:"Market",lat:-12.0792756031438,lng:-77.0326054084494,dir:"Av. Ignacio Merino Nro. 1502 esq. con Manuel Segura",dist:"Lince",maps:"https://maps.app.goo.gl/TE6Y6Hc8oGPtGZQ86",activa:true},
-  {id:"t51",n:"Loreto",f:"Market",lat:-12.0544998291611,lng:-77.0490928110227,dir:"Jiron Loreto 478",dist:"Breña",maps:"https://maps.app.goo.gl/zQMbQ2qmR1JH579Q9",activa:true},
-  {id:"t52",n:"Vara de Oro",f:"Market",lat:-12.0251128545406,lng:-76.9967339475352,dir:"Calle Vara de Oro 288 - Urg Zarate Comu 3",dist:"S.J.L.",maps:"https://maps.app.goo.gl/wkrE4H54wD3VH8rm9",activa:true},
-  {id:"t53",n:"Los Olivos",f:"Market",lat:-11.98831205195,lng:-77.0822101252409,dir:"Av. Los Olivos 210",dist:"S.M.P.",maps:"https://maps.app.goo.gl/qhuoGau6dtNbFLgb9",activa:true},
-  {id:"t54",n:"Mariano Pastor",f:"Market",lat:-12.0729274536981,lng:-77.0651821734151,dir:"C. Mariano Pastor Sevilla 194 (Ref 1/2 cuadra Merc Bolivar)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/6MGuZsMU3341X6Lr6",activa:true},
-  {id:"t55",n:"Amancaes 3",f:"Market",lat:-12.0257230071489,lng:-77.0341626057537,dir:"Av. Amancaes 124, Rímac",dist:"Rimac",maps:"https://maps.app.goo.gl/oZcdG7b484FryNwo8",activa:true},
-  {id:"t56",n:"Alameda Los Cedros",f:"Market",lat:-12.2036161155135,lng:-77.0146858000055,dir:"Av. Alameda Los Cedros 214",dist:"Chorrillos",maps:"https://maps.app.goo.gl/R6dSf5vUMvWEaakV8",activa:true},
-  {id:"t57",n:"Bellavista",f:"Market",lat:-12.063814219369,lng:-77.1454623981609,dir:"Jiron. Grau 485",dist:"Bellavista",maps:"https://maps.app.goo.gl/7ujPpHG8RQXqxkENA",activa:true},
-  {id:"t58",n:"Mall Comas",f:"Market",lat:-11.9338398194793,lng:-77.0658375835365,dir:"Av. Los Ángeles 602, Comas 15314",dist:"Comas",maps:"https://maps.app.goo.gl/cLXJ8XsWSzS3bqo57",activa:true},
-  {id:"t59",n:"A. Los Condores",f:"Market",lat:-12.1011618376867,lng:-76.9441832656271,dir:"Alameda los Condores 628",dist:"La Molina",maps:"https://maps.app.goo.gl/dqKnNNLNN4Y7ufgb8",activa:true},
-  {id:"t60",n:"Mariano Cornejo",f:"Market",lat:-12.0677220872957,lng:-77.0651192762642,dir:"Av Mariano Cornejo 1407",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ed992SADFWwLWyBj8",activa:true},
-  {id:"t61",n:"Las Guindas",f:"Market",lat:-12.0315735941664,lng:-76.9904041119922,dir:"Ca. Las Guindas 348 Urb, El Agustino (Ref media cuadra Condominios Alameda El Agustino)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ExAhcKw7mPDXv5VW6",activa:true},
-  {id:"t62",n:"San Luis",f:"Market",lat:-12.0755237709728,lng:-77.0023173003529,dir:"Av. San Juan 771 San Luis",dist:"La Victoria",maps:"https://share.google/36264kwQUUQoIV7nh",activa:true},
-  {id:"t63",n:"Independencia",f:"Market",lat:-11.9925688075581,lng:-77.0574865358829,dir:"Av. Gerardo Unger Nro. 3601 local LC02 Urb. Industrial Panamericana Norte",dist:"Independencia",maps:"https://share.google/nrqEZNgi6dLcVz7fh",activa:true},
-  {id:"t64",n:"Guardia Civil",f:"Market",lat:-12.1680427416882,lng:-76.9921645565965,dir:"Av. Guardia Civil Norte 625, Urb. Los Parrales de Surco",dist:"Surco",maps:"https://maps.app.goo.gl/cJJCVJX3N5xgNqwb8",activa:true},
-  {id:"t65",n:"Villaran",f:"Market",lat:-12.1216165022436,lng:-77.0048891334863,dir:"Av. Manuel Villlaran 708 Urb. Los Sauces Surquillo",dist:"Surquillo",maps:"https://maps.app.goo.gl/TjtyMkpDEMtNRuji6",activa:true},
-  {id:"t66",n:"Micaela Bastidas",f:"Market",lat:-12.0461930116169,lng:-76.9300866037768,dir:"Calle Comercial Mz U Lote 9 (Ref 1/2 cuadra de mercado modelo n°1 micaela bastidas)",dist:"Ate Vitarte",maps:"https://maps.app.goo.gl/UTdCken84EsBDG4B8",activa:false},
-];
+// ET_FIX_FINAL_NO_TIENDAS_INIT_SEED_20260614: Tiendas no se precargan desde semilla local; Firestore config/app.tiendas es la fuente de verdad.
+const TIENDAS_INIT = [];
+
 
 
 
@@ -439,7 +375,7 @@ function canAuditarEnFecha(usuario,fechaStr,tienda,{isAdmin=false,asignacionExce
   if(asignacionExcepcional) return {ok:true,perfil,estado:"excepcional_asignada",feriado};
   if(feriado&&feriado.laborable===false) return {ok:false,perfil,estado:"bloqueado_feriado",feriado};
   if(dow===0&&!cfg.domingoRegular) return {ok:false,perfil,estado:"bloqueado_domingo",feriado};
-  if(!cfg.dias.includes(dow)) return {ok:false,perfil,estado:"fuera_calendario",feriado};
+  if(!(cfg.dias||[]).includes(dow)) return {ok:false,perfil,estado:"fuera_calendario",feriado};
   if(perfil==="operativo_trade"&&dow===0){
     const horarioDom=tienda?.horarioDom||tienda?.horario?.domingo||"";
     return {ok:!!horarioDom,perfil,estado:horarioDom?"regular_tienda_domingo":"sin_horario_tienda",feriado};
@@ -1119,7 +1055,7 @@ function ChecklistApp() {
   const [vYear,   setVYear]   = useState(now.getFullYear());
   const [vMonth,  setVMonth]  = useState(now.getMonth());
   const [selWeek, setSelWeek] = useState(null);
-  const [tiendas, setTiendas] = useState(TIENDAS_INIT);
+  const [tiendas, setTiendas] = useState([]);
   const [acts,    setActs]    = useState(ACTIVIDADES_INIT);
   const [regs,    setRegs]    = useState({});
   const [exceps,  setExceps]  = useState({});
@@ -1709,7 +1645,7 @@ function ChecklistApp() {
   const dow = getDow(fecha);
   const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
-  const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
+  const actsDia = useMemo(()=>acts.filter(a=>a.activa&&(a.dias||[]).includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
     const override = rangosDia?.[actId]?.[fechaStr];
@@ -1873,7 +1809,7 @@ function ChecklistApp() {
       const dw=getDow(ds);
       acts.filter(a=>
         a.activa &&
-        a.dias.includes(dw) &&
+        (a.dias||[]).includes(dw) &&
         !isExc(tId,a.id,ds) &&
         actsConRegistroIds.has(a.id) && // solo actividades operativamente activas
         (catFilter===null || a.cat===catFilter) &&
@@ -1908,7 +1844,7 @@ function ChecklistApp() {
       if(ds>hoy) return;
       const dw=getDow(ds);
       acts.filter(a=>
-        a.activa && a.dias.includes(dw) &&
+        a.activa && (a.dias||[]).includes(dw) &&
         !isExc(tId,a.id,ds) && actsConRegistroIds.has(a.id) &&
         (a.cat==="Always On"||(adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
       ).forEach(a=>{
@@ -2199,7 +2135,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return; // no contar días futuros
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2235,7 +2171,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return;
         const dw=getDow(ds);
-        acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+        acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
           nTotalEsperadoV++;
           const rango=getRangoActivo(a.id,ds);
           const c1=toMin(rango.c100||"08:30");
@@ -2262,7 +2198,7 @@ function ChecklistApp() {
       tiAct.forEach(ti=>{
         semanasDelMes.forEach(s=>s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+          if(ds>hoy||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
           mx+=10;
           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
           if(p!==null){
@@ -2284,7 +2220,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return;
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2303,11 +2239,11 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return false;
         const dw=getDow(ds);
-        return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
+        return acts.some(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
       }));
       const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
         const ds=dStr(vYear,vMonth,d);
-        return acts.some(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
+        return acts.some(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
           const reg=getReg(ds,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado;
         })());
@@ -2794,7 +2730,7 @@ function ChecklistApp() {
       return actsActivas.filter(a=>
         a.activa&&(
           // Día asignado: Always On aparece siempre en sus días
-          (a.dias.includes(wd)&&a.cat==="Always On")||
+          ((a.dias||[]).includes(wd)&&a.cat==="Always On")||
           // Cualquier actividad (Always On o no) aparece si tiene registro real ese día
           tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
         )
@@ -2920,7 +2856,7 @@ function ChecklistApp() {
     if(d>hoyM) return;
     const dw=getDow(d);
     // Only Always On activities count toward theoretical max (Ad-hoc only when they have real records)
-    actsActivas.filter(a=>a.dias.includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
+    actsActivas.filter(a=>(a.dias||[]).includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
   });
   const pctBase=mxTeorico>0&&detMes?Math.round((detMes.maximos/mxTeorico)*100):null;
   return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>{pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>{"⚠️ N/A parcial"}</span>}</div>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
@@ -2934,7 +2870,7 @@ function ChecklistApp() {
                               const ds=dStr(vYear,vMonth,d);
                               if(ds>hoyC) return;
                               const dw=getDow(ds);
-                              actsActivas.filter(a=>a.dias.includes(dw)&&!isExc(tr.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                              actsActivas.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tr.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                                 nTotal++;
                                 const reg=getReg(ds,tr.id,a.id);
                                 if(!reg?.evidencias||reg.anulado) return;
@@ -3121,7 +3057,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,day);
           if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+          actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3149,7 +3085,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
-        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+        actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3188,7 +3124,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return;
         const dw=getDow(ds);
-        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
           const reg=getReg(ds,ti.id,a.id);
           if(!reg?.evidencias||reg.anulado) return;
           const AR=getRangoActivo(a.id,ds);
@@ -3223,7 +3159,7 @@ function ChecklistApp() {
           s.days.forEach(day=>{
             const ds=dStr(vYear,vMonth,day);
             if(ds>hoy) return;
-            if(!a.dias.includes(getDow(ds))) return;
+            if(!(a.dias||[]).includes(getDow(ds))) return;
             if(isExc(ti.id,a.id,ds)) return;
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
@@ -3386,7 +3322,7 @@ function ChecklistApp() {
             tsEval.forEach(ti=>{
               semsVis.forEach(s=>s.days.forEach(d=>{
                 const ds=dStr(vYear,vMonth,d);
-                if(ds>_hoyDash||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                if(ds>_hoyDash||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
                 mx+=10;
                 const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                 if(p!==null) ob+=p;
@@ -3409,7 +3345,7 @@ function ChecklistApp() {
           const semsVis = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
           const nSinReg=tsEval.filter(ti=>!semsVis.some(s=>s.days.some(d=>{
             const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
-            return actsBase.some(a=>a.dias.includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+            return actsBase.some(a=>(a.dias||[]).includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
           }))).length;
 
           // Construir narrativa según período
@@ -3483,7 +3419,7 @@ function ChecklistApp() {
           // IC: tiendas con al menos 1 registro válido en el período (no anulado)
           const nCump=tsEval.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>{
             const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
-            return actsBase.some(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+            return actsBase.some(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
           }))).length;
           // SE: tiendas con eficiencia ≥95% en el período
           const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
@@ -3579,7 +3515,7 @@ function ChecklistApp() {
                 let aOb=0,aMx=0;
                 s.days.forEach(d=>{
                   const ds=dStr(vYear,vMonth,d);
-                  if(ds>todayStr()||!a.dias.includes(getDow(ds))) return;
+                  if(ds>todayStr()||!(a.dias||[]).includes(getDow(ds))) return;
                   tsEval.forEach(ti=>{
                     if(isExc(ti.id,a.id,ds)) return;
                     aMx+=10;
@@ -3632,7 +3568,7 @@ function ChecklistApp() {
             const tiendasEval=tsBase.filter(ti=>
               semanasDelMes.some(s=>s.days.some(d=>{
                 const ds=dStr(vYear,vMonth,d);
-                return ds<=hoy&&a.dias.includes(getDow(ds))&&!isExc(ti.id,a.id,ds);
+                return ds<=hoy&&(a.dias||[]).includes(getDow(ds))&&!isExc(ti.id,a.id,ds);
               }))
             );
             const nEvalAct=tiendasEval.length;
@@ -3644,7 +3580,7 @@ function ChecklistApp() {
                 s.days.forEach(day=>{
                   const ds=dStr(vYear,vMonth,day);
                   if(ds>hoy) return;
-                  if(!a.dias.includes(getDow(ds))) return;
+                  if(!(a.dias||[]).includes(getDow(ds))) return;
                   if(isExc(ti.id,a.id,ds)) return;
                   const reg=getReg(ds,ti.id,a.id);
                   const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3742,7 +3678,7 @@ function ChecklistApp() {
                 actsBase
                   .filter(a=>
                     a.activa &&
-                    a.dias.includes(dw) &&
+                    (a.dias||[]).includes(dw) &&
                     !isExc(ti.id,a.id,ds) &&
                     actsConRegistroIds.has(a.id)
                   )
@@ -3807,7 +3743,7 @@ function ChecklistApp() {
                 const dw=getDow(ds);
                 tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
                   actsBase
-                    .filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id))
+                    .filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id))
                     .forEach(a=>{
                       fExp++;
                       const reg=getReg(ds,ti.id,a.id);
@@ -3885,7 +3821,7 @@ function ChecklistApp() {
                   if(ds>hoy) return;
                   const dw=getDow(ds);
                   tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
-                    actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                    actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                       const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                       if(p===0) fFuera++;
                     });
@@ -3956,7 +3892,7 @@ function ChecklistApp() {
                           const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
                           const cs=hCell(eficDia);
                           // Issue 5 fix: construir desglose por actividad para este día específico
-                          const actsTipDia=dm?acts.filter(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
+                          const actsTipDia=dm?acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
                             const reg=getReg(ds,null,a.id); // buscar cualquier registro de cualquier tienda ese día
                             // Contar tiendas con registro y su distribución horaria
                             const tiConReg=tsBase.filter(ti=>{
@@ -4119,7 +4055,7 @@ function ChecklistApp() {
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyF) return;
                 const dw=getDow(ds);
-                actsH2.filter(a=>a.dias.includes(dw)).forEach(a=>{
+                actsH2.filter(a=>(a.dias||[]).includes(dw)).forEach(a=>{
                   tsFmt.forEach(ti=>{
                     fTotal++;
                     const sc0=tiendaScore.get(ti.id)||{oro:0,plata:0,bronce:0,fuera:0,pend:0,nombre:ti.n,fmt:ti.f,mejorHora:null};
@@ -4435,7 +4371,7 @@ function ChecklistApp() {
                         const ds=dStr(vYear,vMonth,d);
                         if(ds>todayStr()) return;
                         const dw=getDow(ds);
-                        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                           mx+=10;
                           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                           if(p!==null) ob+=p;
@@ -4479,7 +4415,7 @@ function ChecklistApp() {
                       ftsEval.forEach(ti=>{
                         semanasDelMes.forEach(s=>s.days.forEach(d=>{
                           const ds=dStr(vYear,vMonth,d);
-                          if(ds>todayStr()||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                          if(ds>todayStr()||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
                           aMx+=10;
                           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                           if(p!==null) aOb+=p;
@@ -4795,7 +4731,7 @@ function ChecklistApp() {
                     <label style={S.lbl}>TIENDA ASIGNADA *</label>
                     <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
                       <option value="">Seleccionar tienda</option>
-                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
+                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {nomTienda(t)}</option>)}
                     </select>
                   </div>
                 )}
@@ -5543,7 +5479,7 @@ function ChecklistApp() {
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={sel?"#00b5b4":"#b2bec3"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                               {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
                                             </svg>
-                                            <span style={{flex:1}}>Vega {t.n}</span>
+                                            <span style={{flex:1}}>Vega {nomTienda(t)}</span>
                                             <span style={{fontSize:9,color:"#8aaabb"}}>{getZonaNombre(zid)} · {t.dist}</span>
                                           </label>
                                         );
@@ -5621,7 +5557,7 @@ function ChecklistApp() {
                                   const auditada=auditadasSemana.some(a=>a.tiendaId===t.id);
                                   return(
                                     <span key={t.id} style={{fontSize:10,fontWeight:500,padding:"2px 8px",borderRadius:20,background:auditada?"#EAF3DE":"#e6f1fb",color:auditada?"#27500A":"#0C447C",border:`0.5px solid ${auditada?"#C0DD97":"#85B7EB"}`}}>
-                                      Vega {t.n} {auditada?"✓":""}
+                                      Vega {nomTienda(t)} {auditada?"✓":""}
                                     </span>
                                   );
                                 })}
@@ -6318,7 +6254,7 @@ function ChecklistApp() {
                         <label style={S.lbl}>TIENDA ASIGNADA *</label>
                         <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
                           <option value="">Seleccionar tienda</option>
-                          {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
+                          {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {nomTienda(t)}</option>)}
                         </select>
                       </div>
                     )}
@@ -6563,8 +6499,8 @@ function ChecklistApp() {
               </div>
               <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
                 {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
-                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d].sort((a,b)=>a===0?7:a) }))}
-                    style={{flex:1,minWidth:32,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#f0edff":"#fff",color:newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:(p.dias||[]).includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d].sort((a,b)=>a===0?7:a) }))}
+                    style={{flex:1,minWidth:32,padding:"8px",borderRadius:8,border:`1.5px solid ${(newA.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#e2e8f0"}`,background:(newA.dias||[]).includes(d)?(d===6||d===0)?"#ffeaf5":"#f0edff":"#fff",color:(newA.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                     {lbl}{(d===6||d===0)?" ✨":""}
                   </button>
                 ))}
@@ -6612,8 +6548,8 @@ function ChecklistApp() {
                   </div>
                   <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
-                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
-                        style={{flex:1,minWidth:30,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#e8f4fd":"#fff",color:a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:(x.dias||[]).includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
+                        style={{flex:1,minWidth:30,padding:"7px",borderRadius:8,border:`1.5px solid ${(a.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#e2e8f0"}`,background:(a.dias||[]).includes(d)?(d===6||d===0)?"#ffeaf5":"#e8f4fd":"#fff",color:(a.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                         {lbl}{(d===6||d===0)?" ✨":""}
                       </button>
                     ))}
@@ -6756,10 +6692,10 @@ function ChecklistApp() {
               </div>
             )}
             {tpTab==="coords"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",display:"flex",gap:10,alignItems:"center",marginBottom:12}}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>Coordenadas registradas</div><div style={{padding:14,border:"1px solid #e2e8f0",borderRadius:12,background:"#f8fafc",color:"#5a7a9a",fontSize:13,lineHeight:1.5,marginBottom:14}}>Las coordenadas se registran manualmente desde Google Maps. La app valida formato y rango.</div><div style={{height:280,border:"1px solid #e2e8f0",borderRadius:14,background:"linear-gradient(#e8f4fd 1px,transparent 1px),linear-gradient(90deg,#e8f4fd 1px,transparent 1px)",backgroundSize:"46px 46px",position:"relative",overflow:"hidden"}}>{tiendas.filter(t=>Number.isFinite(Number(t.lat))&&Number.isFinite(Number(t.lng))).slice(0,18).map((t,i)=><span key={t.id} style={{position:"absolute",left:`${14+(i*19)%72}%`,top:`${18+(i*31)%68}%`,background:"#fff",border:"1px solid #e2e8f0",borderRadius:999,padding:"6px 10px",fontSize:11,fontWeight:900,color:"#1a2f4a",boxShadow:"0 4px 12px rgba(26,47,74,.08)"}}>⌖ {t.n}</span>)}</div></div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Pendientes / validación</div>{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).slice(0,12).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #f0f4f8",padding:"10px 0"}}><div><b style={{color:"#1a2f4a"}}>Vega {t.n}</b><div style={{fontSize:11,color:"#8aaabb"}}>#{t.idTienda||"s/id"} · {t.dist||"sin distrito"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar coords</button></div>)}{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length===0&&<div style={{fontSize:12,color:"#00b894",fontWeight:800}}>Todas las tiendas tienen coordenadas válidas.</div>}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",display:"flex",gap:10,alignItems:"center",marginBottom:12}}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>Coordenadas registradas</div><div style={{padding:14,border:"1px solid #e2e8f0",borderRadius:12,background:"#f8fafc",color:"#5a7a9a",fontSize:13,lineHeight:1.5,marginBottom:14}}>Las coordenadas se registran manualmente desde Google Maps. La app valida formato y rango.</div><div style={{height:280,border:"1px solid #e2e8f0",borderRadius:14,background:"linear-gradient(#e8f4fd 1px,transparent 1px),linear-gradient(90deg,#e8f4fd 1px,transparent 1px)",backgroundSize:"46px 46px",position:"relative",overflow:"hidden"}}>{tiendas.filter(t=>Number.isFinite(Number(t.lat))&&Number.isFinite(Number(t.lng))).slice(0,18).map((t,i)=><span key={t.id} style={{position:"absolute",left:`${14+(i*19)%72}%`,top:`${18+(i*31)%68}%`,background:"#fff",border:"1px solid #e2e8f0",borderRadius:999,padding:"6px 10px",fontSize:11,fontWeight:900,color:"#1a2f4a",boxShadow:"0 4px 12px rgba(26,47,74,.08)"}}>⌖ {t.n}</span>)}</div></div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Pendientes / validación</div>{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).slice(0,12).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #f0f4f8",padding:"10px 0"}}><div><b style={{color:"#1a2f4a"}}>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>#{t.idTienda||"s/id"} · {t.dist||"sin distrito"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar coords</button></div>)}{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length===0&&<div style={{fontSize:12,color:"#00b894",fontWeight:800}}>Todas las tiendas tienen coordenadas válidas.</div>}</div></div>
             )}
             {tpTab==="responsables"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Jefes zonales desde Usuarios</div>{zonalesUsuarios.map(u=><div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8"}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontWeight:900}}>{String(u.nombre||"U").split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{u.nombre}</b><div style={{fontSize:11,color:"#8aaabb"}}>{u.cargo||u.rol} · {u.email||"sin correo"}</div></div></div>)}{zonalesUsuarios.length===0&&<div style={{fontSize:12,color:"#8aaabb"}}>Aún no hay usuarios con cargo Jefe Zonal o rol Coordinador.</div>}</div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Asignación por tienda</div>{tiendas.slice(0,14).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",gap:10,borderBottom:"1px solid #f0f4f8",padding:"9px 0"}}><div><b>Vega {t.n}</b><div style={{fontSize:11,color:"#8aaabb"}}>{t.jefeZonalNombre||"sin zonal"} · {t.gerenteTienda||"sin jefe tienda"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar</button></div>)}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Jefes zonales desde Usuarios</div>{zonalesUsuarios.map(u=><div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8"}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontWeight:900}}>{String(u.nombre||"U").split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{u.nombre}</b><div style={{fontSize:11,color:"#8aaabb"}}>{u.cargo||u.rol} · {u.email||"sin correo"}</div></div></div>)}{zonalesUsuarios.length===0&&<div style={{fontSize:12,color:"#8aaabb"}}>Aún no hay usuarios con cargo Jefe Zonal o rol Coordinador.</div>}</div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Asignación por tienda</div>{tiendas.slice(0,14).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",gap:10,borderBottom:"1px solid #f0f4f8",padding:"9px 0"}}><div><b>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>{t.jefeZonalNombre||"sin zonal"} · {t.gerenteTienda||"sin jefe tienda"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar</button></div>)}</div></div>
             )}
             {tpTab==="historial"&&(
               <div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Historial de cambios</div>{(tiendaHistorial||[]).length===0&&<div style={{fontSize:12,color:"#8aaabb",padding:14,background:"#f8fafc",borderRadius:12}}>Aún no hay cambios registrados en esta sesión.</div>}{(tiendaHistorial||[]).map(h=><div key={h.id} style={{display:"grid",gridTemplateColumns:"180px 1fr 180px",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8",fontSize:12}}><span style={{color:"#8aaabb"}}>{new Date(h.fecha).toLocaleString()}</span><b style={{color:"#1a2f4a"}}>{h.accion} · {h.tienda}</b><span style={{color:"#5a7a9a"}}>{h.usuario}</span></div>)}</div>
@@ -7276,7 +7212,7 @@ function ChecklistApp() {
           if(ds > todayStr()) return;
           const dw = getDow(ds);
           // Filtrar actividades por día de la semana y sin excepción
-          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+          actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos += 10;
             const reg = getReg(ds, tId, a.id);
             const p = puntajeReg(reg, getRangoActivo(a.id, ds));
@@ -7415,7 +7351,7 @@ function ChecklistApp() {
                   let sOb=0,sMx=0;
                   s.days.forEach(d=>{
                     const ds=dStr(vYear,vMonth,d);
-                    if(ds>hoy||!a.dias.includes(getDow(ds))) return;
+                    if(ds>hoy||!(a.dias||[]).includes(getDow(ds))) return;
                     tiAct.forEach(ti=>{
                       if(isExc(ti.id,a.id,ds)) return;
                       sMx+=10;
@@ -7613,7 +7549,7 @@ function ChecklistApp() {
               const ds=dStr(vYear,vMonth,day);
               if(ds>hoyFV) return;
               const dw=getDow(ds);
-              acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+              acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                 totalDispV.add(ti.id);
                 const reg=getReg(ds,ti.id,a.id);
                 if(!reg?.evidencias?.length||reg.anulado) return;
@@ -7647,7 +7583,7 @@ function ChecklistApp() {
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyFV) return;
                 const dw=getDow(ds);
-                acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                   fD.add(ti.id);
                   const reg=getReg(ds,ti.id,a.id);
                   if(!reg?.evidencias?.length||reg.anulado) return;
@@ -9442,7 +9378,7 @@ Saludos.`;
           {fmt:"Supermayorista",icon:<FmtIcon fmt="Supermayorista" size={16}/>},
           {fmt:"Market",       icon:<FmtIcon fmt="Market" size={16}/>},
         ];
-        const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
+        const actsHoy=acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(hoy)));
         // actsRef debe declararse ANTES de cualquier uso
         const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
           const reg=getReg(hoy,ti.id,a.id);
@@ -10171,6 +10107,9 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   const [naComentario,setNaComentario]=useState("");
   const fmts=["Todas","Mayorista","Supermayorista","Market"];
   const fmtC={Mayorista:"#6c5ce7",Supermayorista:"#0984e3",Market:"#00b5b4"};
+  const nomTienda=(t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
+  const fmtTienda=(t)=>String(t?.f||t?.formato||"").trim();
+  const distTienda=(t)=>String(t?.dist||t?.distrito||"").trim();
 
   // Tiendas de la ruta activa del auditor
   const tiendasEnRuta=new Set(rutaActiva?.tiendas||[]);
@@ -10197,8 +10136,8 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
 
   const tFiltA=tiendas.filter(t=>{
     if(!t.activa) return false;
-    if(fmtA!=="Todas"&&t.f!==fmtA) return false;
-    if(busqA&&!t.n.toLowerCase().includes(busqA.toLowerCase())&&!t.dist?.toLowerCase().includes(busqA.toLowerCase())) return false;
+    if(fmtA!=="Todas"&&fmtTienda(t)!==fmtA) return false;
+    if(busqA&&!nomTienda(t).toLowerCase().includes(busqA.toLowerCase())&&!distTienda(t).toLowerCase().includes(busqA.toLowerCase())) return false;
     return true;
   }).sort((a,b)=>{
     // Primero las tiendas en ruta; luego bloqueadas al final
@@ -10206,7 +10145,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
     const aB=tiendasBloqueadas.has(a.id); const bB=tiendasBloqueadas.has(b.id);
     if(aR&&!bR) return -1; if(!aR&&bR) return 1;
     if(!aB&&bB) return -1; if(aB&&!bB) return 1;
-    return a.n.localeCompare(b.n,"es");
+    return nomTienda(a).localeCompare(nomTienda(b),"es");
   });
 
   // FIX 5: Auditor sin ruta asignada — estado vacío informativo
@@ -10274,12 +10213,12 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
               onClick={()=>{ if(!esExcluida&&!esBloqueada) onCheckIn(t.id); }}>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
-                  Vega {t.n}
+                  Vega {nomTienda(t)}
                   {esBloqueada&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#EAF3DE",color:"#27500A",border:"1px solid #C0DD97"}}>✓ {bloqLabel}</span>}
                   {!esBloqueada&&enRuta&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#e0fafa",color:"#085041",border:"1px solid #00b5b444"}}>En ruta</span>}
                   {!esBloqueada&&!enRuta&&rutaActiva&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#f0f4f8",color:"#8aaabb",border:"1px solid #dde3e9"}}>Fuera de ruta</span>}
                 </div>
-                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{t.f} · {t.dist}</div>
+                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{fmtTienda(t)} · {distTienda(t)}</div>
                 {(esExcluida||esPendiente)&&(
                   <div style={{fontSize:10,color:"#854F0B",marginTop:3}}>
                     {excl.motivo}{excl.comentario?` · ${excl.comentario}`:""}
@@ -10317,7 +10256,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
           onClick={()=>setNaModal(null)}>
           <div onClick={e=>e.stopPropagation()}
             style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:520,boxShadow:"0 -8px 32px rgba(0,0,0,.15)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Reportar N/A — Vega {tiendas.find(t=>t.id===naModal)?.n}</div>
+            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Reportar N/A — Vega {nomTienda(tiendas.find(t=>t.id===naModal))}</div>
             <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>El admin recibirá la solicitud y la aprobará o rechazará. La tienda aparecerá como N/A pendiente mientras tanto.</div>
             <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO *</label>
             <select value={naMotivo} onChange={e=>setNaMotivo(e.target.value)}
