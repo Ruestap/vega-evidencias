@@ -8502,8 +8502,8 @@ Estatus: En corrección
 Motivo / cambios solicitados:
 ${o.motivoCorreccion||"No especificado"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8516,8 +8516,8 @@ Estatus: En aprobación
 Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
 Hora de corte: ${o.horaCorte||"—"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8532,8 +8532,8 @@ Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 Prioridad: ${o.prioridad||"Normal"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8560,8 +8560,8 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
         };
@@ -8569,7 +8569,16 @@ Saludos.`;
         const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
         const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
         const copyOdtMailText=async(o,modo="asignacion")=>{try{await navigator.clipboard.writeText(buildOdtMail(o,modo));showToast("Texto copiado. Pégalo en tu correo si Outlook no abrió.");return true;}catch(e){showToast("No se pudo abrir correo. Copia el texto desde el detalle de la ODT.");return false;}};
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){copyOdtMailText(o,modo);}else{try{w.opener=null;}catch(_){}}}catch(e){copyOdtMailText(o,modo);}};
+        // FIX_NO_MAILTO_POPUP_20260614: abre Outlook web directo, sin fallback a mailto:
+        // El fallback anterior disparaba el selector de apps del SO (popup "Elija aplicación").
+        // openExternalBlank puro abre la pestaña de Outlook sin ningún popup del sistema.
+        const openOutlookOdt=(o,modo="asignacion")=>{
+          const to=o.demail||"";
+          const subject=odtMailSubject(o,modo);
+          const body=buildOdtMail(o,modo);
+          const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to)+"&subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+          openExternalBlank(url);
+        };
         const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
         const getOdtDesignerContact=(o)=>({nombre:o?.dnombre||"Diseñador",email:o?.demail||"",celular:o?.dcel||""});
