@@ -1,3 +1,4 @@
+/* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
 /* ET_FIX_FINAL_ROLES_DASH_CORRECCION_MOTIVOS_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
 /* ET_FIX_ODT_ESTADO_CORRECCION_NOTIFY_20260614 */
@@ -976,7 +977,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
   // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
   const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
-  const inputStyle=(extra={})=>({...S.inp,padding:"7px 9px",fontSize:11,borderRadius:8,minHeight:34,...extra});
+  const inputStyle=(extra={})=>({...S.inp,padding:"6px 8px",fontSize:10.5,borderRadius:8,minHeight:30,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
     if(!v.ok){setError(v.msg);return;}
@@ -986,7 +987,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:6,overflow:"hidden"}}
       onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#fff",borderRadius:14,width:"min(500px,94vw)",maxHeight:"calc(100dvh - 12px)",overflowY:"auto",padding:9,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+      <div style={{background:"#fff",borderRadius:14,width:"min(440px,96vw)",maxHeight:"calc(100dvh - 10px)",overflowY:"auto",padding:7,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
         <div style={{position:"sticky",top:0,zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,margin:"-9px -9px 8px",padding:"7px 9px",background:"#fff",borderBottom:"1px solid #e2e8f0",borderRadius:"16px 16px 0 0"}}>
           <div style={{minWidth:0}}>
             <div style={{fontSize:15,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
@@ -999,7 +1000,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
           </div>
         </div>
         {error&&<div style={{padding:"9px 12px",borderRadius:10,background:"#fff1f2",border:"1px solid #fecaca",color:"#dc2626",fontSize:12,fontWeight:700,marginBottom:12}}>{error}</div>}
-        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 92px",gap:7,marginBottom:7}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 78px",gap:6,marginBottom:6}}>
           <div>
             <label style={S.lbl}>NOMBRE TIENDA</label>
             <input value={draft.n||""} onChange={e=>!draft._readOnly&&patch({n:e.target.value})}
@@ -1021,7 +1022,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
           <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
             placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:6,marginBottom:6}}>
           <div>
             <label style={S.lbl}>DNI GERENTE</label>
             <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:sanitizeDigits(e.target.value,SAFE_LIMITS.dni)})}
@@ -1055,7 +1056,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
         <TiendaEditField S={S} label="DIRECCIÓN">
           <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 76px",gap:7,marginBottom:7}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 64px",gap:6,marginBottom:6}}>
           <div>
             <label style={S.lbl}>DISTRITO</label>
             <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={inputStyle()}/>
@@ -1065,7 +1066,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             <input value={draft.zonaId||""} onChange={e=>patch({zonaId:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:6,marginBottom:6}}>
           <div>
             <label style={S.lbl}>LATITUD</label>
             <input value={draft.lat??""} onChange={e=>patch({lat:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
@@ -8247,8 +8248,8 @@ function ChecklistApp() {
             }else{detalle="Entregado";diasTb=dias;}
           }else{
             const d=fe?diffDays(hoy,fe):null;
-            if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) detalle=!fe?"En ejecución":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
-            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            if(["diseño","en_diseno","aprobacion","aprobado","correccion"].includes(estado)) detalle=!fe?"En ejecución":d<0?`${Math.abs(d)}d`:d===0?"Hoy · vence":`Retraso ${d}d`;
+            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`${Math.abs(d)}d`:d===0?"Hoy · vence":`Retraso ${d}d`;
             else if(estado==="retrasado") detalle=o?.detalle||o?.alerta||"Con retraso";
             else detalle=o?.detalle||o?.alerta||"—";
             diasTb=dias;
@@ -8381,6 +8382,26 @@ function ChecklistApp() {
         const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
         const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
+        // ET_FIX_ODT_CAPACIDAD_DISENADOR_20260614: no asignar mas de 3 ODT activas por diseñador.
+        const ODT_MAX_ACTIVAS_POR_DISENADOR=3;
+        const odtFinalStates=["entregado","finalizado","terminado","cancelado"];
+        const designerKey=(d)=>({
+          ids:[d?.id,d?.userId,d?.dni,d?.documento,d?.usuario,d?.credencial].map(normOdt).filter(Boolean),
+          digits:[d?.dni,d?.documento,d?.usuario,d?.credencial,d?.id].map(normDigits).filter(Boolean),
+          names:[d?.nombre].map(normOdt).filter(Boolean),
+          emails:[d?.email,d?.correo].map(normOdt).filter(Boolean)
+        });
+        const odtBelongsToDesigner=(o,d)=>{
+          const dk=designerKey(d);
+          const oid=[o?.disenadorId,o?.responsableId,o?.disenadorDni,o?.responsableDni].map(normOdt).filter(Boolean);
+          const odig=[o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId].map(normDigits).filter(Boolean);
+          const onam=[o?.dnombre,o?.disenadorNombre,o?.responsableNombre].map(normOdt).filter(Boolean);
+          const oem=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt).filter(Boolean);
+          return sameAny(dk.ids,oid)||sameAny(dk.digits,odig)||sameAny(dk.names,onam)||sameAny(dk.emails,oem);
+        };
+        const odtActivaParaCarga=(o)=>!odtFinalStates.includes(String(o?.estado||"").toLowerCase())&&o?.activo!==false;
+        const odtCargaDesigner=(d,excludeId="")=>odtsBaseFiltradas.filter(o=>String(o?.id)!==String(excludeId)&&odtActivaParaCarga(o)&&odtBelongsToDesigner(o,d)).length;
+        const designerBloqueadoAsignacion=(d,excludeId="")=>odtCargaDesigner(d,excludeId)>=ODT_MAX_ACTIVAS_POR_DISENADOR;
         const APP_URL="https://vega-evidencias.vercel.app/";
         const ODT_CORRECTION_REASONS=[
           "Brief incompleto",
@@ -8517,7 +8538,7 @@ Saludos.`;
         const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{entregadoEn:extra.entregadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,correccion:55,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const estadoFirestore=(nuevoEstado==="finalizado"||nuevoEstado==="terminado")?"entregado":nuevoEstado;const updated=calcOdtPlan({...o,estado:estadoFirestore,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:estadoFirestore,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);maybeNotifyRequesterAfterState(o,estadoFirestore,updated);maybeNotifyDesignerAfterCorrection(o,estadoFirestore,updated);showToast("Estado actualizado: "+pillE(estadoFirestore).txt);return updated;};
         const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
         const resetOdtFormAndGoDash=()=>{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);};
-        const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
+        const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;if(d&&designerBloqueadoAsignacion(d)){showToast("Diseñador inhabilitado para asignación: tiene 3 ODT activas.");return;}const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
         const deleteOdt=(o)=>{ if(!canDeleteOdt(o)){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
         const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 190px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -8549,7 +8570,7 @@ Saludos.`;
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}><div><label style={{...lbl,textAlign:"center"}}>Fecha inicio *</label><input type="date" value={odtForm.fechaInicio} onChange={e=>setOdtForm(p=>({...p,fechaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Fecha entrega *</label><input type="date" value={odtForm.fechaEntrega} onChange={e=>setOdtForm(p=>({...p,fechaEntrega:e.target.value}))} style={{...inp,fontSize:15}}/></div></div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><label style={{...lbl,textAlign:"center"}}>Hora de inicio</label><input type="time" value={odtForm.horaInicio} onChange={e=>setOdtForm(p=>({...p,horaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Hora de corte <span style={{color:"#e17055",fontWeight:500}}>(pasada esta hora → retraso)</span></label><input type="time" value={odtForm.horaCorte} onChange={e=>setOdtForm(p=>({...p,horaCorte:e.target.value}))} style={{...inp,fontSize:15}}/></div></div><div style={{marginTop:16}}><label style={{...lbl,textAlign:"center"}}>Prioridad</label><select value={odtForm.prioridad||"Normal"} onChange={e=>setOdtForm(p=>({...p,prioridad:e.target.value}))} style={{...inp,fontSize:15}}>{ODT_PRIORIDADES.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
                 </div>
-                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();return <button key={u.id} onClick={()=>setOdtForm(p=>({...p,disenadorId:u.id}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:sel?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador</small></span></span><span style={{fontSize:10,fontWeight:800,color:"#00b894"}}>Disponible</span></button>})}</div></div>}
+                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();const carga=odtCargaDesigner(u);const blocked=designerBloqueadoAsignacion(u);return <button key={u.id} disabled={blocked} onClick={()=>!blocked&&setOdtForm(p=>({...p,disenadorId:u.id}))} title={blocked?"Inhabilitado: 3 ODT activas":"Disponible"} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:blocked?"#f8fafc":sel?"rgba(108,110,245,.08)":"#fff",opacity:blocked?.62:1,cursor:blocked?"not-allowed":"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:blocked?"#b2bec3":"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador · {carga}/{ODT_MAX_ACTIVAS_POR_DISENADOR} activas</small></span></span><span style={{fontSize:10,fontWeight:800,color:blocked?"#dc2626":"#00b894"}}>{blocked?"Inhabilitado":"Disponible"}</span></button>})}</div></div>}
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>3</span>Tipo de trabajo</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:22}}>{TIPOS_TRABAJO.map(t=>{const sel=odtForm.tipo===t.label;return <button key={t.id||t.label} onClick={()=>setOdtForm(p=>({...p,tipo:t.label,hh:t.hh}))} style={{height:78,borderRadius:14,border:`1.5px solid ${sel?"#6C6EF5":"#c8d8e8"}`,background:sel?"rgba(108,110,245,.06)":"#fff",display:"flex",alignItems:"center",gap:14,padding:"0 22px",fontSize:16,fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}><span style={{width:22,height:22,borderRadius:"50%",border:`3px solid ${sel?"#6C6EF5":"#c8d8e8"}`,display:"grid",placeItems:"center"}}>{sel&&<span style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}</span>{t.ico}{t.label}</button>})}</div><label style={{...lbl,textAlign:"center",fontSize:13}}>Objetivo y público</label><textarea value={odtFormDraft.objetivo||""} onChange={e=>setOdtFormDraft(p=>({...p,objetivo:e.target.value}))} placeholder="¿Qué debe comunicar? ¿A quién está dirigido?" style={{...inp,minHeight:90,resize:"vertical",fontSize:15,marginBottom:18}}/><label style={{...lbl,textAlign:"center",fontSize:13}}>Mensaje principal</label><textarea value={odtFormDraft.mensaje||""} onChange={e=>setOdtFormDraft(p=>({...p,mensaje:e.target.value}))} placeholder="Frase clave, claim o copy principal de la pieza" style={{...inp,minHeight:90,resize:"vertical",fontSize:15}}/></div>
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>4</span>Materiales y medidas</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>{MATERIALES_TODOS.map(m=>{const chk=(odtForm.materiales||[]).includes(m);return <label key={m} style={{display:"flex",alignItems:"center",gap:10,border:"1px solid #e2e8f0",borderRadius:12,padding:"10px 12px",background:chk?"rgba(0,181,180,.08)":"#f8fafc",cursor:"pointer"}}><input type="checkbox" checked={chk} onChange={e=>setOdtForm(p=>({...p,materiales:e.target.checked?[...(p.materiales||[]),m]:(p.materiales||[]).filter(x=>x!==m)}))}/><span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{m}</span></label>})}</div><label style={lbl}>Medidas específicas</label><input value={odtForm.medidas} onChange={e=>setOdtForm(p=>({...p,medidas:e.target.value}))} placeholder="Ej: 1080×1920px / A3 vertical" style={inp}/></div>
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>5</span>Estilo y referencias</div><label style={lbl}>Tonalidad</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{["Corporativo","Emocional","Promocional","Divertido","Impactante"].map(t=><button key={t} onClick={()=>setOdtForm(p=>({...p,tonalidad:t}))} style={{padding:"7px 13px",borderRadius:999,border:`1.5px solid ${odtForm.tonalidad===t?"#6C6EF5":"#e2e8f0"}`,background:odtForm.tonalidad===t?"#6C6EF5":"#fff",color:odtForm.tonalidad===t?"#fff":"#5a7a9a",fontWeight:700,cursor:"pointer"}}>{t}</button>)}</div><label style={lbl}>Mecánica / dinámica</label><textarea value={odtFormDraft.mecanica||""} onChange={e=>setOdtFormDraft(p=>({...p,mecanica:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical",marginBottom:12}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><div><label style={lbl}>Productos involucrados</label><input value={odtFormDraft.productos||""} onChange={e=>setOdtFormDraft(p=>({...p,productos:e.target.value}))} style={inp}/></div><div><label style={lbl}>Restricciones</label><input value={odtFormDraft.restricciones||""} onChange={e=>setOdtFormDraft(p=>({...p,restricciones:e.target.value}))} style={inp}/></div></div><label style={lbl}>Comentarios / referencias</label><textarea value={odtFormDraft.referencias||""} onChange={e=>setOdtFormDraft(p=>({...p,referencias:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical"}}/></div>
@@ -8815,9 +8836,7 @@ Saludos.`;
                   {reportStats.map(s=>{
                     const kpiIco2={
                       "Total":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
-                      "Terminadas":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
-                      "Entregadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
-                      "Finalizadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Entregadas":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
                       "En proceso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
                       "Pendientes":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
                       "Con retraso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
@@ -8995,6 +9014,7 @@ Saludos.`;
               const sel=disenadores.find(d=>String(d.id)===String(selectedId));
               const saveAssign=async()=>{
                 if(!sel){showToast("Selecciona un diseñador");return;}
+                if(designerBloqueadoAsignacion(sel,current.id)){showToast("Diseñador inhabilitado para asignación: tiene 3 ODT activas.");return;}
                 const ini=(sel.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();
                 const patch={disenadorId:sel.id,dnombre:sel.nombre,demail:sel.email||"",dcel:sel.celular||"",did:ini,colorD:sel.color||current.colorD||"#6C6EF5",asignadoPor:uName||uDni,asignadoEn:new Date().toISOString()};
                 await updateOdtInFirestore(current.id,patch);
@@ -9012,7 +9032,7 @@ Saludos.`;
                     <label style={{...lbl}}>Diseñador responsable</label>
                     <select value={selectedId} onChange={e=>setOdtAssignModal(p=>({...p,_newDesignerId:e.target.value}))} style={{...inp,background:"#fff",marginBottom:14}}>
                       <option value="">Seleccionar diseñador</option>
-                      {disenadores.map(d=><option key={d.id} value={d.id}>{d.nombre}</option>)}
+                      {disenadores.map(d=>{const carga=odtCargaDesigner(d,current.id);const blocked=designerBloqueadoAsignacion(d,current.id);return <option key={d.id} value={d.id} disabled={blocked}>{d.nombre}{blocked?` · Inhabilitado (${carga}/3 activas)`:carga?` · ${carga}/3 activas`:""}</option>;})}
                     </select>
                     {sel&&<div style={{padding:"10px 12px",borderRadius:12,background:"#f0f6ff",border:"1px solid #c8d8e8",fontSize:12,color:"#5a7a9a",marginBottom:16}}>Se asignará a <b style={{color:"#1a2f4a"}}>{sel.nombre}</b>{sel.email?` · ${sel.email}`:""}</div>}
                     <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
@@ -10462,19 +10482,20 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   const[bloqueo,setBloqueo]=useState(null);
   const[intentos,setIntentos]=useState(0);
   const MAX_INTENTOS=5, BLOQUEO_MIN=10;
-  // Verificar bloqueo persistente en Firestore al montar (anti-bypass recarga)
+  // ET_FIX_LOGIN_LOCAL_DEVICE_20260614: bloqueo local por dispositivo/navegador, sin et_legacy_removed global.
+  const AUTH_DEVICE_KEY="et_auth_device_attempts_v2";
+  const normCred=(v)=>String(v??"").trim().toUpperCase().replace(/[\s\-_.]/g,"");
+  const getLocalAuthState=()=>{try{return JSON.parse(localStorage.getItem(AUTH_DEVICE_KEY)||"{}");}catch{return {};}};
+  const setLocalAuthState=(v)=>{try{localStorage.setItem(AUTH_DEVICE_KEY,JSON.stringify(v||{}));}catch{}};
+  const clearLocalAuthState=()=>{try{localStorage.removeItem(AUTH_DEVICE_KEY);Object.keys(localStorage).filter(k=>k.startsWith("et_et_legacy_removed_")||k.startsWith("et_auth_cred_attempts_")||k==="et_legacy_removed").forEach(k=>localStorage.removeItem(k));}catch{}};
   useEffect(()=>{
-    import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,getDoc})=>{
-      getDoc(doc(db,"auth_attempts","_last")).then(snap=>{
-        if(!snap.exists()) return;
-        const d=snap.data();
-        if(d.bloqueadoHasta){
-          const hasta=new Date(d.bloqueadoHasta).getTime();
-          const rest=Math.ceil((hasta-Date.now())/1000);
-          if(rest>0){setBloqueo({hasta,restante:rest});setErr("Dispositivo bloqueado por intentos fallidos.");}
-        }
-      }).catch(()=>{});
-    });});
+    const st=getLocalAuthState();
+    if(st?.bloqueadoHasta){
+      const hasta=Number(st.bloqueadoHasta);
+      const rest=Math.ceil((hasta-Date.now())/1000);
+      if(rest>0){setBloqueo({hasta,restante:rest});setIntentos(Number(st.intentos||0));setErr("Dispositivo bloqueado por intentos fallidos.");}
+      else clearLocalAuthState();
+    }
   },[]);
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
@@ -10484,9 +10505,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       const rest=Math.ceil((bloqueo.hasta-Date.now())/1000);
       if(rest<=0){
           setBloqueo(null);setIntentos(0);setErr("");
-          import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{
-            setDoc(doc(db,"auth_attempts","_last"),{bloqueadoHasta:null,intentos:0},{merge:true}).catch(()=>{});
-          });});
+          clearLocalAuthState();
         }
       else setBloqueo(b=>({...b,restante:rest}));
     },1000);
@@ -10504,7 +10523,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       const hasta=Date.now()+BLOQUEO_MIN*60*1000;
       setBloqueo({hasta,restante:BLOQUEO_MIN*60});
       setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
-      try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc})=>{setDoc(doc(db,"auth_attempts","_last"),{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ts:new Date().toISOString()},{merge:true});});});}catch{}
+      setLocalAuthState({intentos:n,bloqueadoHasta:hasta,ts:new Date().toISOString()});
     } else {
       setErr(`Credencial incorrecta · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
       setTimeout(()=>setErr(""),3000);
@@ -10512,7 +10531,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   const registrarExito=(id,nombre,rol,tiendaId,cargo)=>{
-    setIntentos(0); setBloqueo(null);
+    setIntentos(0); setBloqueo(null); clearLocalAuthState();
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
       // SECURITY: no loguear credencial ni DNI completo — solo rol y dispositivo
@@ -10524,13 +10543,13 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   const tryAcceso=()=>{
     if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=cred.trim().toUpperCase();
+    const clean=normCred(cred);
     if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
-    // SECURITY: no revelar en el mensaje de error si el usuario existe o no
-    const clean_cmp=cred.trim();
+    // SECURITY: normalizar DNI/RUC/CE/código interno sin espacios ni guiones.
+    if(!Array.isArray(usuarios)){setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");return;}
 
-    // 1. Buscar en usuarios activos por credencial (dni)
-    const found=usuariosActivos.find(u=>u.dni&&u.dni.toUpperCase()===clean);
+    // 1. Buscar usuario activo por dni, credencial, id, userId, codigo o codigoInterno.
+    const found=usuariosActivos.find(u=>[u.dni,u.credencial,u.id,u.userId,u.codigo,u.codigoInterno,u.usuario,u.documento,u.ruc,u.ce].some(v=>normCred(v)===clean));
     if(found){
       onAcceso?.(found.id);
       registrarExito(found.id,found.nombre,found.rol,found.tiendaId,found.cargo);
@@ -10546,7 +10565,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
     // 3. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>a.dni&&a.dni.toUpperCase()===clean);
+    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.userId,a.codigo,a.codigoInterno,a.usuario,a.documento].some(v=>normCred(v)===clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
     registrarFallo();
