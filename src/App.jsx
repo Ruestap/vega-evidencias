@@ -1,3 +1,7 @@
+/* ET_FIX_FINAL_ROLES_DASH_CORRECCION_MOTIVOS_20260614 */
+/* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
+/* ET_FIX_ODT_ESTADO_CORRECCION_NOTIFY_20260614 */
+/* ET_TIENDAS_1_5_EDIT_MODAL_COMPACT_20260614 */
 /* ET_FIX_ODT_FIRESTORE_WHATSAPP_ALERT_20260614 */
 /* ET_FIX_ODT_TIENDA_RESPONSIVE_WHATSAPP_20260614 */
 /* ET_FIX_FINAL_ODT_TIENDA_RESPONSIVE_WHATSAPP_20260614 */
@@ -962,7 +966,7 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 // ET_TIENDAS_1_5_EDIT_MODAL_COMPACT_20260614: modal editar tienda compacto, acciones arriba visibles en zoom alto.
 // FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606: componente estable fuera del modal; evita remount y perdida de foco en cada tecla.
 function TiendaEditField({S,label,children}){
-  return <div style={{marginBottom:8}}><label style={{...S.lbl,marginBottom:5,fontSize:10}}>{label}</label>{children}</div>;
+  return <div style={{marginBottom:6}}><label style={{...S.lbl,marginBottom:4,fontSize:9}}>{label}</label>{children}</div>;
 }
 
 function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
@@ -972,7 +976,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
   // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
   const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
-  const inputStyle=(extra={})=>({...S.inp,padding:"8px 10px",fontSize:12,borderRadius:9,minHeight:38,...extra});
+  const inputStyle=(extra={})=>({...S.inp,padding:"7px 9px",fontSize:11,borderRadius:8,minHeight:34,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
     if(!v.ok){setError(v.msg);return;}
@@ -980,10 +984,10 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
     onSave(v.draft);
   };
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:8,overflow:"hidden"}}
+    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:6,overflow:"hidden"}}
       onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#fff",borderRadius:14,width:"min(560px,96vw)",maxHeight:"calc(100dvh - 16px)",overflowY:"auto",padding:12,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
-        <div style={{position:"sticky",top:0,zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,margin:"-12px -12px 10px",padding:"9px 12px",background:"#fff",borderBottom:"1px solid #e2e8f0",borderRadius:"16px 16px 0 0"}}>
+      <div style={{background:"#fff",borderRadius:14,width:"min(500px,94vw)",maxHeight:"calc(100dvh - 12px)",overflowY:"auto",padding:9,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+        <div style={{position:"sticky",top:0,zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,margin:"-9px -9px 8px",padding:"7px 9px",background:"#fff",borderBottom:"1px solid #e2e8f0",borderRadius:"16px 16px 0 0"}}>
           <div style={{minWidth:0}}>
             <div style={{fontSize:15,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
             <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
@@ -1146,15 +1150,18 @@ function ChecklistApp() {
   // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
   const [odtSubTab,  setOdtSubTab]  = useState("reporte");
   const [odtDashLvl, setOdtDashLvl] = useState("direccion");
-  const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
+  const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
   const [odtFormDraft, setOdtFormDraft] = useState({});
   const [odtNotifyModal, setOdtNotifyModal] = useState(null); // {disenador, odt}
+  const [odtSolicitanteNotifyModal, setOdtSolicitanteNotifyModal] = useState(null); // {odt, modo, solicitante}
+  const [odtCorrectionNotifyModal, setOdtCorrectionNotifyModal] = useState(null); // {odt, disenador}
+  const [odtCorrectionNote, setOdtCorrectionNote] = useState(""); // motivo de correccion para el disenador
   const [odtMaterialesExtra, setOdtMaterialesExtra] = useState([]); // materiales custom en config
   const [odtTiposExtra,      setOdtTiposExtra]      = useState([]); // tipos custom en config
   const ODT_MATERIALES_BASE = ["Feed Instagram (1080×1080)","Historia Instagram (1080×1920)","Banner WhatsApp","Banner Web","Pieza física (afiche/vinil)","Diseño góndola/cabecera","Reel / Video","Otro"];
-  // Firestore-backed ODTs — fallback a localStorage durante migración
+  // ODT 100% Firestore — no localStorage, no mocks, no datos por dispositivo
   const [odtFirestore, setOdtFirestore] = useState([]);
-  const [odtDeletedIds, setOdtDeletedIds] = useState(()=>{try{return JSON.parse(localStorage.getItem("et_odt_deleted_ids")||"[]");}catch{return[];}});
+  const [odtDeletedIds, setOdtDeletedIds] = useState([]);
   const [odtCreated, setOdtCreated] = useState([]);
   const [odtReporteSearch, setOdtReporteSearch] = useState("");
   const [odtReporteEstado, setOdtReporteEstado] = useState("todos");
@@ -8141,7 +8148,7 @@ function ChecklistApp() {
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {/* FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 — Módulo Diseño/ODT tabs 7-9 */}
-      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","ejecutor","solicitante","visor","viewer"].includes(role))&&(()=>{
+      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","solicitante","ejecutor","visor"].includes(role))&&(()=>{
         const TIPOS_BASE=[
           {id:"pop",label:"Material POP",hh:3,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e17055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>},
           {id:"cat",label:"Catálogo",hh:8,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>},
@@ -8152,41 +8159,197 @@ function ChecklistApp() {
           {id:"brief",label:"Creativo (brief)",hh:10,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.9 6.1 6.7.9-4.8 4.7 1.1 6.6L12 17.2 6.1 20.3l1.1-6.6L2.4 9l6.7-.9L12 2z"/></svg>},
         ];
         const TIPOS_TRABAJO=[...TIPOS_BASE,...odtTiposExtra];
+        const ODT_PRIORIDADES=[
+          {id:"Normal",label:"Normal",col:"#5a7a9a",bg:"#f0f4f8",ord:1},
+          {id:"Media",label:"Media",col:"#f6a623",bg:"#fff8ec",ord:2},
+          {id:"Alta",label:"Alta",col:"#e17055",bg:"#fff1e8",ord:3},
+          {id:"Urgente",label:"Urgente",col:"#dc2626",bg:"#ffeae6",ord:4},
+        ];
+        const odtPriorityMeta=(v)=>ODT_PRIORIDADES.find(p=>normOdt(p.id)===normOdt(v)||normOdt(p.label)===normOdt(v))||ODT_PRIORIDADES[0];
+        const odtTypeMeta=(v)=>{
+          const raw=normOdt(v);
+          if(raw.includes("precio")||raw.includes("marcador"))return{label:v||"Marcador Precio",col:"#00b5b4",bg:"#e8faf5",ico:"display"};
+          if(raw.includes("volante")||raw.includes("afiche"))return{label:v||"Volante / Afiche",col:"#0984e3",bg:"#e8f4fd",ico:"poster"};
+          if(raw.includes("catalog"))return{label:v||"Catálogo",col:"#00b5b4",bg:"#e8faf5",ico:"book"};
+          if(raw.includes("digital")||raw.includes("rrss")||raw.includes("feed")||raw.includes("post"))return{label:v||"Digital / RRSS",col:"#6C6EF5",bg:"#EEEFFE",ico:"phone"};
+          if(raw.includes("gondola")||raw.includes("exhibidor"))return{label:v||"Góndola / Exhibidor",col:"#1a2f4a",bg:"#f0f4f8",ico:"stand"};
+          if(raw.includes("pop")||raw.includes("material"))return{label:v||"Material POP",col:"#e17055",bg:"#fff1e8",ico:"play"};
+          return{label:v||"ODT",col:"#5a7a9a",bg:"#f8fafc",ico:"clipboard"};
+        };
+        const OdtSvgIcon=({kind="file",color="#0984e3",size=14})=>{
+          const base={width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"};
+          if(kind==="play")return <svg {...base}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>;
+          if(kind==="barcode")return <svg {...base}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M10 9v6M13 9v6M17 9v6"/></svg>;
+          if(kind==="poster")return <svg {...base}><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>;
+          if(kind==="clipboard")return <svg {...base}><path d="M9 3h6l1 2h3v16H5V5h3l1-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>;
+          if(kind==="display")return <svg {...base}><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4M8 9h8M8 12h5"/></svg>;
+          if(kind==="tag")return <svg {...base}><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg>;
+          if(kind==="book")return <svg {...base}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
+          if(kind==="phone")return <svg {...base}><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg>;
+          if(kind==="stand")return <svg {...base}><path d="M3 10h18"/><path d="M5 10l2-6h10l2 6"/><path d="M6 10v10M18 10v10M4 20h16"/></svg>;
+          if(kind==="clock")return <svg {...base}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+          if(kind==="check")return <svg {...base}><circle cx="12" cy="12" r="10"/><polyline points="8.5 12.5 11 15 16 9"/></svg>;
+          if(kind==="alert")return <svg {...base}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+          if(kind==="eye")return <svg {...base}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
+          if(kind==="pen")return <svg {...base}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>;
+          return <svg {...base}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>;
+        };
         const MATERIALES_TODOS=[...ODT_MATERIALES_BASE,...odtMaterialesExtra];
         const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
         const usuarioIniciales=(uName||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
         const designerByInitial=(ini)=>disenadores.find(d=>(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase()===ini);
-        const ODT_BASE=[]; // ET: sin mocks locales; ODT solo Firestore
-        let odtDeletedIdsStored=[];
-        try{odtDeletedIdsStored=JSON.parse(localStorage.getItem("et_odt_deleted_ids")||"[]");}catch{}
-        const deletedSet=new Set([...(odtDeletedIds||[]),...(odtDeletedIdsStored||[])].map(String));
+        const ODT_BASE=[]; // sin ODT de prueba/mock; Firestore es el único origen
         const odtsMap=new Map();
-        // ET_FIX_ODT_TIENDA_RESPONSIVE_WHATSAPP_20260614: Firestore es la única fuente operativa para ODT.
+        // Firestore es el único origen: no mocks, no localStorage, no merge por dispositivo
         [...(odtFirestore||[])].forEach(o=>{ if(o&&o.id) odtsMap.set(String(o.id),o); });
         const odtsTodos=[...odtsMap.values()];
-        const odtsBaseFiltradas=odtsTodos.filter(o=>!deletedSet.has(String(o.id))&&o.activo!==false);
-        const userKey=norm(`${uDni} ${uName} ${usuarioActual?.id||""} ${usuarioActual?.email||usuarioActual?.correo||""} ${usuarioActual?.credencial||""}`);
-        const odtsRol=role==="ejecutor"?odtsBaseFiltradas.filter(o=>{
-          const asignadoKey=norm(`${o.disenadorId||""} ${o.disenadorDni||""} ${o.responsableDni||""} ${o.demail||""} ${o.dnombre||""} ${o.did||""}`);
-          return !!asignadoKey&&(asignadoKey.includes(norm(uDni))||asignadoKey.includes(norm(uName))||userKey.includes(asignadoKey)||o.did===usuarioIniciales);
-        }):odtsBaseFiltradas;
-        const pillE=(e)=>{ if(e==="diseño")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En diseño"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
-        const estadoLabel=(e)=>pillE(e).txt;
-        const calcOdtAlert=(o)=>{
-          const e=String(o?.estado||"").toLowerCase();
-          if(e==="entregado"||e==="cancelado")return "";
-          const raw=String(o?.fechaEntrega||o?.entrega||"").slice(0,10);
-          const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-          if(!m)return "";
-          const due=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+        const isOdtFinalizada=(o)=>["entregado","finalizado","terminado"].includes(String(o?.estado||"").toLowerCase());
+        const toLocalDate=(v)=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const d=new Date(v);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+        const parseHora=(v,fb="18:30")=>{const raw=String(v||fb).trim().toLowerCase().replace(/\s+/g,"");let m=raw.match(/^(\d{1,2}):(\d{2})$/);if(m)return[Number(m[1]),Number(m[2])];m=raw.match(/^(\d{1,2}):(\d{2})(a\.m\.|am|p\.m\.|pm)$/);if(m){let h=Number(m[1]);const mm=Number(m[2]);const ap=m[3];if(ap.startsWith("p")&&h<12)h+=12;if(ap.startsWith("a")&&h===12)h=0;return[h,mm];}return parseHora(fb,"18:30");};
+        const makeDateTime=(fecha,hora="00:00")=>{const d=toLocalDate(fecha);if(!d)return null;const [h,m]=parseHora(hora,"00:00");d.setHours(h,m,0,0);return d;};
+        const ODT_WORK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["08:00","11:30"]};
+        const daySchedule=(d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null;
+        const isWorkDayOdt=(d)=>!!daySchedule(d);
+        const countWorkDaysInclusive=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let ini=da<=db?da:db,fin=da<=db?db:da,c=0;for(let d=new Date(ini);d<=fin;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return Math.max(1,c);};
+        const countWorkDaysBefore=(start,ref)=>{const ini=toLocalDate(start),r=toLocalDate(ref);if(!ini||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<ini)return 0;let c=0;for(let d=new Date(ini);d<=end;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return c;};
+        const businessMinutesBetween=(start,end)=>{if(!start||!end||isNaN(start)||isNaN(end))return 0;let a=start<=end?new Date(start):new Date(end),b=start<=end?new Date(end):new Date(start),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=daySchedule(d);if(!sch)continue;const [sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
+        const formatHm=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));const h=Math.floor(n/60),m=n%60;if(h&&m)return`${h}h ${m}m`;if(h)return`${h}h`;return`${m}m`;};
+        const formatDiasTb=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));if(n<=0)return"0d";const full=Math.floor(n/600);return full<1?"<1d":`${full}d`;};
+        const toDueDateTime=(o)=>makeDateTime(o?.fechaEntrega||o?.entrega,o?.horaCorte||"18:30");
+        const toFinishDateTime=(o)=>{const raw=o?.entregadoEn||o?.finalizadoEn||o?.fechaCierre||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
+        const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
+        const calcOdtPlan=(o)=>{
+          const estado=String(o?.estado||"pendiente").toLowerCase();
+          const entregada=isOdtFinalizada(o);
           const now=new Date();
-          const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-          const diff=Math.round((due-today)/86400000);
-          if(diff<0)return `Retraso ${Math.abs(diff)}d`;
-          if(diff===0)return "Hoy · vence";
-          if(diff<=7)return `${diff}d`;
-          return "";
+          const hoy=toLocalDate(todayStr());
+          const fi=toLocalDate(o?.fechaInicio)||hoy;
+          const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
+          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),o?.horaInicio||"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
+          const due=toDueDateTime(o);
+          const fin=toFinishDateTime(o);
+          const ref=entregada?(fin||due||now):now;
+          const totalLab=fi&&fe?countWorkDaysInclusive(fi,fe):1;
+          const transLab=entregada?Math.min(totalLab,countWorkDaysInclusive(fi,ref)):Math.min(totalLab,countWorkDaysBefore(fi,hoy));
+          const tiempo=`${transLab}/${totalLab} lab`;
+          const usedBusinessMinutes=businessMinutesBetween(inicioDT,ref);
+          const dias=entregada?formatDiasTb(usedBusinessMinutes):(usedBusinessMinutes>0?formatDiasTb(usedBusinessMinutes):"<1d");
+          let detalle="";
+          let diasTb=dias;
+          if(entregada){
+            const cierre=fin||due;
+            if(due&&cierre){
+              const deltaMin=Math.round((cierre-due)/60000);
+              const deltaDay=diffDays(cierre,due);
+              if(deltaMin>0){detalle=`Entregado con retraso ${formatHm(deltaMin)}`;diasTb=`Retraso ${formatHm(deltaMin)}`;}
+              else if(deltaMin<0&&deltaDay<0){detalle=`Entregado con adelanto +${Math.abs(deltaDay)}d`;diasTb=`Adelanto +${Math.abs(deltaDay)}d`;}
+              else {detalle="Entregado a tiempo";diasTb="A tiempo";}
+            }else{detalle="Entregado";diasTb=dias;}
+          }else{
+            const d=fe?diffDays(hoy,fe):null;
+            if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) detalle=!fe?"En ejecución":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="retrasado") detalle=o?.detalle||o?.alerta||"Con retraso";
+            else detalle=o?.detalle||o?.alerta||"—";
+            diasTb=dias;
+          }
+          const avance=entregada?100:(Number(o?.avance)||0);
+          const progresoMap={pendiente:"Pendiente",diseño:"En proceso",en_diseno:"En proceso",aprobacion:"En aprobación",aprobado:"Aprobado",correccion:"En corrección",entregado:"Entregado",finalizado:"Entregado",terminado:"Entregado",cancelado:"Cancelado",retrasado:"Retrasado"};
+          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso:progresoMap[estado]||"Pendiente"};
         };
+        const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
+        const KANBAN_ENTREGADOS_DIAS=7;
+        const getOdtDeliveredDate=(o)=>{
+          const raw=o?.entregadoEn||o?.fechaCierre||o?.finalizadoEn||o?.updatedAt||o?.fechaEntrega||o?.entrega;
+          if(!raw)return null;
+          const d=new Date(raw);
+          if(!isNaN(d))return d;
+          return toLocalDate(raw);
+        };
+        const isOdtDeliveredVisibleInKanban=(o)=>{
+          if(!isOdtFinalizada(o))return true;
+          const d=getOdtDeliveredDate(o);
+          if(!d)return true;
+          const age=(Date.now()-d.getTime())/86400000;
+          return age<=KANBAN_ENTREGADOS_DIAS;
+        };
+        const normOdt=(v)=>String(v??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+        const normDigits=(v)=>String(v??"").replace(/\D/g,"");
+        const sameAny=(a,b)=>a.filter(Boolean).some(x=>b.filter(Boolean).includes(x));
+        const isAssignedOdt=(o)=>{
+          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
+          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
+          const myNames=[uName,loggedUser?.nombre].map(normOdt);
+          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
+          const odtIds=[o?.disenadorId,o?.disenadorDni,o?.responsableDni,o?.responsableId].map(normOdt);
+          const odtDigits=[o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId].map(normDigits);
+          const odtNames=[o?.dnombre,o?.disenadorNombre,o?.responsableNombre].map(normOdt);
+          const odtEmails=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt);
+          return sameAny(myIds,odtIds)||sameAny(myDigits,odtDigits)||sameAny(myEmails,odtEmails)||sameAny(myNames,odtNames);
+        };
+        const isRequesterOdt=(o)=>{
+          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
+          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
+          const myNames=[uName,loggedUser?.nombre].map(normOdt);
+          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
+          const reqIds=[o?.creadoPor,o?.solicitanteId,o?.solicitanteDni].map(normOdt);
+          const reqDigits=[o?.solicitanteDni,o?.solicitanteId].map(normDigits);
+          const reqNames=[o?.solicitanteNombre,o?.creadoPorNombre,o?.creadoPor].map(normOdt);
+          const reqEmails=[o?.solicitanteEmail,o?.creadoPorEmail].map(normOdt);
+          return sameAny(myIds,reqIds)||sameAny(myDigits,reqDigits)||sameAny(myEmails,reqEmails)||sameAny(myNames,reqNames);
+        };
+        const canViewOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||isRequesterOdt(o)||isAssignedOdt(o)||(isDisenoViewer&&(isRequesterOdt(o)||isAssignedOdt(o)));
+        const canCreateOdt=isDisenoAdmin||isDisenoCoordinator||isSolicitante;
+        const canEditOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
+        const canAssignOdt=(o)=>isDisenoAdmin||isDisenoCoordinator;
+        const canDeleteOdt=(o)=>isDisenoAdmin;
+        const canApproveOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
+        const canDeliverOdt=(o)=>isDisenoAdmin||(isDisenoExecutor&&isAssignedOdt(o)&&String(o?.estado||"").toLowerCase()==="aprobado");
+        const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
+        const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
+        const odtStateOptions=(o)=>{
+          const estado=String(o?.estado||"pendiente").toLowerCase();
+          const all=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","retrasado","cancelado"];
+          let allowed=[];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=all;
+          else if(isDisenoExecutor&&isAssignedOdt(o)) allowed=["diseño","aprobacion",...(estado==="correccion"?["diseño","aprobacion"]:[]),...(estado==="aprobado"?["entregado"]:[])];
+          else if(isSolicitante&&isRequesterOdt(o)) allowed=["aprobacion","correccion","aprobado","cancelado"];
+          if(estado&&!allowed.includes(estado)) allowed=[estado,...allowed];
+          return [...new Set(allowed)];
+        };
+        const canManageOdt=canCreateOdt;
+        const odtsRol=odtsBaseFiltradas.filter(canViewOdt);
+        // ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 — Dashboard por rol/cargo sin cambiar secciones aprobadas.
+        // Admin ve Dirección + Gerencia + Operativo. Visor con cargo gerencia ve Dirección/Gerencia.
+        // Ejecutor/Solicitante ve Operativo con sus ODT filtradas.
+        const normRoleCargo=(v)=>normTxt(v||"");
+        const isGerenciaViewer=isDisenoViewer && ["gerencia","gerente","gerencial","direccion","director"].some(x=>normRoleCargo(uCargo).includes(x));
+        const odtDashLevelsAllowed=(isDisenoAdmin||isDisenoCoordinator)
+          ? ["direccion","gerencia","operativo"]
+          : isGerenciaViewer
+            ? ["direccion","gerencia"]
+            : ["operativo"];
+        const odtDashLevelActive=odtDashLevelsAllowed.includes(odtDashLvl)?odtDashLvl:odtDashLevelsAllowed[0];
+        const odtDashLevelItems=[
+          {id:"direccion",t:"Dirección",d:"Visión ejecutiva",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5M8 19v-8M12 19V7M16 19v-5M20 19V9"/></svg>},
+          {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
+          {id:"operativo",t:"Operativo",d:"Seguimiento diario",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
+        ].filter(x=>odtDashLevelsAllowed.includes(x.id));
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
+        const odtGanttItems=odtsRol.slice(0,8).map((o,idx)=>{
+          const ini=toLocalDate(o.fechaInicio)||toLocalDate(todayStr());
+          const fin=toLocalDate(o.fechaEntrega||o.entrega)||ini;
+          const start=Math.max(1,Math.min(30,ini?ini.getDate():1));
+          const end=Math.max(start,Math.min(30,fin?fin.getDate():start+1));
+          const st=String(o.estado||o.stat||"pendiente").toLowerCase();
+          const col=st==="retrasado"||((o.fechaEntrega||o.entrega)&&todayStr()>(o.fechaEntrega||o.entrega)&&!isOdtFinalizada(o))?"#dc2626":isOdtFinalizada(o)?"#00b894":st==="aprobacion"?"#0984e3":st==="correccion"?"#f6a623":"#6C6EF5";
+          return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
+        });
+        const estadoLabel=(e)=>pillE(e).txt;
+        const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
+        const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
+        const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:7,padding:compact?"3px 8px":"7px 11px",borderRadius:compact?20:11,border:`1px solid ${tm.col}26`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><span style={{width:compact?16:20,height:compact?16:20,borderRadius:6,background:"#fff",border:`1px solid ${tm.col}33`,display:"inline-grid",placeItems:"center",flexShrink:0}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/></span>{tm.label}</span>;};
+        const renderStateChip=(estado,compact=false)=>{const st=odtStateMeta(estado);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:st.col,background:st.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={st.ico} color={st.col} size={compact?9:10}/>{st.txt}</span>;};
         const norm=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         const odtsReporte=odtsRol.filter(o=>{
           const q=norm(odtReporteSearch);
@@ -8196,94 +8359,200 @@ function ChecklistApp() {
           const matchR=odtReporteResp==="todos"||o.dnombre===odtReporteResp;
           return matchQ&&matchE&&matchT&&matchR;
         });
-        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>o.estado==="entregado").length,l:"Terminadas",c:"#00b894"},{v:odtsRol.filter(o=>o.estado==="diseño"||o.estado==="aprobacion").length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
+        const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>isOdtFinalizada(o)).length,l:"Entregadas",c:"#00b894"},{v:odtsRol.filter(o=>["diseño","en_diseno","aprobacion","correccion","aprobado"].includes(o.estado)).length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.alerta?.startsWith("Con retraso")||o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
+        const odtIsOverdue=(o)=>Boolean(o?.estado==="retrasado"||(o?.alerta&&String(o.alerta).toLowerCase().includes("retraso"))||(o?.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o)));
+        const odtIsCorrection=(o)=>String(o?.estado||"").toLowerCase()==="correccion"||String(o?.estadoPlanner||"").toLowerCase().includes("correcci");
+        const odtHasObservation=(o)=>String(o?.motivoCorreccion||o?.observacionesCorreccion||o?.comentarioCorreccion||o?.correccionMotivo||"").trim().length>0;
+        const correccionMotivosCount=odtsRol.reduce((acc,o)=>{
+          const m=String(o?.motivoCorreccion||o?.motivoPredeterminadoCorreccion||o?.observacionesCorreccion||"").trim();
+          if(m){acc[m]=(acc[m]||0)+1;}
+          return acc;
+        },{});
+        const gerenciaCausas=[
+          {label:"Entregas fuera de corte", count:odtsRol.filter(odtIsOverdue).length, color:"#dc2626"},
+          ...Object.entries(correccionMotivosCount).map(([label,count])=>({label,count,color:"#f6a623"})),
+          {label:"Observaciones registradas", count:odtsRol.filter(odtHasObservation).length, color:"#0984e3"},
+          {label:"Brief pendiente de completar", count:odtsRol.filter(o=>!(o.objetivo||o.mensaje||o.mecanica||o.productos||o.restricciones||o.referencias)).length, color:"#6C6EF5"}
+        ].filter(x=>x.count>0);
+        const gerenciaDesignerMetrics=disenadores.map(d=>{const dniNorm=String(d.dni||d.documento||d.usuario||d.id||"").trim().toLowerCase();const ini=(d.nombre||"?").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();const items=odtsRol.filter(o=>String(o.disenadorId||o.responsableId||"").trim().toLowerCase()===String(d.id||"").trim().toLowerCase()||String(o.disenadorDni||o.responsableDni||"").trim().toLowerCase()===dniNorm||o.did===ini);const entregadas=items.filter(o=>isOdtFinalizada(o)).length;const retrasos=items.filter(odtIsOverdue).length;return {...d,ini,items,entregadas,retrasos,pct:items.length?Math.round(entregadas/items.length*100):0};});
         const inp={width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:13,fontFamily:"inherit",outline:"none"};
         const lbl={fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",display:"block",marginBottom:5};
         const SH={background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.05)"};
         const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
-        const adminOnly=isAdmin;
+        const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
         const APP_URL="https://vega-evidencias.vercel.app/";
+        const ODT_CORRECTION_REASONS=[
+          "Brief incompleto",
+          "Corrección de medidas/formato",
+          "Actualizar producto o precio",
+          "Ajuste de copy / mensaje",
+          "Cambio de tono visual",
+          "Falta de referencia o insumo",
+          "Error de fecha / mecánica",
+          "Otro ajuste solicitado"
+        ];
+        /* ET_FIX_MAIL_URL_BRACKETS_FALLBACK_20260614 */
+        /* ET_FIX_MAIL_LINK_20260613_1615 */
+        const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        const buildOdtMail=(o,modo="asignacion")=>{
+          const entregada=isOdtFinalizada(o)||modo==="entrega";
+          const revision=modo==="revision"||modo==="aprobacion";
+          const plan=calcOdtPlan(o||{});
+          if(modo==="correccion"){
+            return `Hola, la ODT requiere corrección antes de aprobarse.
+
+Título: ${o.titulo||"—"}
+Solicitante: ${o.solicitanteNombre||uName||"—"}
+Responsable: ${o.dnombre||"—"}
+Estatus: En corrección
+
+Motivo / cambios solicitados:
+${o.motivoCorreccion||"No especificado"}
+
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
+
+Saludos.`;
+          }
+          if(revision){
+            return `Hola, la ODT fue enviada a aprobación.
+
+Título: ${o.titulo||"—"}
+Responsable: ${o.dnombre||"—"}
+Estatus: En aprobación
+Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
+Hora de corte: ${o.horaCorte||"—"}
+
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
+
+Saludos.`;
+          }
+          if(entregada){
+            return `Hola, la ODT ya fue entregada y queda lista para revisión.
+
+Título: ${o.titulo||"—"}
+Responsable: ${o.dnombre||"—"}
+Estatus: Entregado
+Detalle: ${plan.alerta||"Entregado"}
+Fecha de entrega: ${o.fechaCierre||todayStr()}
+Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
+Prioridad: ${o.prioridad||"Normal"}
+
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
+
+Saludos.`;
+          }
+          return `Tienes una nueva orden de trabajo asignada:
+
+Título: ${o.titulo||"—"}
+Tipo de trabajo: ${o.tipoTrabajo||o.tipo||"—"}
+Área: ${o.area||"—"}
+Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
+Hora de corte: ${o.horaCorte||"—"}
+Prioridad: ${o.prioridad||"Normal"}
+
+Objetivo y público:
+${o.objetivo||"No especificado"}
+
+Mensaje principal:
+${o.mensaje||"No especificado"}
+
+Materiales: ${(o.materiales||[]).join(", ")||"No especificado"}
+Medidas: ${o.medidas||"No especificado"}
+Tonalidad: ${o.tonalidad||"No especificado"}
+Mecánica / dinámica: ${o.mecanica||"No especificado"}
+Productos: ${o.productos||"No especificado"}
+Restricciones: ${o.restricciones||"No especificado"}
+Referencias: ${o.referencias||"No especificado"}
+
+Link de acceso directo a EstrategiaTrade:
+<${APP_URL}>
+
+Saludos.`;
+        };
+        // Correo y WhatsApp: siempre abren en pestaña nueva para no sacar al usuario del dashboard.
+        const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
+        const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
+        const copyOdtMailText=async(o,modo="asignacion")=>{try{await navigator.clipboard.writeText(buildOdtMail(o,modo));showToast("Texto copiado. Pégalo en tu correo si Outlook no abrió.");return true;}catch(e){showToast("No se pudo abrir correo. Copia el texto desde el detalle de la ODT.");return false;}};
+        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){copyOdtMailText(o,modo);}else{try{w.opener=null;}catch(_){}}}catch(e){copyOdtMailText(o,modo);}};
         const getOdtPhone=(u)=>{
           const seen=new Set();
           const scan=(obj,depth=0)=>{
-            if(!obj||depth>2||seen.has(obj))return"";
+            if(!obj||depth>2||seen.has(obj))return "";
             if(typeof obj==="object")seen.add(obj);
             const entries=typeof obj==="object"?Object.entries(obj):[["",obj]];
             for(const [k,v] of entries){
               const key=String(k||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-              const keyLooksPhone=/cel|fono|phone|whats|movil|mobile|tel/.test(key);
-              if(keyLooksPhone&&v!=null){
+              if(/cel|fono|phone|whats|movil|mobile|tel/.test(key)&&v!=null){
                 const n=String(v).replace(/\D/g,"");
                 if((n.length===9&&n.startsWith("9"))||(n.length===11&&n.startsWith("51"))||(n.length===12&&n.startsWith("519")))return n;
               }
             }
-            for(const [,v] of entries){
-              if(v&&typeof v==="object"){const r=scan(v,depth+1);if(r)return r;}
-            }
-            return"";
+            for(const [,v] of entries){if(v&&typeof v==="object"){const r=scan(v,depth+1);if(r)return r;}}
+            return "";
           };
           return scan(u);
         };
-        const findOdtDesigner=(o)=>disenadores.find(d=>String(d.id||"")===String(o?.disenadorId||"")||norm(d.email||d.correo||"")===norm(o?.demail||"")||norm(d.nombre||"")===norm(o?.dnombre||""));
+        const findOdtDesigner=(o)=>disenadores.find(d=>String(d.id||"")===String(o?.disenadorId||o?.responsableId||"")||String(d.dni||d.documento||d.usuario||"").replace(/\D/g,"")===String(o?.disenadorDni||o?.responsableDni||"").replace(/\D/g,"")||normOdt(d.email||d.correo||"")===normOdt(o?.demail||o?.disenadorEmail||o?.responsableEmail||"")||normOdt(d.nombre||"")===normOdt(o?.dnombre||o?.disenadorNombre||o?.responsableNombre||""));
         const getOdtPhoneFor=(o)=>getOdtPhone(o)||getOdtPhone(findOdtDesigner(o));
-        const normalizePeruPhone=(v)=>{const n=String(v||"").replace(/\D/g,"");if(!n)return"";if(n.startsWith("51")&&n.length>=11)return n;if(n.length===9&&n.startsWith("9"))return "51"+n;return n;};
-        const buildOdtMail=(o)=>`Tienes una nueva orden de trabajo asignada:\n\nTítulo: ${o.titulo||"—"}\nTipo de trabajo: ${o.tipoTrabajo||o.tipo||"—"}\nÁrea: ${o.area||"—"}\nFecha entrega: ${o.fechaEntrega||o.entrega||"—"}\nHora de corte: ${o.horaCorte||"—"}\n\nObjetivo y público:\n${o.objetivo||"No especificado"}\n\nMensaje principal:\n${o.mensaje||"No especificado"}\n\nMateriales: ${(o.materiales||[]).join(", ")||"No especificado"}\nMedidas: ${o.medidas||"No especificado"}\nTonalidad: ${o.tonalidad||"No especificado"}\nMecánica / dinámica: ${o.mecanica||"No especificado"}\nProductos: ${o.productos||"No especificado"}\nRestricciones: ${o.restricciones||"No especificado"}\nReferencias: ${o.referencias||"No especificado"}\n\nIngresa con tu credencial:\n${APP_URL}\n\nSaludos.`;
-        const buildOdtWhats=(o)=>`Hola ${o.dnombre||o.disenadorNombre||""}\n\nTienes una nueva actividad de diseño asignada:\n\n*${o.titulo||"Nueva ODT"}*\nEntrega: ${o.fechaEntrega||o.entrega||"—"}\nHora de cierre: ${o.horaCorte||"—"}\nTipo: ${o.tipoTrabajo||o.tipo||"—"}\nÁrea: ${o.area||"—"}\n\nRevisa el detalle en EstrategiaTrade:\n\n${APP_URL}`;
-        const openOutlookOdt=(o)=>{const to=o.demail||"";const subject=`Nueva ODT asignada: ${o.titulo||""}`;const body=buildOdtMail(o);const cuerpoLimpio=String(body).replace(/<br\s*[/]?>/gi,"\n").replace(/<a[^>]*>([^<]*)<[/]a>/gi,"$1").replace(/<[^>]+>/g,"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(cuerpoLimpio||"");const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
-        const openWhatsOdt=(o)=>{const tel=normalizePeruPhone(getOdtPhoneFor(o));const msg=buildOdtWhats(o);const url=tel?"https://wa.me/"+tel+"?text="+encodeURIComponent(msg):"https://wa.me/?text="+encodeURIComponent(msg);const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();setTimeout(()=>{try{document.body.removeChild(a);}catch{}},300);}};
-        const persistOdtCreated=()=>{setOdtCreated([]);};
+        const normalizePeruPhone=(v)=>{const n=String(v||"").replace(/\D/g,"");if(!n)return "";if(n.startsWith("51")&&n.length>=11)return n;if(n.length===9&&n.startsWith("9"))return "51"+n;return n;};
+        const openWhatsOdt=(o,modo="asignacion")=>{const tel=normalizePeruPhone(getOdtPhoneFor(o));const text=buildOdtMail(o,modo);const url=tel?`https://wa.me/${tel}?text=${encodeURIComponent(text)}`:`https://wa.me/?text=${encodeURIComponent(text)}`;openExternalBlank(url);};
+        const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
+        const getOdtDesignerContact=(o)=>({nombre:o?.dnombre||"Diseñador",email:o?.demail||"",celular:o?.dcel||""});
+        const maybeNotifyDesignerAfterCorrection=(o,nuevoEstado,updated)=>{
+          const estado=String(nuevoEstado||"").toLowerCase();
+          if(estado!=="correccion")return;
+          if(!(isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o))))return;
+          const disenador=getOdtDesignerContact(o);
+          setOdtCorrectionNote("");
+          setOdtCorrectionNotifyModal({odt:{...o,...(updated||{}),demail:disenador.email,dcel:disenador.celular},disenador});
+        };
+        const maybeNotifyRequesterAfterState=(o,nuevoEstado,updated)=>{const estado=String(nuevoEstado||"").toLowerCase();if(!(isDisenoExecutor&&isAssignedOdt(o)))return;if(estado!=="aprobacion"&&estado!=="entregado"&&estado!=="finalizado"&&estado!=="terminado")return;const solicitante=getOdtRequesterContact(o);setOdtSolicitanteNotifyModal({odt:{...o,...(updated||{}),demail:solicitante.email,dcel:solicitante.celular},modo:estado==="aprobacion"?"revision":"entrega",solicitante});};
+        const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
-        const deleteOdtInFirestore=async(id)=>{try{await setDoc(doc(db,"diseno_odts",id),{activo:false,deletedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
-        const createOdtAndNotify=()=>{const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||d?.correo||"",dcel:getOdtPhone(d),fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",alerta:"",colorD:"#6C6EF5",hh:String(odtForm.hh||tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true};setOdtFirestore(p=>[nueva,...(p||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtCreated([]);saveOdtToFirestore(nueva);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");const nextDeleted=(odtDeletedIds||[]).map(String).filter(x=>x!==String(nowId));setOdtDeletedIds(nextDeleted);try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(nextDeleted));}catch{}if(d){setOdtNotifyModal({disenador:d,odt:nueva});}else{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}showToast("ODT creada correctamente");};
-        const deleteOdt=(o)=>{ if(!adminOnly){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar la ODT ${o.id}?`))return; const id=String(o.id); setOdtFirestore(p=>(p||[]).filter(x=>String(x.id)!==id)); setOdtCreated([]); deleteOdtInFirestore(id); const next=[...new Set([...(odtDeletedIds||[]).map(String),id])]; setOdtDeletedIds(next); try{localStorage.setItem("et_odt_deleted_ids",JSON.stringify(next));}catch{} setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada con trazabilidad"); };
-        const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 260px";
+        const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{entregadoEn:extra.entregadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,correccion:55,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const estadoFirestore=(nuevoEstado==="finalizado"||nuevoEstado==="terminado")?"entregado":nuevoEstado;const updated=calcOdtPlan({...o,estado:estadoFirestore,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:estadoFirestore,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);maybeNotifyRequesterAfterState(o,estadoFirestore,updated);maybeNotifyDesignerAfterCorrection(o,estadoFirestore,updated);showToast("Estado actualizado: "+pillE(estadoFirestore).txt);return updated;};
+        const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
+        const resetOdtFormAndGoDash=()=>{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);};
+        const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
+        const deleteOdt=(o)=>{ if(!canDeleteOdt(o)){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
+        const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 190px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
         const IcoEdit=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
         const IcoTrash=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>;
         const IcoAssign=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M17 11h6"/></svg>;
         return(
-          <div style={{padding:"20px 24px 48px",background:"#f0f4f8",minHeight:"100%"}}>
+          <div className="odt-responsive-root" style={{padding:"clamp(10px,2vw,20px) clamp(10px,2.5vw,24px) 48px",background:"#f0f4f8",minHeight:"100%",overflowX:"hidden"}}>
+            <style>{`
+              @media (max-width: 900px){
+                .odt-responsive-root .odt-stepper{gap:8px!important; overflow-x:auto!important; padding-bottom:4px!important;}
+                .odt-responsive-root .odt-stepper > div{min-width:170px!important;}
+                .odt-responsive-root .odt-form-grid{grid-template-columns:1fr!important;}
+                .odt-responsive-root .odt-modal-grid{grid-template-columns:1fr!important;}
+              }
+              @media (max-width: 640px){
+                .odt-responsive-root{padding-left:8px!important;padding-right:8px!important;}
+                .odt-responsive-root .odt-stepper > div{min-width:145px!important;}
+              }
+            `}</style>
             {subT==="nueva"&&(
-              <div style={{...SH,maxWidth:1040,padding:24,margin:"0 auto"}}>
+              <div style={{...SH,maxWidth:1040,padding:"clamp(14px,2.4vw,24px)",margin:"0 auto",overflow:"hidden"}}>
                 <div style={{textAlign:"center",fontSize:20,fontWeight:800,color:"#1a2f4a",marginBottom:8}}>Nueva orden de trabajo</div>
                 <div style={{textAlign:"center",fontSize:13,color:"#8aaabb",marginBottom:26}}>Solicitud de diseño · el equipo lo recibirá automáticamente</div>
-                {(()=>{const stepActive=odtForm.titulo?1:0;const step2ok=odtForm.titulo&&odtForm.fechaEntrega;const step3ok=step2ok&&odtForm.tipo;return(
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:28}}>
-                    {["Brief","Asignación","Confirmar"].map((s,i)=>{
-                      const active=i===0||(i===1&&odtForm.titulo)||(i===2&&step2ok);
-                      const cur=i===0;
-                      return <React.Fragment key={s}>
-                        <div onClick={()=>{}} style={{display:"flex",alignItems:"center",gap:9,fontSize:14,fontWeight:800,
-                          color:cur?"#1a2f4a":active?"#6C6EF5":"#8aaabb",cursor:active&&!cur?"pointer":"default"}}
-                          title={!active&&i>0?"Completa el paso anterior primero":""}>
-                          <div style={{width:34,height:34,borderRadius:"50%",display:"grid",placeItems:"center",
-                            background:cur?"#1a2f4a":active?"#6C6EF5":"#dce6ee",
-                            color:cur||active?"#fff":"#8aaabb",fontSize:14,fontWeight:800,transition:"background .2s"}}>
-                            {active&&!cur
-                              ?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                              :<span>{i+1}</span>}
-                          </div>
-                          <span style={{display:"none"}}>{/* label hidden on mobile to save space */}</span>
-                          <span style={{display:"block"}}>{s}</span>
-                        </div>
-                        {i<2&&<div style={{flex:1,height:2,background:active?"#6C6EF5":"#e2e8f0",transition:"background .3s",borderRadius:2}}/>}
-                      </React.Fragment>;
-                    })}
-                  </div>
-                );})()}
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:20}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>1</span>Información general</div>
-                  <label style={{...lbl,textAlign:"center"}}>Título *</label><input defaultValue={odtFormDraft.titulo||""} onBlur={e=>setOdtFormDraft(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Catálogo Verano 2026" style={{...inp,fontSize:16,marginBottom:18}}/>
+                  <label style={{...lbl,textAlign:"center"}}>Título *</label><input value={odtFormDraft.titulo||odtForm.titulo||""} onChange={e=>setOdtFormDraft(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Catálogo Verano 2026" style={{...inp,fontSize:16,marginBottom:18}}/>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}><div><label style={{...lbl,textAlign:"center"}}>Solicitante</label><input readOnly value={uName||""} style={{...inp,background:"#f0f4f8",color:"#8aaabb",fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Área *</label><select value={odtForm.area} onChange={e=>setOdtForm(p=>({...p,area:e.target.value}))} style={{...inp,fontSize:15}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div></div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}><div><label style={{...lbl,textAlign:"center"}}>Fecha inicio *</label><input type="date" value={odtForm.fechaInicio} onChange={e=>setOdtForm(p=>({...p,fechaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Fecha entrega *</label><input type="date" value={odtForm.fechaEntrega} onChange={e=>setOdtForm(p=>({...p,fechaEntrega:e.target.value}))} style={{...inp,fontSize:15}}/></div></div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><label style={{...lbl,textAlign:"center"}}>Hora de inicio</label><input type="time" value={odtForm.horaInicio} onChange={e=>setOdtForm(p=>({...p,horaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Hora de corte <span style={{color:"#e17055",fontWeight:500}}>(pasada esta hora → retraso)</span></label><input type="time" value={odtForm.horaCorte} onChange={e=>setOdtForm(p=>({...p,horaCorte:e.target.value}))} style={{...inp,fontSize:15}}/></div></div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><label style={{...lbl,textAlign:"center"}}>Hora de inicio</label><input type="time" value={odtForm.horaInicio} onChange={e=>setOdtForm(p=>({...p,horaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Hora de corte <span style={{color:"#e17055",fontWeight:500}}>(pasada esta hora → retraso)</span></label><input type="time" value={odtForm.horaCorte} onChange={e=>setOdtForm(p=>({...p,horaCorte:e.target.value}))} style={{...inp,fontSize:15}}/></div></div><div style={{marginTop:16}}><label style={{...lbl,textAlign:"center"}}>Prioridad</label><select value={odtForm.prioridad||"Normal"} onChange={e=>setOdtForm(p=>({...p,prioridad:e.target.value}))} style={{...inp,fontSize:15}}>{ODT_PRIORIDADES.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
                 </div>
-                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"12px 14px",borderRadius:12,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();return <button key={u.id} onClick={()=>setOdtForm(p=>({...p,disenadorId:u.id}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"12px 14px",borderRadius:12,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:sel?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador</small></span></span><span style={{fontSize:10,fontWeight:800,color:"#00b894"}}>Disponible</span></button>})}</div></div>}
-                <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>3</span>Tipo de trabajo</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:22}}>{TIPOS_TRABAJO.map(t=>{const sel=odtForm.tipo===t.label;return <button key={t.id||t.label} onClick={()=>setOdtForm(p=>({...p,tipo:t.label,hh:t.hh}))} style={{height:78,borderRadius:14,border:`1.5px solid ${sel?"#6C6EF5":"#c8d8e8"}`,background:sel?"rgba(108,110,245,.06)":"#fff",display:"flex",alignItems:"center",gap:14,padding:"0 22px",fontSize:16,fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}><span style={{width:22,height:22,borderRadius:"50%",border:`3px solid ${sel?"#6C6EF5":"#c8d8e8"}`,display:"grid",placeItems:"center"}}>{sel&&<span style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}</span>{t.ico}{t.label}</button>})}</div><label style={{...lbl,textAlign:"center",fontSize:13}}>Objetivo y público</label><textarea onBlur={e=>setOdtFormDraft(p=>({...p,objetivo:e.target.value}))} placeholder="¿Qué debe comunicar? ¿A quién está dirigido?" style={{...inp,minHeight:90,resize:"vertical",fontSize:15,marginBottom:18}}/><label style={{...lbl,textAlign:"center",fontSize:13}}>Mensaje principal</label><textarea onBlur={e=>setOdtFormDraft(p=>({...p,mensaje:e.target.value}))} placeholder="Frase clave, claim o copy principal de la pieza" style={{...inp,minHeight:90,resize:"vertical",fontSize:15}}/></div>
+                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();return <button key={u.id} onClick={()=>setOdtForm(p=>({...p,disenadorId:u.id}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:sel?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador</small></span></span><span style={{fontSize:10,fontWeight:800,color:"#00b894"}}>Disponible</span></button>})}</div></div>}
+                <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>3</span>Tipo de trabajo</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:22}}>{TIPOS_TRABAJO.map(t=>{const sel=odtForm.tipo===t.label;return <button key={t.id||t.label} onClick={()=>setOdtForm(p=>({...p,tipo:t.label,hh:t.hh}))} style={{height:78,borderRadius:14,border:`1.5px solid ${sel?"#6C6EF5":"#c8d8e8"}`,background:sel?"rgba(108,110,245,.06)":"#fff",display:"flex",alignItems:"center",gap:14,padding:"0 22px",fontSize:16,fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}><span style={{width:22,height:22,borderRadius:"50%",border:`3px solid ${sel?"#6C6EF5":"#c8d8e8"}`,display:"grid",placeItems:"center"}}>{sel&&<span style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}</span>{t.ico}{t.label}</button>})}</div><label style={{...lbl,textAlign:"center",fontSize:13}}>Objetivo y público</label><textarea value={odtFormDraft.objetivo||""} onChange={e=>setOdtFormDraft(p=>({...p,objetivo:e.target.value}))} placeholder="¿Qué debe comunicar? ¿A quién está dirigido?" style={{...inp,minHeight:90,resize:"vertical",fontSize:15,marginBottom:18}}/><label style={{...lbl,textAlign:"center",fontSize:13}}>Mensaje principal</label><textarea value={odtFormDraft.mensaje||""} onChange={e=>setOdtFormDraft(p=>({...p,mensaje:e.target.value}))} placeholder="Frase clave, claim o copy principal de la pieza" style={{...inp,minHeight:90,resize:"vertical",fontSize:15}}/></div>
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>4</span>Materiales y medidas</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>{MATERIALES_TODOS.map(m=>{const chk=(odtForm.materiales||[]).includes(m);return <label key={m} style={{display:"flex",alignItems:"center",gap:10,border:"1px solid #e2e8f0",borderRadius:12,padding:"10px 12px",background:chk?"rgba(0,181,180,.08)":"#f8fafc",cursor:"pointer"}}><input type="checkbox" checked={chk} onChange={e=>setOdtForm(p=>({...p,materiales:e.target.checked?[...(p.materiales||[]),m]:(p.materiales||[]).filter(x=>x!==m)}))}/><span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{m}</span></label>})}</div><label style={lbl}>Medidas específicas</label><input value={odtForm.medidas} onChange={e=>setOdtForm(p=>({...p,medidas:e.target.value}))} placeholder="Ej: 1080×1920px / A3 vertical" style={inp}/></div>
-                <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>5</span>Estilo y referencias</div><label style={lbl}>Tonalidad</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{["Corporativo","Emocional","Promocional","Divertido","Impactante"].map(t=><button key={t} onClick={()=>setOdtForm(p=>({...p,tonalidad:t}))} style={{padding:"7px 13px",borderRadius:999,border:`1.5px solid ${odtForm.tonalidad===t?"#6C6EF5":"#e2e8f0"}`,background:odtForm.tonalidad===t?"#6C6EF5":"#fff",color:odtForm.tonalidad===t?"#fff":"#5a7a9a",fontWeight:700,cursor:"pointer"}}>{t}</button>)}</div><label style={lbl}>Mecánica / dinámica</label><textarea onBlur={e=>setOdtFormDraft(p=>({...p,mecanica:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical",marginBottom:12}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><div><label style={lbl}>Productos involucrados</label><input onBlur={e=>setOdtFormDraft(p=>({...p,productos:e.target.value}))} style={inp}/></div><div><label style={lbl}>Restricciones</label><input onBlur={e=>setOdtFormDraft(p=>({...p,restricciones:e.target.value}))} style={inp}/></div></div><label style={lbl}>Comentarios / referencias</label><textarea onBlur={e=>setOdtFormDraft(p=>({...p,referencias:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical"}}/></div>
+                <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>5</span>Estilo y referencias</div><label style={lbl}>Tonalidad</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{["Corporativo","Emocional","Promocional","Divertido","Impactante"].map(t=><button key={t} onClick={()=>setOdtForm(p=>({...p,tonalidad:t}))} style={{padding:"7px 13px",borderRadius:999,border:`1.5px solid ${odtForm.tonalidad===t?"#6C6EF5":"#e2e8f0"}`,background:odtForm.tonalidad===t?"#6C6EF5":"#fff",color:odtForm.tonalidad===t?"#fff":"#5a7a9a",fontWeight:700,cursor:"pointer"}}>{t}</button>)}</div><label style={lbl}>Mecánica / dinámica</label><textarea value={odtFormDraft.mecanica||""} onChange={e=>setOdtFormDraft(p=>({...p,mecanica:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical",marginBottom:12}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><div><label style={lbl}>Productos involucrados</label><input value={odtFormDraft.productos||""} onChange={e=>setOdtFormDraft(p=>({...p,productos:e.target.value}))} style={inp}/></div><div><label style={lbl}>Restricciones</label><input value={odtFormDraft.restricciones||""} onChange={e=>setOdtFormDraft(p=>({...p,restricciones:e.target.value}))} style={inp}/></div></div><label style={lbl}>Comentarios / referencias</label><textarea value={odtFormDraft.referencias||""} onChange={e=>setOdtFormDraft(p=>({...p,referencias:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical"}}/></div>
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button style={{padding:"11px 20px",borderRadius:11,border:"1.5px solid #e2e8f0",color:"#8aaabb",fontSize:13,fontWeight:700,background:"#fff",cursor:"pointer"}}>Cancelar</button><button onClick={createOdtAndNotify} style={{padding:"11px 22px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Crear y notificar</button></div>
               </div>
             )}
@@ -8298,6 +8567,7 @@ function ChecklistApp() {
                   <option value="pendiente">Pendiente</option>
                   <option value="diseño">En diseño</option>
                   <option value="aprobacion">En aprobación</option>
+                  <option value="correccion">En corrección</option>
                   <option value="entregado">Entregado</option>
                   <option value="retrasado">Retrasado</option>
                 </select>
@@ -8316,7 +8586,7 @@ function ChecklistApp() {
                 {reportStats.map(s=>{
                     const kpiIco={
                       "Total":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
-                      "Terminadas":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Entregadas":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
                       "En proceso":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
                       "Pendientes":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
                       "Con retraso":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
@@ -8329,30 +8599,27 @@ function ChecklistApp() {
                   })}
               </div>
               <div style={{...SH,overflowX:"auto",maxWidth:"100%"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1200}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1320}}>
                   <thead>
                     <tr style={{background:"#f8fafc"}}>
-                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","ALERTA","HH","TIEMPO","DÍAS","ACCIONES"].map(h=>(
+                      {["TIPO","ACTIVIDAD","ÁREA","RESPONSABLE","F. ENTREGA","H. CIERRE","ESTATUS","PROGRESO","HH","PRIORIDAD","TIEMPO TRANSCURRIDO","DÍAS TB","ACCIONES"].map(h=>(
                         <th key={h} style={{padding:"10px 12px",textAlign:"left",color:"#5a7a9a",fontWeight:700,fontSize:9,letterSpacing:".06em",borderBottom:"1px solid #e2e8f0",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {odtsReporte.length===0&&<tr><td colSpan={12} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
+                    {odtsReporte.length===0&&<tr><td colSpan={13} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
                     {odtsReporte.map(o=>{
                       const p=pillE(o.estado);
                       const isHL=odtHighlighted===o.id;
-                      const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado);
+                      const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                       return(
                         <tr key={o.id}
                           style={{borderBottom:"1px solid #f0f4f8",background:isHL?"rgba(108,110,245,.08)":"#fff",transition:"background .4s"}}
                           onMouseEnter={e=>{if(!isHL)e.currentTarget.style.background="#f8fcff";}}
                           onMouseLeave={e=>{if(!isHL)e.currentTarget.style.background="#fff";}}>
                           <td style={{padding:"12px 10px"}}>
-                            <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:10,border:"1px solid #ffe0b2",background:"#fff8ec",fontSize:11,fontWeight:700,color:"#f6a623",whiteSpace:"nowrap"}}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-                              {o.tipo}
-                            </span>
+                            {renderTypeChip(o.tipoTrabajo||o.tipo)}
                           </td>
                           <td style={{padding:"12px 10px",maxWidth:260}}>
                             <div style={{fontWeight:700,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
@@ -8375,34 +8642,24 @@ function ChecklistApp() {
                             <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:"#5a7a9a",background:"#f0f4f8"}}>{o.horaCorte||"—"}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {(adminOnly||(isEjecutor&&(String(o.disenadorId)===String(uDni)||o.dnombre===uName)))
+                            {canUpdateOdtState(o)
                               ?<select value={o.estado} onChange={async e=>{
                                   const nuevoEstado=e.target.value;
-                                  const updated={...o,estado:nuevoEstado};
-                                  const nextCreated=(odtCreated||[]).map(x=>String(x.id)===String(o.id)?updated:x);
-                                  const isBase=!nextCreated.some(x=>String(x.id)===String(o.id));
-                                  if(isBase){persistOdtCreated([updated,...(odtCreated||[])]);}else{persistOdtCreated(nextCreated);}
-                                  await updateOdtInFirestore(o.id,{estado:nuevoEstado});
-                                  setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);
-                                  showToast("Estado actualizado");
+                                  await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role});
                                 }}
                                 style={{padding:"3px 9px",borderRadius:20,border:"none",background:p.col+"18",color:p.col,fontWeight:700,fontSize:10,cursor:"pointer",outline:"none",whiteSpace:"nowrap",fontFamily:"'DM Sans',system-ui,sans-serif",appearance:"none",WebkitAppearance:"none"}}>
-                                <option value="pendiente">Pendiente</option>
-                                <option value="diseño">En diseño</option>
-                                <option value="aprobacion">En aprobación</option>
-                                <option value="entregado">Entregado</option>
-                                <option value="retrasado">Retrasado</option>
-                                <option value="cancelado">Cancelado</option>
+                                {odtStateOptions(o).map(st=><option key={st} value={st}>{pillE(st).txt}</option>)}
                               </select>
-                              :<span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:p.col,background:p.col+"18",whiteSpace:"nowrap"}}>{p.txt}</span>
+                              :renderStateChip(o.estado,true)
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:(calcOdtAlert(o)||"").startsWith("Retraso")?"#dc2626":"#f6a623",background:(calcOdtAlert(o)||"").startsWith("Retraso")?"#ffeae6":"#fff8ec",whiteSpace:"nowrap"}}>{calcOdtAlert(o)||"—"}</span>
+                            {renderStateChip(o.estado,true)}
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
                           </td>
+                          <td style={{padding:"12px 10px",textAlign:"center"}}>{renderPriorityChip(o.prioridad||"Normal",true)}</td>
                           <td style={{padding:"12px 10px",minWidth:120}}>
                             <div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",marginBottom:3}}>{o.tiempo}</div>
                             <div style={{height:5,background:"#edf2f7",borderRadius:3,overflow:"hidden"}}>
@@ -8410,16 +8667,16 @@ function ChecklistApp() {
                             </div>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
-                            <span style={{fontSize:11,fontWeight:700,color:"#1a2f4a"}}>{o.dias}</span>
+                            <span style={{fontSize:11,fontWeight:800,color:String(o.dias||"").toLowerCase().includes("retraso")?"#dc2626":String(o.dias||"").toLowerCase().includes("adelanto")||String(o.dias||"").toLowerCase().includes("a tiempo")?"#00b894":"#1a2f4a",whiteSpace:"nowrap"}}>{o.dias}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
                               <button title="Ver detalle" onClick={()=>setOdtViewModal(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoEye/></button>
-                              {adminOnly&&<>
+                              {canEditOdt(o)&&<>
                                 <button title="Editar" onClick={()=>{setOdtEditModal(o);setOdtEditForm({});}} style={{width:34,height:34,borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoEdit/></button>
-                                <button onClick={()=>setOdtAssignModal(o)} style={{height:34,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontWeight:700,fontSize:11,cursor:"pointer"}}>Asignar</button>
-                                <button title="Eliminar" onClick={()=>deleteOdt(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoTrash/></button>
+                                {canAssignOdt(o)&&<button onClick={()=>setOdtAssignModal(o)} style={{height:34,padding:"0 11px",borderRadius:9,border:"1.5px solid #6C6EF5",background:"#fff",color:"#6C6EF5",fontWeight:700,fontSize:11,cursor:"pointer"}}>Asignar</button>}
                               </>}
+                              {canDeleteOdt(o)&&<button title="Eliminar" onClick={()=>deleteOdt(o)} style={{width:34,height:34,borderRadius:9,border:"1px solid #fecaca",background:"#fff1f2",display:"grid",placeItems:"center",cursor:"pointer"}}><IcoTrash/></button>}
                             </div>
                           </td>
                         </tr>
@@ -8473,38 +8730,39 @@ function ChecklistApp() {
                   </div>
                 </div>
                 {/* ── Kanban columns ── */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(230px,1fr))",gap:14}}>
                   {[
                     {id:"pendiente",  label:"Pendiente",     c:"#f6a623", estados:["pendiente"]},
                     {id:"diseno",     label:"En diseño",     c:"#6C6EF5", estados:["diseño","en_diseno"]},
-                    {id:"aprobacion", label:"En aprobación", c:"#0984e3", estados:["aprobacion"]},
-                    {id:"entregado",  label:"Entregado",     c:"#00b894", estados:["entregado"]},
+                    {id:"aprobacion", label:"En aprobación", c:"#0984e3", estados:["aprobacion","aprobado"]},
+                    {id:"correccion", label:"En corrección", c:"#f6a623", estados:["correccion"]},
+                    {id:"entregado",  label:"Entregado",    c:"#00b894", estados:["entregado"]},
                   ].map(col=>{
                     const colItems=odtsRol.filter(o=>{
                       const matchEstado=col.estados.some(e=>o.estado===e)||col.estados.some(e=>o.stat===e);
                       const matchResp=odtKanbanFiltro.resp==="todos"||o.disenadorId===odtKanbanFiltro.resp||o.did===odtKanbanFiltro.resp;
                       const matchTipo=odtKanbanFiltro.tipo==="todos"||o.tipoTrabajo===odtKanbanFiltro.tipo||o.tipo===odtKanbanFiltro.tipo;
-                      return matchEstado&&matchResp&&matchTipo;
+                      const matchEntregadoReciente=col.id!=="entregado"||isOdtDeliveredVisibleInKanban(o);
+                      return matchEstado&&matchResp&&matchTipo&&matchEntregadoReciente;
                     });
                     return(
                       <div key={col.id}>
                         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10,padding:"0 4px"}}>
                           <span style={{width:8,height:8,borderRadius:"50%",background:col.c,flexShrink:0}}/>
                           <span style={{fontSize:10,fontWeight:800,color:"#5a7a9a",letterSpacing:".05em",textTransform:"uppercase"}}>{col.label}</span>
+                          {col.id==="entregado"&&<span style={{fontSize:9,color:"#8aaabb",fontWeight:700,textTransform:"none",letterSpacing:0}}>últimos {KANBAN_ENTREGADOS_DIAS}d</span>}
                           <span style={{marginLeft:"auto",padding:"1px 8px",borderRadius:20,fontSize:9,fontWeight:700,background:col.c+"18",color:col.c}}>{colItems.length}</span>
                         </div>
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {colItems.map(o=>{
                             const isHL=odtHighlighted===o.id;
-                            const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado||o.stat);
+                            const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                             return(
                               <div key={o.id} style={{background:isHL?"rgba(108,110,245,.07)":"#fff",borderRadius:12,border:"1px solid #e2e8f0",borderLeft:`3px solid ${col.c}`,padding:12,boxShadow:"0 1px 4px rgba(0,0,0,.05)",transition:"background .4s"}}>
                                 <div style={{fontWeight:700,color:"#1a2f4a",fontSize:12,marginBottom:5,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
                                 <div style={{display:"flex",gap:5,marginBottom:9,flexWrap:"wrap"}}>
-                                  <span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,background:col.c+"18",color:col.c,display:"flex",alignItems:"center",gap:4}}>
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-                                    {o.tipoTrabajo||o.tipo||"—"}
-                                  </span>
+                                  {renderTypeChip(o.tipoTrabajo||o.tipo,true)}
+                                  {renderPriorityChip(o.prioridad||"Normal",true)}
                                   {vencida&&<span style={{padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,background:"#ffeae6",color:"#dc2626",display:"flex",alignItems:"center",gap:3}}>
                                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                                     VENCIDO
@@ -8518,23 +8776,16 @@ function ChecklistApp() {
                                   </div>:<span style={{fontSize:10,color:"#b2bec3"}}>Sin asignar</span>}
                                   <span style={{fontSize:10,color:vencida?"#dc2626":"#8aaabb",fontWeight:vencida?700:400}}>{o.fechaEntrega||o.entrega||"—"}</span>
                                 </div>
-                                {adminOnly&&o.estado==="pendiente"&&!o.disenadorId&&<button onClick={()=>setOdtAssignModal(o)} style={{marginTop:8,width:"100%",padding:"5px 0",borderRadius:8,border:"1px solid #6C6EF5",background:"#EEEFFE",color:"#6C6EF5",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                                {canAssignOdt(o)&&o.estado==="pendiente"&&!o.disenadorId&&<button onClick={()=>setOdtAssignModal(o)} style={{marginTop:8,width:"100%",padding:"5px 0",borderRadius:8,border:"1px solid #6C6EF5",background:"#EEEFFE",color:"#6C6EF5",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                                   Asignar
                                 </button>}
-                                {isEjecutor&&(String(o.disenadorId)===String(uDni)||o.dnombre===uName)&&(()=>{
-                                  const NEXT={pendiente:{label:"Iniciar trabajo",c:"#f6a623",nc:"diseño"},diseño:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},aprobacion:{label:"Marcar entregado",c:"#00b894",nc:"entregado"}};
+                                {isEjecutor&&isAssignedOdt(o)&&(()=>{
+                                  const NEXT={pendiente:{label:"Iniciar trabajo",c:"#f6a623",nc:"diseño"},diseño:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},en_diseno:{label:"Listo para revisión →",c:"#6C6EF5",nc:"aprobacion"},aprobado:{label:"Entregar ODT",c:"#00b894",nc:"entregado"}};
                                   const nx=NEXT[o.estado];
+                                  if(o.estado==="aprobacion")return <button disabled style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#8aaabb",fontSize:11,fontWeight:800,cursor:"not-allowed"}}>Esperando aprobación</button>;
                                   if(!nx)return null;
-                                  return <button onClick={async()=>{
-                                    const updated={...o,estado:nx.nc};
-                                    const nextCreated=(odtCreated||[]).map(x=>String(x.id)===String(o.id)?updated:x);
-                                    const isBase=!nextCreated.some(x=>String(x.id)===String(o.id));
-                                    if(isBase){persistOdtCreated([updated,...(odtCreated||[])]);}else{persistOdtCreated(nextCreated);}
-                                    await updateOdtInFirestore(o.id,{estado:nx.nc});
-                                    setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);
-                                    showToast("Estado actualizado: "+nx.nc);
-                                  }} style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"none",background:nx.c,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                                  return <button onClick={()=>updateOdtEstado(o,nx.nc,{actualizadoPor:uName||uDni,actualizadoRol:role})} style={{marginTop:8,width:"100%",padding:"7px 0",borderRadius:8,border:"none",background:nx.c,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                                     {nx.label}
                                   </button>;
@@ -8551,11 +8802,22 @@ function ChecklistApp() {
               </>}
 
               {odtDashView==="panel"&&<>
+                <div style={{display:"grid",gridTemplateColumns:`repeat(${odtDashLevelItems.length},1fr)`,gap:10,marginBottom:14}}>
+                  {odtDashLevelItems.map(l=>{const on=odtDashLevelActive===l.id;return(
+                    <button key={l.id} onClick={()=>setOdtDashLvl(l.id)} style={{...SH,padding:"14px 10px",minHeight:68,textAlign:"center",border:on?"2px solid #6C6EF5":"1px solid #e2e8f0",background:on?"#1a2f4a":"#fff",color:on?"#fff":"#5a7a9a",cursor:"pointer"}}>
+                      <div style={{display:"flex",justifyContent:"center",marginBottom:5,color:on?"#fff":"#5a7a9a"}}>{l.ico}</div>
+                      <div style={{fontSize:12,fontWeight:900,color:on?"#fff":"#1a2f4a"}}>{l.t}</div>
+                      <div style={{fontSize:9,color:on?"rgba(255,255,255,.75)":"#8aaabb",marginTop:2}}>{l.d}</div>
+                    </button>
+                  )})}
+                </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
                   {reportStats.map(s=>{
                     const kpiIco2={
                       "Total":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
                       "Terminadas":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Entregadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Finalizadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
                       "En proceso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
                       "Pendientes":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
                       "Con retraso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
@@ -8570,97 +8832,267 @@ function ChecklistApp() {
                 <div style={{...SH,padding:18}}>
                   <div style={{fontWeight:800,color:"#1a2f4a",marginBottom:10}}>Avance global</div>
                   <div style={{height:12,borderRadius:8,overflow:"hidden",display:"flex",background:"#e2e8f0"}}>
-                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>o.estado==="entregado").length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
+                    {(()=>{const total=odtsRol.length||1;const pEnt=Math.round(odtsRol.filter(o=>isOdtFinalizada(o)).length/total*100);const pProc=Math.round(odtsRol.filter(o=>["diseño","en_diseno","aprobacion","aprobado"].includes(o.estado||o.stat)).length/total*100);const pPend=Math.round(odtsRol.filter(o=>o.estado==="pendiente"||o.stat==="pendiente").length/total*100);const pRet=Math.max(0,100-pEnt-pProc-pPend);return<><div style={{width:`${pEnt}%`,background:"#00b894",transition:"width .4s"}}/><div style={{width:`${pProc}%`,background:"#0984e3",transition:"width .4s"}}/><div style={{width:`${pPend}%`,background:"#f6a623",transition:"width .4s"}}/><div style={{width:`${pRet}%`,background:"#dc2626",transition:"width .4s"}}/></>;})()}
                   </div>
                   <div style={{display:"flex",gap:14,marginTop:8,flexWrap:"wrap"}}>
                     {[{c:"#00b894",l:"Entregado"},{c:"#0984e3",l:"En proceso"},{c:"#f6a623",l:"Pendiente"},{c:"#dc2626",l:"Con retraso"}].map(x=><span key={x.l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#5a7a9a"}}><span style={{width:8,height:8,borderRadius:"50%",background:x.c}}/>{x.l}</span>)}
                   </div>
                 </div>
+                {odtDashLevelActive==="gerencia"&&<div style={{...SH,padding:16,marginTop:12}}>
+                  <div style={{fontWeight:900,fontSize:13,color:"#1a2f4a",textAlign:"center",marginBottom:12}}>JUNIO 2026</div>
+                  <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los responsables</option></select>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los tipos</option></select>
+                    <select style={{padding:"7px 10px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",fontSize:10,color:"#1a2f4a"}}><option>Todos los estados</option></select>
+                  </div>
+                  <div style={{overflowX:"auto",border:"1px solid #e2e8f0",borderRadius:10}}>
+                    <div style={{minWidth:900}}>
+                      <div style={{display:"grid",gridTemplateColumns:"230px repeat(30,1fr)",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",alignItems:"center"}}>
+                        <div style={{padding:"8px 10px",fontSize:9,fontWeight:900,color:"#5a7a9a",textTransform:"uppercase"}}>Actividad</div>
+                        {Array.from({length:30},(_,i)=><div key={i} style={{textAlign:"center",fontSize:9,fontWeight:800,color:"#8aaabb"}}>{i+1}</div>)}
+                      </div>
+                      {odtGanttItems.map(it=>(
+                        <div key={it.id} style={{display:"grid",gridTemplateColumns:"230px repeat(30,1fr)",minHeight:40,borderBottom:"1px solid #f5f7fa",alignItems:"center"}}>
+                          <div style={{padding:"8px 10px",fontSize:11,fontWeight:800,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.titulo}</div>
+                          <div style={{gridColumn:`${it.start+1}/${Math.min(it.end+2,32)}`,height:18,borderRadius:18,background:it.color,color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",paddingLeft:9,whiteSpace:"nowrap"}}>{it.label}</div>
+                        </div>
+                      ))}
+                      {odtGanttItems.length===0&&<div style={{padding:18,textAlign:"center",fontSize:11,color:"#8aaabb"}}>Sin ODT visibles para graficar.</div>}
+                    </div>
+                  </div>
+                </div>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
                   <div style={{...SH,padding:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       <span style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Vencen en 7 días</span>
-                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length}</span>
+                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length}</span>
                     </div>
-                    {odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).slice(0,5).map(o=>(
+                    {odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).slice(0,5).map(o=>(
                       <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #f5f7fa"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
                         <span style={{flex:1,fontSize:11,color:"#1a2f4a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</span>
                         <span style={{padding:"2px 8px",borderRadius:20,background:"#fff8ec",color:"#f6a623",fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{Math.ceil((new Date(o.fechaEntrega)-new Date(todayStr()))/86400000)===0?"Hoy":Math.ceil((new Date(o.fechaEntrega)-new Date(todayStr()))/86400000)+"d"}</span>
                       </div>
                     ))}
-                    {odtsRol.filter(o=>o.fechaEntrega&&!["entregado"].includes(o.estado)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin vencimientos próximos</div>}
+                    {odtsRol.filter(o=>o.fechaEntrega&&!isOdtFinalizada(o)&&new Date(o.fechaEntrega)>=new Date(todayStr())&&new Date(o.fechaEntrega)-new Date(todayStr())<=7*86400000).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin vencimientos próximos</div>}
                   </div>
                   <div style={{...SH,padding:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                       <span style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Con retraso</span>
-                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).length}</span>
+                      <span style={{marginLeft:"auto",padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:800,fontSize:12}}>{odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).length}</span>
                     </div>
-                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).slice(0,5).map(o=>(
+                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).slice(0,5).map(o=>(
                       <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #f5f7fa"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                         <span style={{flex:1,fontSize:11,color:"#1a2f4a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</span>
                         <span style={{padding:"2px 8px",borderRadius:20,background:"#ffeae6",color:"#dc2626",fontWeight:700,fontSize:9}}>RETRASO</span>
                       </div>
                     ))}
-                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!["entregado"].includes(o.estado))).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin retrasos</div>}
+                    {odtsRol.filter(o=>o.estado==="retrasado"||(o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o))).length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"16px 0"}}>Sin retrasos</div>}
                   </div>
-                  <div style={{...SH,padding:16,gridColumn:"1/-1"}}>
-                    <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:7}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                      Rendimiento por diseñador
-                    </div>
-                    {disenadores.map(d=>{
-                      const asigs=odtsRol.filter(o=>o.disenadorId===d.id||o.did===((d.nombre||"").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()));
-                      const entregadas=asigs.filter(o=>o.estado==="entregado").length;
-                      const pct=asigs.length>0?Math.round(entregadas/asigs.length*100):0;
-                      const colors=["#6C6EF5","#0984e3","#00b5b4"];
-                      const ci=disenadores.indexOf(d)%colors.length;
-                      const ini=(d.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
-                      return(
-                        <div key={d.id} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
-                          <span style={{width:30,height:30,borderRadius:"50%",background:colors[ci],display:"grid",placeItems:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>{ini}</span>
-                          <span style={{width:110,fontSize:11,fontWeight:700,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.nombre}</span>
-                          <div style={{flex:1,height:7,background:"#f0f4f8",borderRadius:4}}><div style={{width:`${pct}%`,height:"100%",background:colors[ci],borderRadius:4,transition:"width .4s"}}/></div>
-                          <span style={{fontSize:11,fontWeight:800,color:colors[ci],width:36,textAlign:"right"}}>{pct}%</span>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12,gridColumn:"1/-1"}}>
+                    <div style={{...SH,padding:16}}>
+                      <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:7}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        Causa raíz detectada
+                      </div>
+                      {gerenciaCausas.slice(0,5).map(c=>(
+                        <div key={c.label} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #f5f7fa"}}>
+                          <span style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
+                          <span style={{flex:1,fontSize:11,fontWeight:700,color:"#1a2f4a"}}>{c.label}</span>
+                          <span style={{padding:"2px 8px",borderRadius:20,background:c.color+"18",color:c.color,fontWeight:800,fontSize:10}}>{c.count}</span>
                         </div>
-                      );
-                    })}
-                    {disenadores.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin diseñadores activos</div>}
+                      ))}
+                      {gerenciaCausas.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin patrones suficientes para análisis.</div>}
+                    </div>
+                    <div style={{...SH,padding:16}}>
+                      <div style={{fontWeight:800,fontSize:13,color:"#1a2f4a",marginBottom:12,display:"flex",alignItems:"center",gap:7}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        Rendimiento por diseñador
+                      </div>
+                      {gerenciaDesignerMetrics.map((d,idx)=>{
+                        const colors=["#6C6EF5","#0984e3","#00b5b4"];
+                        const c=colors[idx%colors.length];
+                        return(
+                          <div key={d.id||d.nombre} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                            <span style={{width:30,height:30,borderRadius:"50%",background:c,display:"grid",placeItems:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>{d.ini}</span>
+                            <span style={{width:120,fontSize:11,fontWeight:700,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.nombre}</span>
+                            <div style={{flex:1,height:7,background:"#f0f4f8",borderRadius:4}}><div style={{width:`${d.pct}%`,height:"100%",background:c,borderRadius:4,transition:"width .4s"}}/></div>
+                            <span style={{fontSize:10,fontWeight:800,color:d.retrasos?"#dc2626":c,width:58,textAlign:"right"}}>{d.pct}% · {d.retrasos}r</span>
+                          </div>
+                        );
+                      })}
+                      {gerenciaDesignerMetrics.length===0&&<div style={{fontSize:11,color:"#b2bec3",textAlign:"center",padding:"12px 0"}}>Sin diseñadores activos</div>}
+                    </div>
                   </div>
                 </div>
               </>}
             </>)}
-            {odtViewModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"8px",overflow:"hidden"}}><div style={{background:"#fff",borderRadius:14,width:"min(760px,96vw)",maxHeight:"calc(100dvh - 16px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderBottom:"1px solid #e2e8f0",flexShrink:0}}><div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg></div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{odtViewModal.titulo}</div><div style={{fontSize:11,color:"#8aaabb",marginTop:2,display:"flex",gap:8,flexWrap:"wrap"}}><span>#{odtViewModal.id}</span><span style={{color:"#e2e8f0"}}>·</span><span>{odtViewModal.area||"—"}</span><span style={{color:"#e2e8f0"}}>·</span><span style={{color:odtViewModal.estado==="retrasado"?"#dc2626":odtViewModal.estado==="entregado"?"#00b894":"#6C6EF5",fontWeight:700}}>{odtViewModal.estado||"pendiente"}</span></div></div><button onClick={()=>setOdtViewModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{overflowY:"auto",flex:1,padding:"10px 12px"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:7,marginBottom:8}}>{[["Tipo de trabajo",odtViewModal.tipoTrabajo||odtViewModal.tipo],["Responsable",odtViewModal.dnombre||"Sin asignar"],["Fecha inicio",odtViewModal.fechaInicio],["Fecha entrega",odtViewModal.fechaEntrega],["Hora de corte",odtViewModal.horaCorte],["HH estimadas",(odtViewModal.hh?odtViewModal.hh+"h":null)],["Prioridad",odtViewModal.prioridad],["Materiales",(odtViewModal.materiales||[]).join(", ")||null],["Medidas",odtViewModal.medidas],["Tonalidad",odtViewModal.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 12px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:12,fontWeight:600,color:"#1a2f4a"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtViewModal.objetivo],["Mensaje principal",odtViewModal.mensaje],["Mecánica / dinámica",odtViewModal.mecanica],["Productos",odtViewModal.productos],["Restricciones",odtViewModal.restricciones],["Comentarios / referencias",odtViewModal.referencias]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 14px",marginBottom:8}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:5}}>{k}</div><div style={{fontSize:13,color:"#1a2f4a",fontWeight:500,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div>{adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"8px 12px",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:7,background:"#fff"}}><button onClick={()=>{openWhatsOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><span>WhatsApp</span></button><button onClick={()=>{openOutlookOdt(odtViewModal);setOdtViewModal(null);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"12px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#1a2f4a",fontSize:13}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>Correo</span></button><button onClick={()=>setOdtViewModal(null)} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontWeight:700,cursor:"pointer",fontSize:13,whiteSpace:"nowrap"}}>Cerrar</button></div>}{!adminOnly&&<div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px",flexShrink:0,
-              display:"flex",gap:10,justifyContent:"flex-end",background:"#fff",flexWrap:"wrap"}}>
-              {isSolicitante&&(()=>{
-                // Find marketing coordinator email from usuarios
-                const mktCoord=usuarios.find(u=>u.area==="marketing"&&(u.rol==="coordinador"||u.rol==="admin")&&u.activo!==false);
-                const toEmail=mktCoord?.email||"marketing@corporacionvega.pe";
-                return <button onClick={()=>{
-                  const subj=`Seguimiento ODT: ${odtViewModal.titulo}`;
-                  const body=`Equipo de Marketing,
+            {/* ET_FIX_VIEW_MODAL_ACTIONS_HEADER_ROW_20260614 */}
+            {odtViewModal&&(()=>{
+              const detailItems=[
+                ["Tipo de trabajo",odtViewModal.tipoTrabajo||odtViewModal.tipo],
+                ["Responsable",odtViewModal.dnombre||"Sin asignar"],
+                ["Fecha inicio",odtViewModal.fechaInicio],
+                ["Fecha entrega",odtViewModal.fechaEntrega],
+                ["Hora de corte",odtViewModal.horaCorte],
+                ["HH estimadas",odtViewModal.hh?odtViewModal.hh+"h":null],
+                ["Prioridad",odtViewModal.prioridad],
+                ["Materiales",(odtViewModal.materiales||[]).join(", ")||null],
+                ["Medidas",odtViewModal.medidas],
+                ["Tonalidad",odtViewModal.tonalidad]
+              ];
+              const textItems=[
+                ["Objetivo y público",odtViewModal.objetivo],
+                ["Mensaje principal",odtViewModal.mensaje],
+                ["Mecánica / dinámica",odtViewModal.mecanica],
+                ["Productos",odtViewModal.productos],
+                ["Restricciones",odtViewModal.restricciones],
+                ["Comentarios / referencias",odtViewModal.referencias]
+              ];
+              const viewActionBtn=(label,icon,onClick,bg,border,color="#1a2f4a")=>(
+                <button onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"9px 10px",borderRadius:10,border,background:bg,cursor:"pointer",fontWeight:900,color,fontSize:11,whiteSpace:"nowrap",minHeight:36}}>
+                  {icon}{label}
+                </button>
+              );
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px"}}>
+                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 16px))",maxHeight:"calc(100dvh - 16px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{borderBottom:"1px solid #e2e8f0",flexShrink:0,background:"#fff"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px 6px 10px"}}>
+                      <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:900,fontSize:12.5,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{odtViewModal.titulo}</div>
+                        <div style={{fontSize:9.5,color:"#8aaabb",marginTop:1,display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                          <span>#{odtViewModal.id}</span><span style={{color:"#e2e8f0"}}>·</span><span>{odtViewModal.area||"—"}</span><span style={{color:"#e2e8f0"}}>·</span><span style={{color:odtViewModal.estado==="retrasado"?"#dc2626":isOdtFinalizada(odtViewModal)?"#00b894":"#6C6EF5",fontWeight:800}}>{pillE(odtViewModal.estado).txt||"Pendiente"}</span>
+                        </div>
+                      </div>
+                      <button onClick={()=>setOdtViewModal(null)} style={{width:30,height:30,borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:canNotifyOdt(odtViewModal)?"1fr 1fr 1fr":"1fr",gap:7,padding:"0 10px 9px 10px"}}>
+                      {canNotifyOdt(odtViewModal)&&viewActionBtn("WhatsApp",<svg key="wa" width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg>,()=>{openWhatsOdt(odtViewModal);setOdtViewModal(null);},"#f0faf5","1.5px solid #d4f1e4")}
+                      {canNotifyOdt(odtViewModal)&&viewActionBtn("Correo",<svg key="mail" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>,()=>{openOutlookOdt(odtViewModal);setOdtViewModal(null);},"#f0f6ff","1.5px solid #c8d8e8")}
+                      {(isSolicitante&&isRequesterOdt(odtViewModal)&&!canNotifyOdt(odtViewModal))&&viewActionBtn("Consultar",<svg key="mail2" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>,()=>{const mktCoord=usuarios.find(u=>u.area==="marketing"&&(u.rol==="coordinador"||u.rol==="admin")&&u.activo!==false);const toEmail=mktCoord?.email||"marketing@corporacionvega.pe";const subj=`Seguimiento ODT: ${odtViewModal.titulo}`;const body=`Equipo de Marketing,\n\nSolicitamos información sobre el avance de la siguiente orden de trabajo:\n\n${buildOdtMail(odtViewModal)}\n\nQuedo pendiente de su respuesta.\n\nSaludos.`;const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);openExternalBlank(url);},"#f0f6ff","1.5px solid #c8d8e8","#0984e3")}
+                      {viewActionBtn("Cerrar",<svg key="x" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,()=>setOdtViewModal(null),"#f8fafc","1px solid #e2e8f0","#5a7a9a")}
+                    </div>
+                  </div>
+                  <div style={{overflowY:"auto",flex:1,padding:"8px 10px",minHeight:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:10,fontWeight:900,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(128px,1fr))",gap:6,marginBottom:8}}>{detailItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 7px"}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",lineHeight:1.2}}>{v}</div></div>):null)}</div>
+                    {textItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 8px",marginBottom:5}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,color:"#1a2f4a",fontWeight:600,lineHeight:1.3,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}
+                  </div>
+                </div>
+              </div>;
+            })()}
+            {/* ET_EDIT_ASSIGN_MODAL_RENDER_20260613_1735 */}
 
-Solicitamos información sobre el avance de la siguiente orden de trabajo:
-
-${buildOdtMail(odtViewModal)}
-
-Quedo pendiente de su respuesta.
-
-Saludos.`;
-                  const url="https://outlook.office.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
-                  window.open(url,"_blank","noopener,noreferrer");
-                }} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderRadius:12,
-                  border:"1.5px solid #c8d8e8",background:"#f0f6ff",cursor:"pointer",fontWeight:700,color:"#0984e3",fontSize:12}}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-                  Consultar a Marketing
-                </button>;
-              })()}
-              <button onClick={()=>setOdtViewModal(null)} style={{padding:"11px 22px",borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#5a7a9a",fontWeight:700,cursor:"pointer"}}>Cerrar</button>
-            </div>}</div></div>}
-            {odtNotifyModal&&adminOnly&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:123,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"8px",overflow:"hidden"}}><div style={{background:"#fff",borderRadius:14,width:"min(760px,96vw)",maxHeight:"calc(100dvh - 16px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0,background:"linear-gradient(135deg,#1a2f4a,#0f1f33)"}}><div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",fontSize:15,fontWeight:800,color:"#fff",flexShrink:0}}>{(odtNotifyModal.disenador?.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:14,color:"#fff"}}>ODT lista — Notificar a {odtNotifyModal.disenador?.nombre}</div><div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo"} · {getOdtPhone(odtNotifyModal.disenador)||"Sin celular"}</div></div><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",flex:1,overflow:"hidden",minHeight:0}}><div style={{overflowY:"auto",padding:"16px 20px",borderRight:"1px solid #e2e8f0"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Brief de la ODT</span></div><div style={{background:"#EEEFFE",borderRadius:10,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>Título</div><div style={{fontSize:14,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.odt?.titulo}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>{[["Tipo",odtNotifyModal.odt?.tipoTrabajo||odtNotifyModal.odt?.tipo],["Área",odtNotifyModal.odt?.area],["F. Entrega",odtNotifyModal.odt?.fechaEntrega],["H. Corte",odtNotifyModal.odt?.horaCorte],["HH",odtNotifyModal.odt?.hh?odtNotifyModal.odt.hh+"h":null],["Materiales",(odtNotifyModal.odt?.materiales||[]).join(", ")||null],["Medidas",odtNotifyModal.odt?.medidas],["Tonalidad",odtNotifyModal.odt?.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtNotifyModal.odt?.objetivo],["Mensaje principal",odtNotifyModal.odt?.mensaje],["Mecánica / dinámica",odtNotifyModal.odt?.mecanica],["Restricciones",odtNotifyModal.odt?.restricciones]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:6}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:4}}>{k}</div><div style={{fontSize:12,color:"#1a2f4a",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div><div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12,background:"#f8fafc"}}><div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Notificar al diseñador</div><div style={{fontSize:11,color:"#8aaabb",lineHeight:1.6,marginBottom:4}}>Elige el canal. El diseñador recibirá el brief completo de la orden.</div><button onClick={()=>openWhatsOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email||odtNotifyModal.disenador?.correo,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #d4f1e4",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>WhatsApp directo</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{getOdtPhone(odtNotifyModal.disenador)||"Sin número registrado"}</div></div></button><button onClick={()=>openOutlookOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email||odtNotifyModal.disenador?.correo,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #c8d8e8",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Correo electrónico</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo registrado"}</div></div></button><div style={{borderTop:"1px solid #e2e8f0",margin:"4px 0"}}/><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",hh:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{padding:"14px 18px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Listo — ir al Dashboard</button><div style={{fontSize:10,color:"#b2bec3",textAlign:"center",lineHeight:1.5}}>ODT guardada. Puedes notificar ahora o más tarde desde el Reporte.</div></div></div></div></div>}
+            {odtAssignModal&&canAssignOdt(odtAssignModal)&&(()=>{
+              const current=odtAssignModal||{};
+              const selectedId=odtAssignModal._newDesignerId||current.disenadorId||"";
+              const sel=disenadores.find(d=>String(d.id)===String(selectedId));
+              const saveAssign=async()=>{
+                if(!sel){showToast("Selecciona un diseñador");return;}
+                const ini=(sel.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();
+                const patch={disenadorId:sel.id,dnombre:sel.nombre,demail:sel.email||"",dcel:sel.celular||"",did:ini,colorD:sel.color||current.colorD||"#6C6EF5",asignadoPor:uName||uDni,asignadoEn:new Date().toISOString()};
+                await updateOdtInFirestore(current.id,patch);
+                setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(current.id)?calcOdtPlan({...x,...patch}):x));
+                setOdtAssignModal(null);
+                showToast("ODT reasignada correctamente");
+              };
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(520px,100%)",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                    <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Asignar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{current.titulo}</div></div>
+                    <button onClick={()=>setOdtAssignModal(null)} style={{width:30,height:30,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900,flexShrink:0}}>×</button>
+                  </div>
+                  <div style={{padding:20}}>
+                    <label style={{...lbl}}>Diseñador responsable</label>
+                    <select value={selectedId} onChange={e=>setOdtAssignModal(p=>({...p,_newDesignerId:e.target.value}))} style={{...inp,background:"#fff",marginBottom:14}}>
+                      <option value="">Seleccionar diseñador</option>
+                      {disenadores.map(d=><option key={d.id} value={d.id}>{d.nombre}</option>)}
+                    </select>
+                    {sel&&<div style={{padding:"10px 12px",borderRadius:12,background:"#f0f6ff",border:"1px solid #c8d8e8",fontSize:12,color:"#5a7a9a",marginBottom:16}}>Se asignará a <b style={{color:"#1a2f4a"}}>{sel.nombre}</b>{sel.email?` · ${sel.email}`:""}</div>}
+                    <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
+                      <button onClick={()=>setOdtAssignModal(null)} style={{padding:"11px 16px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Cancelar</button>
+                      <button onClick={saveAssign} style={{padding:"11px 18px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar asignación</button>
+                    </div>
+                  </div>
+                </div>
+              </div>;
+            })()}
+            {odtEditModal&&canEditOdt(odtEditModal)&&(()=>{
+              const cur=odtEditModal||{};
+              const val=(k)=>odtEditForm[k]!==undefined?odtEditForm[k]:(cur[k]??"");
+              const setF=(k,v)=>setOdtEditForm(p=>({...p,[k]:v}));
+              const saveEdit=async()=>{
+                const patch={
+                  titulo:String(val("titulo")||"").trim()||cur.titulo,
+                  area:val("area")||"Trade Marketing",
+                  tipoTrabajo:val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo,
+                  tipo:(val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",
+                  fechaInicio:val("fechaInicio")||"",
+                  fechaEntrega:val("fechaEntrega")||"",
+                  entrega:val("fechaEntrega")||"—",
+                  horaCorte:val("horaCorte")||"",
+                  hh:String((TIPOS_TRABAJO.find(t=>t.label===(val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo))||{}).hh||cur.hh||""),
+                  medidas:val("medidas")||"",
+                  tonalidad:val("tonalidad")||"",
+                  prioridad:val("prioridad")||cur.prioridad||"Normal",
+                  objetivo:val("objetivo")||"",
+                  mensaje:val("mensaje")||"",
+                  mecanica:val("mecanica")||"",
+                  productos:val("productos")||"",
+                  restricciones:val("restricciones")||"",
+                  referencias:val("referencias")||"",
+                  editadoPor:uName||uDni,
+                  editadoEn:new Date().toISOString()
+                };
+                const tipoObj=TIPOS_TRABAJO.find(t=>t.label===patch.tipoTrabajo);
+                if(tipoObj&&!patch.hh)patch.hh=String(tipoObj.hh||"");
+                await updateOdtInFirestore(cur.id,patch);
+                setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(cur.id)?calcOdtPlan({...x,...patch}):x));
+                setOdtEditModal(null);setOdtEditForm({});showToast("ODT actualizada correctamente");
+              };
+              const field=(label,k,type="text")=><div><label style={{...lbl}}>{label}</label>{type==="textarea"?<textarea value={val(k)} onChange={e=>setF(k,e.target.value)} rows={2} style={{...inp,resize:"vertical",minHeight:68}}/>:<input type={type} value={val(k)} onChange={e=>setF(k,e.target.value)} style={{...inp}}/>}</div>;
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,2vw,22px)",overflow:"hidden"}}>
+                <div style={{background:"#fff",borderRadius:18,width:"min(860px,calc(100vw - 44px))",maxHeight:"calc(100vh - 44px)",display:"flex",flexDirection:"column",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                  <div style={{padding:"10px 14px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexShrink:0,flexWrap:"nowrap"}}>
+                    <div style={{minWidth:0}}><div style={{fontSize:14,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:10,color:"rgba(255,255,255,.65)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220}}>{cur.id}</div></div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"8px 12px",borderRadius:10,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:12}}>Cancelar</button>
+                      <button onClick={saveEdit} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",fontSize:12,boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
+                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:30,height:30,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900,flexShrink:0}}>×</button>
+                    </div>
+                  </div>
+                  <div style={{padding:"14px 16px",overflowY:"auto",minHeight:0,flex:1,paddingBottom:16}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+                      {field("Título", "titulo")}
+                      <div><label style={{...lbl}}>Área</label><select value={val("area")||"Trade Marketing"} onChange={e=>setF("area",e.target.value)} style={{...inp}}><option>Trade Marketing</option><option>Comercial</option><option>Marketing</option><option>Operaciones</option></select></div>
+                      <div><label style={{...lbl}}>Tipo de trabajo</label><select value={val("tipoTrabajo")||cur.tipoTrabajo||cur.tipo||""} onChange={e=>setOdtEditForm(p=>({...p,tipoTrabajo:e.target.value}))} style={{...inp}}><option value="">Seleccionar</option>{TIPOS_TRABAJO.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}</select></div>
+                      {field("Fecha inicio", "fechaInicio", "date")}
+                      {field("Fecha entrega", "fechaEntrega", "date")}
+                      {field("Hora de corte", "horaCorte", "time")}
+                      {field("Medidas", "medidas")}
+                      <div><label style={{...lbl}}>Tonalidad</label><select value={val("tonalidad")} onChange={e=>setF("tonalidad",e.target.value)} style={{...inp}}><option value="">No especificado</option><option>Promocional</option><option>Institucional</option><option>Informativo</option><option>Urgente</option><option>Premium</option></select></div><div><label style={{...lbl}}>Prioridad</label><select value={val("prioridad")||"Normal"} onChange={e=>setF("prioridad",e.target.value)} style={{...inp}}>{ODT_PRIORIDADES.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginTop:10}}>
+                      {field("Objetivo y público","objetivo","textarea")}
+                      {field("Mensaje principal","mensaje","textarea")}
+                      {field("Mecánica / dinámica","mecanica","textarea")}
+                      {field("Productos","productos","textarea")}
+                      {field("Restricciones","restricciones","textarea")}
+                      {field("Referencias","referencias","textarea")}
+                    </div>
+                  </div>
+                </div>
+              </div>;
+            })()}
+            {odtCorrectionNotifyModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:125,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}><div style={{background:"#fff",borderRadius:18,width:"min(560px,96vw)",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:800,fontSize:15,color:"#fff"}}>Notificar corrección al diseñador</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>{odtCorrectionNotifyModal.disenador?.nombre||"Diseñador"} · {odtCorrectionNotifyModal.disenador?.email||"sin correo"}</div></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{padding:20}}><div style={{background:"#fff8ec",border:"1px solid #f6a62333",borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>ODT en corrección</div><div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtCorrectionNotifyModal.odt?.titulo}</div><div style={{fontSize:12,color:"#5a7a9a",marginTop:6}}>Indica al diseñador por qué no fue aprobada y qué cambios debe realizar.</div></div><label style={lbl}>Motivo predeterminado *</label><select value={ODT_CORRECTION_REASONS.includes(odtCorrectionNote)?odtCorrectionNote:""} onChange={e=>setOdtCorrectionNote(e.target.value)} style={{...inp,marginBottom:10}}><option value="">Seleccionar motivo...</option>{ODT_CORRECTION_REASONS.map(m=><option key={m} value={m}>{m}</option>)}</select><label style={lbl}>Detalle / cambios solicitados *</label><textarea value={odtCorrectionNote} onChange={e=>setOdtCorrectionNote(e.target.value)} placeholder="Agrega detalle específico del ajuste solicitado..." style={{...inp,minHeight:100,resize:"vertical",marginBottom:14}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openWhatsOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>WhatsApp al diseñador</button><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openOutlookOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>Correo al diseñador</button></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{marginTop:12,width:"100%",padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",fontWeight:800,color:"#5a7a9a",cursor:"pointer"}}>Cerrar sin notificar</button></div></div></div>}
+            {odtSolicitanteNotifyModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}><div style={{background:"#fff",borderRadius:18,width:"min(520px,96vw)",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{odtSolicitanteNotifyModal.modo==="revision"?"Notificar envío a aprobación":"Notificar entrega de ODT"}</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>{odtSolicitanteNotifyModal.solicitante?.nombre||"Solicitante"} · {odtSolicitanteNotifyModal.solicitante?.email||"sin correo"}</div></div><button onClick={()=>setOdtSolicitanteNotifyModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{padding:20}}><div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>ODT</div><div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtSolicitanteNotifyModal.odt?.titulo}</div><div style={{fontSize:12,color:"#5a7a9a",marginTop:6}}>{odtSolicitanteNotifyModal.modo==="revision"?"El diseñador envió la ODT a aprobación.":"El diseñador marcó la ODT como entregada."}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><button onClick={()=>openWhatsOdt(odtSolicitanteNotifyModal.odt,odtSolicitanteNotifyModal.modo)} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>WhatsApp al solicitante</button><button onClick={()=>openOutlookOdt(odtSolicitanteNotifyModal.odt,odtSolicitanteNotifyModal.modo)} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>Correo al solicitante</button></div><button onClick={()=>setOdtSolicitanteNotifyModal(null)} style={{marginTop:12,width:"100%",padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",fontWeight:800,color:"#5a7a9a",cursor:"pointer"}}>Cerrar</button></div></div></div>}
+            {odtNotifyModal&&canNotifyOdt(odtNotifyModal.odt)&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:123,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(760px,96vw)",maxHeight:"calc(100vh - 24px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0,background:"linear-gradient(135deg,#1a2f4a,#0f1f33)"}}><div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",fontSize:15,fontWeight:800,color:"#fff",flexShrink:0}}>{(odtNotifyModal.disenador?.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:14,color:"#fff"}}>ODT lista — Notificar a {odtNotifyModal.disenador?.nombre}</div><div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo"} · {getOdtPhone(odtNotifyModal.disenador)||"Sin celular"}</div></div><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",flex:1,overflow:"hidden",minHeight:0}}><div style={{overflowY:"auto",padding:"16px 20px",borderRight:"1px solid #e2e8f0"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Brief de la ODT</span></div><div style={{background:"#EEEFFE",borderRadius:10,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>Título</div><div style={{fontSize:14,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.odt?.titulo}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>{[["Tipo",odtNotifyModal.odt?.tipoTrabajo||odtNotifyModal.odt?.tipo],["Área",odtNotifyModal.odt?.area],["F. Entrega",odtNotifyModal.odt?.fechaEntrega],["H. Corte",odtNotifyModal.odt?.horaCorte],["HH",odtNotifyModal.odt?.hh?odtNotifyModal.odt.hh+"h":null],["Materiales",(odtNotifyModal.odt?.materiales||[]).join(", ")||null],["Medidas",odtNotifyModal.odt?.medidas],["Tonalidad",odtNotifyModal.odt?.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtNotifyModal.odt?.objetivo],["Mensaje principal",odtNotifyModal.odt?.mensaje],["Mecánica / dinámica",odtNotifyModal.odt?.mecanica],["Restricciones",odtNotifyModal.odt?.restricciones]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:6}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:4}}>{k}</div><div style={{fontSize:12,color:"#1a2f4a",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div><div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12,background:"#f8fafc"}}><div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Notificar al diseñador</div><div style={{fontSize:11,color:"#8aaabb",lineHeight:1.6,marginBottom:4}}>Elige el canal. El diseñador recibirá el brief completo de la orden.</div><button onClick={()=>openWhatsOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #d4f1e4",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>WhatsApp directo</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{getOdtPhone(odtNotifyModal.disenador)||"Sin número registrado"}</div></div></button><button onClick={()=>openOutlookOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #c8d8e8",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Correo electrónico</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo registrado"}</div></div></button><div style={{borderTop:"1px solid #e2e8f0",margin:"4px 0"}}/><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{padding:"14px 18px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Listo — ir al Dashboard</button><div style={{fontSize:10,color:"#b2bec3",textAlign:"center",lineHeight:1.5}}>ODT guardada. Puedes notificar ahora o más tarde desde el Reporte.</div></div></div></div></div>}
           </div>
         );
       })()}
