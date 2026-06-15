@@ -1,5 +1,5 @@
-/* ET_FIX_RENDER_NO_UNDEF_ODT_TIENDAS_20260615 */
 // ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
+/* ET_FIX_RENDER_UNDEF_DISENO_TIENDA_HELPERS_20260615 */
 /* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
 /* ET_FIX_FINAL_ROLES_DASH_CORRECCION_MOTIVOS_20260614 */
 /* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
@@ -1668,20 +1668,16 @@ function ChecklistApp() {
   const uArea         = loggedUser.area||"";
   // Solicitante: cualquier cargo distinto a Diseñador/Admin que puede crear y seguir ODTs pero no asignar
   const isSolicitante = ["coordinador","visor"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador");
-
-  // ET_FIX_RENDER_NO_UNDEF_ODT_TIENDAS_20260615:
-  // Flags de Diseño declarados en scope superior para evitar RENDER_ERROR al abrir Diseño/ODT.
-  const normLocal = (v)=>String(v||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  const isCargoDisenador = normLocal(uCargo).includes("disen");
-  const isDisenoAdmin = isAdmin;
-  const isDisenoCoordinator = isCoord;
-  const isDisenoExecutor = isEjecutor && isCargoDisenador;
-  const isDisenoViewer = isViewer;
-
-  // Helpers de tiendas usados por Tiendas/Auditoría antes de subcomponentes.
-  const nomTienda = (t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
-  const fmtTienda = (t)=>String(t?.f||t?.formato||"").trim();
-  const distTienda = (t)=>String(t?.dist||t?.distrito||"").trim();
+  /* ET_FIX_DISENO_VARS_SCOPE_20260615 — variables de rol para módulo Diseño/ODT */
+  const isDisenoCargo    = String(uCargo).toLowerCase().trim()==="diseñador"||String(uCargo).toLowerCase().trim()==="disenador";
+  const isDisenoAdmin    = role==="admin";
+  const isDisenoCoordinator = role==="coordinador";
+  const isDisenoExecutor = role==="ejecutor" && isDisenoCargo;
+  const isDisenoViewer   = role==="visor";
+  /* ET_FIX_TIENDA_HELPERS_SCOPE_20260615 — helpers de tienda accesibles en todo el render */
+  const nomTienda=(t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
+  const fmtTienda=(t)=>String(t?.f||t?.formato||"").trim();
+  const distTienda=(t)=>String(t?.dist||t?.distrito||"").trim();
 
   // B1 fix: regsIndex declarado ANTES de getReg que lo referencia
   // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
