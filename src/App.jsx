@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 /* ET_TIENDAS_1_5_VIEWER_APPROVED_20260614 */
+/* ET_TIENDAS_1_5_FORMULARIO_LIMPIO_20260614 */
 import React from "react";
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
@@ -955,9 +956,10 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 }
 
 
+// ET_TIENDAS_1_5_EDIT_MODAL_COMPACT_20260614: modal editar tienda compacto, acciones arriba visibles en zoom alto.
 // FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606: componente estable fuera del modal; evita remount y perdida de foco en cada tecla.
 function TiendaEditField({S,label,children}){
-  return <div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>;
+  return <div style={{marginBottom:8}}><label style={{...S.lbl,marginBottom:5,fontSize:10}}>{label}</label>{children}</div>;
 }
 
 function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
@@ -967,7 +969,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
   // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
   const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
-  const inputStyle=(extra={})=>({...S.inp,...extra});
+  const inputStyle=(extra={})=>({...S.inp,padding:"9px 12px",fontSize:13,borderRadius:10,minHeight:42,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
     if(!v.ok){setError(v.msg);return;}
@@ -977,16 +979,20 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
       onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#fff",borderRadius:18,width:"100%",maxWidth:760,maxHeight:"90vh",overflowY:"auto",padding:22,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <div>
-            <div style={{fontSize:18,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
-            <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
+      <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:680,maxHeight:"calc(100vh - 28px)",overflowY:"auto",padding:16,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+        <div style={{position:"sticky",top:0,zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,margin:"-16px -16px 12px",padding:"12px 16px",background:"#fff",borderBottom:"1px solid #e2e8f0",borderRadius:"16px 16px 0 0"}}>
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:17,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
+            <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
           </div>
-          <button onClick={onClose} style={{border:"none",background:"none",cursor:"pointer",color:"#8aaabb",fontSize:18,lineHeight:1}}>✕</button>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+            <button onClick={onClose} style={{padding:"9px 12px",borderRadius:11,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:800,fontSize:12}}>Cancelar</button>
+            <button onClick={guardar} style={{padding:"9px 14px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:900,fontSize:12}}>Guardar</button>
+            <button onClick={onClose} aria-label="Cerrar" style={{width:38,height:38,borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",cursor:"pointer",color:"#5a7a9a",fontSize:18,lineHeight:1}}>×</button>
+          </div>
         </div>
         {error&&<div style={{padding:"9px 12px",borderRadius:10,background:"#fff1f2",border:"1px solid #fecaca",color:"#dc2626",fontSize:12,fontWeight:700,marginBottom:12}}>{error}</div>}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 150px",gap:10,marginBottom:11}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 130px",gap:8,marginBottom:8}}>
           <div>
             <label style={S.lbl}>NOMBRE TIENDA</label>
             <input value={draft.n||""} onChange={e=>!draft._readOnly&&patch({n:e.target.value})}
@@ -1001,33 +1007,33 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
         </div>
         <TiendaEditField S={S} label="EMAIL TIENDA">
           <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
-            placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
+            placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"10px 0 6px"}}>GERENTE DE TIENDA</div>
         <TiendaEditField S={S} label="NOMBRE GERENTE">
           <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
-            placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={S.inp}/>
+            placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
           <div>
             <label style={S.lbl}>DNI GERENTE</label>
             <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:sanitizeDigits(e.target.value,SAFE_LIMITS.dni)})}
-              placeholder="12345678" inputMode="numeric" autoComplete="off" style={S.inp}/>
+              placeholder="12345678" inputMode="numeric" autoComplete="off" style={inputStyle()}/>
           </div>
           <div>
             <label style={S.lbl}>CELULAR GERENTE</label>
             <input value={draft.celular||""} onChange={e=>patch({celular:sanitizeDigits(e.target.value,SAFE_LIMITS.phone)})}
-              placeholder="987654321" inputMode="tel" autoComplete="off" style={S.inp}/>
+              placeholder="987654321" inputMode="tel" autoComplete="off" style={inputStyle()}/>
           </div>
         </div>
-        <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"10px 0 6px"}}>JEFE ZONAL</div>
         <TiendaEditField S={S} label="ZONAL ASIGNADO">
           <select value={draft._zonalUserId||"__manual__"} onChange={e=>{
             const uid=e.target.value;
             if(uid==="__manual__"){patch({_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""});return;}
             const u=usuarios.find(x=>x.id===uid);
             if(u) patch({_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""});
-          }} style={{...S.inp,padding:"10px 12px"}}>
+          }} style={inputStyle({padding:"9px 12px"})}>
             <option value="__manual__">— Sin asignar —</option>
             {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
               <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
@@ -1036,50 +1042,47 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
         </TiendaEditField>
         <TiendaEditField S={S} label="EMAIL ZONAL">
           <input type="email" value={draft.emailJefeZonal||""} onChange={e=>patch({emailJefeZonal:e.target.value})}
-            placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
+            placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"10px 0 6px"}}>UBICACIÓN</div>
         <TiendaEditField S={S} label="DIRECCIÓN">
-          <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={S.inp}/>
+          <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 120px",gap:8,marginBottom:11}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 100px",gap:8,marginBottom:8}}>
           <div>
             <label style={S.lbl}>DISTRITO</label>
-            <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={S.inp}/>
+            <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={inputStyle()}/>
           </div>
           <div>
             <label style={S.lbl}>ZONA</label>
-            <input value={draft.zonaId||""} onChange={e=>patch({zonaId:e.target.value})} placeholder="05" autoComplete="off" style={S.inp}/>
+            <input value={draft.zonaId||""} onChange={e=>patch({zonaId:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
           <div>
             <label style={S.lbl}>LATITUD</label>
-            <input value={draft.lat??""} onChange={e=>patch({lat:e.target.value})} placeholder="-12.10809817" autoComplete="off" style={S.inp}/>
+            <input value={draft.lat??""} onChange={e=>patch({lat:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
           </div>
           <div>
             <label style={S.lbl}>LONGITUD</label>
-            <input value={draft.lng??""} onChange={e=>patch({lng:e.target.value})} placeholder="-76.96917489" autoComplete="off" style={S.inp}/>
+            <input value={draft.lng??""} onChange={e=>patch({lng:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
           </div>
         </div>
         <TiendaEditField S={S} label="LINK GOOGLE MAPS">
-          <input value={draft.maps||""} onChange={e=>patch({maps:e.target.value})} placeholder="https://maps.app.goo.gl/..." autoComplete="off" style={S.inp}/>
+          <input value={draft.maps||""} onChange={e=>patch({maps:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"10px 0 6px"}}>HORARIOS</div>
         <TiendaEditField S={S} label="LUNES A JUEVES">
-          <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+          <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
         <TiendaEditField S={S} label="VIERNES A SÁBADO">
-          <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+          <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
         <TiendaEditField S={S} label="DOMINGOS">
-          <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
+          <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
         </TiendaEditField>
-        <div style={{display:"flex",gap:8,marginTop:4}}>
-          <button onClick={guardar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar cambios</button>
-          <button onClick={onClose} style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
-        </div>
-        <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
+
+        <div style={{marginTop:8,padding:"7px 10px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
           <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar. FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606</span>
         </div>
       </div>
@@ -6733,9 +6736,9 @@ function ChecklistApp() {
             )}
             {tpTab==="nueva"&&(
               <div style={{background:"#fff",borderRadius:"0 14px 14px 14px",padding:20,border:"1px solid #E2E8F0",borderTop:"none"}}>
-                <div style={{display:"grid",gridTemplateColumns:"150px 1fr 210px 180px",gap:10,marginBottom:10}}><div><label style={S.lbl}>ID_TIENDA *</label><input value={newT.idTienda||""} onChange={e=>setNewT(p=>({...p,idTienda:sanitizeDigits(e.target.value,6)}))} style={S.inp}/></div><div><label style={S.lbl}>Nombre *</label><input value={newT.n||""} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="TOMASAL" style={S.inp}/></div><div><label style={S.lbl}>Formato</label><select value={newT.f||"Market"} onChange={e=>setNewT(p=>({...p,f:e.target.value}))} style={S.inp}><option>Mayorista</option><option>Supermayorista</option><option>Market</option></select></div><div><label style={S.lbl}>Estado</label><select value={newT.activa===false?"Inactiva":"Activa"} onChange={e=>setNewT(p=>({...p,activa:e.target.value==="Activa"}))} style={S.inp}><option>Activa</option><option>Inactiva</option></select></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 180px 140px 140px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Dirección</label><input value={newT.dir||""} onChange={e=>setNewT(p=>({...p,dir:e.target.value}))} placeholder="Jirón Tomasal 145" style={S.inp}/></div><div><label style={S.lbl}>Distrito</label><input value={newT.dist||""} onChange={e=>setNewT(p=>({...p,dist:e.target.value}))} placeholder="Surco" style={S.inp}/></div><div><label style={S.lbl}>Latitud</label><input value={newT.lat||""} onChange={e=>setNewT(p=>({...p,lat:e.target.value}))} placeholder="-12.10809817" style={S.inp}/></div><div><label style={S.lbl}>Longitud</label><input value={newT.lng||""} onChange={e=>setNewT(p=>({...p,lng:e.target.value}))} placeholder="-76.96917489" style={S.inp}/></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 170px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Link Google Maps</label><input value={newT.maps||""} onChange={e=>setNewT(p=>({...p,maps:e.target.value}))} placeholder="https://maps.app.goo.gl/..." style={S.inp}/></div><div><label style={S.lbl}>Zona</label><input value={newT.zonaId||""} onChange={e=>setNewT(p=>({...p,zonaId:e.target.value}))} placeholder="05" style={S.inp}/></div></div>
+                <div style={{display:"grid",gridTemplateColumns:"150px 1fr 210px 180px",gap:10,marginBottom:10}}><div><label style={S.lbl}>ID_TIENDA *</label><input value={newT.idTienda||""} onChange={e=>setNewT(p=>({...p,idTienda:sanitizeDigits(e.target.value,6)}))} style={S.inp}/></div><div><label style={S.lbl}>Nombre *</label><input value={newT.n||""} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Formato</label><select value={newT.f||"Market"} onChange={e=>setNewT(p=>({...p,f:e.target.value}))} style={S.inp}><option>Mayorista</option><option>Supermayorista</option><option>Market</option></select></div><div><label style={S.lbl}>Estado</label><select value={newT.activa===false?"Inactiva":"Activa"} onChange={e=>setNewT(p=>({...p,activa:e.target.value==="Activa"}))} style={S.inp}><option>Activa</option><option>Inactiva</option></select></div></div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 180px 140px 140px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Dirección</label><input value={newT.dir||""} onChange={e=>setNewT(p=>({...p,dir:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Distrito</label><input value={newT.dist||""} onChange={e=>setNewT(p=>({...p,dist:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Latitud</label><input value={newT.lat||""} onChange={e=>setNewT(p=>({...p,lat:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Longitud</label><input value={newT.lng||""} onChange={e=>setNewT(p=>({...p,lng:e.target.value}))} placeholder="" style={S.inp}/></div></div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 170px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Link Google Maps</label><input value={newT.maps||""} onChange={e=>setNewT(p=>({...p,maps:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Zona</label><input value={newT.zonaId||""} onChange={e=>setNewT(p=>({...p,zonaId:e.target.value}))} placeholder="" style={S.inp}/></div></div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 140px 160px 1fr",gap:10,marginBottom:10}}><div><label style={S.lbl}>Jefe de tienda</label><input value={newT.gerenteTienda||""} onChange={e=>setNewT(p=>({...p,gerenteTienda:e.target.value}))} style={S.inp}/></div><div><label style={S.lbl}>DNI</label><input value={newT.dniGerente||""} onChange={e=>setNewT(p=>({...p,dniGerente:sanitizeDigits(e.target.value,8)}))} style={S.inp}/></div><div><label style={S.lbl}>Teléfono</label><input value={newT.celular||""} onChange={e=>setNewT(p=>({...p,celular:sanitizeDigits(e.target.value,12)}))} style={S.inp}/></div><div><label style={S.lbl}>Email tienda</label><input value={newT.emailTienda||""} onChange={e=>setNewT(p=>({...p,emailTienda:e.target.value}))} style={S.inp}/></div></div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div><label style={S.lbl}>Jefe zonal desde Usuarios</label><select value={newT.usuarioZonalId||""} onChange={e=>{const u=zonalesUsuarios.find(x=>x.id===e.target.value);setNewT(p=>({...p,usuarioZonalId:e.target.value,jefeZonalNombre:u?.nombre||"",emailJefeZonal:u?.email||""}))}} style={S.inp}><option value="">— Sin asignar —</option>{zonalesUsuarios.map(u=><option key={u.id} value={u.id}>{u.nombre} · {u.cargo||u.rol}</option>)}</select></div><div><label style={S.lbl}>Email zonal</label><input value={newT.emailJefeZonal||""} onChange={e=>setNewT(p=>({...p,emailJefeZonal:e.target.value}))} style={S.inp}/></div></div>
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button onClick={resetNewT} style={{padding:"11px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Limpiar</button><button onClick={crearTienda} style={{padding:"11px 22px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar tienda</button></div>
