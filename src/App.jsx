@@ -8167,43 +8167,66 @@ function ChecklistApp() {
         const toFinishDateTime=(o)=>{const raw=o?.entregadoEn||o?.finalizadoEn||o?.fechaCierre||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
         const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
         const calcOdtPlan=(o)=>{
+          /* ET_FIX_SCHEDULE_PROGRESO_CARGA_20260615
+             PROGRESO (lectura resumida): Pendiente|En proceso|En corrección|Con retraso|Finalizado
+             DÍAS TB (detalle): (Hoy)|(+Xd)|(-Xd)|(a tiempo)|(retraso Xh Xm)|(adelanto +Xd)
+             HH estimadas y TIEMPO TRANSCURRIDO: solo L-V 08:30-18:30 (sin sábado)
+             Sábado 08:30-11:30 solo aplica para correccion en businessMinutesBetween
+          */
           const estado=String(o?.estado||"pendiente").toLowerCase();
           const entregada=isOdtFinalizada(o);
+          const esCorrección=estado==="correccion";
           const now=new Date();
           const hoy=toLocalDate(todayStr());
           const fi=toLocalDate(o?.fechaInicio)||hoy;
           const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
-          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),o?.horaInicio||"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
+          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
           const due=toDueDateTime(o);
           const fin=toFinishDateTime(o);
           const ref=entregada?(fin||due||now):now;
-          const totalLab=fi&&fe?countWorkDaysInclusive(fi,fe):1;
-          const transLab=entregada?Math.min(totalLab,countWorkDaysInclusive(fi,ref)):Math.min(totalLab,countWorkDaysBefore(fi,hoy));
+          // TIEMPO TRANSCURRIDO: solo L-V (sin sábado) para HH estimadas
+          const weekDaySchedule=(d)=>ODT_WEEK_SCHEDULE[d?.getDay?.()]||null;
+          const countWeekDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let c=0;for(let d=new Date(da<=db?da:db);d<=(da<=db?db:da);d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return Math.max(1,c);};
+          const weekMinsBetween=(s,e)=>{if(!s||!e||isNaN(s)||isNaN(e))return 0;let a=s<=e?new Date(s):new Date(e),b=s<=e?new Date(e):new Date(s),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=weekDaySchedule(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
+          const totalLab=fi&&fe?countWeekDays(fi,fe):1;
+          const transLab=entregada?Math.min(totalLab,countWeekDays(fi,ref)):Math.min(totalLab,(()=>{const da=toLocalDate(o?.fechaInicio||todayStr()),r=hoy;if(!da||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<da)return 0;let c=0;for(let d=new Date(da);d<=end;d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return c;})());
           const tiempo=`${transLab}/${totalLab} lab`;
-          const usedBusinessMinutes=businessMinutesBetween(inicioDT,ref);
-          const dias=entregada?formatDiasTb(usedBusinessMinutes):(usedBusinessMinutes>0?formatDiasTb(usedBusinessMinutes):"<1d");
+          // HH usadas: L-V para todos; incluir sábado solo si está en corrección
+          const schedFn=esCorrección?((d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null):weekDaySchedule;
+          const usedMins=(()=>{if(!inicioDT||isNaN(inicioDT))return 0;let a=inicioDT<=ref?new Date(inicioDT):new Date(ref),b=inicioDT<=ref?new Date(ref):new Date(inicioDT),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=schedFn(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);})();
+          // DÍAS TB (detalle): formato (Hoy), (+2d), (-1d), (a tiempo), (retraso 4h 34m), (adelanto +1d)
+          let diasTb="(<1d)";
+          let progreso="Pendiente";
           let detalle="";
-          let diasTb=dias;
           if(entregada){
             const cierre=fin||due;
             if(due&&cierre){
-              const deltaMin=Math.round((cierre-due)/60000);
-              const deltaDay=diffDays(cierre,due);
-              if(deltaMin>0){detalle=`Entregado con retraso ${formatHm(deltaMin)}`;diasTb=`Retraso ${formatHm(deltaMin)}`;}
-              else if(deltaMin<0&&deltaDay<0){detalle=`Entregado con adelanto +${Math.abs(deltaDay)}d`;diasTb=`Adelanto +${Math.abs(deltaDay)}d`;}
-              else {detalle="Entregado a tiempo";diasTb="A tiempo";}
-            }else{detalle="Entregado";diasTb=dias;}
+              const deltaMin=Math.round((cierre.getTime()-due.getTime())/60000);
+              const adelantoDias=Math.round((due.getTime()-cierre.getTime())/86400000);
+              if(deltaMin>0){diasTb=`(retraso ${formatHm(deltaMin)})`;detalle=`Entregado con retraso ${formatHm(deltaMin)}`;}
+              else if(adelantoDias>=1){diasTb=`(adelanto +${adelantoDias}d)`;detalle=`Entregado con adelanto +${adelantoDias}d`;}
+              else{diasTb="(a tiempo)";detalle="Entregado a tiempo";}
+            }else{diasTb="(a tiempo)";detalle="Entregado";}
+            progreso="Finalizado";
           }else{
-            const d=fe?diffDays(hoy,fe):null;
-            if(["diseño","en_diseno","aprobacion","aprobado","correccion"].includes(estado)) detalle=!fe?"En ejecución":d<0?`${Math.abs(d)}d`:d===0?"Hoy · vence":`Retraso ${d}d`;
-            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`${Math.abs(d)}d`:d===0?"Hoy · vence":`Retraso ${d}d`;
-            else if(estado==="retrasado") detalle=o?.detalle||o?.alerta||"Con retraso";
-            else detalle=o?.detalle||o?.alerta||"—";
-            diasTb=dias;
+            const diasRestantes=fe?diffDays(fe,hoy):null;
+            const vencida=diasRestantes!==null&&diasRestantes<0;
+            // DÍAS TB según días a vencer
+            if(!fe) diasTb="(<1d)";
+            else if(diasRestantes>0) diasTb=`(+${diasRestantes}d)`;
+            else if(diasRestantes===0) diasTb="(Hoy)";
+            else diasTb=`(-${Math.abs(diasRestantes)}d)`;
+            detalle=diasTb;
+            // PROGRESO: lectura resumida del estado real
+            if(["entregado","finalizado","terminado"].includes(estado)) progreso="Finalizado";
+            else if(estado==="cancelado") progreso="Cancelado";
+            else if(estado==="correccion") progreso="En corrección";
+            else if(vencida) progreso="Con retraso";
+            else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) progreso="En proceso";
+            else progreso="Pendiente";
           }
           const avance=entregada?100:(Number(o?.avance)||0);
-          const progresoMap={pendiente:"Pendiente",diseño:"En proceso",en_diseno:"En proceso",aprobacion:"En aprobación",aprobado:"Aprobado",correccion:"En corrección",entregado:"Entregado",finalizado:"Entregado",terminado:"Entregado",cancelado:"Cancelado",retrasado:"Retrasado"};
-          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso:progresoMap[estado]||"Pendiente"};
+          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso};
         };
         const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
         const KANBAN_ENTREGADOS_DIAS=7;
@@ -8346,7 +8369,8 @@ function ChecklistApp() {
           const oem=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt).filter(Boolean);
           return sameAny(dk.ids,oid)||sameAny(dk.digits,odig)||sameAny(dk.names,onam)||sameAny(dk.emails,oem);
         };
-        const odtActivaParaCarga=(o)=>!odtFinalStates.includes(String(o?.estado||"").toLowerCase())&&o?.activo!==false;
+        /* Límite 3 ODT: solo cuenta las que están En Aprobación (pendiente revisión del solicitante) */
+        const odtActivaParaCarga=(o)=>String(o?.estado||"").toLowerCase()==="aprobacion"&&o?.activo!==false;
         const odtCargaDesigner=(d,excludeId="")=>odtsBaseFiltradas.filter(o=>String(o?.id)!==String(excludeId)&&odtActivaParaCarga(o)&&odtBelongsToDesigner(o,d)).length;
         const designerBloqueadoAsignacion=(d,excludeId="")=>odtCargaDesigner(d,excludeId)>=ODT_MAX_ACTIVAS_POR_DISENADOR;
         const APP_URL="https://vega-evidencias.vercel.app/";
