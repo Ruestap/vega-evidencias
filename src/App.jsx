@@ -8282,7 +8282,7 @@ function ChecklistApp() {
           /* ET_FIX_STATE_OPTIONS_PROGRESO_20260615 */
           const estado=String(o?.estado||"pendiente").toLowerCase();
           let allowed=[];
-          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","observado","correccion","aprobado","entregado","cancelado"];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","cancelado"];
           else if(isDisenoExecutor&&isAssignedOdt(o)){
             allowed=["diseño"];
             if(["diseño","en_diseno","correccion"].includes(estado)) allowed.push("aprobacion");
