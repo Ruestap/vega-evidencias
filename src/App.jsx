@@ -8957,14 +8957,14 @@ Saludos.`;
                 ["Comentarios / referencias",odtViewModal.referencias]
               ];
               const viewActionBtn=(label,icon,onClick,bg,border,color="#1a2f4a")=>(
-                <button onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"9px 10px",borderRadius:10,border,background:bg,cursor:"pointer",fontWeight:900,color,fontSize:11,whiteSpace:"nowrap",minHeight:36}}>
+                <button onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"6px 10px",borderRadius:10,border,background:bg,cursor:"pointer",fontWeight:900,color,fontSize:10.5,whiteSpace:"nowrap",minHeight:32}}>
                   {icon}{label}
                 </button>
               );
-              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px"}}>
-                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 16px))",maxHeight:"calc(100dvh - 16px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"6px"}}>
+                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 12px))",maxHeight:"calc(100dvh - 12px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
                   <div style={{borderBottom:"1px solid #e2e8f0",flexShrink:0,background:"#fff"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px 6px 10px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px 5px 10px"}}>
                       <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
                       </div>
@@ -8983,10 +8983,10 @@ Saludos.`;
                       {viewActionBtn("Cerrar",<svg key="x" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,()=>setOdtViewModal(null),"#f8fafc","1px solid #e2e8f0","#5a7a9a")}
                     </div>
                   </div>
-                  <div style={{overflowY:"auto",flex:1,padding:"8px 10px",minHeight:0}}>
+                  <div style={{overflowY:"auto",flex:1,padding:"5px 10px 8px 10px",minHeight:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:10,fontWeight:900,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(128px,1fr))",gap:6,marginBottom:8}}>{detailItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 7px"}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",lineHeight:1.2}}>{v}</div></div>):null)}</div>
-                    {textItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 8px",marginBottom:5}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,color:"#1a2f4a",fontWeight:600,lineHeight:1.3,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:6}}>{detailItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"4px 6px"}}><div style={{fontSize:7,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:9.5,fontWeight:700,color:"#1a2f4a",lineHeight:1.2}}>{v}</div></div>):null)}</div>
+                    {textItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"5px 8px",marginBottom:4}}><div style={{fontSize:7,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:9.5,color:"#1a2f4a",fontWeight:600,lineHeight:1.3,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}
                   </div>
                 </div>
               </div>;
