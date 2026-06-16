@@ -8279,12 +8279,15 @@ function ChecklistApp() {
         const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
         const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
         const odtStateOptions=(o)=>{
+          /* ET_FIX_STATE_OPTIONS_PROGRESO_20260615 */
           const estado=String(o?.estado||"pendiente").toLowerCase();
-          const all=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","retrasado","cancelado"];
           let allowed=[];
-          if(isDisenoAdmin||isDisenoCoordinator) allowed=all;
-          else if(isDisenoExecutor&&isAssignedOdt(o)) allowed=["diseño","aprobacion",...(estado==="correccion"?["diseño","aprobacion"]:[]),...(estado==="aprobado"?["entregado"]:[])];
-          else if(isSolicitante&&isRequesterOdt(o)) allowed=["aprobacion","correccion","aprobado","cancelado"];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","cancelado"];
+          else if(isDisenoExecutor&&isAssignedOdt(o)){
+            allowed=["diseño"];
+            if(["diseño","en_diseno","correccion"].includes(estado)) allowed.push("aprobacion");
+            if(estado==="aprobado") allowed.push("entregado");
+          }else if(isSolicitante&&isRequesterOdt(o)) allowed=["correccion","aprobado","cancelado"];
           if(estado&&!allowed.includes(estado)) allowed=[estado,...allowed];
           return [...new Set(allowed)];
         };
@@ -8561,7 +8564,7 @@ Saludos.`;
                   <option value="aprobacion">En aprobación</option>
                   <option value="correccion">En corrección</option>
                   <option value="entregado">Entregado</option>
-                  <option value="retrasado">Retrasado</option>
+                  /* retrasado no es estado manual */
                 </select>
                 <select value={odtReporteTipo} onChange={e=>setOdtReporteTipo(e.target.value)} style={{...inp,width:"auto",padding:"8px 11px"}}>
                   <option value="todos">Todos los tipos</option>
@@ -8646,7 +8649,18 @@ Saludos.`;
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {renderStateChip(o.estado,true)}
+                            {(()=>{
+                              const pg=o.progreso||"Pendiente";
+                              const pgMeta={
+                                "Finalizado":{bg:"rgba(0,184,148,.12)",col:"#00b894",ico:"check"},
+                                "En proceso":{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",ico:"pen"},
+                                "En corrección":{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"pen"},
+                                "Con retraso":{bg:"#ffeae6",col:"#dc2626",ico:"alert"},
+                                "Cancelado":{bg:"#f1f5f9",col:"#64748b",ico:"alert"},
+                                "Pendiente":{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"clock"},
+                              }[pg]||{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"clock"};
+                              return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:800,color:pgMeta.col,background:pgMeta.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pgMeta.ico} color={pgMeta.col} size={9}/>{pg}</span>;
+                            })()}
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
@@ -8655,7 +8669,7 @@ Saludos.`;
                           <td style={{padding:"12px 10px",minWidth:120}}>
                             <div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",marginBottom:3}}>{o.tiempo}</div>
                             <div style={{height:5,background:"#edf2f7",borderRadius:3,overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${o.avance||0}%`,background:o.estado==="retrasado"?"#dc2626":"#6C6EF5",transition:"width .3s"}}/>
+                              <div style={{height:"100%",width:`${o.avance||0}%`,background:o.progreso==="Con retraso"?"#dc2626":o.progreso==="Finalizado"?"#00b894":"#6C6EF5",transition:"width .3s"}}/>
                             </div>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
