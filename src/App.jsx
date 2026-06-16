@@ -8226,7 +8226,7 @@ function ChecklistApp() {
             else progreso="Pendiente";
           }
           const avance=entregada?100:(Number(o?.avance)||0);
-          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso};
+          const estadoUi=entregada?"entregado":(estado==="observado"?"observado":estado); return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi,progreso};
         };
         const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
         const KANBAN_ENTREGADOS_DIAS=7;
@@ -8282,7 +8282,7 @@ function ChecklistApp() {
           /* ET_FIX_STATE_OPTIONS_PROGRESO_20260615 */
           const estado=String(o?.estado||"pendiente").toLowerCase();
           let allowed=[];
-          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","cancelado"];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","observado","correccion","aprobado","entregado","cancelado"];
           else if(isDisenoExecutor&&isAssignedOdt(o)){
             allowed=["diseño"];
             if(["diseño","en_diseno","correccion"].includes(estado)) allowed.push("aprobacion");
@@ -8309,7 +8309,7 @@ function ChecklistApp() {
           {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
           {id:"operativo",t:"Operativo",d:"Seguimiento diario",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
         ].filter(x=>odtDashLevelsAllowed.includes(x.id));
-        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="observado")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Observado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const odtGanttItems=odtsRol.slice(0,8).map((o,idx)=>{
           const ini=toLocalDate(o.fechaInicio)||toLocalDate(todayStr());
           const fin=toLocalDate(o.fechaEntrega||o.entrega)||ini;
@@ -8320,7 +8320,7 @@ function ChecklistApp() {
           return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
         });
         const estadoLabel=(e)=>pillE(e).txt;
-        const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
+        const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion"||raw==="observado")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
         const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
         const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:7,padding:compact?"3px 8px":"7px 11px",borderRadius:compact?20:11,border:`1px solid ${tm.col}26`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><span style={{width:compact?16:20,height:compact?16:20,borderRadius:6,background:"#fff",border:`1px solid ${tm.col}33`,display:"inline-grid",placeItems:"center",flexShrink:0}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/></span>{tm.label}</span>;};
         const renderStateChip=(estado,compact=false)=>{const st=odtStateMeta(estado);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:st.col,background:st.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={st.ico} color={st.col} size={compact?9:10}/>{st.txt}</span>;};
