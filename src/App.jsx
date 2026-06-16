@@ -8155,7 +8155,7 @@ function ChecklistApp() {
         const toLocalDate=(v)=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const d=new Date(v);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());};
         const parseHora=(v,fb="18:30")=>{const raw=String(v||fb).trim().toLowerCase().replace(/\s+/g,"");let m=raw.match(/^(\d{1,2}):(\d{2})$/);if(m)return[Number(m[1]),Number(m[2])];m=raw.match(/^(\d{1,2}):(\d{2})(a\.m\.|am|p\.m\.|pm)$/);if(m){let h=Number(m[1]);const mm=Number(m[2]);const ap=m[3];if(ap.startsWith("p")&&h<12)h+=12;if(ap.startsWith("a")&&h===12)h=0;return[h,mm];}return parseHora(fb,"18:30");};
         const makeDateTime=(fecha,hora="00:00")=>{const d=toLocalDate(fecha);if(!d)return null;const [h,m]=parseHora(hora,"00:00");d.setHours(h,m,0,0);return d;};
-        const ODT_WORK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["08:00","11:30"]};
+        const ODT_WEEK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"]};const ODT_SAT_SCHEDULE={6:["08:30","11:30"]};const ODT_WORK_SCHEDULE={...ODT_WEEK_SCHEDULE,...ODT_SAT_SCHEDULE};
         const daySchedule=(d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null;
         const isWorkDayOdt=(d)=>!!daySchedule(d);
         const countWorkDaysInclusive=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let ini=da<=db?da:db,fin=da<=db?db:da,c=0;for(let d=new Date(ini);d<=fin;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return Math.max(1,c);};
