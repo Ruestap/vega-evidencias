@@ -8217,12 +8217,12 @@ function ChecklistApp() {
             else if(diasRestantes===0) diasTb="(Hoy)";
             else diasTb=`(-${Math.abs(diasRestantes)}d)`;
             detalle=diasTb;
-            // PROGRESO: lectura resumida — estados activos ganan sobre vencida
+            // PROGRESO: correccion/observado gana sobre vencida; resto activo vencido → Con retraso
             if(["entregado","finalizado","terminado"].includes(estado)) progreso="Finalizado";
             else if(estado==="cancelado") progreso="Cancelado";
             else if(estado==="correccion"||estado==="observado") progreso="En corrección";
+            else if(vencida) progreso="Con retraso";
             else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) progreso="En proceso";
-            else if(vencida) progreso="Con retraso"; // solo pendiente vencido
             else progreso="Pendiente";
           }
           const avance=entregada?100:(Number(o?.avance)||0);
@@ -8617,7 +8617,7 @@ Saludos.`;
                             {renderTypeChip(o.tipoTrabajo||o.tipo)}
                           </td>
                           <td style={{padding:"12px 10px",maxWidth:260}}>
-                            <div style={{fontWeight:700,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
+                            <div style={{fontWeight:700,color:estado==="cancelado"?"#94a3b8":"#1a2f4a",textDecoration:estado==="cancelado"?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
                             <div style={{fontSize:9,color:"#b2bec3",marginTop:3}}>{o.id} · {o.fechaInicio}</div>
                           </td>
                           <td style={{padding:"12px 10px"}}>
@@ -8637,9 +8637,10 @@ Saludos.`;
                             <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:"#5a7a9a",background:"#f0f4f8"}}>{o.horaCorte||"—"}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {canUpdateOdtState(o)
+                            {canUpdateOdtState(o)&&!(estado==="cancelado"&&!isDisenoAdmin)
                               ?<select value={o.estado} onChange={async e=>{
                                   const nuevoEstado=e.target.value;
+                                  if(nuevoEstado==="cancelado"){const motivo=window.prompt("Motivo de cancelación (obligatorio):");if(!motivo||!motivo.trim()){showToast("Debes ingresar un motivo para cancelar");return;}await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role,motivoCancelacion:motivo.trim(),canceladoEn:new Date().toISOString()});return;}
                                   await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role});
                                 }}
                                 style={{padding:"3px 9px",borderRadius:20,border:"none",background:p.col+"18",color:p.col,fontWeight:700,fontSize:10,cursor:"pointer",outline:"none",whiteSpace:"nowrap",fontFamily:"'DM Sans',system-ui,sans-serif",appearance:"none",WebkitAppearance:"none"}}>
