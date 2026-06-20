@@ -10465,6 +10465,7 @@ export default function App(props){
 function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
+  const credInputRef=useRef(null);
   const[err,setErr]=useState("");
   const[showCred,setShowCred]=useState(false);
   const[bloqueo,setBloqueo]=useState(null);
@@ -10531,7 +10532,9 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
 
   const tryAcceso=()=>{
     if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    const clean=normCred(cred);
+    /* ET_FIX_LOGIN_FAST_ENTER_20260620: leer valor del DOM para capturar el último carácter antes de que React procese el onChange pendiente */
+    const rawVal=credInputRef.current?.value??cred;
+    const clean=normCred(rawVal);
     if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
     // SECURITY: normalizar DNI/RUC/CE/código interno sin espacios ni guiones.
     if(!Array.isArray(usuarios)){setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");return;}
@@ -10604,7 +10607,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               <input autoFocus
                 type={showCred?"text":"password"}
                 value={cred}
-                onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
+                ref={credInputRef} onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
                 onKeyDown={e=>e.key==="Enter"&&tryAcceso()}
                 placeholder="DNI / RUC / CE / código"
                 maxLength={12}
