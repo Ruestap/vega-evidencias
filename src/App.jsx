@@ -8217,12 +8217,12 @@ function ChecklistApp() {
             else if(diasRestantes===0) diasTb="(Hoy)";
             else diasTb=`(-${Math.abs(diasRestantes)}d)`;
             detalle=diasTb;
-            // PROGRESO: lectura resumida del estado real
+            // PROGRESO: lectura resumida — estados activos ganan sobre vencida
             if(["entregado","finalizado","terminado"].includes(estado)) progreso="Finalizado";
             else if(estado==="cancelado") progreso="Cancelado";
-            else if(estado==="correccion") progreso="En corrección";
-            else if(vencida) progreso="Con retraso";
+            else if(estado==="correccion"||estado==="observado") progreso="En corrección";
             else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) progreso="En proceso";
+            else if(vencida) progreso="Con retraso"; // solo pendiente vencido
             else progreso="Pendiente";
           }
           const avance=entregada?100:(Number(o?.avance)||0);
