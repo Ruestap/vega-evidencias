@@ -581,16 +581,14 @@ const IcoAuditoriaTab=({active,size=18})=>{
 
 const IcoInicio = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M4 11.5L11.3 4.7a1 1 0 011.4 0L20 11.5"/>
-    <path d="M5.5 10.5V19a1.2 1.2 0 001.2 1.2h10.6A1.2 1.2 0 0018.5 19v-8.5"/>
-    <path d="M9.6 20.2v-3.6a2.4 2.4 0 014.8 0v3.6"/>
+    <path d="M3.5 11.2c0-.7.3-1.4.85-1.86l6.5-5.55a1.7 1.7 0 012.3 0l6.5 5.55c.55.46.85 1.16.85 1.86V19a1.6 1.6 0 01-1.6 1.6H5.1A1.6 1.6 0 013.5 19v-7.8z"/>
+    <path d="M9.6 20.6v-3.7a2.4 2.4 0 014.8 0v3.7"/>
   </svg>
 );
 const IcoTiendas = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 4.5h14l2 4.2a2.1 2.1 0 01-2.1 2.8 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3A2.1 2.1 0 013 8.7z"/>
-    <path d="M5 11.3V19a1.2 1.2 0 001.2 1.2h11.6A1.2 1.2 0 0019 19v-7.7"/>
-    <path d="M9 20.2v-4.5a1 1 0 011-1h4a1 1 0 011 1v4.5"/>
+    <path d="M5.6 4.4h12.8a1.8 1.8 0 011.75 1.4l.75 3.3a2.1 2.1 0 01-2.05 2.6 2.1 2.1 0 01-1.95-1.3 2.1 2.1 0 01-1.95 1.3 2.1 2.1 0 01-1.95-1.3 2.1 2.1 0 01-1.95 1.3 2.1 2.1 0 01-1.95-1.3 2.1 2.1 0 01-1.95 1.3 2.1 2.1 0 01-2.05-2.6l.75-3.3a1.8 1.8 0 011.75-1.4z"/>
+    <path d="M4.8 11.5v6.9a1.4 1.4 0 001.4 1.4h11.6a1.4 1.4 0 001.4-1.4v-6.9"/>
     <line x1="4" y1="20.5" x2="20" y2="20.5"/>
   </svg>
 );
@@ -8044,7 +8042,7 @@ function ChecklistApp() {
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
             style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
-          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><path d="M9 16a4 4 0 107-2.6"/><polyline points="16 11.4 16 13.4 14 13.4"/></svg> Estado</button>}
+          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/><path d="M9 11a3 3 0 015.2-2"/><polyline points="14.4 7.6 14.4 9.1 12.9 9.1"/></svg> Estado</button>}
           {isAdmin&&<button className="et-topbar-pdf" onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> PDF</button>}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
@@ -10097,7 +10095,7 @@ Saludos.`;
               {isAuditor&&<button onClick={()=>{setShowStatusCard(true);setDrawerOpen(false);}}
                 style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",background:"transparent",color:"rgba(253,203,110,.85)",fontWeight:500,fontSize:14}}>
                 <span style={{display:"flex",alignItems:"center"}}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><path d="M9 16a4 4 0 107-2.6"/><polyline points="16 11.4 16 13.4 14 13.4"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/><path d="M9 11a3 3 0 015.2-2"/><polyline points="14.4 7.6 14.4 9.1 12.9 9.1"/></svg>
                 </span>
                 Estado
               </button>}
