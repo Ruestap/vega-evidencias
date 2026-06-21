@@ -1109,6 +1109,17 @@ function ChecklistApp() {
   const [odtViewModal, setOdtViewModal] = useState(null);
   const [odtAssignModal, setOdtAssignModal] = useState(null);
   const [odtEditModal, setOdtEditModal] = useState(null);
+  // FIX: bloquear el scroll de la página mientras un modal de ODT está abierto.
+  // Sin esto, el contenido detrás del modal (tabla de ODTs) sigue generando
+  // scroll en la página, lo que en ciertos navegadores/zooms desalinea el
+  // position:fixed del modal y lo muestra cortado arriba y abajo.
+  useEffect(()=>{
+    const anyOdtModalOpen=!!(odtViewModal||odtAssignModal||odtEditModal);
+    if(!anyOdtModalOpen) return;
+    const prevOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    return()=>{document.body.style.overflow=prevOverflow;};
+  },[odtViewModal,odtAssignModal,odtEditModal]);
   const [odtEditForm, setOdtEditForm] = useState({}); // controlled edit form
   const [odtDashView, setOdtDashView] = useState("kanban");
   const [odtKanbanFiltro, setOdtKanbanFiltro] = useState({resp:"todos",tipo:"todos"}); // kanban filter
@@ -8033,7 +8044,7 @@ function ChecklistApp() {
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
             style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
-          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Estado</button>}
+          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><path d="M9 16a4 4 0 107-2.6"/><polyline points="16 11.4 16 13.4 14 13.4"/></svg> Estado</button>}
           {isAdmin&&<button className="et-topbar-pdf" onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> PDF</button>}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
@@ -10086,7 +10097,7 @@ Saludos.`;
               {isAuditor&&<button onClick={()=>{setShowStatusCard(true);setDrawerOpen(false);}}
                 style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderRadius:12,border:"none",cursor:"pointer",marginBottom:6,textAlign:"left",background:"transparent",color:"rgba(253,203,110,.85)",fontWeight:500,fontSize:14}}>
                 <span style={{display:"flex",alignItems:"center"}}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><path d="M9 16a4 4 0 107-2.6"/><polyline points="16 11.4 16 13.4 14 13.4"/></svg>
                 </span>
                 Estado
               </button>}
