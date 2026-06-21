@@ -1,19 +1,36 @@
-// ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
-/* ET_FIX_RENDER_UNDEF_DISENO_TIENDA_HELPERS_20260615 */
-/* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
-/* ET_FIX_FINAL_ROLES_DASH_CORRECCION_MOTIVOS_20260614 */
-/* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
+/* ET_FIX_RENDER_PILLE_ORDER_20260614 */
+/* ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 */
+/* ET_CIERRE_DISENO_MOCKUP_MANUAL_CALC_20260614 */
 /* ET_FIX_ODT_ESTADO_CORRECCION_NOTIFY_20260614 */
-/* ET_TIENDAS_1_5_EDIT_MODAL_COMPACT_20260614 */
-/* ET_FIX_ODT_FIRESTORE_WHATSAPP_ALERT_20260614 */
-/* ET_FIX_ODT_TIENDA_RESPONSIVE_WHATSAPP_20260614 */
-/* ET_FIX_FINAL_ODT_TIENDA_RESPONSIVE_WHATSAPP_20260614 */
+/* ET_FIX_VIEW_MODAL_ACTIONS_HEADER_ROW_20260614 */
+/* ET_FIX_ODT_ICONOS_REPORTE_MATCH_NUEVA_20260614 */
+/* ET_FIX_VIEW_MODAL_ACTIONS_HEADER_ROW_20260614 */
+/* ET_FIX_ODT_NO_MAILTO_SVG_CLEAN_20260614 */
+/* ET_FINAL_DISENO_PRIORITY_SVG_20260614 */
+/* ET_FIX_VIEW_MODAL_COMPACT_ACTIONS_20260614 */
+/* ET_FIX_LOGIN_WAIT_USERS_NO_FALSE_ATTEMPT_20260614 */
+/* ET_FIX_LOGIN_NO_GLOBAL_PER_CRED_20260614 */
+/* ET_FIX_ODT_KANBAN_ENTREGADOS_7D_20260614 */
+// ET_FIX_EDIT_MODAL_COMPACT_150_20260614
+// ET_FIX_EDIT_MODAL_VIEWER_APPROVED_20260614
+// ET_FIX_ODT_NOTIF_SOLICITANTE_20260614
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-/* ET_TIENDAS_1_5_VIEWER_APPROVED_20260614 */
-/* ET_TIENDAS_1_5_FORMULARIO_LIMPIO_20260614 */
+// ET_FIX_DIAS_TB_LABORALES_20260621
 import React from "react";
+/* ET_REPORTE_SIN_DETALLE_ICONOS_20260613_1845 */
+/* ET_CIERRE_DISENO_ROLES_CONFIG_20260614 */
+/* ET_STEPPER_ODT_FUNCIONAL_20260614 */
+/* ET_FIX_ODT_SIN_STEPPER_SIN_BOTONES_MAIL_20260614 */
+/* ET_FIX_ODT_EXTERNAL_LINKS_20260614 */
+/* ET_FIX_EDIT_MODAL_ADMIN_VISIBLE_20260614 */
+/* ET_FIX_LOGIN_DEVICE_LOCK_20260614 */
+/* ET_ENTREGADO_FLOW_RESPONSIVE_20260613_1755 */
 import { db } from "./firebase";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
+/* ET_FIRESTORE_ONLY_MAIL_PLAIN_20260613_1635 */
+/* ET_ODT_STATUS_MAIL_STEPPER_20260613_1710 */
+/* ET_EDIT_ASSIGN_STATUS_20260613_1735 */
+/* ET_FIX_REPORTE_ACCIONES_MAIL_20260614 */
 import {
   collection, doc, onSnapshot,
   setDoc, deleteDoc, addDoc, updateDoc, query, where, orderBy
@@ -52,9 +69,74 @@ class AppErrorBoundary extends React.Component {
 
 /* ══ DATOS ══════════════════════════════════════════════ */
 // Fallback local — Firestore es la fuente de verdad (ver useEffect de sync config/app)
-// ET_FIX_FINAL_NO_TIENDAS_INIT_SEED_20260614: Tiendas no se precargan desde semilla local; Firestore config/app.tiendas es la fuente de verdad.
-const TIENDAS_INIT = [];
-
+const TIENDAS_INIT = [
+  {id:"t01",n:"Collique",f:"Mayorista",lat:-11.9130710881406,lng:-77.0315240586426,dir:"Av. Andrés Avelino Cáceres N°236, Mz K, Lt.1, 2da. Zona (Mcdo. 12 de Octubre)",dist:"Comas",maps:"https://goo.gl/maps/WMx9abr8jDP7hFmr6",activa:true},
+  {id:"t02",n:"Infantas",f:"Mayorista",lat:-11.9452993788987,lng:-77.0666678245644,dir:"Av.  Av Gerardo Unger 6531(Ref Media  Cuadra Comisaria de Infantas)",dist:"S.M.P.",maps:"https://goo.gl/maps/CEEaDF5Vb8tA6gaz6",activa:true},
+  {id:"t03",n:"Productores",f:"Mayorista",lat:-12.0406048829501,lng:-76.947559418012,dir:"Av. La Cultura s/n Psje. B Puesto 13 Santa Anita - Mercado Productores",dist:"Santa Anita",maps:"https://goo.gl/maps/EzcjFuixKH8UFF229",activa:true},
+  {id:"t04",n:"Belaunde",f:"Mayorista",lat:-11.9394642199328,lng:-77.05063230274,dir:"Av Belaunde Oeste 198",dist:"Comas",maps:"https://goo.gl/maps/gXxPQDmHDeiTeCxU8",activa:true},
+  {id:"t05",n:"Santa Clara",f:"Supermayorista",lat:-12.0179693921418,lng:-76.8835553504947,dir:"Av. Estrella 286 Urb. Santa Clara  Distrito de Ate Vitarte",dist:"Ate Vitarte",maps:"https://g.page/QhatuPlazaSantaClara?share",activa:true},
+  {id:"t06",n:"San Antonio",f:"Supermayorista",lat:-11.862040061358,lng:-77.0096919246391,dir:"Fundación Punchauca Caudivilla Mz \"D\" Lt - 01 San Antonio Alt. km 22 de la Tupac Amaru",dist:"Carabayllo",maps:"https://goo.gl/maps/eUm25P5MX24Svq8p6",activa:true},
+  {id:"t07",n:"Chorrillos",f:"Supermayorista",lat:-12.16797675312,lng:-77.0239126189426,dir:"Jr. Genaro Numa Llona N° 200 (Ref Alt 2 de Estacion de Bomberos )",dist:"Chorrillos",maps:"https://goo.gl/maps/QUB3Q4uRu3qfSyZM9",activa:true},
+  {id:"t08",n:"Año Nuevo",f:"Supermayorista",lat:-11.9239747733092,lng:-77.0409121709185,dir:"Urb. Villa Collique Zonal 4 Jr. Jupiter Mz 6 Lote 68",dist:"Comas",maps:"https://maps.app.goo.gl/hotaB65hVzXaS78E6",activa:true},
+  {id:"t09",n:"Colonial",f:"Supermayorista",lat:-12.0465295077811,lng:-77.0474716086143,dir:"Av Colonial  679 - Int 103 - Cruce Carcamo (Cercado de Lima)",dist:"Lima Cercado",maps:"https://maps.app.goo.gl/Y116zBpWoAV9AhEK6",activa:true},
+  {id:"t10",n:"Huamantanga",f:"Supermayorista",lat:-11.8642606553917,lng:-77.0740240854907,dir:"Av. Puente Piedra 200(Ref - Frente al Puesto Regular)",dist:"Puente Piedra",maps:"https://goo.gl/maps/CeHBhbQTBW2nyqzU9",activa:true},
+  {id:"t11",n:"Filomeno",f:"Supermayorista",lat:-12.0240887249942,lng:-77.0286662025572,dir:"Urb. Ciudad  y Campo - Av Armando Filomeno 105",dist:"Rimac",maps:"https://goo.gl/maps/BqP9A8KqRkjeXnCY8",activa:true},
+  {id:"t12",n:"Naranjal",f:"Supermayorista",lat:-11.9676870957647,lng:-77.0948968735974,dir:"Av. Pacasmayo Mz. A Lt -01 Ref. (Ovalo de Canta Callao / Av Sol de Naranjal)",dist:"S.M.P.",maps:"https://goo.gl/maps/ErHSirU7eiiRkFH78",activa:true},
+  {id:"t13",n:"San Diego",f:"Supermayorista",lat:-11.9457045229958,lng:-77.0875688429728,dir:"Mza. Ñ1 Lote 3 Urb. San Diego Vipol",dist:"S.M.P.",maps:"https://goo.gl/maps/RZDLeRfs1UNU9wFU8",activa:true},
+  {id:"t14",n:"Surco",f:"Supermayorista",lat:-12.145287970169,lng:-76.9877465027067,dir:"Urb Prolongacion  Benavides - Av Tomas Marsano Mz \"G-4\" Lt 23",dist:"Surco",maps:"https://goo.gl/maps/EEMTkD2mhiFYQALG7",activa:true},
+  {id:"t15",n:"Lima VES",f:"Supermayorista",lat:-12.2306606786337,lng:-76.9091952188438,dir:"Av. Lima Lt \"A - 02\" (Ref Ex Electra) Villa El Salvador",dist:"V.E.S.",maps:"https://goo.gl/maps/F4hWVzVsuy7z2Kup8",activa:true},
+  {id:"t16",n:"Minka",f:"Supermayorista",lat:-12.0479673671,lng:-77.111423924141,dir:"Av. Argentina N°3093 - Pabellón 7 - Int 97",dist:"Callao",maps:"https://goo.gl/maps/V5hVoRQKTatTS2VLA",activa:true},
+  {id:"t17",n:"Nestor Gambetta",f:"Supermayorista",lat:-11.8380137768696,lng:-77.1106039375981,dir:"Via Leocio Prado  Mz G Lt.96 (Ref 2 Cuadras de PRECIO UNO)",dist:"Puente Piedra",maps:"https://goo.gl/maps/UUSR9Y2VNy8odHYm8",activa:true},
+  {id:"t18",n:"Tres Regiones",f:"Supermayorista",lat:-11.8473268750784,lng:-77.0909708230882,dir:"Panamericana norte km. 33.5, Zapallal - Puente Piedra (mercado las tres regiones)",dist:"Puente Piedra",maps:"https://goo.gl/maps/YAVyCgNzwEEJvNRN9",activa:true},
+  {id:"t19",n:"Bocanegra",f:"Market",lat:-12.0066909878997,lng:-77.0993521687059,dir:"Av. Bocanegra Mz, A Lote N° 30, Urb. Albino Herrera, Primera Etapa",dist:"Callao",maps:"https://goo.gl/maps/z2iuTStL7i5uv7ig8",activa:true},
+  {id:"t20",n:"Canta Callao",f:"Market",lat:-11.9979508014858,lng:-77.1139514644159,dir:"Parcela 2-A, Ex Fundo Taboada – Valle de Boca Negra, Local Comercial Nº 110",dist:"Callao",maps:"https://goo.gl/maps/VkpsQ26Jjmbvckoh6",activa:true},
+  {id:"t21",n:"Mi Perú",f:"Market",lat:-11.8540475368831,lng:-77.1251839301726,dir:"Av. Ayacucho  Mz \"A9\" Lt -22 Gr \"A\" - Mi Perú",dist:"Ventanilla",maps:"https://goo.gl/maps/7u4tMquY7RYg4BsFA",activa:true},
+  {id:"t22",n:"Santo Domingo",f:"Market",lat:-11.8870300194622,lng:-77.0355570041254,dir:"Av Mariano Condorcanqui Mz T",dist:"Carabayllo",maps:"https://goo.gl/maps/EjFhHNvZZS8yND9M7",activa:true},
+  {id:"t23",n:"Amaranto",f:"Market",lat:-11.8997588873418,lng:-77.0369269423487,dir:"Jr. Amaranto 108 - 110, Urb. Santa Isabel",dist:"Carabayllo",maps:"https://goo.gl/maps/ytZxPSFqPEfiKd8bA",activa:true},
+  {id:"t24",n:"Malvinas",f:"Market",lat:-12.0440597372605,lng:-77.0499197423462,dir:"Av Argentina cdra 6 Int \"L\" . CC Via Mix",dist:"Lima Cercado",maps:"https://goo.gl/maps/Xy2UwwzUedBynGqu6",activa:true},
+  {id:"t25",n:"Husares De Junin",f:"Market",lat:-12.0770426523306,lng:-77.0514508478503,dir:"Av. Husares De Junin Nro. 366 Int. 1 Fnd. Oyague",dist:"Jesus María",maps:"https://goo.gl/maps/ccvd1ncnuqtXzKqV7",activa:true},
+  {id:"t26",n:"Santa Catalina",f:"Market",lat:-12.089545803654,lng:-77.0197852198942,dir:"Av. Carlos Villaran 500 - C.C. Santa",dist:"La Victoria",maps:"https://goo.gl/maps/GaghBoXhkURDfcfR8",activa:true},
+  {id:"t27",n:"Canevaro",f:"Market",lat:-12.0850888511931,lng:-77.0454268337727,dir:"Av. Canevaro N°1405 (Ref. frente al Parque de bomberos)",dist:"Lince",maps:"https://goo.gl/maps/hp2vVXvyzvgNFcCA6",activa:true},
+  {id:"t28",n:"Alayza",f:"Market",lat:-12.0837799669684,lng:-77.0359517108937,dir:"Av. General Cesar Canevaro Nro. 213 Lima - Lima - Lince",dist:"Lince",maps:"https://goo.gl/maps/CYdkDWM6LYRW6bMq8",activa:true},
+  {id:"t29",n:"Huandoy",f:"Market",lat:-11.9755420632121,lng:-77.0823099152715,dir:"Av Huandoy N° 5032",dist:"Los Olivos",maps:"https://goo.gl/maps/GkbaaSvJoAaRA6F67",activa:true},
+  {id:"t30",n:"Las Palmeras",f:"Market",lat:-11.9732419484427,lng:-77.0722909907347,dir:"Av Las Palmeras 5345",dist:"Los Olivos",maps:"https://goo.gl/maps/j7P16D6Qcw9rGHx78",activa:true},
+  {id:"t31",n:"Benavides",f:"Market",lat:-12.1262277453332,lng:-77.0147340280236,dir:"Av. Alfredo Benavides Nro. 1615 Urb. San Jorge Lima - Lima - Miraflores",dist:"Miraflores",maps:"https://goo.gl/maps/aL4v5TUUuwT8f3Rk9",activa:true},
+  {id:"t32",n:"Clement",f:"Market",lat:-12.0752479997504,lng:-77.0633833684983,dir:"Av. José Leguía y Meléndez Nro. 1040",dist:"Pueblo Libre",maps:"https://goo.gl/maps/kW82Ut3NSVm5opW87",activa:true},
+  {id:"t33",n:"Aviación",f:"Market",lat:-12.1074414800023,lng:-77.0005866261898,dir:"Av. Aviacion N° 3540",dist:"San Borja",maps:"https://g.page/vega-market-aviacion?share",activa:true},
+  {id:"t34",n:"La Cultura",f:"Market",lat:-12.0846341748754,lng:-77.0047722978547,dir:"Av. Aviación N° 2347",dist:"San Borja",maps:"https://goo.gl/maps/6jseYX4BqrCXu3hY8",activa:true},
+  {id:"t35",n:"Chimu",f:"Market",lat:-12.0981034965201,lng:-76.9623006042263,dir:"Av Gran Chimu 1641 Urb. Zarate",dist:"S.J.L.",maps:"https://goo.gl/maps/Fwj6B5aD9TYCMseP8",activa:true},
+  {id:"t36",n:"Montenegro",f:"Market",lat:-11.9362598875811,lng:-76.9719465484801,dir:"Jr. Mar de flores. Oeste 127 MZ Q1 - Lt 2B",dist:"S.J.L.",maps:"https://goo.gl/maps/s2yVQLymmw8bReCg9",activa:true},
+  {id:"t37",n:"Izaguirre",f:"Market",lat:-11.989557202557,lng:-77.0977567584093,dir:"Av Carlos Izaguirre MZ \"A\", Lt 30",dist:"S.M.P.",maps:"https://maps.app.goo.gl/HrSB3aakKn897whe8",activa:true},
+  {id:"t38",n:"Riobamba",f:"Market",lat:-12.0331715698591,lng:-77.0589855334734,dir:"Urb. Perú, Jr. Riobamba 501, San Martín de Porres",dist:"S.M.P.",maps:"https://goo.gl/maps/PZhCDig7d99rRtme6",activa:true},
+  {id:"t39",n:"Escardó",f:"Market",lat:-12.0779047089124,lng:-77.0927689647178,dir:"Av. Rafael Escardo Salazar Nº 454 urbanización Maranga",dist:"San Miguel",maps:"https://goo.gl/maps/Sur3ctj6KP9dCobF7",activa:true},
+  {id:"t40",n:"Maranga",f:"Market",lat:-12.0697705428756,lng:-77.0919306022064,dir:"Av. Los Precursores N° 362-366 - San Miguel",dist:"San Miguel",maps:"https://goo.gl/maps/31WiaYd6BZrxyj5V9",activa:true},
+  {id:"t41",n:"Universal",f:"Market",lat:-12.0436282626762,lng:-76.9794604832883,dir:"Jr. César Vallejo 356- 360 Urb. Universal",dist:"Santa Anita",maps:"https://goo.gl/maps/MLcUYojHz5R5VrTx8",activa:true},
+  {id:"t42",n:"Roosevelt",f:"Market",lat:-12.1467620468921,lng:-77.0124804800025,dir:"Jr. Franklin Roosevelt 812",dist:"Surco",maps:"https://goo.gl/maps/wau8L8pp8KizFXCS8",activa:true},
+  {id:"t43",n:"Higuereta",f:"Market",lat:-12.1294650401685,lng:-77.0009571492134,dir:"Av. Santiago De Surco Nro. 3004 Int. 101 Urb. La Castellana Lima",dist:"Surco",maps:"https://maps.app.goo.gl/4Ks7i6CXbmjsb27h6",activa:true},
+  {id:"t44",n:"Mareategui",f:"Market",lat:-12.1545753990258,lng:-76.9525443717441,dir:"Jose Carlos Mareategui N° 798",dist:"V.M.T.",maps:"https://goo.gl/maps/baJNRwMns6FCkXJy7",activa:true},
+  {id:"t45",n:"Salamanca",f:"Market",lat:-12.0745836007826,lng:-76.9881374448751,dir:"Urb. Salamanca de Monterrico Av. Los Aymaras 349",dist:"Ate Vitarte",maps:"https://goo.gl/maps/4wtQfhdqaPF7cQYGA",activa:true},
+  {id:"t46",n:"Olimpo",f:"Market",lat:-12.0745301492371,lng:-76.9772683225455,dir:"Calle Efestos Mz W Lt 4 Urb Olimpo (Ref frente al Merc Olimpo)",dist:"Ate Vitarte",maps:"https://goo.gl/maps/Fqk1StEsUFMRodJh9",activa:true},
+  {id:"t47",n:"Nueva Esperanza",f:"Market",lat:-12.1673239484862,lng:-76.9204274410753,dir:"Av. 26 de Noviembre N° 1993, Virgen de Lourdes - VMT",dist:"V.M.T.",maps:"https://goo.gl/maps/V15954Ve1mUcvwx5A",activa:true},
+  {id:"t48",n:"Alisos",f:"Market",lat:-11.9832041997733,lng:-77.0789397745201,dir:"Av. Los Alisos Mz. R Lote 45 Urb. Los Jazmines de Naranjal",dist:"Los Olivos",maps:"https://goo.gl/maps/AymktEnhAKKF4xf48",activa:true},
+  {id:"t49",n:"Ignacio Merino",f:"Market",lat:-12.0840366270314,lng:-77.0315598469307,dir:"Av. Ignacio Merino 1999",dist:"Lince",maps:"https://maps.app.goo.gl/TqfoSCZG4EV9niXp9",activa:true},
+  {id:"t50",n:"Rospigliosi",f:"Market",lat:-12.0792756031438,lng:-77.0326054084494,dir:"Av. Ignacio Merino Nro. 1502 esq. con Manuel Segura",dist:"Lince",maps:"https://maps.app.goo.gl/TE6Y6Hc8oGPtGZQ86",activa:true},
+  {id:"t51",n:"Loreto",f:"Market",lat:-12.0544998291611,lng:-77.0490928110227,dir:"Jiron Loreto 478",dist:"Breña",maps:"https://maps.app.goo.gl/zQMbQ2qmR1JH579Q9",activa:true},
+  {id:"t52",n:"Vara de Oro",f:"Market",lat:-12.0251128545406,lng:-76.9967339475352,dir:"Calle Vara de Oro 288 - Urg Zarate Comu 3",dist:"S.J.L.",maps:"https://maps.app.goo.gl/wkrE4H54wD3VH8rm9",activa:true},
+  {id:"t53",n:"Los Olivos",f:"Market",lat:-11.98831205195,lng:-77.0822101252409,dir:"Av. Los Olivos 210",dist:"S.M.P.",maps:"https://maps.app.goo.gl/qhuoGau6dtNbFLgb9",activa:true},
+  {id:"t54",n:"Mariano Pastor",f:"Market",lat:-12.0729274536981,lng:-77.0651821734151,dir:"C. Mariano Pastor Sevilla 194 (Ref 1/2 cuadra Merc Bolivar)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/6MGuZsMU3341X6Lr6",activa:true},
+  {id:"t55",n:"Amancaes 3",f:"Market",lat:-12.0257230071489,lng:-77.0341626057537,dir:"Av. Amancaes 124, Rímac",dist:"Rimac",maps:"https://maps.app.goo.gl/oZcdG7b484FryNwo8",activa:true},
+  {id:"t56",n:"Alameda Los Cedros",f:"Market",lat:-12.2036161155135,lng:-77.0146858000055,dir:"Av. Alameda Los Cedros 214",dist:"Chorrillos",maps:"https://maps.app.goo.gl/R6dSf5vUMvWEaakV8",activa:true},
+  {id:"t57",n:"Bellavista",f:"Market",lat:-12.063814219369,lng:-77.1454623981609,dir:"Jiron. Grau 485",dist:"Bellavista",maps:"https://maps.app.goo.gl/7ujPpHG8RQXqxkENA",activa:true},
+  {id:"t58",n:"Mall Comas",f:"Market",lat:-11.9338398194793,lng:-77.0658375835365,dir:"Av. Los Ángeles 602, Comas 15314",dist:"Comas",maps:"https://maps.app.goo.gl/cLXJ8XsWSzS3bqo57",activa:true},
+  {id:"t59",n:"A. Los Condores",f:"Market",lat:-12.1011618376867,lng:-76.9441832656271,dir:"Alameda los Condores 628",dist:"La Molina",maps:"https://maps.app.goo.gl/dqKnNNLNN4Y7ufgb8",activa:true},
+  {id:"t60",n:"Mariano Cornejo",f:"Market",lat:-12.0677220872957,lng:-77.0651192762642,dir:"Av Mariano Cornejo 1407",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ed992SADFWwLWyBj8",activa:true},
+  {id:"t61",n:"Las Guindas",f:"Market",lat:-12.0315735941664,lng:-76.9904041119922,dir:"Ca. Las Guindas 348 Urb, El Agustino (Ref media cuadra Condominios Alameda El Agustino)",dist:"Pueblo Libre",maps:"https://maps.app.goo.gl/ExAhcKw7mPDXv5VW6",activa:true},
+  {id:"t62",n:"San Luis",f:"Market",lat:-12.0755237709728,lng:-77.0023173003529,dir:"Av. San Juan 771 San Luis",dist:"La Victoria",maps:"https://share.google/36264kwQUUQoIV7nh",activa:true},
+  {id:"t63",n:"Independencia",f:"Market",lat:-11.9925688075581,lng:-77.0574865358829,dir:"Av. Gerardo Unger Nro. 3601 local LC02 Urb. Industrial Panamericana Norte",dist:"Independencia",maps:"https://share.google/nrqEZNgi6dLcVz7fh",activa:true},
+  {id:"t64",n:"Guardia Civil",f:"Market",lat:-12.1680427416882,lng:-76.9921645565965,dir:"Av. Guardia Civil Norte 625, Urb. Los Parrales de Surco",dist:"Surco",maps:"https://maps.app.goo.gl/cJJCVJX3N5xgNqwb8",activa:true},
+  {id:"t65",n:"Villaran",f:"Market",lat:-12.1216165022436,lng:-77.0048891334863,dir:"Av. Manuel Villlaran 708 Urb. Los Sauces Surquillo",dist:"Surquillo",maps:"https://maps.app.goo.gl/TjtyMkpDEMtNRuji6",activa:true},
+  {id:"t66",n:"Micaela Bastidas",f:"Market",lat:-12.0461930116169,lng:-76.9300866037768,dir:"Calle Comercial Mz U Lote 9 (Ref 1/2 cuadra de mercado modelo n°1 micaela bastidas)",dist:"Ate Vitarte",maps:"https://maps.app.goo.gl/UTdCken84EsBDG4B8",activa:false},
+];
 
 
 
@@ -235,11 +317,6 @@ function cleanStoreEditDraft(draft){
     emailJefeZonal:sanitizeEmailInput(draft?.emailJefeZonal),
     dir:sanitizeTextInput(draft?.dir,SAFE_LIMITS.longText),
     dist:sanitizeTextInput(draft?.dist,80),
-    zonaId:sanitizeTextInput(draft?.zonaId||draft?.idZona,20),
-    lat: draft?.lat==="" || draft?.lat===undefined || draft?.lat===null ? "" : Number(String(draft.lat).replace(",",".")),
-    lng: draft?.lng==="" || draft?.lng===undefined || draft?.lng===null ? "" : Number(String(draft.lng).replace(",",".")),
-    maps:sanitizeTextInput(draft?.maps||draft?.googleMapsUrl,SAFE_LIMITS.longText),
-    activa: draft?.activa===false ? false : true,
     horarioLunJue:sanitizeHorarioInput(draft?.horarioLunJue),
     horarioVieSab:sanitizeHorarioInput(draft?.horarioVieSab),
     horarioDom:sanitizeHorarioInput(draft?.horarioDom),
@@ -252,9 +329,6 @@ function validateStoreEditDraft(draft){
   if(d.emailJefeZonal&&!isValidCorpEmail(d.emailJefeZonal)) return {ok:false,msg:"El email zonal debe ser corporativo: @corporacionvega.pe"};
   if(d.dniGerente&&d.dniGerente.length!==8) return {ok:false,msg:"El DNI del gerente debe tener 8 dígitos."};
   if(d.celular&&d.celular.length<9) return {ok:false,msg:"El celular del gerente debe tener al menos 9 dígitos."};
-  if(d.lat!=="" && (!Number.isFinite(d.lat) || d.lat < -90 || d.lat > 90)) return {ok:false,msg:"Latitud inválida. Debe estar entre -90 y 90."};
-  if(d.lng!=="" && (!Number.isFinite(d.lng) || d.lng < -180 || d.lng > 180)) return {ok:false,msg:"Longitud inválida. Debe estar entre -180 y 180."};
-  if(d.maps && !/^https?:\/\//i.test(d.maps)) return {ok:false,msg:"El link de Google Maps debe iniciar con http o https."};
   return {ok:true,draft:d};
 }
 function getRouteMetaFromTiendas(lista){
@@ -376,7 +450,7 @@ function canAuditarEnFecha(usuario,fechaStr,tienda,{isAdmin=false,asignacionExce
   if(asignacionExcepcional) return {ok:true,perfil,estado:"excepcional_asignada",feriado};
   if(feriado&&feriado.laborable===false) return {ok:false,perfil,estado:"bloqueado_feriado",feriado};
   if(dow===0&&!cfg.domingoRegular) return {ok:false,perfil,estado:"bloqueado_domingo",feriado};
-  if(!(cfg.dias||[]).includes(dow)) return {ok:false,perfil,estado:"fuera_calendario",feriado};
+  if(!cfg.dias.includes(dow)) return {ok:false,perfil,estado:"fuera_calendario",feriado};
   if(perfil==="operativo_trade"&&dow===0){
     const horarioDom=tienda?.horarioDom||tienda?.horario?.domingo||"";
     return {ok:!!horarioDom,perfil,estado:horarioDom?"regular_tienda_domingo":"sin_horario_tienda",feriado};
@@ -901,10 +975,9 @@ function LogTable({filtered, regs, db, deleteDoc, doc, setDoc, showToast, sc, sb
 }
 
 
-// ET_TIENDAS_1_5_EDIT_MODAL_COMPACT_20260614: modal editar tienda compacto, acciones arriba visibles en zoom alto.
 // FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606: componente estable fuera del modal; evita remount y perdida de foco en cada tecla.
 function TiendaEditField({S,label,children}){
-  return <div style={{marginBottom:6}}><label style={{...S.lbl,marginBottom:4,fontSize:9}}>{label}</label>{children}</div>;
+  return <div style={{marginBottom:11}}><label style={S.lbl}>{label}</label>{children}</div>;
 }
 
 function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
@@ -914,7 +987,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
   // Mantener el borrador crudo durante la escritura evita lag, salto de cursor y perdida de foco.
   // La limpieza fuerte se ejecuta al guardar, no por cada tecla.
   const patch=useCallback((obj)=>setDraft(p=>({...p,...obj})),[]);
-  const inputStyle=(extra={})=>({...S.inp,padding:"6px 8px",fontSize:10.5,borderRadius:8,minHeight:30,...extra});
+  const inputStyle=(extra={})=>({...S.inp,...extra});
   const guardar=()=>{
     const v=validateStoreEditDraft(draft);
     if(!v.ok){setError(v.msg);return;}
@@ -922,22 +995,18 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
     onSave(v.draft);
   };
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:6,overflow:"hidden"}}
+    <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.72)",zIndex:95,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
       onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#fff",borderRadius:14,width:"min(440px,96vw)",maxHeight:"calc(100dvh - 10px)",overflowY:"auto",padding:7,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
-        <div style={{position:"sticky",top:0,zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,margin:"-9px -9px 8px",padding:"7px 9px",background:"#fff",borderBottom:"1px solid #e2e8f0",borderRadius:"16px 16px 0 0"}}>
-          <div style={{minWidth:0}}>
-            <div style={{fontSize:15,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
-            <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
+      <div style={{background:"#fff",borderRadius:18,width:"100%",maxWidth:760,maxHeight:"90vh",overflowY:"auto",padding:22,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:900,color:"#1a2f4a"}}>Editar tienda</div>
+            <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>Los cambios se validan antes de guardarse.</div>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-            <button onClick={onClose} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:800,fontSize:11}}>Cancelar</button>
-            <button onClick={guardar} style={{padding:"7px 11px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:900,fontSize:11}}>Guardar</button>
-            <button onClick={onClose} aria-label="Cerrar" style={{width:32,height:32,borderRadius:10,border:"1px solid #e2e8f0",background:"#f8fafc",cursor:"pointer",color:"#5a7a9a",fontSize:18,lineHeight:1}}>×</button>
-          </div>
+          <button onClick={onClose} style={{border:"none",background:"none",cursor:"pointer",color:"#8aaabb",fontSize:18,lineHeight:1}}>✕</button>
         </div>
         {error&&<div style={{padding:"9px 12px",borderRadius:10,background:"#fff1f2",border:"1px solid #fecaca",color:"#dc2626",fontSize:12,fontWeight:700,marginBottom:12}}>{error}</div>}
-        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 78px",gap:6,marginBottom:6}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 150px",gap:10,marginBottom:11}}>
           <div>
             <label style={S.lbl}>NOMBRE TIENDA</label>
             <input value={draft.n||""} onChange={e=>!draft._readOnly&&patch({n:e.target.value})}
@@ -952,33 +1021,33 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
         </div>
         <TiendaEditField S={S} label="EMAIL TIENDA">
           <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
-            placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={inputStyle()}/>
+            placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"10px 0 6px"}}>GERENTE DE TIENDA</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#00b5b4",letterSpacing:".06em",margin:"14px 0 8px"}}>GERENTE DE TIENDA</div>
         <TiendaEditField S={S} label="NOMBRE GERENTE">
           <input value={draft.gerenteTienda||""} onChange={e=>patch({gerenteTienda:e.target.value})}
-            placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={inputStyle()}/>
+            placeholder="APELLIDO APELLIDO, Nombre" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:6,marginBottom:6}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
           <div>
             <label style={S.lbl}>DNI GERENTE</label>
             <input value={draft.dniGerente||""} onChange={e=>patch({dniGerente:sanitizeDigits(e.target.value,SAFE_LIMITS.dni)})}
-              placeholder="12345678" inputMode="numeric" autoComplete="off" style={inputStyle()}/>
+              placeholder="12345678" inputMode="numeric" autoComplete="off" style={S.inp}/>
           </div>
           <div>
             <label style={S.lbl}>CELULAR GERENTE</label>
             <input value={draft.celular||""} onChange={e=>patch({celular:sanitizeDigits(e.target.value,SAFE_LIMITS.phone)})}
-              placeholder="987654321" inputMode="tel" autoComplete="off" style={inputStyle()}/>
+              placeholder="987654321" inputMode="tel" autoComplete="off" style={S.inp}/>
           </div>
         </div>
-        <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"10px 0 6px"}}>JEFE ZONAL</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#f6a623",letterSpacing:".06em",margin:"14px 0 8px"}}>JEFE ZONAL</div>
         <TiendaEditField S={S} label="ZONAL ASIGNADO">
           <select value={draft._zonalUserId||"__manual__"} onChange={e=>{
             const uid=e.target.value;
             if(uid==="__manual__"){patch({_zonalUserId:"__manual__",jefeZonalNombre:"",emailJefeZonal:""});return;}
             const u=usuarios.find(x=>x.id===uid);
             if(u) patch({_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""});
-          }} style={inputStyle({padding:"9px 12px"})}>
+          }} style={{...S.inp,padding:"10px 12px"}}>
             <option value="__manual__">— Sin asignar —</option>
             {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
               <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
@@ -987,47 +1056,30 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
         </TiendaEditField>
         <TiendaEditField S={S} label="EMAIL ZONAL">
           <input type="email" value={draft.emailJefeZonal||""} onChange={e=>patch({emailJefeZonal:e.target.value})}
-            placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={inputStyle()}/>
+            placeholder="apellido.n@corporacionvega.pe" inputMode="email" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"10px 0 6px"}}>UBICACIÓN</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>UBICACIÓN</div>
         <TiendaEditField S={S} label="DIRECCIÓN">
-          <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={inputStyle()}/>
+          <input value={draft.dir||""} onChange={e=>patch({dir:e.target.value})} placeholder="Av. Principal 123" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 64px",gap:6,marginBottom:6}}>
-          <div>
-            <label style={S.lbl}>DISTRITO</label>
-            <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={inputStyle()}/>
-          </div>
-          <div>
-            <label style={S.lbl}>ZONA</label>
-            <input value={draft.zonaId||""} onChange={e=>patch({zonaId:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
-          </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:6,marginBottom:6}}>
-          <div>
-            <label style={S.lbl}>LATITUD</label>
-            <input value={draft.lat??""} onChange={e=>patch({lat:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
-          </div>
-          <div>
-            <label style={S.lbl}>LONGITUD</label>
-            <input value={draft.lng??""} onChange={e=>patch({lng:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
-          </div>
-        </div>
-        <TiendaEditField S={S} label="LINK GOOGLE MAPS">
-          <input value={draft.maps||""} onChange={e=>patch({maps:e.target.value})} placeholder="" autoComplete="off" style={inputStyle()}/>
+        <TiendaEditField S={S} label="DISTRITO">
+          <input value={draft.dist||""} onChange={e=>patch({dist:e.target.value})} placeholder="Comas" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"10px 0 6px"}}>HORARIOS</div>
+        <div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".06em",margin:"14px 0 8px"}}>HORARIOS</div>
         <TiendaEditField S={S} label="LUNES A JUEVES">
-          <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
+          <input value={draft.horarioLunJue||""} onChange={e=>patch({horarioLunJue:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
         <TiendaEditField S={S} label="VIERNES A SÁBADO">
-          <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
+          <input value={draft.horarioVieSab||""} onChange={e=>patch({horarioVieSab:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
         <TiendaEditField S={S} label="DOMINGOS">
-          <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={inputStyle()}/>
+          <input value={draft.horarioDom||""} onChange={e=>patch({horarioDom:e.target.value})} placeholder="7:00 AM A 9:00 PM" autoComplete="off" style={S.inp}/>
         </TiendaEditField>
-
-        <div style={{marginTop:8,padding:"7px 10px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button onClick={guardar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",cursor:"pointer",fontWeight:800,fontSize:13}}>Guardar cambios</button>
+          <button onClick={onClose} style={{padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>Cancelar</button>
+        </div>
+        <div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:"#f8fafc",border:"1px solid #e2e8f0"}}>
           <span style={{fontSize:10,color:"#8aaabb"}}>El nombre se guarda en MAYÚSCULAS. Gerente y jefe zonal se normalizan a Título. Emails, DNI, celular y horarios se limpian antes de guardar. FIX_TIENDA_EDIT_FOCUS_STABLE_FIELD_20260606</span>
         </div>
       </div>
@@ -1047,6 +1099,7 @@ function ChecklistApp() {
   const [pinMod,  setPinMod]  = useState(false);
   const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
+  const [usuariosLoaded, setUsuariosLoaded] = useState(false); // FIX: no contar intentos si usuarios aún no cargó desde Firestore
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
@@ -1056,7 +1109,7 @@ function ChecklistApp() {
   const [vYear,   setVYear]   = useState(now.getFullYear());
   const [vMonth,  setVMonth]  = useState(now.getMonth());
   const [selWeek, setSelWeek] = useState(null);
-  const [tiendas, setTiendas] = useState([]);
+  const [tiendas, setTiendas] = useState(TIENDAS_INIT);
   const [acts,    setActs]    = useState(ACTIVIDADES_INIT);
   const [regs,    setRegs]    = useState({});
   const [exceps,  setExceps]  = useState({});
@@ -1077,12 +1130,8 @@ function ChecklistApp() {
   const [cfgMod,  setCfgMod]  = useState(null); // null | "evidencias" | "auditoria"
   const [ddOpen,  setDdOpen]  = useState(false); // dropdown Panel de control
   const [ddUsrOpen, setDdUsrOpen] = useState(false); // FIX_RUTAACTIVA_PARAM_20260520_DEPLOY_OK dropdown Gestión de Usuarios — independiente de ddOpen
-  const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva/Coordenadas/Responsables/Historial en módulo Tiendas
+  const [tpTab,   setTpTab]   = useState("lista"); // pestaña Tiendas/Nueva/Carga en módulo Tiendas
   const [fmtTab,  setFmtTab]  = useState("Mayorista"); // subpestaña formato en módulo Tiendas
-  const [tiendaFiltroTxt, setTiendaFiltroTxt] = useState("");
-  const [tiendaFiltroEstado, setTiendaFiltroEstado] = useState("Todos");
-  const [tiendaFiltroZona, setTiendaFiltroZona] = useState("Todas");
-  const [tiendaHistorial, setTiendaHistorial] = useState([]);
   /* ── auditoría config ── */
   const [audCfgTab,  setAudCfgTab]  = useState("score");
   // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
@@ -1320,6 +1369,10 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
       setUsuarios(data);
+      setUsuariosLoaded(true);
+    }, err=>{
+      console.error("usuarios snapshot failed:", err?.code||err?.message||"unknown");
+      setUsuariosLoaded(true);
     });
     return ()=>unsub();
   },[]);
@@ -1335,6 +1388,13 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
+  // Limpieza de llaves antiguas: las ODT ya no se guardan por navegador/dispositivo
+  useEffect(()=>{
+    try{
+      ["et_odt_items","et_odt_deleted_ids","disenoODTs","odts","designODTs"].forEach(k=>localStorage.removeItem(k));
+    }catch{}
+  },[]);
+
   // Sync diseno_odts desde Firestore — fuente de verdad para ODTs
   useEffect(()=>{
     const q=query(collection(db,"diseno_odts"),orderBy("creadoEn","desc"));
@@ -1342,8 +1402,9 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>data.push({id:d.id,...d.data()}));
       setOdtFirestore(data);
-    },()=>{
-      // Fallback silencioso si no hay permiso o índice — usa localStorage
+    },(e)=>{
+      console.warn("[ODT Firestore sync]", e?.message || e);
+      setOdtFirestore([]);
     });
     return()=>unsub();
   },[]);
@@ -1646,7 +1707,7 @@ function ChecklistApp() {
   const dow = getDow(fecha);
   const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
-  const actsDia = useMemo(()=>acts.filter(a=>a.activa&&(a.dias||[]).includes(dow)),[acts,dow]);
+  const actsDia = useMemo(()=>acts.filter(a=>a.activa&&a.dias.includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
     const override = rangosDia?.[actId]?.[fechaStr];
@@ -1666,18 +1727,14 @@ function ChecklistApp() {
   const loggedUser    = usuarios.find(u=>u.id===uDni||u.dni===uDni)||{};
   const uCargo        = loggedUser.cargo||"";
   const uArea         = loggedUser.area||"";
-  // Solicitante: cualquier cargo distinto a Diseñador/Admin que puede crear y seguir ODTs pero no asignar
-  const isSolicitante = ["coordinador","visor"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador");
-  /* ET_FIX_DISENO_VARS_SCOPE_20260615 — variables de rol para módulo Diseño/ODT */
-  const isDisenoCargo    = String(uCargo).toLowerCase().trim()==="diseñador"||String(uCargo).toLowerCase().trim()==="disenador";
-  const isDisenoAdmin    = role==="admin";
-  const isDisenoCoordinator = role==="coordinador";
+  // Roles globales + cargo/area/alcance: el rol define poder; el cargo define funcion.
+  const normTxt = (v)=>String(v||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const isDisenoCargo = normTxt(uCargo)==="disenador";
+  const isSolicitante = role==="solicitante";
   const isDisenoExecutor = role==="ejecutor" && isDisenoCargo;
-  const isDisenoViewer   = role==="visor";
-  /* ET_FIX_TIENDA_HELPERS_SCOPE_20260615 — helpers de tienda accesibles en todo el render */
-  const nomTienda=(t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
-  const fmtTienda=(t)=>String(t?.f||t?.formato||"").trim();
-  const distTienda=(t)=>String(t?.dist||t?.distrito||"").trim();
+  const isDisenoViewer = role==="visor";
+  const isDisenoCoordinator = role==="coordinador";
+  const isDisenoAdmin = role==="admin";
 
   // B1 fix: regsIndex declarado ANTES de getReg que lo referencia
   // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
@@ -1820,7 +1877,7 @@ function ChecklistApp() {
       const dw=getDow(ds);
       acts.filter(a=>
         a.activa &&
-        (a.dias||[]).includes(dw) &&
+        a.dias.includes(dw) &&
         !isExc(tId,a.id,ds) &&
         actsConRegistroIds.has(a.id) && // solo actividades operativamente activas
         (catFilter===null || a.cat===catFilter) &&
@@ -1855,7 +1912,7 @@ function ChecklistApp() {
       if(ds>hoy) return;
       const dw=getDow(ds);
       acts.filter(a=>
-        a.activa && (a.dias||[]).includes(dw) &&
+        a.activa && a.dias.includes(dw) &&
         !isExc(tId,a.id,ds) && actsConRegistroIds.has(a.id) &&
         (a.cat==="Always On"||(adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
       ).forEach(a=>{
@@ -2146,7 +2203,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return; // no contar días futuros
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2182,7 +2239,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return;
         const dw=getDow(ds);
-        acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+        acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
           nTotalEsperadoV++;
           const rango=getRangoActivo(a.id,ds);
           const c1=toMin(rango.c100||"08:30");
@@ -2209,7 +2266,7 @@ function ChecklistApp() {
       tiAct.forEach(ti=>{
         semanasDelMes.forEach(s=>s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
-          if(ds>hoy||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+          if(ds>hoy||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
           mx+=10;
           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
           if(p!==null){
@@ -2231,7 +2288,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return;
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+          acts.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2250,11 +2307,11 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return false;
         const dw=getDow(ds);
-        return acts.some(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
+        return acts.some(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds));
       }));
       const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
         const ds=dStr(vYear,vMonth,d);
-        return acts.some(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
+        return acts.some(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)&&(()=>{
           const reg=getReg(ds,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado;
         })());
@@ -2308,9 +2365,9 @@ function ChecklistApp() {
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
-  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
+  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios} usuariosLoaded={usuariosLoaded}
     onAcceso={(id)=>registrarAcceso(id)}
-    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="visor"?1:0);setModulo(0);}}/>;
+    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab((r==="ejecutor"||r==="coordinador")?9:(r==="visor"?1:0));setModulo(0);}}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -2353,7 +2410,7 @@ function ChecklistApp() {
 
         {/* rango extendido — solo para Ad-hoc y Promocional */}
         {(actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional")&&(
-          <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          <div style={{background:"#fff8ec",border:"1px solid #FAC775",borderRadius:9,padding:"7px 9px",marginBottom:10}}>
             <div style={{fontSize:10,fontWeight:700,color:"#854F0B",marginBottom:8}}>⏱️ VENTANA DE REGISTRO — {actInfo?.cat?.toUpperCase()}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:6,marginBottom:6}}>
               {[{k:"c100",icon:"🥇",label:"ORO hasta"},{k:"c80",icon:"🥈",label:"PLATA hasta"},{k:"c60",icon:"🥉",label:"BRONCE hasta"}].map(f=>(
@@ -2617,7 +2674,7 @@ function ChecklistApp() {
                 background:franjaActiva===i?f.bg:"#fff",
                 transition:"all .2s"
               }}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end",minWidth:210}}>
                   <span style={{fontSize:16}}>{f.icon}</span>
                   <div>
                     <div style={{fontSize:11,fontWeight:800,color:franjaActiva===i?f.c:"#5a7a9a"}}>{f.label}</div>
@@ -2741,7 +2798,7 @@ function ChecklistApp() {
       return actsActivas.filter(a=>
         a.activa&&(
           // Día asignado: Always On aparece siempre en sus días
-          ((a.dias||[]).includes(wd)&&a.cat==="Always On")||
+          (a.dias.includes(wd)&&a.cat==="Always On")||
           // Cualquier actividad (Always On o no) aparece si tiene registro real ese día
           tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})
         )
@@ -2752,7 +2809,7 @@ function ChecklistApp() {
         {/* nav mes */}
         <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14,flexWrap:"wrap"}}>
           <button onClick={()=>navMes(-1)} style={{padding:"10px 18px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>←</button>
-          <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+          <span style={{fontWeight:800,fontSize:14,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
           <button onClick={()=>navMes(1)} style={{padding:"10px 18px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:40}}>→</button>
           <div style={{width:"100%",display:"flex",gap:6}}>
             <button onClick={()=>setSelWeek(null)} style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${selWeek===null?"#00b5b4":"#e2e8f0"}`,background:selWeek===null?"#e0fafa":"#fff",color:selWeek===null?"#00b5b4":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>Mes</button>
@@ -2867,7 +2924,7 @@ function ChecklistApp() {
     if(d>hoyM) return;
     const dw=getDow(d);
     // Only Always On activities count toward theoretical max (Ad-hoc only when they have real records)
-    actsActivas.filter(a=>(a.dias||[]).includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
+    actsActivas.filter(a=>a.dias.includes(dw)&&(a.cat==="Always On"||(actsConRegistroIds.has(a.id)&&tiAct.some(ti2=>{const r=getReg(d,ti2.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;})))).forEach(()=>{ mxTeorico+=10; });
   });
   const pctBase=mxTeorico>0&&detMes?Math.round((detMes.maximos/mxTeorico)*100):null;
   return <td style={{padding:"6px 8px",textAlign:"center",background:sb(pMes)}}>{pMes!==null?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}><span style={{fontWeight:800,fontSize:12,color:sc(pMes)}}>{pMes}%</span><span style={{fontSize:8,color:"#8aaabb"}}>{detMes?.obtenidos}/{detMes?.maximos}pts</span>{pctBase!==null&&pctBase<100&&<span style={{fontSize:7,color:"#854F0B",background:"#FAEEDA",borderRadius:4,padding:"0 3px"}}>{"⚠️ N/A parcial"}</span>}</div>:<span style={{color:"#b2bec3"}}>—</span>}</td>;
@@ -2881,7 +2938,7 @@ function ChecklistApp() {
                               const ds=dStr(vYear,vMonth,d);
                               if(ds>hoyC) return;
                               const dw=getDow(ds);
-                              actsActivas.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tr.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                              actsActivas.filter(a=>a.dias.includes(dw)&&!isExc(tr.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                                 nTotal++;
                                 const reg=getReg(ds,tr.id,a.id);
                                 if(!reg?.evidencias||reg.anulado) return;
@@ -3068,7 +3125,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,day);
           if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
-          actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3096,7 +3153,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
-        actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+        actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3135,7 +3192,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return;
         const dw=getDow(ds);
-        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
+        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&actsConRegistroIds.has(a.id)&&!isExc(ti.id,a.id,ds)).forEach(a=>{
           const reg=getReg(ds,ti.id,a.id);
           if(!reg?.evidencias||reg.anulado) return;
           const AR=getRangoActivo(a.id,ds);
@@ -3170,7 +3227,7 @@ function ChecklistApp() {
           s.days.forEach(day=>{
             const ds=dStr(vYear,vMonth,day);
             if(ds>hoy) return;
-            if(!(a.dias||[]).includes(getDow(ds))) return;
+            if(!a.dias.includes(getDow(ds))) return;
             if(isExc(ti.id,a.id,ds)) return;
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
@@ -3250,7 +3307,7 @@ function ChecklistApp() {
         {/* nav mes */}
         <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
           <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>←</button>
-          <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+          <span style={{fontWeight:800,fontSize:14,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
           <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:9,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13}}>→</button>
         </div>
         {/* selector semana — igual que en Reporte y visor */}
@@ -3333,7 +3390,7 @@ function ChecklistApp() {
             tsEval.forEach(ti=>{
               semsVis.forEach(s=>s.days.forEach(d=>{
                 const ds=dStr(vYear,vMonth,d);
-                if(ds>_hoyDash||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                if(ds>_hoyDash||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
                 mx+=10;
                 const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                 if(p!==null) ob+=p;
@@ -3356,7 +3413,7 @@ function ChecklistApp() {
           const semsVis = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
           const nSinReg=tsEval.filter(ti=>!semsVis.some(s=>s.days.some(d=>{
             const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
-            return actsBase.some(a=>(a.dias||[]).includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+            return actsBase.some(a=>a.dias.includes(dw)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
           }))).length;
 
           // Construir narrativa según período
@@ -3430,7 +3487,7 @@ function ChecklistApp() {
           // IC: tiendas con al menos 1 registro válido en el período (no anulado)
           const nCump=tsEval.filter(ti=>semanasDelMes.some(s=>s.days.some(d=>{
             const ds=dStr(vYear,vMonth,d); const dw=getDow(ds);
-            return actsBase.some(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
+            return actsBase.some(a=>a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds))!==null);
           }))).length;
           // SE: tiendas con eficiencia ≥95% en el período
           const nExc=scoresMes.filter(s=>s.score!==null&&s.score>=95).length;
@@ -3526,7 +3583,7 @@ function ChecklistApp() {
                 let aOb=0,aMx=0;
                 s.days.forEach(d=>{
                   const ds=dStr(vYear,vMonth,d);
-                  if(ds>todayStr()||!(a.dias||[]).includes(getDow(ds))) return;
+                  if(ds>todayStr()||!a.dias.includes(getDow(ds))) return;
                   tsEval.forEach(ti=>{
                     if(isExc(ti.id,a.id,ds)) return;
                     aMx+=10;
@@ -3579,7 +3636,7 @@ function ChecklistApp() {
             const tiendasEval=tsBase.filter(ti=>
               semanasDelMes.some(s=>s.days.some(d=>{
                 const ds=dStr(vYear,vMonth,d);
-                return ds<=hoy&&(a.dias||[]).includes(getDow(ds))&&!isExc(ti.id,a.id,ds);
+                return ds<=hoy&&a.dias.includes(getDow(ds))&&!isExc(ti.id,a.id,ds);
               }))
             );
             const nEvalAct=tiendasEval.length;
@@ -3591,7 +3648,7 @@ function ChecklistApp() {
                 s.days.forEach(day=>{
                   const ds=dStr(vYear,vMonth,day);
                   if(ds>hoy) return;
-                  if(!(a.dias||[]).includes(getDow(ds))) return;
+                  if(!a.dias.includes(getDow(ds))) return;
                   if(isExc(ti.id,a.id,ds)) return;
                   const reg=getReg(ds,ti.id,a.id);
                   const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3689,7 +3746,7 @@ function ChecklistApp() {
                 actsBase
                   .filter(a=>
                     a.activa &&
-                    (a.dias||[]).includes(dw) &&
+                    a.dias.includes(dw) &&
                     !isExc(ti.id,a.id,ds) &&
                     actsConRegistroIds.has(a.id)
                   )
@@ -3754,7 +3811,7 @@ function ChecklistApp() {
                 const dw=getDow(ds);
                 tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
                   actsBase
-                    .filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id))
+                    .filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id))
                     .forEach(a=>{
                       fExp++;
                       const reg=getReg(ds,ti.id,a.id);
@@ -3832,7 +3889,7 @@ function ChecklistApp() {
                   if(ds>hoy) return;
                   const dw=getDow(ds);
                   tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
-                    actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                    actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                       const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                       if(p===0) fFuera++;
                     });
@@ -3903,7 +3960,7 @@ function ChecklistApp() {
                           const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
                           const cs=hCell(eficDia);
                           // Issue 5 fix: construir desglose por actividad para este día específico
-                          const actsTipDia=dm?acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
+                          const actsTipDia=dm?acts.filter(a=>a.activa&&a.dias.includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
                             const reg=getReg(ds,null,a.id); // buscar cualquier registro de cualquier tienda ese día
                             // Contar tiendas con registro y su distribución horaria
                             const tiConReg=tsBase.filter(ti=>{
@@ -4066,7 +4123,7 @@ function ChecklistApp() {
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyF) return;
                 const dw=getDow(ds);
-                actsH2.filter(a=>(a.dias||[]).includes(dw)).forEach(a=>{
+                actsH2.filter(a=>a.dias.includes(dw)).forEach(a=>{
                   tsFmt.forEach(ti=>{
                     fTotal++;
                     const sc0=tiendaScore.get(ti.id)||{oro:0,plata:0,bronce:0,fuera:0,pend:0,nombre:ti.n,fmt:ti.f,mejorHora:null};
@@ -4173,7 +4230,7 @@ function ChecklistApp() {
 
             <div style={{padding:"14px 16px"}}>
               {/* 4 KPIs */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(230px,1fr))",gap:10,marginBottom:12}}>
                 {[
                   {pct:pctOro,   lbl:"Registros en ORO",  sub:`antes de ${AR0.c100}`,barC:"#00b894",c:"#f6a623"},
                   {pct:pctPlata, lbl:"Tardíos rescatados", sub:`${AR0.c100} a ${AR0.c80}`,barC:"#74b9ff",c:"#0984e3"},
@@ -4207,7 +4264,7 @@ function ChecklistApp() {
                 <div style={{fontSize:9,color:"#b2bec3",marginBottom:10}}>{periodoLabel}{dashAct!=="Todas"?` · ${actLabel}`:""}</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {ranking.map((r,i)=>(
-                    <div key={r.id} style={{flex:"1 1 140px",background:podiumBg[i],borderRadius:10,padding:"10px 12px",border:`1.5px solid ${podiumBorder[i]}`}}>
+                    <div key={r.id} style={{flex:"1 1 140px",background:podiumBg[i],borderRadius:9,padding:"7px 9px",border:`1.5px solid ${podiumBorder[i]}`}}>
                       <div style={{fontSize:22,marginBottom:2}}>{podiumIcons[i]}</div>
                       <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:1}}>Vega {r.nombre}</div>
                       <div style={{fontSize:9,color:"#8aaabb",marginBottom:r.mejorHora?4:6}}>{r.fmt}</div>
@@ -4382,7 +4439,7 @@ function ChecklistApp() {
                         const ds=dStr(vYear,vMonth,d);
                         if(ds>todayStr()) return;
                         const dw=getDow(ds);
-                        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                        actsBase.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                           mx+=10;
                           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                           if(p!==null) ob+=p;
@@ -4426,7 +4483,7 @@ function ChecklistApp() {
                       ftsEval.forEach(ti=>{
                         semanasDelMes.forEach(s=>s.days.forEach(d=>{
                           const ds=dStr(vYear,vMonth,d);
-                          if(ds>todayStr()||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
+                          if(ds>todayStr()||!a.dias.includes(getDow(ds))||isExc(ti.id,a.id,ds)) return;
                           aMx+=10;
                           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                           if(p!==null) aOb+=p;
@@ -4742,7 +4799,7 @@ function ChecklistApp() {
                     <label style={S.lbl}>TIENDA ASIGNADA *</label>
                     <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
                       <option value="">Seleccionar tienda</option>
-                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {nomTienda(t)}</option>)}
+                      {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
                     </select>
                   </div>
                 )}
@@ -5085,9 +5142,9 @@ function ChecklistApp() {
             {/* Título resumen */}
             <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",letterSpacing:".06em",textTransform:"uppercase",marginBottom:12}}>Resumen del sistema</div>
             {/* 4 métricas */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(230px,1fr))",gap:8}}>
               {/* Usuarios activos */}
-              <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
+              <div style={{background:"#f8fafc",borderRadius:9,padding:"7px 9px",border:"1px solid #f0f4f8"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                   <div style={{fontSize:20,fontWeight:700,color:"#1a2f4a",lineHeight:1}}>{usuarios.filter(u=>u.activo!==false).length}</div>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a2f4a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -5099,7 +5156,7 @@ function ChecklistApp() {
                 <div style={{fontSize:9,color:"#059669",marginTop:3}}>↑ +2 esta semana</div>
               </div>
               {/* Roles */}
-              <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
+              <div style={{background:"#f8fafc",borderRadius:9,padding:"7px 9px",border:"1px solid #f0f4f8"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                   <div style={{fontSize:20,fontWeight:700,color:"#6C6EF5",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.rol).filter(Boolean))].length}</div>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -5110,7 +5167,7 @@ function ChecklistApp() {
                 <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>— Sin cambios</div>
               </div>
               {/* Áreas activas */}
-              <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8"}}>
+              <div style={{background:"#f8fafc",borderRadius:9,padding:"7px 9px",border:"1px solid #f0f4f8"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                   <div style={{fontSize:20,fontWeight:700,color:"#00b5b4",lineHeight:1}}>{[...new Set(usuarios.map(u=>u.area).filter(Boolean))].length}</div>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -5122,7 +5179,7 @@ function ChecklistApp() {
                 <div style={{fontSize:9,color:"#059669",marginTop:3}}>↑ +1 este mes</div>
               </div>
               {/* Accesos hoy — tarjeta con botón Detalles */}
-              <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #f0f4f8",position:"relative"}}>
+              <div style={{background:"#f8fafc",borderRadius:9,padding:"7px 9px",border:"1px solid #f0f4f8",position:"relative"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                   <div style={{fontSize:20,fontWeight:700,color:fallHoy>0?"#d97706":"#059669",lineHeight:1}}>{accesosHoy.length}</div>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fallHoy>0?"#d97706":"#059669"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -5490,7 +5547,7 @@ function ChecklistApp() {
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={sel?"#00b5b4":"#b2bec3"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                               {sel?<polyline points="20,6 9,17 4,12"/>:<rect x="3" y="3" width="18" height="18" rx="3"/>}
                                             </svg>
-                                            <span style={{flex:1}}>Vega {nomTienda(t)}</span>
+                                            <span style={{flex:1}}>Vega {t.n}</span>
                                             <span style={{fontSize:9,color:"#8aaabb"}}>{getZonaNombre(zid)} · {t.dist}</span>
                                           </label>
                                         );
@@ -5568,7 +5625,7 @@ function ChecklistApp() {
                                   const auditada=auditadasSemana.some(a=>a.tiendaId===t.id);
                                   return(
                                     <span key={t.id} style={{fontSize:10,fontWeight:500,padding:"2px 8px",borderRadius:20,background:auditada?"#EAF3DE":"#e6f1fb",color:auditada?"#27500A":"#0C447C",border:`0.5px solid ${auditada?"#C0DD97":"#85B7EB"}`}}>
-                                      Vega {nomTienda(t)} {auditada?"✓":""}
+                                      Vega {t.n} {auditada?"✓":""}
                                     </span>
                                   );
                                 })}
@@ -5994,7 +6051,7 @@ function ChecklistApp() {
                         </div>
                         {TIPOS_TRABAJO.map(t=>(
                           <div key={t.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid #F1F5F9"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:10,fontSize:12,fontWeight:600,color:"#1a2f4a"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:10,fontSize:11,fontWeight:600,color:"#1a2f4a"}}>
                               <span style={{color:t.color}}>{t.svg}</span>
                               {t.label}
                             </div>
@@ -6265,7 +6322,7 @@ function ChecklistApp() {
                         <label style={S.lbl}>TIENDA ASIGNADA *</label>
                         <select value={newUsuario.tiendaId||""} onChange={e=>setNewUsuario(p=>({...p,tiendaId:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:"#0984e355",background:"#e6f1fb"}}>
                           <option value="">Seleccionar tienda</option>
-                          {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {nomTienda(t)}</option>)}
+                          {tiendas.filter(t=>t.activa).map(t=><option key={t.id} value={t.id}>Vega {t.n}</option>)}
                         </select>
                       </div>
                     )}
@@ -6510,8 +6567,8 @@ function ChecklistApp() {
               </div>
               <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
                 {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
-                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:(p.dias||[]).includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d].sort((a,b)=>a===0?7:a) }))}
-                    style={{flex:1,minWidth:32,padding:"8px",borderRadius:8,border:`1.5px solid ${(newA.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#e2e8f0"}`,background:(newA.dias||[]).includes(d)?(d===6||d===0)?"#ffeaf5":"#f0edff":"#fff",color:(newA.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                  <button key={d} onClick={()=>setNewA(p=>({...p,dias:p.dias.includes(d)?p.dias.filter(x=>x!==d):[...p.dias,d].sort((a,b)=>a===0?7:a) }))}
+                    style={{flex:1,minWidth:32,padding:"8px",borderRadius:8,border:`1.5px solid ${newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#e2e8f0"}`,background:newA.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#f0edff":"#fff",color:newA.dias.includes(d)?(d===6||d===0)?"#e84393":"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                     {lbl}{(d===6||d===0)?" ✨":""}
                   </button>
                 ))}
@@ -6559,8 +6616,8 @@ function ChecklistApp() {
                   </div>
                   <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]].map(([d,lbl])=>(
-                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:(x.dias||[]).includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
-                        style={{flex:1,minWidth:30,padding:"7px",borderRadius:8,border:`1.5px solid ${(a.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#e2e8f0"}`,background:(a.dias||[]).includes(d)?(d===6||d===0)?"#ffeaf5":"#e8f4fd":"#fff",color:(a.dias||[]).includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                      <button key={d} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,dias:x.dias.includes(d)?x.dias.filter(v=>v!==d):[...x.dias,d]}:x))}
+                        style={{flex:1,minWidth:30,padding:"7px",borderRadius:8,border:`1.5px solid ${a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#e2e8f0"}`,background:a.dias.includes(d)?(d===6||d===0)?"#ffeaf5":"#e8f4fd":"#fff",color:a.dias.includes(d)?(d===6||d===0)?"#e84393":"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>
                         {lbl}{(d===6||d===0)?" ✨":""}
                       </button>
                     ))}
@@ -6575,7 +6632,7 @@ function ChecklistApp() {
                   </div>
                   <button onClick={()=>{setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
                     style={{width:"100%",padding:"9px",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
-                    💾 Guardar cambios
+                    Guardar cambios
                   </button>
                 </div>
               )}
@@ -6610,106 +6667,208 @@ function ChecklistApp() {
       )}
 
       {cfgTab===2&&(()=>{
-        /* ET_TIENDAS_1_5_VIEWER_APPROVED_20260614: Tiendas 1.5 alineado a viewer aprobado */
+        /* íconos de formato — globales: IcoMayorista, IcoSupermayorista, IcoMarket, IcoTiendaLocal, FmtIcon */
         const FMT_ICO={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket};
         const FMT_LABELS={Mayorista:"Mayorista",Supermayorista:"Supermayorista",Market:"Market"};
-        const zonasDisponibles=[...new Set((tiendas||[]).map(getZonaIdTienda).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"es",{numeric:true}));
-        const zonalesUsuarios=(usuarios||[]).filter(u=>u?.activo!==false && (
-          String(u?.cargo||"").toLowerCase().includes("zonal") ||
-          String(u?.rol||"").toLowerCase().includes("coordinador") ||
-          String(u?.rol||"").toLowerCase().includes("admin")
-        ));
-        const fmtActual=fmtTab||"Mayorista";
-        const fc=FMT[fmtActual]||FMT.Market;
-        const PILL_ON ={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:800,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.25)",display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
-        const PILL_OFF={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#5a7a9a",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
-        const filtroTxt=String(tiendaFiltroTxt||"").trim().toLowerCase();
-        const tiendasFormato=(tiendas||[]).filter(t=>t.f===fmtActual);
-        const tiendasFiltradas=tiendasFormato.filter(t=>{
-          const estadoOk=tiendaFiltroEstado==="Todos" || (tiendaFiltroEstado==="Activa" ? t.activa!==false : t.activa===false);
-          const zonaOk=tiendaFiltroZona==="Todas" || String(getZonaIdTienda(t)||"")===String(tiendaFiltroZona);
-          const hay=(String(t.n||"")+" "+String(t.idTienda||"")+" "+String(t.dir||"")+" "+String(t.dist||"")+" "+String(t.emailTienda||t.email||"")+" "+String(t.gerenteTienda||"")).toLowerCase();
-          return estadoOk && zonaOk && (!filtroTxt || hay.includes(filtroTxt));
-        });
-        const registrarHistorial=(accion,tienda)=>setTiendaHistorial(p=>[{id:"hist-"+Date.now(),fecha:new Date().toISOString(),accion,tienda:tienda?.n||tienda?.sucursal||"Tienda",usuario:uName||uDni||"Usuario"},...(p||[])].slice(0,30));
-        const validarCoords=(lat,lng)=>Number.isFinite(Number(lat))&&Number(lat)>=-90&&Number(lat)<=90&&Number.isFinite(Number(lng))&&Number(lng)>=-180&&Number(lng)<=180;
-        const resetNewT=()=>setNewT({n:"",f:"Market",idTienda:"",activa:true,zonaId:"",dir:"",dist:"",lat:"",lng:"",maps:"",emailTienda:"",gerenteTienda:"",dniGerente:"",celular:"",jefeZonalNombre:"",emailJefeZonal:"",usuarioZonalId:""});
-        const activarInactivar=(ti)=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);saveConfig({tiendas:np});return np;});
-        const eliminarTienda=(ti)=>{if(!window.confirm(`¿Eliminar permanentemente "Vega ${ti.n}"? Esta acción no se puede deshacer.`)) return;setTiendas(p=>{const np=p.filter(x=>x.id!==ti.id);saveConfig({tiendas:np});return np;});registrarHistorial("Eliminar",ti);showToast(`Tienda Vega ${ti.n} eliminada`);};
-        const crearTienda=()=>{
-          const idT=String(newT.idTienda||"").trim();
-          const nombre=sanitizeTextInput(newT.n,80).trim();
-          if(!idT) return showToast("Ingresa ID_TIENDA");
-          if((tiendas||[]).some(t=>String(t.idTienda||"")===idT)) return showToast("Ya existe una tienda con ese ID_TIENDA");
-          if(!nombre) return showToast("Ingresa nombre de tienda");
-          if((newT.lat||newT.lng) && !validarCoords(newT.lat,newT.lng)) return showToast("Coordenadas inválidas");
-          const zonal=zonalesUsuarios.find(u=>u.id===newT.usuarioZonalId);
-          const nt={
-            id:"t"+Date.now(),idTienda:idT,n:nombre.toUpperCase(),f:newT.f||fmtActual,activa:newT.activa!==false,
-            zonaId:sanitizeTextInput(newT.zonaId,20),dir:sanitizeTextInput(newT.dir,SAFE_LIMITS.longText),dist:sanitizeTextInput(newT.dist,80),
-            lat:newT.lat===""?"":Number(String(newT.lat).replace(",",".")),lng:newT.lng===""?"":Number(String(newT.lng).replace(",",".")),maps:sanitizeTextInput(newT.maps,SAFE_LIMITS.longText),
-            emailTienda:sanitizeEmailInput(newT.emailTienda),email:sanitizeEmailInput(newT.emailTienda),
-            gerenteTienda:toTitleCase(newT.gerenteTienda),dniGerente:sanitizeDigits(newT.dniGerente,8),celular:sanitizeDigits(newT.celular,12),
-            usuarioZonalId:zonal?.id||null,jefeZonalNombre:zonal?.nombre||toTitleCase(newT.jefeZonalNombre),emailJefeZonal:zonal?.email||sanitizeEmailInput(newT.emailJefeZonal),
-            contactosTienda:[],creadoEn:new Date().toISOString(),creadoPor:uName||uDni||"admin"
-          };
-          nt.contactosTienda=[
-            nt.gerenteTienda?{id:"gerente_tienda",tipo:"contacto_operativo",cargo:"Jefe de tienda",nombre:nt.gerenteTienda,dni:nt.dniGerente,celular:nt.celular,email:nt.emailTienda,accesoApp:false,usuarioId:null,activo:true,fuente:"creacion_manual"}:null,
-            nt.jefeZonalNombre?{id:"jefe_zonal",tipo:"contacto_operativo",cargo:"Jefe zonal",nombre:nt.jefeZonalNombre,email:nt.emailJefeZonal,accesoApp:false,usuarioId:nt.usuarioZonalId,activo:true,fuente:nt.usuarioZonalId?"usuarios":"manual"}:null
-          ].filter(Boolean);
-          setTiendas(p=>{const np=[...p,nt];saveConfig({tiendas:np});return np;});
-          registrarHistorial("Crear tienda",nt);setFmtTab(nt.f);setTpTab("lista");resetNewT();showToast("Tienda creada correctamente");
-        };
-        const TiendaTabIcon=({children})=><span style={{display:"flex",alignItems:"center"}}>{children}</span>;
+        /* estados viven en el componente principal: tpTab/setTpTab, fmtTab/setFmtTab */
+
+        const PILL_ON ={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.25)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+        const PILL_OFF={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+
         return(
           <div>
+            {/* ── pestañas principales Tiendas / Nueva ── */}
             <div style={{background:"#F5F7FB",padding:"12px 0 0",marginBottom:0}}>
-              <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                <button onClick={()=>setTpTab("lista")} style={tpTab==="lista"?PILL_ON:PILL_OFF}><IcoTiendas/>Tiendas</button>
-                <button onClick={()=>setTpTab("nueva")} style={tpTab==="nueva"?PILL_ON:PILL_OFF}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="nueva"?"#fff":"#5a7a9a"} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Nueva</button>
-                <button onClick={()=>setTpTab("coords")} style={tpTab==="coords"?PILL_ON:PILL_OFF}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="coords"?"#fff":"#5a7a9a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>Coordenadas</button>
-                <button onClick={()=>setTpTab("responsables")} style={tpTab==="responsables"?PILL_ON:PILL_OFF}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="responsables"?"#fff":"#5a7a9a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>Responsables</button>
-                <button onClick={()=>setTpTab("historial")} style={tpTab==="historial"?PILL_ON:PILL_OFF}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="historial"?"#fff":"#5a7a9a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Historial</button>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>setTpTab("lista")} style={tpTab==="lista"?PILL_ON:PILL_OFF}>
+                  <IcoTiendas/>
+                  Tiendas
+                </button>
+                <button onClick={()=>setTpTab("nueva")} style={tpTab==="nueva"?PILL_ON:PILL_OFF}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tpTab==="nueva"?"#fff":"#6B7280"} strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                  </svg>
+                  Nueva
+                </button>
               </div>
+
+              {/* ── subpestañas formato (solo en pestaña lista) ── */}
               {tpTab==="lista"&&(
                 <div style={{display:"flex",gap:0,background:"#fff",borderRadius:"10px 10px 0 0",padding:"10px 12px 0",borderTop:"1px solid #E2E8F0"}}>
-                  {["Mayorista","Supermayorista","Market"].map(fmt=>{const IcoFmt=FMT_ICO[fmt];const color=(FMT[fmt]||FMT.Market).c;const active=fmtActual===fmt;return <button key={fmt} onClick={()=>setFmtTab(fmt)} style={{padding:"9px 16px",border:"none",borderRadius:"8px 8px 0 0",borderBottom:`3px solid ${active?color:"transparent"}`,background:active?(FMT[fmt].bg+"80"):"transparent",color:active?color:"#64748B",fontWeight:active?800:600,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><IcoFmt size={16} color={active?color:"#94A3B8"}/>{FMT_LABELS[fmt]}</button>})}
+                  {["Mayorista","Supermayorista","Market"].map(fmt=>{
+                    const IcoFmt=FMT_ICO[fmt];
+                    const fc=FMT[fmt];
+                    const active=fmtTab===fmt;
+                    return(
+                      <button key={fmt} onClick={()=>setFmtTab(fmt)}
+                        style={{padding:"9px 16px",border:"none",borderRadius:"8px 8px 0 0",
+                          borderBottom:`3px solid ${active?fc.c:"transparent"}`,
+                          background:active?fc.bg+"80":"transparent",
+                          color:active?fc.c:"#64748B",
+                          fontWeight:active?700:500,fontSize:13,cursor:"pointer",
+                          display:"flex",alignItems:"center",gap:6,transition:"all .15s",whiteSpace:"nowrap"}}>
+                        <IcoFmt size={16} color={active?fc.c:"#94A3B8"}/>
+                        {FMT_LABELS[fmt]}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
-            {tpTab==="lista"&&(
-              <div style={{background:"#fff",borderRadius:"0 0 14px 14px",padding:16,border:"1px solid #E2E8F0",borderTop:"none"}}>
-                <div style={{display:"grid",gridTemplateColumns:"minmax(220px,1fr) 210px 210px auto",gap:10,alignItems:"center",marginBottom:14}}>
-                  <div style={{position:"relative"}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg><input value={tiendaFiltroTxt} onChange={e=>setTiendaFiltroTxt(e.target.value)} placeholder="Buscar tienda" style={{...S.inp,paddingLeft:42}}/></div>
-                  <select value={tiendaFiltroEstado} onChange={e=>setTiendaFiltroEstado(e.target.value)} style={S.inp}><option>Todos</option><option>Activa</option><option>Inactiva</option></select>
-                  <select value={tiendaFiltroZona} onChange={e=>setTiendaFiltroZona(e.target.value)} style={S.inp}><option>Todas</option>{zonasDisponibles.map(z=><option key={z} value={z}>Zona {z}</option>)}</select>
-                  <button onClick={()=>{setTiendaFiltroTxt("");setTiendaFiltroEstado("Todos");setTiendaFiltroZona("Todas");}} style={{padding:"10px 18px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Limpiar</button>
+
+            {/* ── contenido pestaña LISTA ── */}
+            {tpTab==="lista"&&(()=>{
+              const fc=FMT[fmtTab];
+              const ts=tiendas.filter(ti=>ti.f===fmtTab);
+              const nAct=ts.filter(ti=>ti.activa).length;
+              const nInact=ts.filter(ti=>!ti.activa).length;
+              return(
+                <div style={{background:"#fff",borderRadius:"0 0 10px 10px",padding:"14px",border:"1px solid #E2E8F0",borderTop:"none"}}>
+                  <div style={{fontSize:11,color:"#8aaabb",marginBottom:10}}>
+                    {nAct} activas · {nInact} inactivas
+                  </div>
+                  {ts.map(ti=>{
+                    const contactoPrincipal=getContactoPrincipalTienda(ti);
+                    const jefeZonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")||null;
+                    const zonalNombre=jefeZonal?.nombre||ti.jefeZonalNombre||"";
+                    const gerenteNombre=contactoPrincipal?.nombre||ti.gerenteTienda||"";
+                    return(
+                      <div key={ti.id} style={{...S.card,marginBottom:6,opacity:ti.activa?1:.6}}>
+                        <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:700,fontSize:13,color:ti.activa?"#1a2f4a":"#94a3b8",display:"flex",alignItems:"center",gap:6}}>
+                              Vega {ti.n}
+                              {ti.idTienda&&<span style={{fontSize:9,fontWeight:600,color:"#8aaabb",background:"#f0f4f8",padding:"1px 5px",borderRadius:4}}>#{ti.idTienda}</span>}
+                            </div>
+                            <div style={{fontSize:10,color:"#8aaabb",display:"flex",gap:8,flexWrap:"wrap",marginTop:2,alignItems:"center"}}>
+                              {(ti.emailTienda||ti.email)&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.emailTienda||ti.email}</span>}
+                              {gerenteNombre&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{gerenteNombre}</span>}
+                              {zonalNombre&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {zonalNombre}</span>}
+                              <span style={{display:"inline-flex",alignItems:"center",gap:4,color:"#5a7a9a"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Contacto referencial, sin acceso</span>
+                            </div>
+                          </div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            {/* Editar: admin siempre, coordinador solo si es el zonal asignado */}
+                            {(isAdmin||isCoord)&&(
+                            <button onClick={()=>setTiendaEditModal({
+                              ...ti,
+                              n:ti.n||"",
+                              idTienda:ti.idTienda||"",
+                              emailTienda:ti.emailTienda||ti.email||"",
+                              email:ti.emailTienda||ti.email||"",
+                              gerenteTienda:ti.gerenteTienda||ti.contactoTienda?.nombre||"",
+                              dniGerente:ti.dniGerente||ti.contactoTienda?.dni||"",
+                              celular:ti.celular||ti.contactoTienda?.celular||"",
+                              jefeZonalNombre:ti.jefeZonalNombre||ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.nombre||"",
+                              emailJefeZonal:ti.emailJefeZonal||ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.email||"",
+                              _zonalUserId:ti.usuarioZonalId||"__manual__",
+                              dir:ti.dir||"",
+                              dist:ti.dist||"",
+                              horarioLunJue:ti.horarioLunJue||ti.horario?.lunJue||"",
+                              horarioVieSab:ti.horarioVieSab||ti.horario?.vieSab||"",
+                              horarioDom:ti.horarioDom||ti.horario?.domingo||"",
+                              _readOnly: isCoord&&!isAdmin, // coordinador solo puede editar contactos
+                            })}
+                              style={{padding:"5px 12px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              {isCoord&&!isAdmin?"Ver/Editar":"Editar"}
+                            </button>
+                            )}
+                            {/* Cerrar/Activar: solo admin */}
+                            {isAdmin&&(
+                            <button onClick={()=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa}:x);saveConfig({tiendas:np});return np;})}
+                              style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${ti.activa?"#fecaca":"#bbf7d0"}`,background:ti.activa?"#fff1f2":"#f0fdf4",color:ti.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                              {ti.activa?"Cerrar":"Activar"}
+                            </button>
+                            )}
+                            {/* Eliminar: solo admin */}
+                            {isAdmin&&(
+                              <button onClick={()=>{
+                                if(!window.confirm(`¿Eliminar permanentemente "Vega ${ti.n}"? Esta acción no se puede deshacer.`)) return;
+                                setTiendas(p=>{const np=p.filter(x=>x.id!==ti.id);saveConfig({tiendas:np});return np;});
+                                showToast(`🗑️ Vega ${ti.n} eliminada`);
+                              }}
+                                title="Eliminar tienda (solo admin)"
+                                style={{padding:"5px 10px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:3}}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {ts.length===0&&<div style={{textAlign:"center",padding:"24px",fontSize:12,color:"#b2bec3"}}>Sin tiendas en este formato</div>}
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
-                  {[{l:"Tiendas",v:tiendasFormato.length,c:"#6C6EF5"},{l:"Activas",v:tiendasFormato.filter(t=>t.activa!==false).length,c:"#00b894"},{l:"Inactivas",v:tiendasFormato.filter(t=>t.activa===false).length,c:"#dc2626"},{l:"Sin contacto",v:tiendasFormato.filter(t=>!getContactoPrincipalTienda(t)).length,c:"#f6a623"},{l:"Coords pendientes",v:tiendasFormato.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length,c:"#0984e3"}].map(k=><div key={k.l} style={{...S.card,padding:14,textAlign:"center",borderTop:`3px solid ${k.c}`}}><div style={{fontSize:28,fontWeight:900,color:k.c,lineHeight:1}}>{k.v}</div><div style={{fontSize:9,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginTop:6}}>{k.l}</div></div>)}
-                </div>
-                {tiendasFiltradas.map(ti=>{const contacto=getContactoPrincipalTienda(ti);const gerente=contacto?.nombre||ti.gerenteTienda||"";const zonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.nombre||ti.jefeZonalNombre||"";return <div key={ti.id} style={{...S.card,marginBottom:10,opacity:ti.activa===false?0.62:1}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{minWidth:0}}><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:16,fontWeight:900,color:ti.activa===false?"#94a3b8":"#1a2f4a"}}>Vega {ti.n}<span style={{fontSize:10,fontWeight:800,color:"#8aaabb",background:"#f0f4f8",padding:"3px 7px",borderRadius:6}}>#{ti.idTienda||"s/id"}</span><span style={{fontSize:10,fontWeight:900,color:ti.activa===false?"#8aaabb":"#00b894",background:ti.activa===false?"#f0f4f8":"#e8faf5",padding:"3px 10px",borderRadius:20}}>{ti.activa===false?"Inactiva":"Activa"}</span></div><div style={{fontSize:11,color:"#8aaabb",display:"flex",gap:10,flexWrap:"wrap",marginTop:8}}>{(ti.emailTienda||ti.email)&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.emailTienda||ti.email}</span>}{gerente&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{gerente}</span>}{zonal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {zonal}</span>}<span>Contacto referencial, sin acceso</span></div></div><div style={{display:"flex",gap:8,flexShrink:0}}>{(isAdmin||isCoord)&&<button onClick={()=>setTiendaEditModal({...ti,_zonalUserId:ti.usuarioZonalId||"__manual__",_readOnly:isCoord&&!isAdmin})} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Editar</button>}{isAdmin&&<button onClick={()=>{activarInactivar(ti);registrarHistorial(ti.activa===false?"Activar":"Inactivar",ti);}} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${ti.activa===false?"#bbf7d0":"#fecaca"}`,background:ti.activa===false?"#f0fdf4":"#fff1f2",color:ti.activa===false?"#16a34a":"#dc2626",fontWeight:800,cursor:"pointer"}}>{ti.activa===false?"Activar":"Inactivar"}</button>}{isAdmin&&<button onClick={()=>eliminarTienda(ti)} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",fontWeight:800,cursor:"pointer"}}>Eliminar</button>}</div></div></div>})}
-                {tiendasFiltradas.length===0&&<div style={{textAlign:"center",padding:"26px",fontSize:12,color:"#8aaabb"}}>Sin tiendas para los filtros seleccionados</div>}
-              </div>
-            )}
+              );
+            })()}
+
+            {/* ── contenido pestaña NUEVA ── */}
             {tpTab==="nueva"&&(
-              <div style={{background:"#fff",borderRadius:"0 14px 14px 14px",padding:20,border:"1px solid #E2E8F0",borderTop:"none"}}>
-                <div style={{display:"grid",gridTemplateColumns:"150px 1fr 210px 180px",gap:10,marginBottom:10}}><div><label style={S.lbl}>ID_TIENDA *</label><input value={newT.idTienda||""} onChange={e=>setNewT(p=>({...p,idTienda:sanitizeDigits(e.target.value,6)}))} style={S.inp}/></div><div><label style={S.lbl}>Nombre *</label><input value={newT.n||""} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Formato</label><select value={newT.f||"Market"} onChange={e=>setNewT(p=>({...p,f:e.target.value}))} style={S.inp}><option>Mayorista</option><option>Supermayorista</option><option>Market</option></select></div><div><label style={S.lbl}>Estado</label><select value={newT.activa===false?"Inactiva":"Activa"} onChange={e=>setNewT(p=>({...p,activa:e.target.value==="Activa"}))} style={S.inp}><option>Activa</option><option>Inactiva</option></select></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 180px 140px 140px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Dirección</label><input value={newT.dir||""} onChange={e=>setNewT(p=>({...p,dir:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Distrito</label><input value={newT.dist||""} onChange={e=>setNewT(p=>({...p,dist:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Latitud</label><input value={newT.lat||""} onChange={e=>setNewT(p=>({...p,lat:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Longitud</label><input value={newT.lng||""} onChange={e=>setNewT(p=>({...p,lng:e.target.value}))} placeholder="" style={S.inp}/></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 170px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Link Google Maps</label><input value={newT.maps||""} onChange={e=>setNewT(p=>({...p,maps:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Zona</label><input value={newT.zonaId||""} onChange={e=>setNewT(p=>({...p,zonaId:e.target.value}))} placeholder="" style={S.inp}/></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 160px 1fr",gap:10,marginBottom:10}}><div><label style={S.lbl}>Jefe de tienda</label><input value={newT.gerenteTienda||""} onChange={e=>setNewT(p=>({...p,gerenteTienda:e.target.value}))} style={S.inp}/></div><div><label style={S.lbl}>DNI</label><input value={newT.dniGerente||""} onChange={e=>setNewT(p=>({...p,dniGerente:sanitizeDigits(e.target.value,8)}))} style={S.inp}/></div><div><label style={S.lbl}>Teléfono</label><input value={newT.celular||""} onChange={e=>setNewT(p=>({...p,celular:sanitizeDigits(e.target.value,12)}))} style={S.inp}/></div><div><label style={S.lbl}>Email tienda</label><input value={newT.emailTienda||""} onChange={e=>setNewT(p=>({...p,emailTienda:e.target.value}))} style={S.inp}/></div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div><label style={S.lbl}>Jefe zonal desde Usuarios</label><select value={newT.usuarioZonalId||""} onChange={e=>{const u=zonalesUsuarios.find(x=>x.id===e.target.value);setNewT(p=>({...p,usuarioZonalId:e.target.value,jefeZonalNombre:u?.nombre||"",emailJefeZonal:u?.email||""}))}} style={S.inp}><option value="">— Sin asignar —</option>{zonalesUsuarios.map(u=><option key={u.id} value={u.id}>{u.nombre} · {u.cargo||u.rol}</option>)}</select></div><div><label style={S.lbl}>Email zonal</label><input value={newT.emailJefeZonal||""} onChange={e=>setNewT(p=>({...p,emailJefeZonal:e.target.value}))} style={S.inp}/></div></div>
-                <div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button onClick={resetNewT} style={{padding:"11px 18px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Limpiar</button><button onClick={crearTienda} style={{padding:"11px 22px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",color:"#fff",fontWeight:900,cursor:"pointer"}}>Guardar tienda</button></div>
+              <div style={{background:"#fff",borderRadius:"0 10px 10px 10px",padding:"20px",border:"1px solid #E2E8F0",borderTop:"none",marginTop:0}}>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".06em",marginBottom:8}}>NOMBRE (sin "Vega")</label>
+                  <input value={newT.n} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="Ej: La Victoria"
+                    style={{width:"100%",padding:"13px 16px",borderRadius:12,border:"1.5px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"#5a7a9a",letterSpacing:".06em",marginBottom:8}}>FORMATO</label>
+                  <div style={{display:"flex",gap:8}}>
+                    {["Mayorista","Supermayorista","Market"].map(f=>{
+                      const fc=FMT[f];
+                      const IcoFmt=FMT_ICO[f];
+                      const on=newT.f===f;
+                      return(
+                        <button key={f} onClick={()=>setNewT(p=>({...p,f}))}
+                          style={{flex:1,padding:"12px 8px",borderRadius:12,border:`1.5px solid ${on?fc.c:"#e2e8f0"}`,background:on?fc.bg:"#fff",color:on?fc.c:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all .15s"}}>
+                          <IcoFmt size={22} color={on?fc.c:"#94A3B8"}/>
+                          {f==="Supermayorista"?"Super":f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{if(!newT.n.trim())return;const nt={id:"t"+Date.now(),n:newT.n.trim(),f:newT.f,activa:true};setTiendas(p=>{const np=[...p,nt];saveConfig({tiendas:np});return np;});setNewT({n:"",f:"Market"});setTpTab("lista");setFmtTab(newT.f);}}
+                    style={{flex:1,padding:"13px",borderRadius:12,border:"none",background:"#00b5b4",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:14}}>
+                    Agregar
+                  </button>
+                  <button onClick={()=>{setTpTab("lista");setNewT({n:"",f:"Market"});}}
+                    style={{padding:"13px 20px",borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:13}}>
+                    Cancelar
+                  </button>
+                </div>
               </div>
             )}
-            {tpTab==="coords"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",display:"flex",gap:10,alignItems:"center",marginBottom:12}}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>Coordenadas registradas</div><div style={{padding:14,border:"1px solid #e2e8f0",borderRadius:12,background:"#f8fafc",color:"#5a7a9a",fontSize:13,lineHeight:1.5,marginBottom:14}}>Las coordenadas se registran manualmente desde Google Maps. La app valida formato y rango.</div><div style={{height:280,border:"1px solid #e2e8f0",borderRadius:14,background:"linear-gradient(#e8f4fd 1px,transparent 1px),linear-gradient(90deg,#e8f4fd 1px,transparent 1px)",backgroundSize:"46px 46px",position:"relative",overflow:"hidden"}}>{tiendas.filter(t=>Number.isFinite(Number(t.lat))&&Number.isFinite(Number(t.lng))).slice(0,18).map((t,i)=><span key={t.id} style={{position:"absolute",left:`${14+(i*19)%72}%`,top:`${18+(i*31)%68}%`,background:"#fff",border:"1px solid #e2e8f0",borderRadius:999,padding:"6px 10px",fontSize:11,fontWeight:900,color:"#1a2f4a",boxShadow:"0 4px 12px rgba(26,47,74,.08)"}}>⌖ {t.n}</span>)}</div></div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Pendientes / validación</div>{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).slice(0,12).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #f0f4f8",padding:"10px 0"}}><div><b style={{color:"#1a2f4a"}}>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>#{t.idTienda||"s/id"} · {t.dist||"sin distrito"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar coords</button></div>)}{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length===0&&<div style={{fontSize:12,color:"#00b894",fontWeight:800}}>Todas las tiendas tienen coordenadas válidas.</div>}</div></div>
-            )}
-            {tpTab==="responsables"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Jefes zonales desde Usuarios</div>{zonalesUsuarios.map(u=><div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8"}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontWeight:900}}>{String(u.nombre||"U").split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{u.nombre}</b><div style={{fontSize:11,color:"#8aaabb"}}>{u.cargo||u.rol} · {u.email||"sin correo"}</div></div></div>)}{zonalesUsuarios.length===0&&<div style={{fontSize:12,color:"#8aaabb"}}>Aún no hay usuarios con cargo Jefe Zonal o rol Coordinador.</div>}</div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Asignación por tienda</div>{tiendas.slice(0,14).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",gap:10,borderBottom:"1px solid #f0f4f8",padding:"9px 0"}}><div><b>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>{t.jefeZonalNombre||"sin zonal"} · {t.gerenteTienda||"sin jefe tienda"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar</button></div>)}</div></div>
-            )}
-            {tpTab==="historial"&&(
-              <div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Historial de cambios</div>{(tiendaHistorial||[]).length===0&&<div style={{fontSize:12,color:"#8aaabb",padding:14,background:"#f8fafc",borderRadius:12}}>Aún no hay cambios registrados en esta sesión.</div>}{(tiendaHistorial||[]).map(h=><div key={h.id} style={{display:"grid",gridTemplateColumns:"180px 1fr 180px",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8",fontSize:12}}><span style={{color:"#8aaabb"}}>{new Date(h.fecha).toLocaleString()}</span><b style={{color:"#1a2f4a"}}>{h.accion} · {h.tienda}</b><span style={{color:"#5a7a9a"}}>{h.usuario}</span></div>)}</div>
+            {/* ── contenido pestaña CARGA MASIVA ── */}
+            {tpTab==="carga"&&(
+              <div style={{background:"#fff",borderRadius:"0 10px 10px 10px",padding:"20px",border:"1px solid #E2E8F0",borderTop:"none",marginTop:0}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                  <div style={{padding:14,borderRadius:14,border:"1px solid #e2e8f0",background:"#f8fafc"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:6}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9"/><line x1="9" y1="13" x2="9" y2="13"/><line x1="9" y1="17" x2="9" y2="17"/></svg>
+                      Directorio Tiendas 2026
+                    </div>
+                    <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.5,marginBottom:12}}>Carga precargada desde el Excel aprobado: zona, distrito, formato, horarios y contactos operativos. Los jefes/gerentes se guardan como contactos referenciales, no como usuarios con acceso.</div>
+                    <button onClick={()=>{const np=mergeDirectorioTiendas(tiendas);setTiendas(np);saveConfig({tiendas:np});setBulkImportLog({tipo:"directorio_contactos",total:DIRECTORIO_TIENDAS_2026.length,fecha:new Date().toISOString(),modo:"contactos_sin_usuarios"});showToast("Directorio 2026 aplicado sin crear usuarios");}}
+                      style={{width:"100%",padding:"11px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer"}}>
+                      Aplicar carga precargada
+                    </button>
+                  </div>
+                  <div style={{padding:14,borderRadius:14,border:"1px solid #e2e8f0",background:"#f8fafc"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:6}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      Calendarios operativos
+                    </div>
+                    <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.5}}>Administrativo, Operativo Trade y Tienda se calculan por perfil. Domingo ya no se bloquea para Operativo Trade si tiene ruta y la tienda opera.</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+                      {Object.values(CALENDARIO_PERFILES).map(c=><span key={c.id} style={{fontSize:10,fontWeight:800,padding:"3px 8px",borderRadius:20,background:c.id==="operativo_trade"?"#e0fafa":c.id==="tienda"?"#e8f4fd":"#f0f4f8",color:c.id==="operativo_trade"?"#085041":c.id==="tienda"?"#0C447C":"#5a7a9a"}}>{c.nombre}</span>)}
+                    </div>
+                  </div>
+                </div>
+                {bulkImportLog&&<div style={{fontSize:11,color:"#085041",background:"#e0fafa",border:"1px solid #99e6e6",borderRadius:10,padding:"9px 12px"}}>Última carga: {bulkImportLog.total} registros · {new Date(bulkImportLog.fecha).toLocaleString("es-PE")}</div>}
+              </div>
             )}
           </div>
         );
@@ -7223,7 +7382,7 @@ function ChecklistApp() {
           if(ds > todayStr()) return;
           const dw = getDow(ds);
           // Filtrar actividades por día de la semana y sin excepción
-          actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
+          actsBase.filter(a=>a.dias.includes(dw)&&!isExc(tId,a.id,ds)&&actsConRegistroIds.has(a.id)&&(a.cat==="Always On"||tiAct.some(ti2=>{const r2=getReg(ds,ti2.id,a.id);return r2?.evidencias?.length>0&&!r2?.anulado;}))).forEach(a=>{
             maximos += 10;
             const reg = getReg(ds, tId, a.id);
             const p = puntajeReg(reg, getRangoActivo(a.id, ds));
@@ -7255,7 +7414,7 @@ function ChecklistApp() {
       {/* ── NAV MES + SEMANAS ── */}
       <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
         <button onClick={()=>navMes(-1)} style={{padding:"8px 14px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:38}}>←</button>
-        <span style={{fontWeight:800,fontSize:15,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
+        <span style={{fontWeight:800,fontSize:14,color:"#1a2f4a",flex:1,textAlign:"center"}}>{MESES[vMonth].toUpperCase()} {vYear}</span>
         <button onClick={()=>navMes(1)} style={{padding:"8px 14px",borderRadius:8,border:"1px solid #c8d8e8",background:"#fff",cursor:"pointer",fontWeight:700,fontSize:13,minHeight:38}}>→</button>
       </div>
       <div style={{display:"flex",gap:5,marginBottom:16}}>
@@ -7304,7 +7463,7 @@ function ChecklistApp() {
               {icon:"📬",label:"Cobertura tiendas",  value:Math.round((scoresMesV.filter(s=>s.pct!==null).length/Math.max(1,tiAct.length))*100)+"%", color:"#0984e3", sub:`${scoresMesV.filter(s=>s.pct!==null).length} de ${tiAct.length}`, bg:"#e8f4fd"},
               {icon:"🚨",label:"Tiendas en riesgo",  value:enRiesgo.length>0?enRiesgo.length+" tiendas":"✓ Ninguna", color:enRiesgo.length>0?"#dc2626":"#00b894", sub:enRiesgo.length>0?"eficiencia <60%":"todas sobre el umbral", bg:enRiesgo.length>0?"#fff1f2":"#e8faf5"},
             ].map((k,i)=>(
-              <div key={i} style={{background:k.bg,borderRadius:10,padding:"10px 12px"}}>
+              <div key={i} style={{background:k.bg,borderRadius:9,padding:"7px 9px"}}>
                 <div style={{fontSize:14,marginBottom:4}}>{k.icon}</div>
                 <div style={{fontSize:18,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
                 <div style={{fontSize:9,color:"#5a7a9a",marginTop:3,fontWeight:600}}>{k.label}</div>
@@ -7362,7 +7521,7 @@ function ChecklistApp() {
                   let sOb=0,sMx=0;
                   s.days.forEach(d=>{
                     const ds=dStr(vYear,vMonth,d);
-                    if(ds>hoy||!(a.dias||[]).includes(getDow(ds))) return;
+                    if(ds>hoy||!a.dias.includes(getDow(ds))) return;
                     tiAct.forEach(ti=>{
                       if(isExc(ti.id,a.id,ds)) return;
                       sMx+=10;
@@ -7522,7 +7681,7 @@ function ChecklistApp() {
           {/* KPIs de distribución horaria */}
           <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginTop:4}}>
             <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>DISTRIBUCIÓN DE HORARIO DE ENVÍO</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(230px,1fr))",gap:6}}>
               {[
                 {icon:"🥇",label:"ORO",    n:nOroV,   c:"#BA7517",bg:"#fff8ec",desc:`≤${rangoMostrar}`},
                 {icon:"🥈",label:"Tardíos",n:nC2V,    c:"#185FA5",bg:"#e8f4fd",desc:"llegaron tarde"},
@@ -7560,7 +7719,7 @@ function ChecklistApp() {
               const ds=dStr(vYear,vMonth,day);
               if(ds>hoyFV) return;
               const dw=getDow(ds);
-              acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+              acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                 totalDispV.add(ti.id);
                 const reg=getReg(ds,ti.id,a.id);
                 if(!reg?.evidencias?.length||reg.anulado) return;
@@ -7594,7 +7753,7 @@ function ChecklistApp() {
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyFV) return;
                 const dw=getDow(ds);
-                acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
+                acts.filter(a=>a.activa&&a.dias.includes(dw)&&!isExc(ti.id,a.id,ds)&&actsConRegistroIds.has(a.id)).forEach(a=>{
                   fD.add(ti.id);
                   const reg=getReg(ds,ti.id,a.id);
                   if(!reg?.evidencias?.length||reg.anulado) return;
@@ -7814,7 +7973,7 @@ function ChecklistApp() {
           </div>
           <div style={{padding:"14px 16px"}}>
             {/* Cuatro KPIs */}
-            <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:12}}>
+            <div style={{display:"grid", gridTemplateColumns:"repeat(5,minmax(230px,1fr))", gap:10, marginBottom:12}}>
               {[
                 {pct:pctOro,   lbl:"Registros en ORO",  sub:`antes de ${rangoMostrar}`,   barC:"#00b894", c:"#f6a623"},
                 {pct:pctPlata, lbl:"Tardíos rescatados", sub:`${rangoMostrar} a ${c2}`, barC:"#74b9ff", c:"#0984e3"},
@@ -7934,9 +8093,9 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
+    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","visor"]},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
-    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","ejecutor"]},
+    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","solicitante","ejecutor","visor"]},
   ].filter(m=>m.roles.includes(role||""));
 
   const SUB_EVIDENCIAS = isViewer
@@ -7973,7 +8132,7 @@ function ChecklistApp() {
 
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <style>{`*{box-sizing:border-box;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
       {/* ══ SIDEBAR ══ */}
@@ -8048,6 +8207,12 @@ function ChecklistApp() {
         {modulo===0&&(()=>{
           const TAB_PILL_ACTIVE={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
           const TAB_PILL_INACTIVE={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,boxShadow:"none",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
+          const renderSubTabIcon=(i)=>{
+            const common={width:14,height:14,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"};
+            if([0,4,7].includes(i)) return <svg {...common}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>;
+            if([1,5,8].includes(i)) return <svg {...common}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+            return <svg {...common}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+          };
           return(
           <div style={{background:"#F5F7FB",padding:"12px 20px 0",flexShrink:0}}>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
@@ -8071,12 +8236,7 @@ function ChecklistApp() {
                     color:tab===tb.i?"#5B6CF7":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                  {tb.i===7?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
-                  :tb.i===8?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                  :tb.i===9?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  :tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
-                  :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
-                  :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                  {renderSubTabIcon(tb.i)}
                   {tb.label}
                 </button>
               ))}
@@ -8155,92 +8315,56 @@ function ChecklistApp() {
         const toLocalDate=(v)=>{if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const d=new Date(v);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());};
         const parseHora=(v,fb="18:30")=>{const raw=String(v||fb).trim().toLowerCase().replace(/\s+/g,"");let m=raw.match(/^(\d{1,2}):(\d{2})$/);if(m)return[Number(m[1]),Number(m[2])];m=raw.match(/^(\d{1,2}):(\d{2})(a\.m\.|am|p\.m\.|pm)$/);if(m){let h=Number(m[1]);const mm=Number(m[2]);const ap=m[3];if(ap.startsWith("p")&&h<12)h+=12;if(ap.startsWith("a")&&h===12)h=0;return[h,mm];}return parseHora(fb,"18:30");};
         const makeDateTime=(fecha,hora="00:00")=>{const d=toLocalDate(fecha);if(!d)return null;const [h,m]=parseHora(hora,"00:00");d.setHours(h,m,0,0);return d;};
-        const ODT_WEEK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"]};const ODT_SAT_SCHEDULE={6:["08:30","11:30"]};const ODT_WORK_SCHEDULE={...ODT_WEEK_SCHEDULE,...ODT_SAT_SCHEDULE};
-        const daySchedule=(d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null;
+        const ODT_WORK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"],6:["08:30","11:30"]};
+        const ODT_FULL_WORKDAY_MIN=600;
+        const dateKeyLocal=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        const daySchedule=(d)=>{if(!d||isNaN(d))return null;const feriado=getFeriadoOperativo(dateKeyLocal(d));if(feriado&&feriado.laborable===false)return null;return ODT_WORK_SCHEDULE[d.getDay()]||null;};
         const isWorkDayOdt=(d)=>!!daySchedule(d);
         const countWorkDaysInclusive=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let ini=da<=db?da:db,fin=da<=db?db:da,c=0;for(let d=new Date(ini);d<=fin;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return Math.max(1,c);};
         const countWorkDaysBefore=(start,ref)=>{const ini=toLocalDate(start),r=toLocalDate(ref);if(!ini||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<ini)return 0;let c=0;for(let d=new Date(ini);d<=end;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return c;};
         const businessMinutesBetween=(start,end)=>{if(!start||!end||isNaN(start)||isNaN(end))return 0;let a=start<=end?new Date(start):new Date(end),b=start<=end?new Date(end):new Date(start),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=daySchedule(d);if(!sch)continue;const [sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
         const formatHm=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));const h=Math.floor(n/60),m=n%60;if(h&&m)return`${h}h ${m}m`;if(h)return`${h}h`;return`${m}m`;};
-        const MINS_DIA_LAB=600;/* L-V 08:30-18:30 */
-        const formatDiasTb=(mins)=>{
-          const n=Math.max(0,Math.round(Math.abs(mins)));
-          if(n<=0)return"<1d";
-          const dias=Math.floor(n/MINS_DIA_LAB);
-          const resto=n%MINS_DIA_LAB;
-          const horas=Math.floor(resto/60);
-          const minutos=resto%60;
-          if(dias>0&&horas>0&&minutos>0)return`${dias}d ${horas}h ${minutos}m`;
-          if(dias>0&&horas>0)return`${dias}d ${horas}h`;
-          if(dias>0)return`${dias}d`;
-          if(horas>0&&minutos>0)return`${horas}h ${minutos}m`;
-          if(horas>0)return`${horas}h`;
-          return`${minutos}m`;
-        };
+        const formatDiasTb=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));if(n<=0)return"0m";const d=Math.floor(n/ODT_FULL_WORKDAY_MIN);const rem=n-(d*ODT_FULL_WORKDAY_MIN);const h=Math.floor(rem/60);const m=rem%60;const parts=[];if(d)parts.push(`${d}d`);if(h)parts.push(`${h}h`);if(m)parts.push(`${m}m`);return parts.join(" ")||"0m";};
         const toDueDateTime=(o)=>makeDateTime(o?.fechaEntrega||o?.entrega,o?.horaCorte||"18:30");
         const toFinishDateTime=(o)=>{const raw=o?.entregadoEn||o?.finalizadoEn||o?.fechaCierre||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
         const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
         const calcOdtPlan=(o)=>{
-          /* ET_FIX_SCHEDULE_PROGRESO_CARGA_20260615
-             PROGRESO (lectura resumida): Pendiente|En proceso|En corrección|Con retraso|Finalizado
-             DÍAS TB (detalle): (Hoy)|(+Xd)|(-Xd)|(a tiempo)|(retraso Xh Xm)|(adelanto +Xd)
-             HH estimadas y TIEMPO TRANSCURRIDO: solo L-V 08:30-18:30 (sin sábado)
-             Sábado 08:30-11:30 solo aplica para correccion en businessMinutesBetween
-          */
           const estado=String(o?.estado||"pendiente").toLowerCase();
           const entregada=isOdtFinalizada(o);
-          const esCorrección=estado==="correccion";
           const now=new Date();
           const hoy=toLocalDate(todayStr());
           const fi=toLocalDate(o?.fechaInicio)||hoy;
           const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
-          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
+          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),o?.horaInicio||"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
           const due=toDueDateTime(o);
           const fin=toFinishDateTime(o);
           const ref=entregada?(fin||due||now):now;
-          // TIEMPO TRANSCURRIDO: solo L-V (sin sábado) para HH estimadas
-          const weekDaySchedule=(d)=>ODT_WEEK_SCHEDULE[d?.getDay?.()]||null;
-          const countWeekDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let c=0;for(let d=new Date(da<=db?da:db);d<=(da<=db?db:da);d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return Math.max(1,c);};
-          const weekMinsBetween=(s,e)=>{if(!s||!e||isNaN(s)||isNaN(e))return 0;let a=s<=e?new Date(s):new Date(e),b=s<=e?new Date(e):new Date(s),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=weekDaySchedule(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
-          const totalLab=fi&&fe?countWeekDays(fi,fe):1;
-          const transLab=entregada?Math.min(totalLab,countWeekDays(fi,ref)):Math.min(totalLab,(()=>{const da=toLocalDate(o?.fechaInicio||todayStr()),r=hoy;if(!da||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<da)return 0;let c=0;for(let d=new Date(da);d<=end;d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return c;})());
+          const totalLab=fi&&fe?countWorkDaysInclusive(fi,fe):1;
+          const transLab=entregada?Math.min(totalLab,countWorkDaysInclusive(fi,ref)):Math.min(totalLab,countWorkDaysBefore(fi,hoy));
           const tiempo=`${transLab}/${totalLab} lab`;
-          // HH usadas: L-V para todos; incluir sábado solo si está en corrección
-          const schedFn=esCorrección?((d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null):weekDaySchedule;
-          const usedMins=(()=>{if(!inicioDT||isNaN(inicioDT))return 0;let a=inicioDT<=ref?new Date(inicioDT):new Date(ref),b=inicioDT<=ref?new Date(ref):new Date(inicioDT),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=schedFn(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);})();
-          // DÍAS TB (detalle): formato (Hoy), (+2d), (-1d), (a tiempo), (retraso 4h 34m), (adelanto +1d)
-          let diasTb="(<1d)";
-          let progreso="Pendiente";
+          const usedBusinessMinutes=businessMinutesBetween(inicioDT,ref);
+          const dias=entregada?formatDiasTb(usedBusinessMinutes):(usedBusinessMinutes>0?formatDiasTb(usedBusinessMinutes):"<1d");
           let detalle="";
+          let diasTb=dias;
           if(entregada){
             const cierre=fin||due;
             if(due&&cierre){
-              const deltaMin=Math.round((cierre.getTime()-due.getTime())/60000);
-              const adelantoDias=Math.round((due.getTime()-cierre.getTime())/86400000);
-              if(deltaMin>0){diasTb=`(retraso ${formatHm(deltaMin)})`;detalle=`Entregado con retraso ${formatHm(deltaMin)}`;}
-              else if(adelantoDias>=1){diasTb=`(adelanto +${adelantoDias}d)`;detalle=`Entregado con adelanto +${adelantoDias}d`;}
-              else{diasTb="(a tiempo)";detalle="Entregado a tiempo";}
-            }else{diasTb="(a tiempo)";detalle="Entregado";}
-            progreso="Finalizado";
+              const deltaMin=Math.round((cierre-due)/60000);
+              if(deltaMin>0){const retrasoLab=businessMinutesBetween(due,cierre);const retrasoTxt=formatDiasTb(retrasoLab);detalle=`Entregado con retraso ${retrasoTxt}`;diasTb=`Retraso ${retrasoTxt}`;}
+              else if(deltaMin<0){const adelantoLab=businessMinutesBetween(cierre,due);const adelantoTxt=formatDiasTb(adelantoLab);detalle=`Entregado con adelanto +${adelantoTxt}`;diasTb=`Adelanto +${adelantoTxt}`;}
+              else {detalle="Entregado a tiempo";diasTb="A tiempo";}
+            }else{detalle="Entregado";diasTb=dias;}
           }else{
-            const diasRestantes=fe?diffDays(fe,hoy):null;
-            const vencida=diasRestantes!==null&&diasRestantes<0;
-            // DÍAS TB según días a vencer
-            if(!fe) diasTb="(<1d)";
-            else if(diasRestantes>0) diasTb=`(+${diasRestantes}d)`;
-            else if(diasRestantes===0) diasTb="(Hoy)";
-            else diasTb=`(-${Math.abs(diasRestantes)}d)`;
-            detalle=diasTb;
-            // PROGRESO: correccion/observado gana sobre vencida; resto activo vencido → Con retraso
-            if(["entregado","finalizado","terminado"].includes(estado)) progreso="Finalizado";
-            else if(estado==="cancelado") progreso="Cancelado";
-            else if(estado==="correccion"||estado==="observado") progreso="En corrección";
-            else if(vencida) progreso="Con retraso";
-            else if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) progreso="En proceso";
-            else progreso="Pendiente";
+            const d=fe?diffDays(hoy,fe):null;
+            if(["diseño","en_diseno","aprobacion","aprobado"].includes(estado)) detalle=!fe?"En ejecución":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="pendiente") detalle=!fe?"Pendiente":d<0?`(+${Math.abs(d)}d)`:d===0?"Hoy":`Con retraso (-${d}d)`;
+            else if(estado==="retrasado") detalle=o?.detalle||o?.alerta||"Con retraso";
+            else detalle=o?.detalle||o?.alerta||"—";
+            diasTb=dias;
           }
           const avance=entregada?100:(Number(o?.avance)||0);
-          const estadoUi=entregada?"entregado":(estado==="observado"?"observado":estado); return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi,progreso};
+          const progresoMap={pendiente:"Pendiente",diseño:"En proceso",en_diseno:"En proceso",aprobacion:"En aprobación",aprobado:"Aprobado",correccion:"En corrección",entregado:"Entregado",finalizado:"Entregado",terminado:"Entregado",cancelado:"Cancelado",retrasado:"Retrasado"};
+          return {...o,detalle,alerta:detalle,tiempo,dias:diasTb,avance,estadoUi:entregada?"entregado":estado,progreso:progresoMap[estado]||"Pendiente"};
         };
         const odtsBaseFiltradas=odtsTodos.filter(o=>o.activo!==false).map(calcOdtPlan);
         const KANBAN_ENTREGADOS_DIAS=7;
@@ -8293,15 +8417,12 @@ function ChecklistApp() {
         const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
         const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
         const odtStateOptions=(o)=>{
-          /* ET_FIX_STATE_OPTIONS_PROGRESO_20260615 */
           const estado=String(o?.estado||"pendiente").toLowerCase();
+          const all=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","retrasado","cancelado"];
           let allowed=[];
-          if(isDisenoAdmin||isDisenoCoordinator) allowed=["pendiente","diseño","aprobacion","correccion","aprobado","entregado","cancelado"];
-          else if(isDisenoExecutor&&isAssignedOdt(o)){
-            allowed=["diseño"];
-            if(["diseño","en_diseno","correccion"].includes(estado)) allowed.push("aprobacion");
-            if(estado==="aprobado") allowed.push("entregado");
-          }else if(isSolicitante&&isRequesterOdt(o)) allowed=["correccion","aprobado","cancelado"];
+          if(isDisenoAdmin||isDisenoCoordinator) allowed=all;
+          else if(isDisenoExecutor&&isAssignedOdt(o)) allowed=["diseño","aprobacion",...(estado==="correccion"?["diseño","aprobacion"]:[]),...(estado==="aprobado"?["entregado"]:[])];
+          else if(isSolicitante&&isRequesterOdt(o)) allowed=["aprobacion","correccion","aprobado","cancelado"];
           if(estado&&!allowed.includes(estado)) allowed=[estado,...allowed];
           return [...new Set(allowed)];
         };
@@ -8323,7 +8444,7 @@ function ChecklistApp() {
           {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
           {id:"operativo",t:"Operativo",d:"Seguimiento diario",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
         ].filter(x=>odtDashLevelsAllowed.includes(x.id));
-        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="observado")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Observado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
+        const pillE=(e)=>{ if(e==="diseño"||e==="en_diseno")return{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",txt:"En proceso"}; if(e==="retrasado")return{bg:"#ffeae6",col:"#dc2626",txt:"Retrasado"}; if(e==="entregado"||e==="finalizado"||e==="terminado")return{bg:"rgba(0,184,148,.12)",col:"#00b894",txt:"Entregado"}; if(e==="aprobado")return{bg:"rgba(0,181,180,.12)",col:"#00b5b4",txt:"Aprobado"}; if(e==="aprobacion")return{bg:"rgba(9,132,227,.1)",col:"#0984e3",txt:"En aprobación"}; if(e==="correccion")return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"En corrección"}; if(e==="cancelado")return{bg:"#f1f5f9",col:"#64748b",txt:"Cancelado"}; return{bg:"rgba(246,166,35,.12)",col:"#f6a623",txt:"Pendiente"}; };
         const odtGanttItems=odtsRol.slice(0,8).map((o,idx)=>{
           const ini=toLocalDate(o.fechaInicio)||toLocalDate(todayStr());
           const fin=toLocalDate(o.fechaEntrega||o.entrega)||ini;
@@ -8334,7 +8455,7 @@ function ChecklistApp() {
           return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
         });
         const estadoLabel=(e)=>pillE(e).txt;
-        const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion"||raw==="observado")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
+        const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
         const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
         const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:7,padding:compact?"3px 8px":"7px 11px",borderRadius:compact?20:11,border:`1px solid ${tm.col}26`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><span style={{width:compact?16:20,height:compact?16:20,borderRadius:6,background:"#fff",border:`1px solid ${tm.col}33`,display:"inline-grid",placeItems:"center",flexShrink:0}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/></span>{tm.label}</span>;};
         const renderStateChip=(estado,compact=false)=>{const st=odtStateMeta(estado);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:st.col,background:st.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={st.ico} color={st.col} size={compact?9:10}/>{st.txt}</span>;};
@@ -8351,14 +8472,9 @@ function ChecklistApp() {
         const odtIsOverdue=(o)=>Boolean(o?.estado==="retrasado"||(o?.alerta&&String(o.alerta).toLowerCase().includes("retraso"))||(o?.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o)));
         const odtIsCorrection=(o)=>String(o?.estado||"").toLowerCase()==="correccion"||String(o?.estadoPlanner||"").toLowerCase().includes("correcci");
         const odtHasObservation=(o)=>String(o?.motivoCorreccion||o?.observacionesCorreccion||o?.comentarioCorreccion||o?.correccionMotivo||"").trim().length>0;
-        const correccionMotivosCount=odtsRol.reduce((acc,o)=>{
-          const m=String(o?.motivoCorreccion||o?.motivoPredeterminadoCorreccion||o?.observacionesCorreccion||"").trim();
-          if(m){acc[m]=(acc[m]||0)+1;}
-          return acc;
-        },{});
         const gerenciaCausas=[
           {label:"Entregas fuera de corte", count:odtsRol.filter(odtIsOverdue).length, color:"#dc2626"},
-          ...Object.entries(correccionMotivosCount).map(([label,count])=>({label,count,color:"#f6a623"})),
+          {label:"Correcciones solicitadas", count:odtsRol.filter(odtIsCorrection).length, color:"#f6a623"},
           {label:"Observaciones registradas", count:odtsRol.filter(odtHasObservation).length, color:"#0984e3"},
           {label:"Brief pendiente de completar", count:odtsRol.filter(o=>!(o.objetivo||o.mensaje||o.mecanica||o.productos||o.restricciones||o.referencias)).length, color:"#6C6EF5"}
         ].filter(x=>x.count>0);
@@ -8369,38 +8485,7 @@ function ChecklistApp() {
         const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
         const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
-        // ET_FIX_ODT_CAPACIDAD_DISENADOR_20260614: no asignar mas de 3 ODT activas por diseñador.
-        const ODT_MAX_ACTIVAS_POR_DISENADOR=3;
-        const odtFinalStates=["entregado","finalizado","terminado","cancelado"];
-        const designerKey=(d)=>({
-          ids:[d?.id,d?.userId,d?.dni,d?.documento,d?.usuario,d?.credencial].map(normOdt).filter(Boolean),
-          digits:[d?.dni,d?.documento,d?.usuario,d?.credencial,d?.id].map(normDigits).filter(Boolean),
-          names:[d?.nombre].map(normOdt).filter(Boolean),
-          emails:[d?.email,d?.correo].map(normOdt).filter(Boolean)
-        });
-        const odtBelongsToDesigner=(o,d)=>{
-          const dk=designerKey(d);
-          const oid=[o?.disenadorId,o?.responsableId,o?.disenadorDni,o?.responsableDni].map(normOdt).filter(Boolean);
-          const odig=[o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId].map(normDigits).filter(Boolean);
-          const onam=[o?.dnombre,o?.disenadorNombre,o?.responsableNombre].map(normOdt).filter(Boolean);
-          const oem=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt).filter(Boolean);
-          return sameAny(dk.ids,oid)||sameAny(dk.digits,odig)||sameAny(dk.names,onam)||sameAny(dk.emails,oem);
-        };
-        /* Límite 3 ODT: solo cuenta las que están En Aprobación (pendiente revisión del solicitante) */
-        const odtActivaParaCarga=(o)=>String(o?.estado||"").toLowerCase()==="aprobacion"&&o?.activo!==false;
-        const odtCargaDesigner=(d,excludeId="")=>odtsBaseFiltradas.filter(o=>String(o?.id)!==String(excludeId)&&odtActivaParaCarga(o)&&odtBelongsToDesigner(o,d)).length;
-        const designerBloqueadoAsignacion=(d,excludeId="")=>odtCargaDesigner(d,excludeId)>=ODT_MAX_ACTIVAS_POR_DISENADOR;
         const APP_URL="https://vega-evidencias.vercel.app/";
-        const ODT_CORRECTION_REASONS=[
-          "Brief incompleto",
-          "Corrección de medidas/formato",
-          "Actualizar producto o precio",
-          "Ajuste de copy / mensaje",
-          "Cambio de tono visual",
-          "Falta de referencia o insumo",
-          "Error de fecha / mecánica",
-          "Otro ajuste solicitado"
-        ];
         /* ET_FIX_MAIL_URL_BRACKETS_FALLBACK_20260614 */
         /* ET_FIX_MAIL_LINK_20260613_1615 */
         const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -8419,8 +8504,8 @@ Estatus: En corrección
 Motivo / cambios solicitados:
 ${o.motivoCorreccion||"No especificado"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8433,8 +8518,8 @@ Estatus: En aprobación
 Fecha entrega: ${o.fechaEntrega||o.entrega||"—"}
 Hora de corte: ${o.horaCorte||"—"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8449,8 +8534,8 @@ Fecha de entrega: ${o.fechaCierre||todayStr()}
 Hora de entrega: ${new Date(o.entregadoEn||o.finalizadoEn||Date.now()).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}
 Prioridad: ${o.prioridad||"Normal"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
           }
@@ -8477,8 +8562,8 @@ Productos: ${o.productos||"No especificado"}
 Restricciones: ${o.restricciones||"No especificado"}
 Referencias: ${o.referencias||"No especificado"}
 
-Link de acceso directo a EstrategiaTrade:
-<${APP_URL}>
+Ingresa a EstrategiaTrade:
+${APP_URL}
 
 Saludos.`;
         };
@@ -8486,29 +8571,17 @@ Saludos.`;
         const openExternalBlank=(url)=>{try{const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),300);return true;}catch(e){showToast("No se pudo abrir la pestaña. Revisa el bloqueador de ventanas emergentes.");return false;}};
         const odtMailSubject=(o,modo="asignacion")=>(modo==="revision"||modo==="aprobacion")?`ODT enviada a aprobación: ${o.titulo||""}`:((isOdtFinalizada(o)||modo==="entrega")?`ODT entregada para revisión: ${o.titulo||""}`:`Nueva ODT asignada: ${o.titulo||""}`);
         const copyOdtMailText=async(o,modo="asignacion")=>{try{await navigator.clipboard.writeText(buildOdtMail(o,modo));showToast("Texto copiado. Pégalo en tu correo si Outlook no abrió.");return true;}catch(e){showToast("No se pudo abrir correo. Copia el texto desde el detalle de la ODT.");return false;}};
-        const openOutlookOdt=(o,modo="asignacion")=>{const to=o.demail||"";const subject=odtMailSubject(o,modo);const body=buildOdtMail(o,modo);const outlookUrl="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to||"")+"&subject="+encodeURIComponent(subject||"")+"&body="+encodeURIComponent(body||"");try{const w=window.open(outlookUrl,"_blank","noopener,noreferrer");if(!w||w.closed||typeof w.closed==="undefined"){copyOdtMailText(o,modo);}else{try{w.opener=null;}catch(_){}}}catch(e){copyOdtMailText(o,modo);}};
-        const getOdtPhone=(u)=>{
-          const seen=new Set();
-          const scan=(obj,depth=0)=>{
-            if(!obj||depth>2||seen.has(obj))return "";
-            if(typeof obj==="object")seen.add(obj);
-            const entries=typeof obj==="object"?Object.entries(obj):[["",obj]];
-            for(const [k,v] of entries){
-              const key=String(k||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-              if(/cel|fono|phone|whats|movil|mobile|tel/.test(key)&&v!=null){
-                const n=String(v).replace(/\D/g,"");
-                if((n.length===9&&n.startsWith("9"))||(n.length===11&&n.startsWith("51"))||(n.length===12&&n.startsWith("519")))return n;
-              }
-            }
-            for(const [,v] of entries){if(v&&typeof v==="object"){const r=scan(v,depth+1);if(r)return r;}}
-            return "";
-          };
-          return scan(u);
+        // FIX_NO_MAILTO_POPUP_20260614: abre Outlook web directo, sin fallback a mailto:
+        // El fallback anterior disparaba el selector de apps del SO (popup "Elija aplicación").
+        // openExternalBlank puro abre la pestaña de Outlook sin ningún popup del sistema.
+        const openOutlookOdt=(o,modo="asignacion")=>{
+          const to=o.demail||"";
+          const subject=odtMailSubject(o,modo);
+          const body=buildOdtMail(o,modo);
+          const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(to)+"&subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+          openExternalBlank(url);
         };
-        const findOdtDesigner=(o)=>disenadores.find(d=>String(d.id||"")===String(o?.disenadorId||o?.responsableId||"")||String(d.dni||d.documento||d.usuario||"").replace(/\D/g,"")===String(o?.disenadorDni||o?.responsableDni||"").replace(/\D/g,"")||normOdt(d.email||d.correo||"")===normOdt(o?.demail||o?.disenadorEmail||o?.responsableEmail||"")||normOdt(d.nombre||"")===normOdt(o?.dnombre||o?.disenadorNombre||o?.responsableNombre||""));
-        const getOdtPhoneFor=(o)=>getOdtPhone(o)||getOdtPhone(findOdtDesigner(o));
-        const normalizePeruPhone=(v)=>{const n=String(v||"").replace(/\D/g,"");if(!n)return "";if(n.startsWith("51")&&n.length>=11)return n;if(n.length===9&&n.startsWith("9"))return "51"+n;return n;};
-        const openWhatsOdt=(o,modo="asignacion")=>{const tel=normalizePeruPhone(getOdtPhoneFor(o));const text=buildOdtMail(o,modo);const url=tel?`https://wa.me/${tel}?text=${encodeURIComponent(text)}`:`https://wa.me/?text=${encodeURIComponent(text)}`;openExternalBlank(url);};
+        const openWhatsOdt=(o,modo="asignacion")=>{const tel=String(o.dcel||"").replace(/\D/g,"");const url=`https://wa.me/${tel||"51"}?text=${encodeURIComponent(buildOdtMail(o,modo))}`;openExternalBlank(url);};
         const getOdtRequesterContact=(o)=>{const id=String(o?.solicitanteId||o?.creadoPor||"").trim().toLowerCase();const u=(usuarios||[]).find(x=>[x.id,x.dni,x.credencial,x.usuario,x.userId].some(v=>String(v||"").trim().toLowerCase()===id));return {nombre:o?.solicitanteNombre||u?.nombre||"Solicitante",email:o?.solicitanteEmail||u?.email||u?.correo||"",celular:o?.solicitanteWhatsapp||o?.solicitanteCelular||u?.whatsapp||u?.celular||u?.telefono||""};};
         const getOdtDesignerContact=(o)=>({nombre:o?.dnombre||"Diseñador",email:o?.demail||"",celular:o?.dcel||""});
         const maybeNotifyDesignerAfterCorrection=(o,nuevoEstado,updated)=>{
@@ -8526,7 +8599,7 @@ Saludos.`;
         const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{entregadoEn:extra.entregadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,correccion:55,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const estadoFirestore=(nuevoEstado==="finalizado"||nuevoEstado==="terminado")?"entregado":nuevoEstado;const updated=calcOdtPlan({...o,estado:estadoFirestore,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:estadoFirestore,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);maybeNotifyRequesterAfterState(o,estadoFirestore,updated);maybeNotifyDesignerAfterCorrection(o,estadoFirestore,updated);showToast("Estado actualizado: "+pillE(estadoFirestore).txt);return updated;};
         const deleteOdtInFirestore=async(id)=>{try{await deleteDoc(doc(db,"diseno_odts",id));}catch(e){console.warn("[ODT delete Firestore]",e?.message);}};
         const resetOdtFormAndGoDash=()=>{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);};
-        const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;if(d&&designerBloqueadoAsignacion(d)){showToast("Diseñador inhabilitado para asignación: tiene 3 ODT activas.");return;}const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
+        const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
         const deleteOdt=(o)=>{ if(!canDeleteOdt(o)){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
         const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 190px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -8558,7 +8631,7 @@ Saludos.`;
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}><div><label style={{...lbl,textAlign:"center"}}>Fecha inicio *</label><input type="date" value={odtForm.fechaInicio} onChange={e=>setOdtForm(p=>({...p,fechaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Fecha entrega *</label><input type="date" value={odtForm.fechaEntrega} onChange={e=>setOdtForm(p=>({...p,fechaEntrega:e.target.value}))} style={{...inp,fontSize:15}}/></div></div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><label style={{...lbl,textAlign:"center"}}>Hora de inicio</label><input type="time" value={odtForm.horaInicio} onChange={e=>setOdtForm(p=>({...p,horaInicio:e.target.value}))} style={{...inp,fontSize:15}}/></div><div><label style={{...lbl,textAlign:"center"}}>Hora de corte <span style={{color:"#e17055",fontWeight:500}}>(pasada esta hora → retraso)</span></label><input type="time" value={odtForm.horaCorte} onChange={e=>setOdtForm(p=>({...p,horaCorte:e.target.value}))} style={{...inp,fontSize:15}}/></div></div><div style={{marginTop:16}}><label style={{...lbl,textAlign:"center"}}>Prioridad</label><select value={odtForm.prioridad||"Normal"} onChange={e=>setOdtForm(p=>({...p,prioridad:e.target.value}))} style={{...inp,fontSize:15}}>{ODT_PRIORIDADES.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
                 </div>
-                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();const carga=odtCargaDesigner(u);const blocked=designerBloqueadoAsignacion(u);return <button key={u.id} disabled={blocked} onClick={()=>!blocked&&setOdtForm(p=>({...p,disenadorId:u.id}))} title={blocked?"Inhabilitado: 3 ODT activas":"Disponible"} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:blocked?"#f8fafc":sel?"rgba(108,110,245,.08)":"#fff",opacity:blocked?.62:1,cursor:blocked?"not-allowed":"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:blocked?"#b2bec3":"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador · {carga}/{ODT_MAX_ACTIVAS_POR_DISENADOR} activas</small></span></span><span style={{fontSize:10,fontWeight:800,color:blocked?"#dc2626":"#00b894"}}>{blocked?"Inhabilitado":"Disponible"}</span></button>})}</div></div>}
+                {(isAdmin||role==="coordinador")&&<div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>2</span>Responsable</div><div style={{display:"grid",gap:9}}><button onClick={()=>setOdtForm(p=>({...p,disenadorId:""}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${!odtForm.disenadorId?"#6C6EF5":"#e2e8f0"}`,background:!odtForm.disenadorId?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#dce6ee",display:"grid",placeItems:"center",color:"#6C6EF5",fontWeight:800}}>—</span><b>Sin asignar</b></span><span style={{fontSize:10,fontWeight:800,color:"#f6a623"}}>Pendiente</span></button>{disenadores.map(u=>{const sel=odtForm.disenadorId===u.id;const ini=(u.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();return <button key={u.id} onClick={()=>setOdtForm(p=>({...p,disenadorId:u.id}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 10px",borderRadius:10,border:`1.5px solid ${sel?"#6C6EF5":"#e2e8f0"}`,background:sel?"rgba(108,110,245,.08)":"#fff",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:32,height:32,borderRadius:"50%",background:"#6C6EF5",display:"grid",placeItems:"center",color:"#fff",fontWeight:800}}>{ini}</span><span><b>{u.nombre}</b><small style={{display:"block",fontSize:10,color:"#8aaabb"}}>Ejecutor · Diseñador</small></span></span><span style={{fontSize:10,fontWeight:800,color:"#00b894"}}>Disponible</span></button>})}</div></div>}
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>3</span>Tipo de trabajo</div><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:22}}>{TIPOS_TRABAJO.map(t=>{const sel=odtForm.tipo===t.label;return <button key={t.id||t.label} onClick={()=>setOdtForm(p=>({...p,tipo:t.label,hh:t.hh}))} style={{height:78,borderRadius:14,border:`1.5px solid ${sel?"#6C6EF5":"#c8d8e8"}`,background:sel?"rgba(108,110,245,.06)":"#fff",display:"flex",alignItems:"center",gap:14,padding:"0 22px",fontSize:16,fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}><span style={{width:22,height:22,borderRadius:"50%",border:`3px solid ${sel?"#6C6EF5":"#c8d8e8"}`,display:"grid",placeItems:"center"}}>{sel&&<span style={{width:8,height:8,borderRadius:"50%",background:"#6C6EF5"}}/>}</span>{t.ico}{t.label}</button>})}</div><label style={{...lbl,textAlign:"center",fontSize:13}}>Objetivo y público</label><textarea value={odtFormDraft.objetivo||""} onChange={e=>setOdtFormDraft(p=>({...p,objetivo:e.target.value}))} placeholder="¿Qué debe comunicar? ¿A quién está dirigido?" style={{...inp,minHeight:90,resize:"vertical",fontSize:15,marginBottom:18}}/><label style={{...lbl,textAlign:"center",fontSize:13}}>Mensaje principal</label><textarea value={odtFormDraft.mensaje||""} onChange={e=>setOdtFormDraft(p=>({...p,mensaje:e.target.value}))} placeholder="Frase clave, claim o copy principal de la pieza" style={{...inp,minHeight:90,resize:"vertical",fontSize:15}}/></div>
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>4</span>Materiales y medidas</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>{MATERIALES_TODOS.map(m=>{const chk=(odtForm.materiales||[]).includes(m);return <label key={m} style={{display:"flex",alignItems:"center",gap:10,border:"1px solid #e2e8f0",borderRadius:12,padding:"10px 12px",background:chk?"rgba(0,181,180,.08)":"#f8fafc",cursor:"pointer"}}><input type="checkbox" checked={chk} onChange={e=>setOdtForm(p=>({...p,materiales:e.target.checked?[...(p.materiales||[]),m]:(p.materiales||[]).filter(x=>x!==m)}))}/><span style={{fontSize:12,fontWeight:700,color:"#1a2f4a"}}>{m}</span></label>})}</div><label style={lbl}>Medidas específicas</label><input value={odtForm.medidas} onChange={e=>setOdtForm(p=>({...p,medidas:e.target.value}))} placeholder="Ej: 1080×1920px / A3 vertical" style={inp}/></div>
                 <div style={{border:"1.5px solid #e2e8f0",borderRadius:16,padding:22,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,fontSize:15,fontWeight:800,color:"#6C6EF5",textTransform:"uppercase",letterSpacing:".03em",marginBottom:14}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center"}}>5</span>Estilo y referencias</div><label style={lbl}>Tonalidad</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{["Corporativo","Emocional","Promocional","Divertido","Impactante"].map(t=><button key={t} onClick={()=>setOdtForm(p=>({...p,tonalidad:t}))} style={{padding:"7px 13px",borderRadius:999,border:`1.5px solid ${odtForm.tonalidad===t?"#6C6EF5":"#e2e8f0"}`,background:odtForm.tonalidad===t?"#6C6EF5":"#fff",color:odtForm.tonalidad===t?"#fff":"#5a7a9a",fontWeight:700,cursor:"pointer"}}>{t}</button>)}</div><label style={lbl}>Mecánica / dinámica</label><textarea value={odtFormDraft.mecanica||""} onChange={e=>setOdtFormDraft(p=>({...p,mecanica:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical",marginBottom:12}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}><div><label style={lbl}>Productos involucrados</label><input value={odtFormDraft.productos||""} onChange={e=>setOdtFormDraft(p=>({...p,productos:e.target.value}))} style={inp}/></div><div><label style={lbl}>Restricciones</label><input value={odtFormDraft.restricciones||""} onChange={e=>setOdtFormDraft(p=>({...p,restricciones:e.target.value}))} style={inp}/></div></div><label style={lbl}>Comentarios / referencias</label><textarea value={odtFormDraft.referencias||""} onChange={e=>setOdtFormDraft(p=>({...p,referencias:e.target.value}))} style={{...inp,minHeight:70,resize:"vertical"}}/></div>
@@ -8578,7 +8651,7 @@ Saludos.`;
                   <option value="aprobacion">En aprobación</option>
                   <option value="correccion">En corrección</option>
                   <option value="entregado">Entregado</option>
-                  /* retrasado no es estado manual */
+                  <option value="retrasado">Retrasado</option>
                 </select>
                 <select value={odtReporteTipo} onChange={e=>setOdtReporteTipo(e.target.value)} style={{...inp,width:"auto",padding:"8px 11px"}}>
                   <option value="todos">Todos los tipos</option>
@@ -8620,7 +8693,6 @@ Saludos.`;
                     {odtsReporte.length===0&&<tr><td colSpan={13} style={{textAlign:"center",padding:32,color:"#b2bec3",fontWeight:700}}>No hay ODTs para los filtros seleccionados.</td></tr>}
                     {odtsReporte.map(o=>{
                       const p=pillE(o.estado);
-                      const estado=String(o?.estadoUi||o?.estado||"pendiente").toLowerCase();
                       const isHL=odtHighlighted===o.id;
                       const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                       return(
@@ -8632,7 +8704,7 @@ Saludos.`;
                             {renderTypeChip(o.tipoTrabajo||o.tipo)}
                           </td>
                           <td style={{padding:"12px 10px",maxWidth:260}}>
-                            <div style={{fontWeight:700,color:estado==="cancelado"?"#94a3b8":"#1a2f4a",textDecoration:estado==="cancelado"?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
+                            <div style={{fontWeight:700,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
                             <div style={{fontSize:9,color:"#b2bec3",marginTop:3}}>{o.id} · {o.fechaInicio}</div>
                           </td>
                           <td style={{padding:"12px 10px"}}>
@@ -8652,10 +8724,9 @@ Saludos.`;
                             <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,color:"#5a7a9a",background:"#f0f4f8"}}>{o.horaCorte||"—"}</span>
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {canUpdateOdtState(o)&&!(estado==="cancelado"&&!isDisenoAdmin)
+                            {canUpdateOdtState(o)
                               ?<select value={o.estado} onChange={async e=>{
                                   const nuevoEstado=e.target.value;
-                                  if(nuevoEstado==="cancelado"){const motivo=window.prompt("Motivo de cancelación (obligatorio):");if(!motivo||!motivo.trim()){showToast("Debes ingresar un motivo para cancelar");return;}await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role,motivoCancelacion:motivo.trim(),canceladoEn:new Date().toISOString()});return;}
                                   await updateOdtEstado(o,nuevoEstado,{actualizadoPor:uName||uDni,actualizadoRol:role});
                                 }}
                                 style={{padding:"3px 9px",borderRadius:20,border:"none",background:p.col+"18",color:p.col,fontWeight:700,fontSize:10,cursor:"pointer",outline:"none",whiteSpace:"nowrap",fontFamily:"'DM Sans',system-ui,sans-serif",appearance:"none",WebkitAppearance:"none"}}>
@@ -8665,18 +8736,7 @@ Saludos.`;
                             }
                           </td>
                           <td style={{padding:"12px 10px"}}>
-                            {(()=>{
-                              const pg=o.progreso||"Pendiente";
-                              const pgMeta={
-                                "Finalizado":{bg:"rgba(0,184,148,.12)",col:"#00b894",ico:"check"},
-                                "En proceso":{bg:"rgba(108,110,245,.12)",col:"#6C6EF5",ico:"pen"},
-                                "En corrección":{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"pen"},
-                                "Con retraso":{bg:"#ffeae6",col:"#dc2626",ico:"alert"},
-                                "Cancelado":{bg:"#f1f5f9",col:"#64748b",ico:"alert"},
-                                "Pendiente":{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"clock"},
-                              }[pg]||{bg:"rgba(246,166,35,.12)",col:"#f6a623",ico:"clock"};
-                              return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:800,color:pgMeta.col,background:pgMeta.bg,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pgMeta.ico} color={pgMeta.col} size={9}/>{pg}</span>;
-                            })()}
+                            {renderStateChip(o.estado,true)}
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
                             <span style={{fontWeight:700,color:"#8aaabb"}}>{o.hh||"—"}</span>
@@ -8685,7 +8745,7 @@ Saludos.`;
                           <td style={{padding:"12px 10px",minWidth:120}}>
                             <div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",marginBottom:3}}>{o.tiempo}</div>
                             <div style={{height:5,background:"#edf2f7",borderRadius:3,overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${o.avance||0}%`,background:o.progreso==="Con retraso"?"#dc2626":o.progreso==="Finalizado"?"#00b894":"#6C6EF5",transition:"width .3s"}}/>
+                              <div style={{height:"100%",width:`${o.avance||0}%`,background:o.estado==="retrasado"?"#dc2626":"#6C6EF5",transition:"width .3s"}}/>
                             </div>
                           </td>
                           <td style={{padding:"12px 10px",textAlign:"center"}}>
@@ -8837,7 +8897,9 @@ Saludos.`;
                   {reportStats.map(s=>{
                     const kpiIco2={
                       "Total":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>,
-                      "Entregadas":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Terminadas":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Entregadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
+                      "Finalizadas":<svg width="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>,
                       "En proceso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
                       "Pendientes":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
                       "Con retraso":<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={s.c} strokeWidth="1.8" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
@@ -8973,14 +9035,14 @@ Saludos.`;
                 ["Comentarios / referencias",odtViewModal.referencias]
               ];
               const viewActionBtn=(label,icon,onClick,bg,border,color="#1a2f4a")=>(
-                <button onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"6px 10px",borderRadius:10,border,background:bg,cursor:"pointer",fontWeight:900,color,fontSize:10.5,whiteSpace:"nowrap",minHeight:32}}>
+                <button onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"9px 10px",borderRadius:10,border,background:bg,cursor:"pointer",fontWeight:900,color,fontSize:11,whiteSpace:"nowrap",minHeight:36}}>
                   {icon}{label}
                 </button>
               );
-              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"6px"}}>
-                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 12px))",maxHeight:"calc(100dvh - 12px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px"}}>
+                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 16px))",maxHeight:"calc(100dvh - 16px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
                   <div style={{borderBottom:"1px solid #e2e8f0",flexShrink:0,background:"#fff"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px 5px 10px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px 6px 10px"}}>
                       <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
                       </div>
@@ -8999,10 +9061,10 @@ Saludos.`;
                       {viewActionBtn("Cerrar",<svg key="x" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,()=>setOdtViewModal(null),"#f8fafc","1px solid #e2e8f0","#5a7a9a")}
                     </div>
                   </div>
-                  <div style={{overflowY:"auto",flex:1,padding:"5px 10px 8px 10px",minHeight:0}}>
+                  <div style={{overflowY:"auto",flex:1,padding:"8px 10px",minHeight:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style={{fontSize:10,fontWeight:900,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Detalle del brief</span></div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:6}}>{detailItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"4px 6px"}}><div style={{fontSize:7,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:9.5,fontWeight:700,color:"#1a2f4a",lineHeight:1.2}}>{v}</div></div>):null)}</div>
-                    {textItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"5px 8px",marginBottom:4}}><div style={{fontSize:7,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:9.5,color:"#1a2f4a",fontWeight:600,lineHeight:1.3,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(128px,1fr))",gap:6,marginBottom:8}}>{detailItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 7px"}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,fontWeight:700,color:"#1a2f4a",lineHeight:1.2}}>{v}</div></div>):null)}</div>
+                    {textItems.map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 8px",marginBottom:5}}><div style={{fontSize:7.5,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{k}</div><div style={{fontSize:10,color:"#1a2f4a",fontWeight:600,lineHeight:1.3,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}
                   </div>
                 </div>
               </div>;
@@ -9015,7 +9077,6 @@ Saludos.`;
               const sel=disenadores.find(d=>String(d.id)===String(selectedId));
               const saveAssign=async()=>{
                 if(!sel){showToast("Selecciona un diseñador");return;}
-                if(designerBloqueadoAsignacion(sel,current.id)){showToast("Diseñador inhabilitado para asignación: tiene 3 ODT activas.");return;}
                 const ini=(sel.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase();
                 const patch={disenadorId:sel.id,dnombre:sel.nombre,demail:sel.email||"",dcel:sel.celular||"",did:ini,colorD:sel.color||current.colorD||"#6C6EF5",asignadoPor:uName||uDni,asignadoEn:new Date().toISOString()};
                 await updateOdtInFirestore(current.id,patch);
@@ -9033,7 +9094,7 @@ Saludos.`;
                     <label style={{...lbl}}>Diseñador responsable</label>
                     <select value={selectedId} onChange={e=>setOdtAssignModal(p=>({...p,_newDesignerId:e.target.value}))} style={{...inp,background:"#fff",marginBottom:14}}>
                       <option value="">Seleccionar diseñador</option>
-                      {disenadores.map(d=>{const carga=odtCargaDesigner(d,current.id);const blocked=designerBloqueadoAsignacion(d,current.id);return <option key={d.id} value={d.id} disabled={blocked}>{d.nombre}{blocked?` · Inhabilitado (${carga}/3 activas)`:carga?` · ${carga}/3 activas`:""}</option>;})}
+                      {disenadores.map(d=><option key={d.id} value={d.id}>{d.nombre}</option>)}
                     </select>
                     {sel&&<div style={{padding:"10px 12px",borderRadius:12,background:"#f0f6ff",border:"1px solid #c8d8e8",fontSize:12,color:"#5a7a9a",marginBottom:16}}>Se asignará a <b style={{color:"#1a2f4a"}}>{sel.nombre}</b>{sel.email?` · ${sel.email}`:""}</div>}
                     <div style={{display:"flex",justifyContent:"flex-end",gap:10}}>
@@ -9111,9 +9172,9 @@ Saludos.`;
                 </div>
               </div>;
             })()}
-            {odtCorrectionNotifyModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:125,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}><div style={{background:"#fff",borderRadius:18,width:"min(560px,96vw)",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:800,fontSize:15,color:"#fff"}}>Notificar corrección al diseñador</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>{odtCorrectionNotifyModal.disenador?.nombre||"Diseñador"} · {odtCorrectionNotifyModal.disenador?.email||"sin correo"}</div></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{padding:20}}><div style={{background:"#fff8ec",border:"1px solid #f6a62333",borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>ODT en corrección</div><div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtCorrectionNotifyModal.odt?.titulo}</div><div style={{fontSize:12,color:"#5a7a9a",marginTop:6}}>Indica al diseñador por qué no fue aprobada y qué cambios debe realizar.</div></div><label style={lbl}>Motivo predeterminado *</label><select value={ODT_CORRECTION_REASONS.includes(odtCorrectionNote)?odtCorrectionNote:""} onChange={e=>setOdtCorrectionNote(e.target.value)} style={{...inp,marginBottom:10}}><option value="">Seleccionar motivo...</option>{ODT_CORRECTION_REASONS.map(m=><option key={m} value={m}>{m}</option>)}</select><label style={lbl}>Detalle / cambios solicitados *</label><textarea value={odtCorrectionNote} onChange={e=>setOdtCorrectionNote(e.target.value)} placeholder="Agrega detalle específico del ajuste solicitado..." style={{...inp,minHeight:100,resize:"vertical",marginBottom:14}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openWhatsOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>WhatsApp al diseñador</button><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openOutlookOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>Correo al diseñador</button></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{marginTop:12,width:"100%",padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",fontWeight:800,color:"#5a7a9a",cursor:"pointer"}}>Cerrar sin notificar</button></div></div></div>}
+            {odtCorrectionNotifyModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:125,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}><div style={{background:"#fff",borderRadius:18,width:"min(560px,96vw)",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:800,fontSize:15,color:"#fff"}}>Notificar corrección al diseñador</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>{odtCorrectionNotifyModal.disenador?.nombre||"Diseñador"} · {odtCorrectionNotifyModal.disenador?.email||"sin correo"}</div></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{padding:20}}><div style={{background:"#fff8ec",border:"1px solid #f6a62333",borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>ODT en corrección</div><div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtCorrectionNotifyModal.odt?.titulo}</div><div style={{fontSize:12,color:"#5a7a9a",marginTop:6}}>Indica al diseñador por qué no fue aprobada y qué cambios debe realizar.</div></div><label style={lbl}>Motivo / cambios solicitados *</label><textarea value={odtCorrectionNote} onChange={e=>setOdtCorrectionNote(e.target.value)} placeholder="Ej: Ajustar precios, corregir medidas, cambiar tono del copy, actualizar producto..." style={{...inp,minHeight:120,resize:"vertical",marginBottom:14}}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openWhatsOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>WhatsApp al diseñador</button><button onClick={async()=>{const nota=(odtCorrectionNote||"").trim();if(!nota){showToast("Agrega el motivo de corrección antes de notificar");return;}const patched={...odtCorrectionNotifyModal.odt,motivoCorreccion:nota};await updateOdtInFirestore(patched.id,{motivoCorreccion:nota,correccionEn:new Date().toISOString(),correccionPor:uName||uDni});openOutlookOdt(patched,"correccion");setOdtCorrectionNotifyModal(null);}} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>Correo al diseñador</button></div><button onClick={()=>setOdtCorrectionNotifyModal(null)} style={{marginTop:12,width:"100%",padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",fontWeight:800,color:"#5a7a9a",cursor:"pointer"}}>Cerrar sin notificar</button></div></div></div>}
             {odtSolicitanteNotifyModal&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}><div style={{background:"#fff",borderRadius:18,width:"min(520px,96vw)",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div><div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{odtSolicitanteNotifyModal.modo==="revision"?"Notificar envío a aprobación":"Notificar entrega de ODT"}</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>{odtSolicitanteNotifyModal.solicitante?.nombre||"Solicitante"} · {odtSolicitanteNotifyModal.solicitante?.email||"sin correo"}</div></div><button onClick={()=>setOdtSolicitanteNotifyModal(null)} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{padding:20}}><div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:10,fontWeight:800,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>ODT</div><div style={{fontSize:15,fontWeight:800,color:"#1a2f4a"}}>{odtSolicitanteNotifyModal.odt?.titulo}</div><div style={{fontSize:12,color:"#5a7a9a",marginTop:6}}>{odtSolicitanteNotifyModal.modo==="revision"?"El diseñador envió la ODT a aprobación.":"El diseñador marcó la ODT como entregada."}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><button onClick={()=>openWhatsOdt(odtSolicitanteNotifyModal.odt,odtSolicitanteNotifyModal.modo)} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #d4f1e4",background:"#f0faf5",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>WhatsApp al solicitante</button><button onClick={()=>openOutlookOdt(odtSolicitanteNotifyModal.odt,odtSolicitanteNotifyModal.modo)} style={{padding:"13px 14px",borderRadius:12,border:"1.5px solid #c8d8e8",background:"#f0f6ff",fontWeight:800,color:"#1a2f4a",cursor:"pointer"}}>Correo al solicitante</button></div><button onClick={()=>setOdtSolicitanteNotifyModal(null)} style={{marginTop:12,width:"100%",padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",fontWeight:800,color:"#5a7a9a",cursor:"pointer"}}>Cerrar</button></div></div></div>}
-            {odtNotifyModal&&canNotifyOdt(odtNotifyModal.odt)&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:123,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(760px,96vw)",maxHeight:"calc(100vh - 24px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0,background:"linear-gradient(135deg,#1a2f4a,#0f1f33)"}}><div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",fontSize:15,fontWeight:800,color:"#fff",flexShrink:0}}>{(odtNotifyModal.disenador?.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:14,color:"#fff"}}>ODT lista — Notificar a {odtNotifyModal.disenador?.nombre}</div><div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo"} · {getOdtPhone(odtNotifyModal.disenador)||"Sin celular"}</div></div><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",flex:1,overflow:"hidden",minHeight:0}}><div style={{overflowY:"auto",padding:"16px 20px",borderRight:"1px solid #e2e8f0"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Brief de la ODT</span></div><div style={{background:"#EEEFFE",borderRadius:10,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>Título</div><div style={{fontSize:14,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.odt?.titulo}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>{[["Tipo",odtNotifyModal.odt?.tipoTrabajo||odtNotifyModal.odt?.tipo],["Área",odtNotifyModal.odt?.area],["F. Entrega",odtNotifyModal.odt?.fechaEntrega],["H. Corte",odtNotifyModal.odt?.horaCorte],["HH",odtNotifyModal.odt?.hh?odtNotifyModal.odt.hh+"h":null],["Materiales",(odtNotifyModal.odt?.materiales||[]).join(", ")||null],["Medidas",odtNotifyModal.odt?.medidas],["Tonalidad",odtNotifyModal.odt?.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtNotifyModal.odt?.objetivo],["Mensaje principal",odtNotifyModal.odt?.mensaje],["Mecánica / dinámica",odtNotifyModal.odt?.mecanica],["Restricciones",odtNotifyModal.odt?.restricciones]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:6}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:4}}>{k}</div><div style={{fontSize:12,color:"#1a2f4a",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div><div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12,background:"#f8fafc"}}><div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Notificar al diseñador</div><div style={{fontSize:11,color:"#8aaabb",lineHeight:1.6,marginBottom:4}}>Elige el canal. El diseñador recibirá el brief completo de la orden.</div><button onClick={()=>openWhatsOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #d4f1e4",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>WhatsApp directo</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{getOdtPhone(odtNotifyModal.disenador)||"Sin número registrado"}</div></div></button><button onClick={()=>openOutlookOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:getOdtPhone(odtNotifyModal.disenador)})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #c8d8e8",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Correo electrónico</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo registrado"}</div></div></button><div style={{borderTop:"1px solid #e2e8f0",margin:"4px 0"}}/><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{padding:"14px 18px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Listo — ir al Dashboard</button><div style={{fontSize:10,color:"#b2bec3",textAlign:"center",lineHeight:1.5}}>ODT guardada. Puedes notificar ahora o más tarde desde el Reporte.</div></div></div></div></div>}
+            {odtNotifyModal&&canNotifyOdt(odtNotifyModal.odt)&&<div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:123,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}><div style={{background:"#fff",borderRadius:18,width:"min(760px,96vw)",maxHeight:"calc(100vh - 24px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}><div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0,background:"linear-gradient(135deg,#1a2f4a,#0f1f33)"}}><div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",fontSize:15,fontWeight:800,color:"#fff",flexShrink:0}}>{(odtNotifyModal.disenador?.nombre||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:800,fontSize:14,color:"#fff"}}>ODT lista — Notificar a {odtNotifyModal.disenador?.nombre}</div><div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo"} · {odtNotifyModal.disenador?.celular||"Sin celular"}</div></div><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",flex:1,overflow:"hidden",minHeight:0}}><div style={{overflowY:"auto",padding:"16px 20px",borderRight:"1px solid #e2e8f0"}}><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><span style={{fontSize:11,fontWeight:800,color:"#6C6EF5",letterSpacing:".05em",textTransform:"uppercase"}}>Brief de la ODT</span></div><div style={{background:"#EEEFFE",borderRadius:10,padding:"10px 14px",marginBottom:12}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>Título</div><div style={{fontSize:14,fontWeight:800,color:"#1a2f4a"}}>{odtNotifyModal.odt?.titulo}</div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>{[["Tipo",odtNotifyModal.odt?.tipoTrabajo||odtNotifyModal.odt?.tipo],["Área",odtNotifyModal.odt?.area],["F. Entrega",odtNotifyModal.odt?.fechaEntrega],["H. Corte",odtNotifyModal.odt?.horaCorte],["HH",odtNotifyModal.odt?.hh?odtNotifyModal.odt.hh+"h":null],["Materiales",(odtNotifyModal.odt?.materiales||[]).join(", ")||null],["Medidas",odtNotifyModal.odt?.medidas],["Tonalidad",odtNotifyModal.odt?.tonalidad]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{k}</div><div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</div></div>):null)}</div>{[["Objetivo y público",odtNotifyModal.odt?.objetivo],["Mensaje principal",odtNotifyModal.odt?.mensaje],["Mecánica / dinámica",odtNotifyModal.odt?.mecanica],["Restricciones",odtNotifyModal.odt?.restricciones]].map(([k,v])=>v?(<div key={k} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:6}}><div style={{fontSize:9,fontWeight:800,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".04em",marginBottom:4}}>{k}</div><div style={{fontSize:12,color:"#1a2f4a",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v}</div></div>):null)}</div><div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12,background:"#f8fafc"}}><div style={{fontSize:13,fontWeight:800,color:"#1a2f4a",marginBottom:2}}>Notificar al diseñador</div><div style={{fontSize:11,color:"#8aaabb",lineHeight:1.6,marginBottom:4}}>Elige el canal. El diseñador recibirá el brief completo de la orden.</div><button onClick={()=>openWhatsOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:odtNotifyModal.disenador?.celular})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #d4f1e4",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>WhatsApp directo</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.celular||"Sin número registrado"}</div></div></button><button onClick={()=>openOutlookOdt({...odtNotifyModal.odt,demail:odtNotifyModal.disenador?.email,dcel:odtNotifyModal.disenador?.celular})} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"1.5px solid #c8d8e8",background:"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><div style={{fontWeight:800,fontSize:13,color:"#1a2f4a"}}>Correo electrónico</div><div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>{odtNotifyModal.disenador?.email||"Sin correo registrado"}</div></div></button><div style={{borderTop:"1px solid #e2e8f0",margin:"4px 0"}}/><button onClick={()=>{setOdtNotifyModal(null);setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);}} style={{padding:"14px 18px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#6C6EF5,#1a2f4a)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Listo — ir al Dashboard</button><div style={{fontSize:10,color:"#b2bec3",textAlign:"center",lineHeight:1.5}}>ODT guardada. Puedes notificar ahora o más tarde desde el Reporte.</div></div></div></div></div>}
           </div>
         );
       })()}
@@ -9260,7 +9321,7 @@ Saludos.`;
                   .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
                 // Un solo botón inteligente: siempre abre el cliente web configurado
                 // Para Outlook 365 (corporativo) — sin mailto, sin Zoom
-                const url="https://outlook.office.com/mail/0/deeplink/compose?to="
+                const url="https://outlook.office365.com/mail/0/deeplink/compose?to="
                   +encodeURIComponent(to||"")
                   +"&subject="+encodeURIComponent(asunto||"")
                   +"&body="+encodeURIComponent(cuerpoLimpio);
@@ -9283,7 +9344,7 @@ Saludos.`;
                         abrirEmailWeb(auditEmailModal.to,auditEmailModal.subject,auditEmailModal.body);
                         setTimeout(()=>setAuditEmailModal(null),500);
                       }}
-                      style={{flex:1,minWidth:140,padding:"12px 14px",borderRadius:12,border:"none",
+                      style={{flex:1,minWidth:140,padding:"9px 10px",borderRadius:10,border:"none",
                         background:"linear-gradient(135deg,#0078D4,#1a2f4a)",color:"#fff",
                         fontWeight:800,fontSize:13,cursor:"pointer",
                         display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -9334,12 +9395,12 @@ Saludos.`;
                       try{await navigator.clipboard.writeText(txt);showToast("Copiado al portapapeles");}
                       catch{window.prompt("Copia:",txt);}
                     }}
-                    style={{padding:"12px 14px",borderRadius:12,border:"1px solid #c8d8e8",
+                    style={{padding:"9px 10px",borderRadius:10,border:"1px solid #c8d8e8",
                       background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:12,fontWeight:700}}>
                     Copiar
                   </button>
                   <button onClick={()=>setAuditEmailModal(null)}
-                    style={{padding:"12px 18px",borderRadius:12,border:"1px solid #e2e8f0",
+                    style={{padding:"9px 10px",borderRadius:10,border:"1px solid #e2e8f0",
                       background:"#fff",color:"#5a7a9a",cursor:"pointer",fontWeight:700,fontSize:13}}>
                     Cerrar
                   </button>
@@ -9390,12 +9451,6 @@ Saludos.`;
                 usuarioZonalId:clean._zonalUserId&&clean._zonalUserId!=="__manual__"?clean._zonalUserId:(x.usuarioZonalId||null),
                 dir:clean.dir||x.dir||"",
                 dist:clean.dist||x.dist||"",
-                zonaId:clean.zonaId||x.zonaId||x.idZona||"",
-                lat:clean.lat===""?x.lat:clean.lat,
-                lng:clean.lng===""?x.lng:clean.lng,
-                maps:clean.maps||x.maps||x.googleMapsUrl||"",
-                googleMapsUrl:clean.maps||x.googleMapsUrl||x.maps||"",
-                activa:clean.activa,
                 horarioLunJue:clean.horarioLunJue||x.horarioLunJue||"",
                 horarioVieSab:clean.horarioVieSab||x.horarioVieSab||"",
                 horarioDom:clean.horarioDom||x.horarioDom||"",
@@ -9406,7 +9461,7 @@ Saludos.`;
               });
               saveConfig({tiendas:np});return np;
             });
-            showToast("Tienda actualizada");
+            showToast("✅ Tienda actualizada");
             setTiendaEditModal(null);
           }}
         />
@@ -9416,7 +9471,7 @@ Saludos.`;
       {waModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:90}} onClick={()=>setWaModal(null)}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:520,boxShadow:"0 -8px 32px rgba(0,0,0,.2)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>💬 Mensaje para {waModal.nombre}</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>💬 Mensaje para {waModal.nombre}</div>
             <div style={{fontSize:11,color:"#8aaabb",marginBottom:12}}>Número: +{waModal.numero}</div>
             <textarea readOnly value={waModal.msg} rows={5}
               style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#1a2f4a",fontSize:12,resize:"none",boxSizing:"border-box",marginBottom:14}}/>
@@ -9443,7 +9498,7 @@ Saludos.`;
           {fmt:"Supermayorista",icon:<FmtIcon fmt="Supermayorista" size={16}/>},
           {fmt:"Market",       icon:<FmtIcon fmt="Market" size={16}/>},
         ];
-        const actsHoy=acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(hoy)));
+        const actsHoy=acts.filter(a=>a.activa&&a.dias.includes(getDow(hoy)));
         // actsRef debe declararse ANTES de cualquier uso
         const actsConRegHoy=actsHoy.filter(a=>tiAct.some(ti=>{
           const reg=getReg(hoy,ti.id,a.id);
@@ -9654,7 +9709,7 @@ Saludos.`;
                     {label:"Tardíos rescatados",value:pctC2+"%",color:"#185FA5",sub:`${bloque2Desde} – ${bloque2Hasta}`},
                     {label:"Sin registrar",value:pctSin+"%",color:pctSin>15?"#A32D2D":"#888780",sub:pctSin>0?`${totalDisp-totalReg} tienda${totalDisp-totalReg>1?"s":""}`:pctSin>15?"▼ alto":"✓ dentro del rango"},
                   ].map((k,i)=>(
-                    <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"0.5px solid #e2e8f0"}}>
+                    <div key={i} style={{background:"#f8fafc",borderRadius:9,padding:"7px 9px",border:"0.5px solid #e2e8f0"}}>
                       <div style={{fontSize:10,color:"#8aaabb",marginBottom:4,fontWeight:500}}>{k.label}</div>
                       <div style={{fontSize:20,fontWeight:800,color:k.color,lineHeight:1}}>{k.value}</div>
                       <div style={{fontSize:9,color:k.color,marginTop:3,fontWeight:500}}>{k.sub}</div>
@@ -9886,7 +9941,7 @@ Saludos.`;
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
           <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:380}}>
             <div style={{fontSize:28,marginBottom:8}}>⚠️</div>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Anular registro</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>Anular registro</div>
             <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>El registro quedará visible con badge ⚠️ Anulado y no contará en el puntaje.</div>
             <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO *</label>
             <select value={motivoAnu} onChange={e=>setMotivoAnu(e.target.value)} style={{width:"100%",padding:"10px 12px",borderRadius:9,border:`1.5px solid ${motivoAnu?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:13,outline:"none",marginBottom:12}}>
@@ -9912,7 +9967,7 @@ Saludos.`;
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
           <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:380}}>
             <div style={{fontSize:28,marginBottom:8}}>✏️</div>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Actualizar registro</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>Actualizar registro</div>
             <div style={{fontSize:11,color:"#5a7a9a",marginBottom:16}}>Se agrega una corrección al historial con tu nombre y motivo.</div>
             <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>NUEVA HORA DE ENVÍO *</label>
             <input type="time" value={horaUpd} onChange={e=>setHoraUpd(e.target.value)} style={{width:"100%",padding:"12px",borderRadius:9,border:`1.5px solid ${horaUpd?"#00b5b4":"#c8d8e8"}`,background:"#f8fafc",color:"#1a2f4a",fontSize:20,outline:"none",textAlign:"center",fontWeight:700,marginBottom:12,boxSizing:"border-box"}}/>
@@ -9931,7 +9986,7 @@ Saludos.`;
         <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,backdropFilter:"blur(4px)"}}>
           <div style={{background:"#fff",borderRadius:16,padding:28,width:"90%",maxWidth:360,textAlign:"center"}}>
             <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:8}}>¿Eliminar registro?</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:8}}>¿Eliminar registro?</div>
             <div style={{fontSize:12,color:"#5a7a9a",marginBottom:6}}>{delModal.label}</div>
             <div style={{fontSize:11,color:"#dc2626",background:"#fff1f2",borderRadius:8,padding:"8px 12px",marginBottom:20}}>Esta acción no se puede deshacer. Solo usar en marcha blanca.</div>
             <div style={{display:"flex",gap:8}}>
@@ -10105,7 +10160,7 @@ function ItemAudit({item,val,obsIt,escala,escalaTxt,onValor,onObsItem}){
   return(
     <div style={{marginBottom:10,borderRadius:10,overflow:"hidden",border:`1px solid ${val!==undefined?"#00b5b4":"#e2e8f0"}`}}>
       <div style={{padding:"10px 14px",background:"#f8fafc"}}>
-        <div style={{fontSize:12,fontWeight:600,color:"#1a2f4a",marginBottom:8}}>{item.texto}</div>
+        <div style={{fontSize:11,fontWeight:600,color:"#1a2f4a",marginBottom:8}}>{item.texto}</div>
         <div style={{display:"flex",gap:6}}>
           {escala.map((v,idx)=>(
             <button key={v} onClick={()=>onValor(item.id,v)}
@@ -10172,9 +10227,6 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
   const [naComentario,setNaComentario]=useState("");
   const fmts=["Todas","Mayorista","Supermayorista","Market"];
   const fmtC={Mayorista:"#6c5ce7",Supermayorista:"#0984e3",Market:"#00b5b4"};
-  const nomTienda=(t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
-  const fmtTienda=(t)=>String(t?.f||t?.formato||"").trim();
-  const distTienda=(t)=>String(t?.dist||t?.distrito||"").trim();
 
   // Tiendas de la ruta activa del auditor
   const tiendasEnRuta=new Set(rutaActiva?.tiendas||[]);
@@ -10201,8 +10253,8 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
 
   const tFiltA=tiendas.filter(t=>{
     if(!t.activa) return false;
-    if(fmtA!=="Todas"&&fmtTienda(t)!==fmtA) return false;
-    if(busqA&&!nomTienda(t).toLowerCase().includes(busqA.toLowerCase())&&!distTienda(t).toLowerCase().includes(busqA.toLowerCase())) return false;
+    if(fmtA!=="Todas"&&t.f!==fmtA) return false;
+    if(busqA&&!t.n.toLowerCase().includes(busqA.toLowerCase())&&!t.dist?.toLowerCase().includes(busqA.toLowerCase())) return false;
     return true;
   }).sort((a,b)=>{
     // Primero las tiendas en ruta; luego bloqueadas al final
@@ -10210,7 +10262,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
     const aB=tiendasBloqueadas.has(a.id); const bB=tiendasBloqueadas.has(b.id);
     if(aR&&!bR) return -1; if(!aR&&bR) return 1;
     if(!aB&&bB) return -1; if(aB&&!bB) return 1;
-    return nomTienda(a).localeCompare(nomTienda(b),"es");
+    return a.n.localeCompare(b.n,"es");
   });
 
   // FIX 5: Auditor sin ruta asignada — estado vacío informativo
@@ -10218,7 +10270,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
     return(
       <div style={{padding:"48px 24px",textAlign:"center"}}>
         <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c8d8e8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:16}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <div style={{fontWeight:700,fontSize:15,color:"#1a2f4a",marginBottom:8}}>Sin ruta asignada</div>
+        <div style={{fontWeight:700,fontSize:14,color:"#1a2f4a",marginBottom:8}}>Sin ruta asignada</div>
         <div style={{fontSize:12,color:"#8aaabb",maxWidth:260,margin:"0 auto",lineHeight:1.6}}>Tu coordinador o administrador aún no ha asignado una ruta para esta semana. Comunícate con ellos para que te asignen las tiendas que debes auditar.</div>
       </div>
     );
@@ -10278,12 +10330,12 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
               onClick={()=>{ if(!esExcluida&&!esBloqueada) onCheckIn(t.id); }}>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1a2f4a",display:"flex",alignItems:"center",gap:6}}>
-                  Vega {nomTienda(t)}
+                  Vega {t.n}
                   {esBloqueada&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#EAF3DE",color:"#27500A",border:"1px solid #C0DD97"}}>✓ {bloqLabel}</span>}
                   {!esBloqueada&&enRuta&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#e0fafa",color:"#085041",border:"1px solid #00b5b444"}}>En ruta</span>}
                   {!esBloqueada&&!enRuta&&rutaActiva&&<span style={{fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:10,background:"#f0f4f8",color:"#8aaabb",border:"1px solid #dde3e9"}}>Fuera de ruta</span>}
                 </div>
-                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{fmtTienda(t)} · {distTienda(t)}</div>
+                <div style={{fontSize:11,color:"#8aaabb",marginTop:2}}>{t.f} · {t.dist}</div>
                 {(esExcluida||esPendiente)&&(
                   <div style={{fontSize:10,color:"#854F0B",marginTop:3}}>
                     {excl.motivo}{excl.comentario?` · ${excl.comentario}`:""}
@@ -10321,7 +10373,7 @@ function SeleccionTienda({tiendas,onCheckIn,auditExclusiones,onSolicitarExclusio
           onClick={()=>setNaModal(null)}>
           <div onClick={e=>e.stopPropagation()}
             style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:520,boxShadow:"0 -8px 32px rgba(0,0,0,.15)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Reportar N/A — Vega {nomTienda(tiendas.find(t=>t.id===naModal))}</div>
+            <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>Reportar N/A — Vega {tiendas.find(t=>t.id===naModal)?.n}</div>
             <div style={{fontSize:11,color:"#8aaabb",marginBottom:14}}>El admin recibirá la solicitud y la aprobará o rechazará. La tienda aparecerá como N/A pendiente mientras tanto.</div>
             <label style={{fontSize:10,fontWeight:700,color:"#5a7a9a",display:"block",marginBottom:5}}>MOTIVO *</label>
             <select value={naMotivo} onChange={e=>setNaMotivo(e.target.value)}
@@ -10425,7 +10477,7 @@ function PantallaAuditoria({paso,tiendas,tiendaSelId,modulos,respuestas,moduloAc
   if(paso===2){
     return(
       <div style={{padding:"16px 16px 100px"}}>
-        <div style={{fontWeight:800,fontSize:15,color:"#1a2f4a",marginBottom:4}}>Observaciones y compromisos</div>
+        <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a",marginBottom:4}}>Observaciones y compromisos</div>
         <div style={{fontSize:12,color:"#8aaabb",marginBottom:16}}>Vega {tienda?.n}</div>
         <div style={{marginBottom:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:"12px 14px"}}>
           <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a",marginBottom:8}}>Resumen por módulo</div>
@@ -10478,30 +10530,44 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
+function LoginScreen({pins,auditores,usuarios,usuariosLoaded,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
-  const credInputRef=useRef(null);
   const[err,setErr]=useState("");
   const[showCred,setShowCred]=useState(false);
   const[bloqueo,setBloqueo]=useState(null);
   const[intentos,setIntentos]=useState(0);
   const MAX_INTENTOS=5, BLOQUEO_MIN=10;
-  // ET_FIX_LOGIN_LOCAL_DEVICE_20260614: bloqueo local por dispositivo/navegador, sin et_legacy_removed global.
-  const AUTH_DEVICE_KEY="et_auth_device_attempts_v2";
-  const normCred=(v)=>String(v??"").trim().toUpperCase().replace(/[\s\-_.]/g,"");
-  const getLocalAuthState=()=>{try{return JSON.parse(localStorage.getItem(AUTH_DEVICE_KEY)||"{}");}catch{return {};}};
-  const setLocalAuthState=(v)=>{try{localStorage.setItem(AUTH_DEVICE_KEY,JSON.stringify(v||{}));}catch{}};
-  const clearLocalAuthState=()=>{try{localStorage.removeItem(AUTH_DEVICE_KEY);Object.keys(localStorage).filter(k=>k.startsWith("et_et_legacy_removed_")||k.startsWith("et_auth_cred_attempts_")||k==="et_legacy_removed").forEach(k=>localStorage.removeItem(k));}catch{}};
-  useEffect(()=>{
-    const st=getLocalAuthState();
-    if(st?.bloqueadoHasta){
-      const hasta=Number(st.bloqueadoHasta);
-      const rest=Math.ceil((hasta-Date.now())/1000);
-      if(rest>0){setBloqueo({hasta,restante:rest});setIntentos(Number(st.intentos||0));setErr("Dispositivo bloqueado por intentos fallidos.");}
-      else clearLocalAuthState();
-    }
-  },[]);
+  const normCred=v=>String(v||"").replace(/[^a-zA-Z0-9]/g,"").trim().toUpperCase();
+  const deviceKey=()=>{
+    try{
+      const k="et_device_id";
+      let v=localStorage.getItem(k);
+      if(!v){v=`dev_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;localStorage.setItem(k,v);}
+      return v;
+    }catch{return "dev_session";}
+  };
+  const credHash=(v)=>{
+    const str=normCred(v);
+    let h=0;
+    for(let i=0;i<str.length;i++) h=((h<<5)-h)+str.charCodeAt(i), h|=0;
+    return Math.abs(h).toString(36);
+  };
+  const attemptKeyFor=(v)=>`et_auth_cred_attempts_${deviceKey()}_${credHash(v)}`;
+  const readAttemptState=(v)=>{
+    try{return JSON.parse(localStorage.getItem(attemptKeyFor(v))||"{}");}catch{return {};}
+  };
+  const writeAttemptState=(v,data)=>{try{localStorage.setItem(attemptKeyFor(v),JSON.stringify(data||{}));}catch{}};
+  const clearAttemptState=(v)=>{try{localStorage.removeItem(attemptKeyFor(v));}catch{}};
+  const clearLegacyAttemptState=()=>{
+    try{
+      Object.keys(localStorage)
+        .filter(k=>k==="et_auth_attempts"||k==="auth_attempts"||k.startsWith("et_auth_attempts_"))
+        .forEach(k=>localStorage.removeItem(k));
+    }catch{}
+  };
+  // Bloqueo por credencial + dispositivo. No hay documento global ni bloqueo al cargar la pantalla.
+  useEffect(()=>{clearLegacyAttemptState();setBloqueo(null);setIntentos(0);setErr("");},[]);
   const inpS={width:"100%",padding:"14px",borderRadius:12,background:"#f8fafc",color:"#1a2f4a",outline:"none",textAlign:"center",boxSizing:"border-box",border:"2px solid #e2e8f0",fontSize:20,fontWeight:700,fontFamily:"monospace",letterSpacing:4};
 
   useEffect(()=>{
@@ -10510,33 +10576,37 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       const rest=Math.ceil((bloqueo.hasta-Date.now())/1000);
       if(rest<=0){
           setBloqueo(null);setIntentos(0);setErr("");
-          clearLocalAuthState();
+          clearAttemptState();
         }
       else setBloqueo(b=>({...b,restante:rest}));
     },1000);
     return()=>clearInterval(iv);
   },[bloqueo]);
 
-  const registrarFallo=()=>{
-    const n=intentos+1; setIntentos(n);
-    // SECURITY: registrar intento fallido en Firestore para trazabilidad (sin exponer la credencial)
+  const registrarFallo=(credential)=>{
+    const prev=readAttemptState(credential);
+    const n=(Number(prev?.intentos)||0)+1;
+    setIntentos(n);
+    writeAttemptState(credential,{intentos:n,ultimoIntento:new Date().toISOString()});
+    // SECURITY: registrar intento fallido en Firestore para trazabilidad sin guardar la credencial digitada.
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
-      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n});
+      setDoc(ref,{userId:"",nombre:"",rol:"",timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:false,intento:n,deviceKey:deviceKey().slice(-8),credHash:credHash(credential)});
     });});}catch{}
     if(n>=MAX_INTENTOS){
       const hasta=Date.now()+BLOQUEO_MIN*60*1000;
-      setBloqueo({hasta,restante:BLOQUEO_MIN*60});
-      setErr(`Bloqueado por ${BLOQUEO_MIN} minutos tras ${MAX_INTENTOS} intentos fallidos.`);
-      setLocalAuthState({intentos:n,bloqueadoHasta:hasta,ts:new Date().toISOString()});
+      setBloqueo({hasta,restante:BLOQUEO_MIN*60,credHash:credHash(credential)});
+      setErr(`Credencial bloqueada en este dispositivo por ${BLOQUEO_MIN} minutos.`);
+      writeAttemptState(credential,{intentos:n,bloqueadoHasta:new Date(hasta).toISOString(),ultimoIntento:new Date().toISOString()});
     } else {
+      setBloqueo(null);
       setErr(`Credencial incorrecta · ${MAX_INTENTOS-n} intento${MAX_INTENTOS-n!==1?"s":""} restante${MAX_INTENTOS-n!==1?"s":""}`);
       setTimeout(()=>setErr(""),3000);
     }
   };
 
   const registrarExito=(id,nombre,rol,tiendaId,cargo)=>{
-    setIntentos(0); setBloqueo(null); clearLocalAuthState();
+    setIntentos(0); setBloqueo(null); clearAttemptState(cred);
     try{import("./firebase").then(({db})=>{import("firebase/firestore").then(({doc,setDoc,collection})=>{
       const ref=doc(collection(db,"auth_log"));
       // SECURITY: no loguear credencial ni DNI completo — solo rol y dispositivo
@@ -10547,40 +10617,47 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
   };
 
   const tryAcceso=()=>{
-    if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
-    /* ET_FIX_LOGIN_FAST_ENTER_20260620: leer valor del DOM para capturar el último carácter antes de que React procese el onChange pendiente */
-    const rawVal=credInputRef.current?.value??cred;
-    const clean=normCred(rawVal);
+    const clean=normCred(cred);
     if(clean.length<4){setErr("Mínimo 4 caracteres");return;}
-    // SECURITY: normalizar DNI/RUC/CE/código interno sin espacios ni guiones.
-    if(!Array.isArray(usuarios)){setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");return;}
+    const attemptState=readAttemptState(clean);
+    const hasta=attemptState?.bloqueadoHasta?new Date(attemptState.bloqueadoHasta).getTime():0;
+    const rest=Math.ceil((hasta-Date.now())/1000);
+    if(rest>0){setBloqueo({hasta,restante:rest,credHash:credHash(clean)});setErr(`Credencial bloqueada para esta credencial en este dispositivo — espera ${Math.floor(rest/60)}:${String(rest%60).padStart(2,"0")}`);return;}
+    if(attemptState?.bloqueadoHasta){clearAttemptState(clean);setBloqueo(null);setIntentos(0);}
+    // SECURITY: no revelar en el mensaje de error si el usuario existe o no
+    // FIX: validar pins legacy primero y NO contar intentos si usuarios todavía no cargó desde Firestore.
+    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
+    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
+    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
+    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
 
-    // 1. Buscar usuario activo por dni, credencial, id, userId, codigo o codigoInterno.
-    const found=usuariosActivos.find(u=>[u.dni,u.credencial,u.id,u.userId,u.codigo,u.codigoInterno,u.usuario,u.documento,u.ruc,u.ce].some(v=>normCred(v)===clean));
+    if(usuariosLoaded===false){
+      setErr("Cargando credenciales. Intenta nuevamente en unos segundos.");
+      return;
+    }
+
+    // 1. Buscar en usuarios activos por credencial (DNI/RUC/CE/código normalizado)
+    const found=usuariosActivos.find(u=>{
+      const vals=[u.dni,u.credencial,u.id,u.userId,u.codigo,u.codigoInterno].map(normCred).filter(Boolean);
+      return vals.includes(clean);
+    });
     if(found){
       onAcceso?.(found.id);
       registrarExito(found.id,found.nombre,found.rol,found.tiendaId,found.cargo);
       return;
     }
 
-    // 2. Pins legacy (admin / viewer) para retrocompatibilidad
-    // SECURITY: comparación con tiempo constante para evitar timing attacks
-    const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
-    if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
-    if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
-    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
-
-    // 3. Auditores legacy
+    // 2. Auditores legacy
     const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.userId,a.codigo,a.codigoInterno,a.usuario,a.documento].some(v=>normCred(v)===clean));
+    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.codigo,a.codigoInterno].map(normCred).filter(Boolean).includes(clean));
     if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
-    registrarFallo();
+    registrarFallo(clean);
   };
 
   return(
     <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",background:"linear-gradient(135deg,#b8c8d8 0%,#8aaabb 40%,#5a7a9a 100%)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&display=swap" rel="stylesheet"/>
       <div style={{width:"90%",maxWidth:360,background:"#fff",borderRadius:20,padding:"32px 28px 34px",boxShadow:"0 24px 60px rgba(0,0,0,.3)",textAlign:"center"}}>
         {/* Logo */}
         <div style={{width:65,height:65,borderRadius:16,background:"linear-gradient(135deg,#00b5b4,#1a2f4a)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 22px rgba(0,0,0,.14)"}}>
@@ -10605,7 +10682,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
           <div style={{padding:"20px 16px",background:"#fff1f2",borderRadius:14,border:"2px solid #fecaca",marginBottom:16}}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" style={{marginBottom:8}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             <div style={{fontWeight:700,fontSize:14,color:"#dc2626",marginBottom:4}}>Acceso bloqueado</div>
-            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:10}}>Demasiados intentos fallidos</div>
+            <div style={{fontSize:12,color:"#5a7a9a",marginBottom:10}}>Demasiados intentos fallidos para esta credencial</div>
             <div style={{fontSize:32,fontWeight:800,color:"#dc2626",fontFamily:"monospace",letterSpacing:4}}>
               {Math.floor(bloqueo.restante/60)}:{String(bloqueo.restante%60).padStart(2,"0")}
             </div>
@@ -10623,7 +10700,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
               <input autoFocus
                 type={showCred?"text":"password"}
                 value={cred}
-                ref={credInputRef} onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
+                onChange={e=>setCred(e.target.value.replace(/[^a-zA-Z0-9]/g,"").slice(0,12))}
                 onKeyDown={e=>e.key==="Enter"&&tryAcceso()}
                 placeholder="DNI / RUC / CE / código"
                 maxLength={12}
