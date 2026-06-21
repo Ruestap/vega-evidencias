@@ -8162,7 +8162,21 @@ function ChecklistApp() {
         const countWorkDaysBefore=(start,ref)=>{const ini=toLocalDate(start),r=toLocalDate(ref);if(!ini||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<ini)return 0;let c=0;for(let d=new Date(ini);d<=end;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return c;};
         const businessMinutesBetween=(start,end)=>{if(!start||!end||isNaN(start)||isNaN(end))return 0;let a=start<=end?new Date(start):new Date(end),b=start<=end?new Date(end):new Date(start),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=daySchedule(d);if(!sch)continue;const [sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
         const formatHm=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));const h=Math.floor(n/60),m=n%60;if(h&&m)return`${h}h ${m}m`;if(h)return`${h}h`;return`${m}m`;};
-        const formatDiasTb=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));if(n<=0)return"0d";const full=Math.floor(n/600);return full<1?"<1d":`${full}d`;};
+        const MINS_DIA_LAB=600;/* L-V 08:30-18:30 */
+        const formatDiasTb=(mins)=>{
+          const n=Math.max(0,Math.round(Math.abs(mins)));
+          if(n<=0)return"<1d";
+          const dias=Math.floor(n/MINS_DIA_LAB);
+          const resto=n%MINS_DIA_LAB;
+          const horas=Math.floor(resto/60);
+          const minutos=resto%60;
+          if(dias>0&&horas>0&&minutos>0)return`${dias}d ${horas}h ${minutos}m`;
+          if(dias>0&&horas>0)return`${dias}d ${horas}h`;
+          if(dias>0)return`${dias}d`;
+          if(horas>0&&minutos>0)return`${horas}h ${minutos}m`;
+          if(horas>0)return`${horas}h`;
+          return`${minutos}m`;
+        };
         const toDueDateTime=(o)=>makeDateTime(o?.fechaEntrega||o?.entrega,o?.horaCorte||"18:30");
         const toFinishDateTime=(o)=>{const raw=o?.entregadoEn||o?.finalizadoEn||o?.fechaCierre||o?.updatedAt;if(raw){const d=new Date(raw);if(!isNaN(d))return d;const dd=toLocalDate(raw);if(dd)return dd;}return isOdtFinalizada(o)?toDueDateTime(o):null;};
         const diffDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 0;return Math.round((da-db)/86400000);};
