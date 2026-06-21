@@ -587,10 +587,10 @@ const IcoInicio = () => (
 );
 const IcoTiendas = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 4h13l3 5.2a2.3 2.3 0 01-2.25 2.9 2.3 2.3 0 01-2.15-1.5 2.3 2.3 0 01-2.15 1.5 2.3 2.3 0 01-2.15-1.5 2.3 2.3 0 01-2.15 1.5A2.3 2.3 0 013 9.2z"/>
-    <path d="M5.5 11.7v6.3a2 2 0 002 2h6.8"/>
-    <line x1="9" y1="11.7" x2="9" y2="20"/>
-    <line x1="20.5" y1="11.7" x2="20.5" y2="20.5"/>
+    <path d="M5.5 4h13l2.3 4.3a2.4 2.4 0 01-2.3 3.1 2.4 2.4 0 01-2.25-1.55 2.4 2.4 0 01-2.25 1.55 2.4 2.4 0 01-2.25-1.55 2.4 2.4 0 01-2.25 1.55 2.4 2.4 0 01-2.25-1.55 2.4 2.4 0 01-2.25 1.55A2.4 2.4 0 013.2 8.3z"/>
+    <line x1="9" y1="4.5" x2="9" y2="7.5"/>
+    <line x1="15" y1="4.5" x2="15" y2="7.5"/>
+    <path d="M5 11.4v7.1a1.5 1.5 0 001.5 1.5h11a1.5 1.5 0 001.5-1.5v-7.1"/>
   </svg>
 );
 const IcoUsuarios = () => (
@@ -2310,7 +2310,13 @@ function ChecklistApp() {
 
   if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
     onAcceso={(id)=>registrarAcceso(id)}
-    onLogin={(r,n,dni)=>{setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setTab(r==="visor"?1:0);setModulo(0);}}/>;
+    onLogin={(r,n,dni,cargo)=>{
+      setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setModulo(0);
+      const esDisenador=String(cargo||"").toLowerCase().trim()==="diseñador"||String(cargo||"").toLowerCase().trim()==="disenador";
+      // FIX: Ejecutor con cargo Diseñador no tiene permiso en Evidencias (tab 0) — antes
+      // aterrizaba ahí igual y la app parecía "trabada" hasta hacer clic manual en Diseño.
+      setTab(r==="visor"?1:(r==="ejecutor"&&esDisenador)?7:0);
+    }}/>;
 
   /* ══ PASO 1 — seleccionar actividad ══ */
   const renderPaso1 = ()=>(
@@ -10552,7 +10558,7 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
       setDoc(ref,{userId:id||"",nombre,rol,timestamp:new Date().toISOString(),dispositivo:window.innerWidth<768?"mobile":"desktop",exitoso:true});
       if(id) setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString(),intentosFallidos:0,bloqueadoHasta:null},{merge:true});
     });});}catch(e){console.error("auth_log write failed:", e?.code||"unknown");}
-    onLogin(rol,nombre,id||"");
+    onLogin(rol,nombre,id||"",cargo||"");
   };
 
   const tryAcceso=()=>{
