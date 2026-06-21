@@ -581,16 +581,17 @@ const IcoAuditoriaTab=({active,size=18})=>{
 
 const IcoInicio = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
-    <path d="M9 21V12h6v9"/>
+    <path d="M4 11.5L11.3 4.7a1 1 0 011.4 0L20 11.5"/>
+    <path d="M5.5 10.5V19a1.2 1.2 0 001.2 1.2h10.6A1.2 1.2 0 0018.5 19v-8.5"/>
+    <path d="M9.6 20.2v-3.6a2.4 2.4 0 014.8 0v3.6"/>
   </svg>
 );
 const IcoTiendas = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3 9l1-5h16l1 5"/>
-    <path d="M3 9h18v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/>
-    <path d="M9 21V13h6v8"/>
-    <path d="M3 9a3 3 0 006 0M9 9a3 3 0 006 0M15 9a3 3 0 006 0"/>
+    <path d="M5 4.5h14l2 4.2a2.1 2.1 0 01-2.1 2.8 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3 2.1 2.1 0 01-2-1.3 2.1 2.1 0 01-2 1.3A2.1 2.1 0 013 8.7z"/>
+    <path d="M5 11.3V19a1.2 1.2 0 001.2 1.2h11.6A1.2 1.2 0 0019 19v-7.7"/>
+    <path d="M9 20.2v-4.5a1 1 0 011-1h4a1 1 0 011 1v4.5"/>
+    <line x1="4" y1="20.5" x2="20" y2="20.5"/>
   </svg>
 );
 const IcoUsuarios = () => (
@@ -8032,7 +8033,7 @@ function ChecklistApp() {
             onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
             disabled={isViewer}
             style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
-          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Estado</button>}
+          {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Estado</button>}
           {isAdmin&&<button className="et-topbar-pdf" onClick={()=>exportPDFRef.current?.()} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:11,fontWeight:700}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> PDF</button>}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 10px",borderRadius:20,background:"rgba(255,255,255,.08)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{uName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
@@ -8071,11 +8072,8 @@ function ChecklistApp() {
                     color:tab===tb.i?"#5B6CF7":"#64748B",
                     fontWeight:tab===tb.i?700:500,fontSize:13,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
-                  {tb.i===7?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
-                  :tb.i===8?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                  :tb.i===9?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  :tb.i===0||tb.i===4?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
-                  :tb.i===1||tb.i===5?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
+                  {tb.i===0||tb.i===4||tb.i===7?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/><line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="7" x2="10.5" y2="7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/><line x1="3.5" y1="9.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                  :tb.i===1||tb.i===5||tb.i===8?<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7.5" width="2.5" height="5.5" rx="1" fill="currentColor"/><rect x="5.5" y="4.5" width="2.5" height="8.5" rx="1" fill="currentColor"/><rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/></svg>
                   :<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4.5,6.5 7,8.5 13,2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                   {tb.label}
                 </button>
@@ -8983,7 +8981,7 @@ Saludos.`;
                 </button>
               );
               return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:"6px"}}>
-                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 12px))",maxHeight:"calc(100dvh - 12px)",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
+                <div style={{background:"#fff",borderRadius:16,width:"min(640px,calc(100vw - 12px))",maxHeight:"min(calc(100vh - 12px),calc(100dvh - 12px))",minHeight:0,display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
                   <div style={{borderBottom:"1px solid #e2e8f0",flexShrink:0,background:"#fff"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px 5px 10px"}}>
                       <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#6C6EF5,#0984e3)",display:"grid",placeItems:"center",flexShrink:0}}>
