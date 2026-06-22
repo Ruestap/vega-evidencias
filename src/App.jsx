@@ -1300,7 +1300,7 @@ function ChecklistApp() {
   // Bug 4 fix: refs siempre actualizados para evitar stale closure en saveConfig
   const roleRef    = useRef(role);
   useEffect(()=>{ roleRef.current=role; },[role]);
-  const cargoRef   = useRef(uCargo);
+  const cargoRef   = useRef("");
   useEffect(()=>{ cargoRef.current=uCargo; },[uCargo]);
   const actsRef    = useRef(acts);
   const tiendasRef = useRef(tiendas);
