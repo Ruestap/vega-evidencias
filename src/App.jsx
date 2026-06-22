@@ -1322,6 +1322,16 @@ function ChecklistApp() {
     const unsub = onSnapshot(collection(db,"usuarios"), snap=>{
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
+      // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: usuarios guardados con rol="auditor"
+      // desde antes de la migración no se corrigen solos — el rol "auditor" ya no existe
+      // en la lista de roles, así que se reasigna a Ejecutor + cargo Auditor Trade.
+      data.forEach(u=>{
+        if(u.rol==="auditor"){
+          const cargoNuevo=u.cargo||"Auditor Trade";
+          setDoc(doc(db,"usuarios",u.id),{rol:"ejecutor",cargo:cargoNuevo},{merge:true}).catch(()=>{});
+          u.rol="ejecutor"; u.cargo=cargoNuevo;
+        }
+      });
       setUsuarios(data);
     });
     return ()=>unsub();
@@ -1395,9 +1405,22 @@ function ChecklistApp() {
       } else {
         const data=[];
         snap.forEach(d=>data.push({id:d.id,...d.data()}));
+        // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: el doc roles/auditor pudo quedar
+        // guardado en Firestore desde antes de la migración a cargo. La siembra inicial
+        // (ROLES_INIT arriba) solo corre si la colección está vacía, así que un dato viejo
+        // nunca se corrige solo — hay que migrarlo activamente aquí.
+        const tieneAuditorRol=data.some(d=>d.id==="auditor");
+        const tieneUserRol=data.some(d=>d.id==="user");
+        if(tieneAuditorRol){
+          deleteDoc(doc(db,"roles","auditor")).catch(()=>{});
+        }
+        if(tieneAuditorRol&&!tieneUserRol){
+          setDoc(doc(db,"roles","user"),{nombre:"User",desc:"Gestión según módulo",color:"#00b5b4",sistema:true,activo:true});
+        }
+        const dataLimpia=data.filter(d=>d.id!=="auditor");
         const ord=["admin","coordinador","user","ejecutor","visor"];
-        data.sort((a,b)=>{const ai=ord.indexOf(a.id),bi=ord.indexOf(b.id);if(ai>=0&&bi>=0)return ai-bi;if(ai>=0)return -1;if(bi>=0)return 1;return(a.nombre||"").localeCompare(b.nombre||"");});
-        setRoles(data);
+        dataLimpia.sort((a,b)=>{const ai=ord.indexOf(a.id),bi=ord.indexOf(b.id);if(ai>=0&&bi>=0)return ai-bi;if(ai>=0)return -1;if(bi>=0)return 1;return(a.nombre||"").localeCompare(b.nombre||"");});
+        setRoles(dataLimpia);
       }
     });
     return()=>unsub();
