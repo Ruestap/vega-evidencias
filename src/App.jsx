@@ -1125,7 +1125,8 @@ function ChecklistApp() {
   // Módulos activos usados en la auditoría en curso (IDs y escala reales)
   const [auditModulosActivos, setAuditModulosActivos] = useState([]);
   /* ── módulo usuarios ── */
-  const [usrTab,  setUsrTab]  = useState(null); // FIX_RUTA_MODULOS_MULTISELECT_20260520 null=dashboard | "usuarios" | "roles" | "areas" | "log"
+  const [usrTab,  setUsrTab]  = useState(null); // FIX_RUTA_MODULOS_MULTISELECT_20260520 null=dashboard | "usuarios" | "roles" | "areas" | "log" | "permisos" | "bloqueos"
+  const [permisosModActivo, setPermisosModActivo] = useState("diseno");
   const [roles,   setRoles]   = useState([]);
   const [areas,   setAreas]   = useState([]);
   const [areaOpen,setAreaOpen]= useState(null);
@@ -1153,7 +1154,7 @@ function ChecklistApp() {
   const [logAccesoFiltroUser,  setLogAccesoFiltroUser]  = useState("");
   const [logAccesoFiltroEstado,setLogAccesoFiltroEstado]= useState("todos");
   const [logAccesoFiltroDias,  setLogAccesoFiltroDias]  = useState(30);
-  const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",editId:null};
+  const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",alcance:"",permisos:{},editId:null};
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
@@ -4588,11 +4589,32 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>},
       {id:"roles",    label:"Roles",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
+      {id:"permisos", label:"Permisos",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>},
       {id:"log",      label:"Log de accesos",
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>},
+      {id:"bloqueos", label:"Bloqueos",
+        ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>},
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
+    const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global",solo_lectura:"Solo lectura"};
+    const PERMISOS_MODULOS={
+      diseno:{label:"Diseño / ODT",acciones:[
+        {id:"crear",label:"Crear ODT"},{id:"verTodo",label:"Ver todas las ODT"},{id:"verAsignadas",label:"Ver ODT asignadas/propias"},
+        {id:"editarBrief",label:"Editar brief"},{id:"asignar",label:"Asignar/Reasignar"},{id:"enProceso",label:"Cambiar a En proceso"},
+        {id:"enviarAprobacion",label:"Enviar a aprobación"},{id:"aprobar",label:"Aprobar/Observar"},{id:"entregar",label:"Marcar entregado"},
+        {id:"cancelar",label:"Cancelar ODT"},{id:"notificar",label:"Notificar WA/Correo"}]},
+      tiendas:{label:"Tiendas",acciones:[
+        {id:"ver",label:"Ver tiendas"},{id:"crear",label:"Crear tienda"},{id:"editar",label:"Editar tienda"},
+        {id:"inactivar",label:"Inactivar tienda"},{id:"coordenadas",label:"Gestionar coordenadas"},{id:"responsables",label:"Gestionar responsables"}]},
+      auditoria:{label:"Auditoría",acciones:[
+        {id:"registrar",label:"Registrar auditoría"},{id:"verReporte",label:"Ver reporte"},{id:"editar",label:"Editar registro"},
+        {id:"exportarPdf",label:"Exportar PDF"}]},
+      usuarios:{label:"Usuarios",acciones:[
+        {id:"ver",label:"Ver usuarios"},{id:"crear",label:"Crear usuario"},{id:"editar",label:"Editar usuario"},
+        {id:"resetBloqueo",label:"Reset bloqueo"},{id:"editarPermisos",label:"Editar permisos"}]},
+    };
     const DOC_CFG={dni:{label:"DNI",ph:"12345678",hint:"8 dígitos",min:8,max:8,alpha:false},ruc:{label:"RUC",ph:"20123456789",hint:"11 dígitos",min:11,max:11,alpha:false},ce:{label:"Carnet Extranjería",ph:"CE12345678",hint:"8–12 alfanum.",min:8,max:12,alpha:true},cod:{label:"Código interno",ph:"VEGA2024RR",hint:"8–12 alfanum.",min:8,max:12,alpha:true}};
     const CARGOS_CON_TIENDA=["Gerente de Tienda","Jefe de Tienda"];
     const AREA_LEGACY_MAP={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
@@ -4660,7 +4682,7 @@ function ChecklistApp() {
           )}
         </div>
         {/* Botón acción contextual — aparece junto al dropdown según módulo */}
-        {usrTab&&usrTab!=="log"&&(
+        {usrTab&&!["log","permisos","bloqueos"].includes(usrTab)&&(
           <button onClick={()=>setShowNUsuario(true)}
             style={{padding:"8px 14px",borderRadius:50,border:"none",
               background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,
@@ -4752,13 +4774,45 @@ function ChecklistApp() {
                     </select>
                   </div>
                 )}
+                <div style={{marginTop:10}}>
+                  <label style={S.lbl}>ALCANCE *</label>
+                  <select value={newUsuario.alcance||""} onChange={e=>setNewUsuario(p=>({...p,alcance:e.target.value}))} style={{...S.inp,cursor:"pointer"}}>
+                    <option value="">Seleccionar alcance</option>
+                    <option value="odt_asignadas">ODT asignadas</option>
+                    <option value="area">Área</option>
+                    <option value="zona">Zona</option>
+                    <option value="tiendas_asignadas">Tiendas asignadas</option>
+                    <option value="global">Global</option>
+                    <option value="solo_lectura">Solo lectura</option>
+                  </select>
+                  <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>Define cuánto del módulo puede ver/operar este usuario.</div>
+                </div>
+              </div>
+              <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10}}>PERMISOS POR MÓDULO</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  {Object.entries(PERMISOS_MODULOS).map(([modId,modDef])=>(
+                    <div key={modId} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"9px 11px"}}>
+                      <div style={{fontWeight:700,fontSize:11,color:"#1a2f4a",marginBottom:6}}>{modDef.label}</div>
+                      {modDef.acciones.map(acc=>{
+                        const checked=!!newUsuario.permisos?.[modId]?.[acc.id];
+                        return(
+                          <label key={acc.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#5a7a9a",padding:"2px 0",cursor:"pointer"}}>
+                            <input type="checkbox" checked={checked} onChange={e=>setNewUsuario(p=>({...p,permisos:{...p.permisos,[modId]:{...(p.permisos?.[modId]||{}),[acc.id]:e.target.checked}}}))}/>
+                            {acc.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={async()=>{
                   if(!newUsuario.nombre.trim()) return showToast("Ingresa el nombre completo");
                   if(!dniOk) return showToast(`Credencial: ${docCfg.min}–${docCfg.max} caracteres`);
                   if(!newUsuario.area) return showToast("Selecciona el área");
-                  const data={nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,tipoDoc:newUsuario.tipoDoc,dni:newUsuario.dni,email:newUsuario.email||"",whatsapp:newUsuario.whatsapp||"",telefono:newUsuario.whatsapp||"",area:newUsuario.area||"",cargo:newUsuario.cargo||"",tiendaId:newUsuario.tiendaId||"",activo:true};
+                  const data={nombre:newUsuario.nombre.trim(),rol:newUsuario.rol,tipoDoc:newUsuario.tipoDoc,dni:newUsuario.dni,email:newUsuario.email||"",whatsapp:newUsuario.whatsapp||"",telefono:newUsuario.whatsapp||"",area:newUsuario.area||"",cargo:newUsuario.cargo||"",tiendaId:newUsuario.tiendaId||"",alcance:newUsuario.alcance||"",permisos:newUsuario.permisos||{},activo:true};
                   if(newUsuario.editId){await setDoc(doc(db,"usuarios",newUsuario.editId),data,{merge:true});showToast("Usuario actualizado");}
                   else{const ref=doc(collection(db,"usuarios"));await setDoc(ref,{...data,ultimoAcceso:null});showToast("Usuario registrado");}
                   setShowNUsuario(false);setNewUsuario(NU_INIT);
@@ -4791,6 +4845,7 @@ function ChecklistApp() {
                     <span style={{fontFamily:"monospace"}}>{(u.tipoDoc||"DNI").toUpperCase()} ••••{(u.dni||"").slice(-4)}</span>
                     {areaNombre&&<span style={{background:"#f0edff",color:"#6c5ce7",padding:"1px 7px",borderRadius:10,fontWeight:600}}>{areaNombre}</span>}
                     {u.cargo&&<span style={{background:"#f0f4f8",color:"#5a7a9a",padding:"1px 7px",borderRadius:10}}>{u.cargo}</span>}
+                    {u.alcance&&<span style={{background:"#fff7e6",color:"#d97706",padding:"1px 7px",borderRadius:10}}>{ALCANCE_LABELS[u.alcance]||u.alcance}</span>}
                     {tiendaNombre&&<span style={{background:"#e6f1fb",color:"#0C447C",padding:"1px 7px",borderRadius:10}}>Vega {tiendaNombre}</span>}
                   </div>
                 </div>
@@ -4798,7 +4853,7 @@ function ChecklistApp() {
                   const AREA_LEGACY={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
                   const rawArea=u.area||"";
                   const areaId=areas.find(a=>a.id===rawArea)?.id||areas.find(a=>a.nombre?.toLowerCase()===rawArea.toLowerCase())?.id||AREA_LEGACY[rawArea]||rawArea;
-                  setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
+                  setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",alcance:u.alcance||"",permisos:u.permisos||{},editId:u.id});
                   setShowNUsuario(true);
                 }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -5062,6 +5117,91 @@ function ChecklistApp() {
         );
       })()}
 
+      {/* ══ PERMISOS — matriz por módulo y rol ══ */}
+      {usrTab==="permisos"&&(()=>{
+        const modActivo=permisosModActivo||"diseno";
+        const modDef=PERMISOS_MODULOS[modActivo];
+        const rolesCols=["admin","coordinador","ejecutor","auditor","visor"];
+        return(
+        <div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+            {Object.entries(PERMISOS_MODULOS).map(([id,m])=>(
+              <button key={id} onClick={()=>setPermisosModActivo(id)} style={{padding:"7px 13px",borderRadius:9,border:`1.5px solid ${modActivo===id?"#1a2f4a":"#e2e8f0"}`,background:modActivo===id?"#1a2f4a":"#fff",color:modActivo===id?"#fff":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{m.label}</button>
+            ))}
+          </div>
+          <div style={{overflowX:"auto",borderRadius:12,border:"1px solid #e2e8f0"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:640,background:"#fff"}}>
+              <thead>
+                <tr>
+                  <th style={{padding:"10px 12px",textAlign:"left",color:"#8aaabb",fontWeight:800,fontSize:9,letterSpacing:".04em",borderBottom:"1px solid #e2e8f0",background:"#f8fafc",textTransform:"uppercase"}}>Acción</th>
+                  {rolesCols.map(r=>(<th key={r} style={{padding:"10px 12px",textAlign:"center",color:"#8aaabb",fontWeight:800,fontSize:9,letterSpacing:".04em",borderBottom:"1px solid #e2e8f0",background:"#f8fafc",textTransform:"uppercase"}}>{ROL_CFG_U[r]?.label||r}</th>))}
+                </tr>
+              </thead>
+              <tbody>
+                {modDef.acciones.map(acc=>{
+                  const usuariosConPermiso=usuarios.filter(u=>u.activo!==false&&u.permisos?.[modActivo]?.[acc.id]);
+                  return(
+                    <tr key={acc.id}>
+                      <td style={{padding:"9px 12px",fontWeight:700,color:"#1a2f4a",borderBottom:"1px solid #f0f4f8"}}>{acc.label}</td>
+                      {rolesCols.map(r=>{
+                        const cnt=usuariosConPermiso.filter(u=>u.rol===r).length;
+                        const totalRol=usuarios.filter(u=>u.activo!==false&&u.rol===r).length;
+                        const estado=totalRol===0?"none":cnt===0?"none":cnt===totalRol?"all":"part";
+                        return(
+                          <td key={r} style={{padding:"9px 12px",textAlign:"center",borderBottom:"1px solid #f0f4f8"}}>
+                            {estado==="all"&&<span style={{color:"#00b894",fontWeight:900}}>✓</span>}
+                            {estado==="part"&&<span style={{color:"#d97706",fontWeight:700,fontSize:10}}>parcial</span>}
+                            {estado==="none"&&<span style={{color:"#cbd5e1"}}>—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:10,color:"#8aaabb",marginTop:10}}>✓ = todos los usuarios activos de ese rol tienen el permiso · parcial = algunos · — = ninguno. Edita el permiso individual desde la ficha de cada usuario.</div>
+        </div>
+        );
+      })()}
+
+      {/* ══ BLOQUEOS — usuarios bloqueados o con intentos fallidos ══ */}
+      {usrTab==="bloqueos"&&(()=>{
+        const bloqueados=usuarios.filter(u=>u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date());
+        const conIntentos=usuarios.filter(u=>(u.intentosFallidos||0)>0&&!(u.bloqueadoHasta&&new Date(u.bloqueadoHasta)>new Date()));
+        return(
+        <div>
+          <div style={{...S.card,padding:"12px 14px",marginBottom:14,background:"#f8fafc"}}>
+            <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.5}}>Evalúa intentos fallidos por usuario (guardado en su ficha de Firestore, no solo en el dispositivo). Permite resetear intentos o bloquear preventivamente.</div>
+          </div>
+          <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",marginBottom:8,letterSpacing:".04em"}}>BLOQUEADOS ACTUALMENTE ({bloqueados.length})</div>
+          {bloqueados.length===0&&<div style={{fontSize:12,color:"#b2bec3",padding:"10px 0",marginBottom:14}}>Sin usuarios bloqueados.</div>}
+          {bloqueados.map(u=>(
+            <div key={u.id} style={{...S.card,padding:"11px 13px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a"}}>{u.nombre}</div>
+                <div style={{fontSize:10,color:"#dc2626"}}>Bloqueado hasta {new Date(u.bloqueadoHasta).toLocaleString("es-PE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})} · {u.intentosFallidos||0} intentos</div>
+              </div>
+              <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:null,intentosFallidos:0},{merge:true});showToast("Usuario desbloqueado");}} style={{padding:"6px 12px",borderRadius:9,border:"1px solid #FAC775",background:"#FAEEDA",color:"#633806",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>Desbloquear</button>
+            </div>
+          ))}
+          <div style={{fontSize:10,fontWeight:700,color:"#8aaabb",marginBottom:8,marginTop:14,letterSpacing:".04em"}}>CON INTENTOS FALLIDOS, SIN BLOQUEO ({conIntentos.length})</div>
+          {conIntentos.length===0&&<div style={{fontSize:12,color:"#b2bec3",padding:"10px 0"}}>Sin intentos fallidos pendientes.</div>}
+          {conIntentos.map(u=>(
+            <div key={u.id} style={{...S.card,padding:"11px 13px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:12,color:"#1a2f4a"}}>{u.nombre}</div>
+                <div style={{fontSize:10,color:"#d97706"}}>{u.intentosFallidos} intento{u.intentosFallidos!==1?"s":""} fallido{u.intentosFallidos!==1?"s":""}</div>
+              </div>
+              <button onClick={async()=>{await setDoc(doc(db,"usuarios",u.id),{intentosFallidos:0},{merge:true});showToast("Intentos reseteados");}} style={{padding:"6px 12px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>Reset intentos</button>
+              <button onClick={async()=>{const hasta=new Date(Date.now()+30*60*1000).toISOString();await setDoc(doc(db,"usuarios",u.id),{bloqueadoHasta:hasta},{merge:true});showToast("Usuario bloqueado 30 min");}} style={{padding:"6px 12px",borderRadius:9,border:"1px solid #fecaca",background:"#fff1f1",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>Bloquear</button>
+            </div>
+          ))}
+        </div>
+        );
+      })()}
+
       {/* ══ DASHBOARD INICIAL — visible cuando no hay tab seleccionado ══ */}
       {!usrTab&&(()=>{
         const hoyStr=new Date().toDateString();
@@ -5082,7 +5222,8 @@ function ChecklistApp() {
               <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
             </svg>
             <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-            <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
+            <div style={{fontSize:11,color:"#c8d8e8",marginTop:4,marginBottom:16}}>Usuarios · Áreas · Roles · Permisos · Log de accesos · Bloqueos</div>
+            <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:"11px 14px",fontSize:11,color:"#5a7a9a",textAlign:"left",maxWidth:420,margin:"0 auto"}}><b style={{color:"#1a2f4a"}}>Regla Usuarios 2.0:</b> Usuario = Rol + Cargo + Área + Alcance + Permisos por módulo. Auditor y Diseñador son cargos, no roles.</div>
           </div>
         );
 
