@@ -1323,13 +1323,13 @@ function ChecklistApp() {
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
       // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: usuarios guardados con rol="auditor"
-      // desde antes de la migración no se corrigen solos — el rol "auditor" ya no existe
-      // en la lista de roles, así que se reasigna a Ejecutor + cargo Auditor Trade.
+      // se normalizan SOLO EN MEMORIA (no se escribe a Firestore aquí, para evitar
+      // loops de setDoc→onSnapshot). La corrección persistente se hace una sola vez
+      // desde el botón "Migrar roles antiguos" en Configuración.
       data.forEach(u=>{
         if(u.rol==="auditor"){
-          const cargoNuevo=u.cargo||"Auditor Trade";
-          setDoc(doc(db,"usuarios",u.id),{rol:"ejecutor",cargo:cargoNuevo},{merge:true}).catch(()=>{});
-          u.rol="ejecutor"; u.cargo=cargoNuevo;
+          u.rol="ejecutor";
+          if(!u.cargo) u.cargo="Auditor Trade";
         }
       });
       setUsuarios(data);
@@ -1406,17 +1406,10 @@ function ChecklistApp() {
         const data=[];
         snap.forEach(d=>data.push({id:d.id,...d.data()}));
         // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: el doc roles/auditor pudo quedar
-        // guardado en Firestore desde antes de la migración a cargo. La siembra inicial
-        // (ROLES_INIT arriba) solo corre si la colección está vacía, así que un dato viejo
-        // nunca se corrige solo — hay que migrarlo activamente aquí.
-        const tieneAuditorRol=data.some(d=>d.id==="auditor");
-        const tieneUserRol=data.some(d=>d.id==="user");
-        if(tieneAuditorRol){
-          deleteDoc(doc(db,"roles","auditor")).catch(()=>{});
-        }
-        if(tieneAuditorRol&&!tieneUserRol){
-          setDoc(doc(db,"roles","user"),{nombre:"User",desc:"Gestión según módulo",color:"#00b5b4",sistema:true,activo:true});
-        }
+        // guardado en Firestore desde antes de la migración a cargo. Se filtra SOLO EN
+        // MEMORIA aquí (sin deleteDoc/setDoc dentro del listener, para evitar loops);
+        // la limpieza persistente en Firestore se hace una sola vez desde el botón
+        // "Migrar roles antiguos" en Configuración.
         const dataLimpia=data.filter(d=>d.id!=="auditor");
         const ord=["admin","coordinador","user","ejecutor","visor"];
         dataLimpia.sort((a,b)=>{const ai=ord.indexOf(a.id),bi=ord.indexOf(b.id);if(ai>=0&&bi>=0)return ai-bi;if(ai>=0)return -1;if(bi>=0)return 1;return(a.nombre||"").localeCompare(b.nombre||"");});
@@ -4931,6 +4924,21 @@ function ChecklistApp() {
             </div>
           )}
           <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,fontWeight:600,letterSpacing:".04em"}}>ROLES DEL SISTEMA — no eliminables</div>
+          {(roles.some(r=>r.id==="auditor")||usuarios.some(u=>u.rol==="auditor"))&&(
+            <div style={{...S.card,padding:"12px 14px",marginBottom:10,border:"1.5px solid #f6a623",background:"#fff8ec"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#854F0B",marginBottom:4}}>Datos antiguos detectados</div>
+              <div style={{fontSize:11,color:"#854F0B",marginBottom:10}}>El rol "Auditor" ya no existe en el sistema, pero sigue guardado en Firestore. Esta acción lo corrige de forma permanente: elimina el rol Auditor y reasigna a los usuarios afectados como Ejecutor + cargo "Auditor Trade".</div>
+              <button onClick={async()=>{
+                if(roles.some(r=>r.id==="auditor")) await deleteDoc(doc(db,"roles","auditor")).catch(()=>{});
+                if(!roles.some(r=>r.id==="user")) await setDoc(doc(db,"roles","user"),{nombre:"User",desc:"Gestión según módulo",color:"#00b5b4",sistema:true,activo:true}).catch(()=>{});
+                const afectados=usuarios.filter(u=>u.rol==="auditor");
+                for(const u of afectados){
+                  await setDoc(doc(db,"usuarios",u.id),{rol:"ejecutor",cargo:u.cargo||"Auditor Trade"},{merge:true}).catch(()=>{});
+                }
+                showToast(`Migración completa: ${afectados.length} usuario${afectados.length!==1?"s":""} actualizado${afectados.length!==1?"s":""}`);
+              }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Migrar roles antiguos ahora</button>
+            </div>
+          )}
           {roles.map(r=>{
             const usrCount=usuarios.filter(u=>u.rol===r.id).length;
             const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
