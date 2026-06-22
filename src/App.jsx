@@ -980,7 +980,7 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             if(u) patch({_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""});
           }} style={inputStyle({padding:"9px 12px"})}>
             <option value="__manual__">— Sin asignar —</option>
-            {usuarios.filter(u=>["auditor","coordinador","visor","viewer_zonal"].includes(u.rol)&&u.activo!==false).map(u=>(
+            {usuarios.filter(u=>["admin","coordinador","ejecutor","visor"].includes(u.rol)&&u.activo!==false).map(u=>(
               <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
             ))}
           </select>
@@ -1116,7 +1116,7 @@ function ChecklistApp() {
   const [modulosAud, setModulosAud] = useState([]);
   const [newRuta,    setNewRuta]    = useState({auditorId:"",moduloIds:[],tiendas:[],frecuencia:"semanal",zona:"",distrito:"",formato:"Todas",tipoRuta:"regular",perfilCalendario:"auto",motivoExcepcion:"",editId:null});
   const [rutasFiltro, setRutasFiltro] = useState("activas"); // "activas" | "todas"
-  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});
+  const [newModAud,  setNewModAud]  = useState({nombre:"",area:"",cargo:"",rol:"ejecutor",tareas:[],accesos:[],scoreConfig:null,editId:null});
   const [showNewRuta,setShowNewRuta]= useState(false);
   const [showNewMod, setShowNewMod] = useState(false);
   const [modAudOpen, setModAudOpen] = useState(null);
@@ -1154,7 +1154,7 @@ function ChecklistApp() {
   const [logAccesoFiltroUser,  setLogAccesoFiltroUser]  = useState("");
   const [logAccesoFiltroEstado,setLogAccesoFiltroEstado]= useState("todos");
   const [logAccesoFiltroDias,  setLogAccesoFiltroDias]  = useState(30);
-  const NU_INIT={nombre:"",rol:"auditor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",alcance:"",permisos:{},editId:null};
+  const NU_INIT={nombre:"",rol:"ejecutor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",alcance:"",permisos:{},editId:null};
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
@@ -1300,6 +1300,8 @@ function ChecklistApp() {
   // Bug 4 fix: refs siempre actualizados para evitar stale closure en saveConfig
   const roleRef    = useRef(role);
   useEffect(()=>{ roleRef.current=role; },[role]);
+  const cargoRef   = useRef(uCargo);
+  useEffect(()=>{ cargoRef.current=uCargo; },[uCargo]);
   const actsRef    = useRef(acts);
   const tiendasRef = useRef(tiendas);
   const pinsRef    = useRef(pins);
@@ -1383,17 +1385,17 @@ function ChecklistApp() {
       if(snap.empty){
         const ROLES_INIT=[
           {id:"admin",      nombre:"Admin",       desc:"Acceso total a todos los módulos",                           color:"#f6a623",sistema:true,activo:true},
-          {id:"coordinador",nombre:"Coordinador", desc:"Evidencias, Auditoría, Órdenes de Trabajo y reportes",      color:"#6C6EF5",sistema:true,activo:true},
-          {id:"ejecutor",   nombre:"Ejecutor",    desc:"Acceso exclusivo al módulo Órdenes de Trabajo",             color:"#00b5b4",sistema:true,activo:true},
-          {id:"auditor",    nombre:"Auditor",     desc:"Auditoría de Tiendas, Evidencias y sus reportes",           color:"#0984e3",sistema:true,activo:true},
-          {id:"visor",      nombre:"Visor",       desc:"Dashboards y reportes filtrados por cargo y tienda asignada",color:"#8aaabb",sistema:true,activo:true},
+          {id:"coordinador",nombre:"Coordinador", desc:"Gestión según módulo",      color:"#6C6EF5",sistema:true,activo:true},
+          {id:"user",nombre:"User", desc:"Gestión según módulo",      color:"#00b5b4",sistema:true,activo:true},
+          {id:"ejecutor",   nombre:"Ejecutor",    desc:"Ejecuta tareas según cargo y alcance",             color:"#0984e3",sistema:true,activo:true},
+          {id:"visor",      nombre:"Visor",       desc:"Solo lectura según alcance",color:"#8aaabb",sistema:true,activo:true},
         ];
         ROLES_INIT.forEach(r=>setDoc(doc(db,"roles",r.id),r));
         setRoles(ROLES_INIT);
       } else {
         const data=[];
         snap.forEach(d=>data.push({id:d.id,...d.data()}));
-        const ord=["admin","coordinador","ejecutor","auditor","visor"];
+        const ord=["admin","coordinador","user","ejecutor","visor"];
         data.sort((a,b)=>{const ai=ord.indexOf(a.id),bi=ord.indexOf(b.id);if(ai>=0&&bi>=0)return ai-bi;if(ai>=0)return -1;if(bi>=0)return 1;return(a.nombre||"").localeCompare(b.nombre||"");});
         setRoles(data);
       }
@@ -1407,7 +1409,7 @@ function ChecklistApp() {
       if(snap.empty){
         const AREAS_INIT=[
           {id:"marketing",  nombre:"Marketing",  activa:true,cargos:[{id:"c1",nombre:"Coordinador Trade",activo:true},{id:"c2",nombre:"Diseñador",activo:true},{id:"c3",nombre:"Marketing Digital",activo:true},{id:"c4",nombre:"Ecommerce",activo:true},{id:"c5",nombre:"Gerente de Marketing",activo:true}]},
-          {id:"operaciones",nombre:"Operaciones",activa:true,cargos:[{id:"c1",nombre:"Gerente de Operaciones",activo:true},{id:"c2",nombre:"Jefe Zonal",activo:true},{id:"c3",nombre:"Gerente de Tienda",activo:true},{id:"c4",nombre:"Jefe de Tienda",activo:true},{id:"c5",nombre:"Auditor Trade",activo:true}]},
+          {id:"operaciones",nombre:"Operaciones",activa:true,cargos:[{id:"c1",nombre:"Gerente de Operaciones",activo:true},{id:"c2",nombre:"Jefe Zonal",activo:true},{id:"c2b",nombre:"Gerente Zonal",activo:true},{id:"c3",nombre:"Gerente de Tienda",activo:true},{id:"c4",nombre:"Jefe de Tienda",activo:true},{id:"c5",nombre:"Auditor Trade",activo:true},{id:"c6",nombre:"Promotor",activo:true},{id:"c7",nombre:"Mercaderista",activo:true}]},
           {id:"comercial",  nombre:"Comercial",  activa:true,cargos:[{id:"c1",nombre:"Líder Comercial",activo:true},{id:"c2",nombre:"Gerente Comercial",activo:true},{id:"c3",nombre:"Supply",activo:true}]},
         ];
         AREAS_INIT.forEach(a=>setDoc(doc(db,"areas",a.id),a));
@@ -1659,16 +1661,20 @@ function ChecklistApp() {
   const isAdmin       = role==="admin";
   const isCoord       = role==="coordinador";
   const isEjecutor    = role==="ejecutor";
-  const isAuditor     = role==="admin"||role==="coordinador"||role==="auditor";
   const isViewer      = role==="visor";
   const canEdit       = role==="admin"||role==="coordinador";
-  const canViewReports= ["admin","coordinador","auditor","visor"].includes(role);
   // cargo e indicadores del usuario logueado
   const loggedUser    = usuarios.find(u=>u.id===uDni||u.dni===uDni)||{};
   const uCargo        = loggedUser.cargo||"";
   const uArea         = loggedUser.area||"";
+  // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: "Auditor" deja de ser rol del sistema y pasa
+  // a ser cargo (Auditor Trade) bajo el rol Ejecutor. isAuditor preserva el mismo acceso al
+  // módulo Auditoría que antes tenía role==="auditor".
+  const isCargoAuditorTrade = String(uCargo).toLowerCase().trim()==="auditor trade"||String(uCargo).toLowerCase().trim()==="auditor";
+  const isAuditor     = role==="admin"||role==="coordinador"||(role==="ejecutor"&&isCargoAuditorTrade);
+  const canViewReports= role==="admin"||role==="coordinador"||role==="visor"||(role==="ejecutor"&&isCargoAuditorTrade);
   // Solicitante: cualquier cargo distinto a Diseñador/Admin que puede crear y seguir ODTs pero no asignar
-  const isSolicitante = ["coordinador","visor"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador");
+  const isSolicitante = ["coordinador","visor","user"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador");
   /* ET_FIX_DISENO_VARS_SCOPE_20260615 — variables de rol para módulo Diseño/ODT */
   const isDisenoCargo    = String(uCargo).toLowerCase().trim()==="diseñador"||String(uCargo).toLowerCase().trim()==="disenador";
   const isDisenoAdmin    = role==="admin";
@@ -1734,11 +1740,13 @@ function ChecklistApp() {
       const key2=`statusShown_${todayStr()}_0930`;
       // B14 fix: solo mostrar a auditores/admin, no al viewer
       const currentRole = roleRef.current;
-      if(hhmm===t1&&!sessionStorage.getItem(key1)&&(currentRole==="admin"||currentRole==="auditor")){
+      const currentCargo = String(cargoRef.current||"").toLowerCase().trim();
+      const esAuditorTrade = currentRole==="ejecutor"&&(currentCargo==="auditor trade"||currentCargo==="auditor");
+      if(hhmm===t1&&!sessionStorage.getItem(key1)&&(currentRole==="admin"||esAuditorTrade)){
         sessionStorage.setItem(key1,"1");
         setShowStatusCard(true);
       }
-      if(hhmm===t2&&!sessionStorage.getItem(key2)&&(currentRole==="admin"||currentRole==="auditor")){
+      if(hhmm===t2&&!sessionStorage.getItem(key2)&&(currentRole==="admin"||esAuditorTrade)){
         sessionStorage.setItem(key2,"1");
         setShowStatusCard(true);
       }
@@ -4597,7 +4605,7 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>},
     ];
 
-    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#00b5b4",bg:"#e0fafa"},auditor:{label:"Auditor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
+    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},user:{label:"User",c:"#00b5b4",bg:"#e0fafa"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
     const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global",solo_lectura:"Solo lectura"};
     const PERMISOS_MODULOS={
       diseno:{label:"Diseño / ODT",acciones:[
@@ -4744,7 +4752,7 @@ function ChecklistApp() {
                 <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10}}>ROL Y ACCESO</div>
                 <div style={{marginBottom:10}}>
                   <label style={S.lbl}>ROL *</label>
-                  <select value={newUsuario.rol||"auditor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
+                  <select value={newUsuario.rol||"ejecutor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
                     {roles.filter(r=>r.activo!==false).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
                   </select>
                   <div style={{fontSize:10,color:ROL_CFG_U[newUsuario.rol]?.c||"#8aaabb",marginTop:3}}>{roles.find(r=>r.id===newUsuario.rol)?.desc||""}</div>
@@ -4853,7 +4861,7 @@ function ChecklistApp() {
                   const AREA_LEGACY={"Trade Marketing":"marketing","trade marketing":"marketing","Marketing":"marketing","Operaciones":"operaciones","Comercial":"comercial"};
                   const rawArea=u.area||"";
                   const areaId=areas.find(a=>a.id===rawArea)?.id||areas.find(a=>a.nombre?.toLowerCase()===rawArea.toLowerCase())?.id||AREA_LEGACY[rawArea]||rawArea;
-                  setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",alcance:u.alcance||"",permisos:u.permisos||{},editId:u.id});
+                  setNewUsuario({nombre:u.nombre||"",rol:u.rol||"ejecutor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",alcance:u.alcance||"",permisos:u.permisos||{},editId:u.id});
                   setShowNUsuario(true);
                 }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -5121,7 +5129,7 @@ function ChecklistApp() {
       {usrTab==="permisos"&&(()=>{
         const modActivo=permisosModActivo||"diseno";
         const modDef=PERMISOS_MODULOS[modActivo];
-        const rolesCols=["admin","coordinador","ejecutor","auditor","visor"];
+        const rolesCols=["admin","coordinador","user","ejecutor","visor"];
         return(
         <div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
@@ -5467,7 +5475,7 @@ function ChecklistApp() {
             {/* ── PASO 2b: Auditoría → en construcción ── */}
             {cfgMod==="auditoria"&&(()=>{
               const audTabs=[{id:"score",label:"Score"},{id:"tareas",label:"Tareas"},{id:"rutas",label:"Rutas"}];
-              const auditores=usuarios.filter(u=>(["auditor","coordinador","admin"].includes(u.rol)||isOperativoTradeUser(u))&&u.activo!==false);
+              const auditores=usuarios.filter(u=>(["coordinador","admin"].includes(u.rol)||(u.rol==="ejecutor"&&String(u.cargo||"").toLowerCase().trim().includes("auditor"))||isOperativoTradeUser(u))&&u.activo!==false);
               const rutasSemana=rutas.filter(r=>r.semana===semanaActual);
               return(
                 <div style={{marginTop:10}}>
@@ -5744,7 +5752,7 @@ function ChecklistApp() {
                             <div style={{fontSize:13,fontWeight:700,color:"#1a2f4a"}}>Módulos de evaluación</div>
                             <div style={{fontSize:11,color:"#8aaabb"}}>{modulosAud.filter(m=>m.activo!==false).length} módulos activos</div>
                           </div>
-                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});}}
+                          <button onClick={()=>{setShowNewMod(true);setNewModAud({nombre:"",area:"",cargo:"",rol:"ejecutor",tareas:[],accesos:[],scoreConfig:null,editId:null});}}
                             style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Nuevo módulo
@@ -5763,7 +5771,7 @@ function ChecklistApp() {
                             <div style={{borderTop:"1px solid #f0f4f8",paddingTop:12,marginBottom:12}}>
                               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                                 <label style={S.lbl}>ACCESOS (área · cargo · rol)</label>
-                                <button onClick={()=>setNewModAud(p=>({...p,accesos:[...(p.accesos||[]),{area:"",cargo:"",rol:"auditor"}]}))}
+                                <button onClick={()=>setNewModAud(p=>({...p,accesos:[...(p.accesos||[]),{area:"",cargo:"",rol:"ejecutor"}]}))}
                                   style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11}}>
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                   Agregar acceso
@@ -5786,7 +5794,7 @@ function ChecklistApp() {
                                   </select>
                                   <select value={ac.rol} onChange={e=>setNewModAud(p=>({...p,accesos:p.accesos.map((x,xi)=>xi===ai?{...x,rol:e.target.value}:x)}))}
                                     style={{...S.inp,margin:0}}>
-                                    <option value="auditor">Auditor</option>
+                                    <option value="ejecutor">Ejecutor</option>
                                     <option value="coordinador">Coordinador</option>
                                     <option value="admin">Admin</option>
                                   </select>
@@ -5825,11 +5833,11 @@ function ChecklistApp() {
                                 const data={nombre:newModAud.nombre.trim(),accesos,tareas,scoreConfig:newModAud.scoreConfig||{enabled:false,tipo:"numerico",escala:[0,1.5,3],labels:["No ejecutado","Por mejorar","Correcto"],version:1,vigenteDesde:new Date().toISOString()},activo:true,orden:modulosAud.length+1};
                                 if(newModAud.editId){await setDoc(doc(db,"modulos_auditoria",newModAud.editId),data,{merge:true});showToast("Módulo actualizado");}
                                 else{await setDoc(doc(collection(db,"modulos_auditoria")),data);showToast("Módulo creado");}
-                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});
+                                setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"ejecutor",tareas:[],accesos:[],scoreConfig:null,editId:null});
                               }} style={{flex:1,padding:"10px",borderRadius:50,border:"none",background:"#1a2f4a",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                                 {newModAud.editId?"Guardar cambios":"Crear módulo"}
                               </button>
-                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"auditor",tareas:[],accesos:[],scoreConfig:null,editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
+                              <button onClick={()=>{setShowNewMod(false);setNewModAud({nombre:"",area:"",cargo:"",rol:"ejecutor",tareas:[],accesos:[],scoreConfig:null,editId:null});}} style={{padding:"10px 16px",borderRadius:50,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -5884,7 +5892,7 @@ function ChecklistApp() {
                                       </div>
                                     </div>
                                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                                      <button onClick={()=>{setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"auditor",tareas:m.tareas||[],accesos:m.accesos||[],scoreConfig:m.scoreConfig||null,editId:m.id});setShowNewMod(true);}}
+                                      <button onClick={()=>{setNewModAud({nombre:m.nombre,area:m.area,cargo:m.cargo||"",rol:m.rol||"ejecutor",tareas:m.tareas||[],accesos:m.accesos||[],scoreConfig:m.scoreConfig||null,editId:m.id});setShowNewMod(true);}}
                                         style={{padding:"5px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:600}}>Editar</button>
                                       <div onClick={async()=>{await setDoc(doc(db,"modulos_auditoria",m.id),{activo:m.activo===false},{merge:true});showToast(m.activo===false?"Módulo activado":"Módulo desactivado");}}
                                         style={{width:38,height:22,borderRadius:11,background:m.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0,transition:"background .2s"}}>
@@ -6383,7 +6391,7 @@ function ChecklistApp() {
                     {/* Dropdown rol */}
                     <div style={{marginBottom:10}}>
                       <label style={S.lbl}>ROL *</label>
-                      <select value={newUsuario.rol||"auditor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))}
+                      <select value={newUsuario.rol||"ejecutor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))}
                         style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
                         {roles.filter(r=>r.activo!==false).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
                       </select>
@@ -6470,7 +6478,7 @@ function ChecklistApp() {
                           ||areas.find(a=>a.nombre?.toLowerCase()===rawArea.toLowerCase())?.id
                           ||AREA_LEGACY[rawArea]
                           ||rawArea;
-                        setNewUsuario({nombre:u.nombre||"",rol:u.rol||"auditor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
+                        setNewUsuario({nombre:u.nombre||"",rol:u.rol||"ejecutor",tipoDoc:u.tipoDoc||"dni",dni:u.dni||"",email:u.email||"",whatsapp:u.whatsapp||u.telefono||"",telefono:u.whatsapp||u.telefono||"",area:areaId,cargo:u.cargo||"",tiendaId:u.tiendaId||"",editId:u.id});
                         setShowNUsuario(true);
                       }} style={{padding:"7px 9px",borderRadius:9,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",cursor:"pointer"}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -8081,10 +8089,10 @@ function ChecklistApp() {
   // modulo: 0=Inicio, 1=Tiendas, 2=Usuarios, 3=Configuración
   // tab dentro de Inicio: 0/1/2=Actividades, 4/5/6=Auditoría
   const HOME_MAIN_TABS = [
-    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,roles:["admin","auditor","viewer"]},
-    {id:"auditoria", label:"Auditoría",  defaultTab:4,roles:["admin","auditor"]},
-    {id:"diseno",    label:"Diseño",     defaultTab:7,roles:["admin","coordinador","ejecutor"]},
-  ].filter(m=>m.roles.includes(role||""));
+    {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,show:isAdmin||isAuditor||isViewer},
+    {id:"auditoria", label:"Auditoría",  defaultTab:4,show:isAdmin||isAuditor},
+    {id:"diseno",    label:"Diseño",     defaultTab:7,show:isAdmin||role==="coordinador"||role==="ejecutor"},
+  ].filter(m=>m.show);
 
   const SUB_EVIDENCIAS = isViewer
     ? [{i:1,label:"Reporte"},{i:2,label:"Dashboard"}]
@@ -8240,7 +8248,7 @@ function ChecklistApp() {
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {/* FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 — Módulo Diseño/ODT tabs 7-9 */}
-      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","solicitante","ejecutor","visor"].includes(role))&&(()=>{
+      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","user","ejecutor","visor"].includes(role))&&(()=>{
         const TIPOS_BASE=[
           {id:"pop",label:"Material POP",hh:3,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e17055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>},
           {id:"cat",label:"Catálogo",hh:8,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>},
@@ -10732,12 +10740,6 @@ function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
     const safeEq=(a,b)=>{if(!a||!b||a.length!==b.length) return false; let d=0; for(let i=0;i<a.length;i++) d|=a.charCodeAt(i)^b.charCodeAt(i); return d===0;};
     if(pins.admin&&pins.admin.length>=4&&safeEq(clean.toLowerCase(),pins.admin.toLowerCase())){registrarExito("__admin_pin__","Administrador","admin");return;}
     if(pins.viewer&&pins.viewer.length>=4&&safeEq(clean.toLowerCase(),pins.viewer.toLowerCase())){registrarExito("__visor_pin__","Gerencia","visor");return;}
-    if(pins.auditor&&pins.auditor.length>=4&&safeEq(clean.toLowerCase(),pins.auditor.toLowerCase())){registrarExito("__auditor_pin__","Auditor","auditor");return;}
-
-    // 3. Auditores legacy
-    const audsLegacy=(auditores||[]).filter(a=>a.activo!==false);
-    const leg=audsLegacy.find(a=>[a.dni,a.credencial,a.id,a.userId,a.codigo,a.codigoInterno,a.usuario,a.documento].some(v=>normCred(v)===clean));
-    if(leg){onAcceso?.(leg.id);registrarExito(leg.id,leg.nombre,"auditor");return;}
 
     registrarFallo();
   };
@@ -10830,7 +10832,7 @@ function PinModal({pins,onSave,onClose}){
   const[pinErr,setPinErr]=useState("");
   const validarYGuardar=()=>{
     // SECURITY: pins deben tener mínimo 6 caracteres y no contener espacios
-    const campos=[{k:"admin",label:"Administrador"},{k:"auditor",label:"Auditor"},{k:"viewer",label:"Visitante"}];
+    const campos=[{k:"admin",label:"Administrador"},{k:"viewer",label:"Visitante"}];
     for(const f of campos){
       if(p[f.k]&&(p[f.k].length<6||/\s/.test(p[f.k]))){
         setPinErr(`Código ${f.label}: mínimo 6 caracteres, sin espacios.`);
@@ -10847,7 +10849,7 @@ function PinModal({pins,onSave,onClose}){
           <div style={{fontSize:32,marginBottom:8}}>🔑</div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#1a2f4a"}}>Gestionar Códigos de Acceso</div>
         </div>
-        {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"auditor",label:"Código Auditor",c:"#00b5b4"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
+        {[{k:"admin",label:"🛡️ Código Administrador",c:"#f6a623"},{k:"viewer",label:"👁️ Código Visitante",c:"#74b9ff"}].map(f=>(
           <div key={f.k} style={{marginBottom:14}}>
             <label style={{fontSize:10,fontWeight:800,color:f.c,letterSpacing:".06em",display:"block",marginBottom:5}}>{f.label}</label>
             <input type={show?"text":"password"} value={p[f.k]} onChange={e=>setP(x=>({...x,[f.k]:e.target.value.replace(/\s/g,"")}))}
