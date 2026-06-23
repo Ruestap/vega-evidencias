@@ -1300,8 +1300,6 @@ function ChecklistApp() {
   // Bug 4 fix: refs siempre actualizados para evitar stale closure en saveConfig
   const roleRef    = useRef(role);
   useEffect(()=>{ roleRef.current=role; },[role]);
-  const cargoRef   = useRef("");
-  useEffect(()=>{ cargoRef.current=uCargo; },[uCargo]);
   const actsRef    = useRef(acts);
   const tiendasRef = useRef(tiendas);
   const pinsRef    = useRef(pins);
@@ -1683,6 +1681,8 @@ function ChecklistApp() {
   const loggedUser    = usuarios.find(u=>u.id===uDni||u.dni===uDni)||{};
   const uCargo        = loggedUser.cargo||"";
   const uArea         = loggedUser.area||"";
+  const cargoRef   = useRef(uCargo);
+  useEffect(()=>{ cargoRef.current=uCargo; },[uCargo]);
   // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: "Auditor" deja de ser rol del sistema y pasa
   // a ser cargo (Auditor Trade) bajo el rol Ejecutor. isAuditor preserva el mismo acceso al
   // módulo Auditoría que antes tenía role==="auditor".
