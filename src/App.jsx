@@ -2023,10 +2023,12 @@ function ChecklistApp() {
   const eliminarRegistro = async (docId) => {
     try {
       await setDoc(doc(db,"registros",docId), {...(regs[docId]||{}), evidencias: [], activo:false, deletedAt:new Date().toISOString(), deletedBy:uDni||uName||"admin_ui", deleteReason:"eliminacion_manual"});
+      showToast("🗑️ Registro eliminado con trazabilidad");
     } catch(e) {
       console.error("eliminarRegistro error:", e?.code||e?.message||"unknown");
       showToast("❌ Error al eliminar. Verifica tu conexión.");
     }
+    setDelModal(null);
   };
 
   const anularRegistro = async () => {
@@ -4619,7 +4621,7 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>},
     ];
 
-    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},user:{label:"Usuario",c:"#00b5b4",bg:"#e0fafa"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
+    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},user:{label:"User",c:"#00b5b4",bg:"#e0fafa"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
     const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global",solo_lectura:"Solo lectura"};
     const PERMISOS_MODULOS={
       diseno:{label:"Diseño / ODT",acciones:[
@@ -6905,7 +6907,7 @@ function ChecklistApp() {
 
 {cfgTab===3&&(()=>{
         // ── Historial de auditorías de campo ──
-        const auditList=Object.values(auditorias).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+        const auditList=Object.values(auditorias).filter(a=>a.activo!==false&&!a.deletedAt&&a.estado!=="anulada").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
         // ── KPIs Dashboard ──
         const hoy7=localDateAdd(todayStr(),-7);
         const auditSemana=auditList.filter(a=>a.fecha>=hoy7&&a.estado==="enviado");
@@ -7001,7 +7003,7 @@ function ChecklistApp() {
                           <td style={{padding:"7px 10px",whiteSpace:"nowrap"}}>{a.auditorNombre||a.auditorId}</td>
                           <td style={{padding:"7px 10px",whiteSpace:"nowrap"}}>
                             <span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,color:tr.c,background:tr.bg}}>
-                              {sc!==null&&sc!==undefined?sc.toFixed(1)+"%":"S/D"} {tr.icon}
+                              {typeof sc==="number"&&!isNaN(sc)?sc.toFixed(1)+"%":"S/D"} {tr.icon}
                             </span>
                           </td>
                           <td style={{padding:"7px 10px"}}>
