@@ -4668,7 +4668,6 @@ function ChecklistApp() {
                     <option value="zona">Zona</option>
                     <option value="tiendas_asignadas">Tiendas asignadas</option>
                     <option value="global">Global</option>
-                    <option value="solo_lectura">Solo lectura</option>
                   </select>
                   <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>Define cuánto del módulo puede ver/operar este usuario.</div>
                 </div>
@@ -4800,20 +4799,7 @@ function ChecklistApp() {
               }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Migrar roles antiguos ahora</button>
             </div>
           )}
-          {usuarios.some(u=>u.rol==="ejecutor"&&String(u.cargo||"").toLowerCase().trim()!=="diseñador"&&String(u.cargo||"").toLowerCase().trim()!=="disenador"&&u.permisos?.diseno?.crear!==true)&&(
-            <div style={{...S.card,padding:"12px 14px",marginBottom:10,border:"1.5px solid #f6a623",background:"#fff8ec"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#854F0B",marginBottom:4}}>Permiso "Crear ODT" pendiente de migrar</div>
-              <div style={{fontSize:11,color:"#854F0B",marginBottom:10}}>Ahora la acción de solicitar ODT para un Ejecutor requiere el permiso individual "Crear ODT" (sección 7 del doc funcional). Esta acción otorga el permiso a los Ejecutores que ya usaban esta función antes, para no quitarles acceso sin aviso. Revísalo luego en Usuarios → Permisos.</div>
-              <button onClick={async()=>{
-                const afectados=usuarios.filter(u=>u.rol==="ejecutor"&&String(u.cargo||"").toLowerCase().trim()!=="diseñador"&&String(u.cargo||"").toLowerCase().trim()!=="disenador"&&u.permisos?.diseno?.crear!==true);
-                for(const u of afectados){
-                  await setDoc(doc(db,"usuarios",u.id),{permisos:{...(u.permisos||{}),diseno:{...(u.permisos?.diseno||{}),crear:true}}},{merge:true}).catch(()=>{});
-                }
-                showToast(`Permiso otorgado a ${afectados.length} ejecutor${afectados.length!==1?"es":""}`);
-              }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Otorgar permiso "Crear ODT" ahora</button>
-            </div>
-          )}
-          {roles.map(r=>{
+                    {roles.map(r=>{
             const usrCount=usuarios.filter(u=>u.rol===r.id).length;
             const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
             return(
@@ -9082,11 +9068,10 @@ Saludos.`;
                       </div>
                       <button onClick={()=>setOdtViewModal(null)} style={{width:30,height:30,borderRadius:9,border:"1px solid #e2e8f0",background:"#f8fafc",display:"grid",placeItems:"center",cursor:"pointer",flexShrink:0}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:canNotifyOdt(odtViewModal)?"1fr 1fr 1fr":"1fr",gap:7,padding:"0 10px 9px 10px"}}>
+                    <div style={{display:"grid",gridTemplateColumns:canNotifyOdt(odtViewModal)?"1fr 1fr":"1fr",gap:7,padding:"0 10px 9px 10px"}}>
                       {canNotifyOdt(odtViewModal)&&viewActionBtn("WhatsApp",<svg key="wa" width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.47 14.37c-.3-.15-1.76-.87-2.03-.97-.28-.1-.48-.15-.68.15s-.78.97-.95 1.17c-.18.2-.35.22-.65.07-1.76-.88-2.91-1.57-4.07-3.55-.31-.53.31-.49.89-1.63.1-.2.05-.37-.03-.52-.07-.15-.68-1.64-.94-2.25-.25-.59-.5-.51-.68-.52-.18-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.28.3-1.06 1.04-1.06 2.53s1.09 2.94 1.24 3.14c.15.2 2.14 3.27 5.19 4.58 1.93.83 2.69.9 3.66.76.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.05 2C6.48 2 2 6.48 2 12.05c0 1.87.5 3.63 1.38 5.14L2 22l4.96-1.3A10.03 10.03 0 0012.05 22C17.62 22 22 17.52 22 11.95 22 6.42 17.62 2 12.05 2zm0 18.15c-1.71 0-3.32-.5-4.67-1.36l-.33-.2-3.44.9.93-3.36-.22-.35A8.09 8.09 0 013.85 12c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.68 8.15-8.2 8.15z"/></svg>,()=>{openWhatsOdt(odtViewModal);setOdtViewModal(null);},"#f0faf5","1.5px solid #d4f1e4")}
                       {canNotifyOdt(odtViewModal)&&viewActionBtn("Correo",<svg key="mail" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>,()=>{openOutlookOdt(odtViewModal);setOdtViewModal(null);},"#f0f6ff","1.5px solid #c8d8e8")}
                       {(isSolicitante&&isRequesterOdt(odtViewModal)&&!canNotifyOdt(odtViewModal))&&viewActionBtn("Consultar",<svg key="mail2" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>,()=>{const mktCoord=usuarios.find(u=>u.area==="marketing"&&(u.rol==="coordinador"||u.rol==="admin")&&u.activo!==false);const toEmail=mktCoord?.email||"marketing@corporacionvega.pe";const subj=`Seguimiento ODT: ${odtViewModal.titulo}`;const body=`Equipo de Marketing,\n\nSolicitamos información sobre el avance de la siguiente orden de trabajo:\n\n${buildOdtMail(odtViewModal)}\n\nQuedo pendiente de su respuesta.\n\nSaludos.`;const url="https://outlook.office365.com/mail/0/deeplink/compose?to="+encodeURIComponent(toEmail)+"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);openExternalBlank(url);},"#f0f6ff","1.5px solid #c8d8e8","#0984e3")}
-                      {viewActionBtn("Cerrar",<svg key="x" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a9a" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,()=>setOdtViewModal(null),"#f8fafc","1px solid #e2e8f0","#5a7a9a")}
                     </div>
                   </div>
                   <div style={{padding:"5px 10px 8px 10px"}}>
