@@ -1698,6 +1698,69 @@ function ChecklistApp() {
 
   /* ── cálculos KPI ── */
 
+  // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
+  const actsConRegistroIds = useMemo(()=>{
+    const ids = new Set();
+    const ymPrefix = `${vYear}-${String(vMonth+1).padStart(2,"0")}`;
+    Object.entries(regs).forEach(([docId, r])=>{
+      if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
+      const f = r.fecha||"";
+      if(f.startsWith(ymPrefix) && f.length===10) {
+        ids.add(r.actividadId);
+        return;
+      }
+      // Fallback: extraer fecha del docId (formato fecha--tiendaId--actividadId)
+      const partes = docId.split("--");
+      if(partes.length>=3 && partes[0].startsWith(ymPrefix)) ids.add(r.actividadId);
+    });
+    return ids;
+  },[regs,vYear,vMonth]);
+
+  // calcEficiencia — motor base. Acepta filtro opcional de categoría.
+  // Denominador dinámico: solo cuenta días/actividades con historial operativo real.
+  const calcEficiencia = useCallback((tId, days, catFilter=null)=>{
+    let obtenidos=0, maximos=0, registros=[];
+    const hoy=todayStr();
+    const adHocDiasConReg = {};
+
+    days.forEach(ds=>{
+      if(ds>hoy) return;
+      acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
+        const tieneReg=tiAct.some(ti=>{
+          const r=getReg(ds,ti.id,a.id);
+          return r?.evidencias?.length>0&&!r?.anulado;
+        });
+        if(tieneReg){
+          if(!adHocDiasConReg[a.id]) adHocDiasConReg[a.id]=new Set();
+          adHocDiasConReg[a.id].add(ds);
+        }
+      });
+    });
+
+    days.forEach(ds=>{
+      if(ds>hoy) return;
+      const dw=getDow(ds);
+      acts.filter(a=>
+        a.activa &&
+        (a.dias||[]).includes(dw) &&
+        !isExc(tId,a.id,ds) &&
+        actsConRegistroIds.has(a.id) &&
+        (catFilter===null || a.cat===catFilter) &&
+        (a.cat==="Always On" || (adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
+      ).forEach(a=>{
+        const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
+        maximos+=10;
+        if(p!==null){
+          obtenidos+=p;
+          registros.push({fecha:ds,act:a.n,cat:a.cat,pts:p,max:10});
+        }
+      });
+    });
+
+    if(maximos===0) return null;
+    return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
+  },[acts,tiAct,actsConRegistroIds,isExc,getReg,getRangoActivo]);
+
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
     const ef=calcEficiencia(tId,days);
