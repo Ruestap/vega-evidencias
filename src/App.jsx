@@ -1,5 +1,3 @@
-// ET_DIA1_CIERRE_MARCHA_BLANCA_20260626
-// Incluye borrado inteligente de tiendas, limpieza zombie confirmada y base para smoke test de roles.
 // ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
 /* ET_FIX_RENDER_UNDEF_DISENO_TIENDA_HELPERS_20260615 */
 /* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
@@ -53,7 +51,8 @@ class AppErrorBoundary extends React.Component {
 }
 
 /* ══ DATOS ══════════════════════════════════════════════ */
-// Fallback local — Firestore es la fuente de verdad (ver useEffect de sync config/app)
+// Firestore es la fuente de verdad para tiendas (ver useEffect de sync config/app)
+
 
 
 
@@ -440,6 +439,8 @@ function getContactoPrincipalTienda(tienda){
   const contactos=(tienda?.contactosTienda||[]).filter(c=>c&&c.activo!==false);
   return contactos.find(c=>c.id==="gerente_tienda")||contactos[0]||null;
 }
+// FIX_AUTONORM_TIENDAS_20260602 — normaliza tiendas sin idTienda cuyo nombre sucio matchea el directorio
+// Corre silenciosamente al cargar config. Solo toca n, idTienda y f — nunca borra registros.
 function autoNormalizeTiendasSucias(tiendas, directorio=DIRECTORIO_TIENDAS_2026){
   const tokenes=s=>normalizeTxt(s).split(/\s+/).filter(w=>w.length>2);
   const score=(a,b)=>{const ta=tokenes(a),tb=tokenes(b);const matches=ta.filter(w=>tb.includes(w));return matches.length/Math.max(ta.length,tb.length,1);};
@@ -658,7 +659,6 @@ const FmtIcon=({fmt,size=18,color})=>{
   const Ico={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket}[fmt];
   return Ico?<Ico size={size} color={color||FMT[fmt]?.c||"currentColor"}/>:null;
 };
-
 /* ══ UTILS ══════════════════════════════════════════════ */
 const horaHHMM=(d=new Date())=>`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 // FIX: Usa fecha LOCAL del dispositivo, no UTC — evita desfase de zona horaria (ej. Peru UTC-5)
@@ -1037,7 +1037,6 @@ function ChecklistApp() {
   const [tiendaHistorial, setTiendaHistorial] = useState([]);
   /* ── auditoría config ── */
   const [audCfgTab,  setAudCfgTab]  = useState("score");
-  // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
   const [odtDashLvl, setOdtDashLvl] = useState("direccion");
   const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
   const [odtFormDraft, setOdtFormDraft] = useState({});
@@ -1127,7 +1126,6 @@ function ChecklistApp() {
   const [dashFmt,   setDashFmt]   = useState("Todas");
   const [dashAct,   setDashAct]   = useState("Todas");
   const [dashHora,  setDashHora]  = useState("Todas");
-  /* ── long press excepciones en paso 2 ── */
   /* ── módulo auditoría de campo ── */
   const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
   const [auditorias,        setAuditorias]        = useState({});
@@ -1220,11 +1218,10 @@ function ChecklistApp() {
       // Limpiar exceps: descartar true legacy y arrays vacíos
       // B16 fix: NO limpiar entradas de la semana en curso o futuras — solo legacy boolean y arrays vacíos
       const exc = d.excepciones || {};
-      const hoyClean = todayStr();
       const cleaned = Object.fromEntries(
         Object.entries(exc).filter(([,v])=>{
           if(!Array.isArray(v)) return false; // descarta legacy boolean true
-          // Mantener si tiene entradas; el admin gestiona incluso las pasadas.
+          // Mantener si tiene entradas (aunque sean pasadas) — el admin las gestiona
           return v.length > 0;
         })
       );
@@ -1416,6 +1413,11 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
+  // Guardar o actualizar un usuario en Firestore
+  // NOTA ARQUITECTURA: campo "credencial" eliminado — el DNI es LA credencial para todos los roles.
+  // Si hay registros legacy con campo "credencial" en Firestore, no causan error (se ignoran).
+  // Puedes borrarlos manualmente en Firebase Console una vez confirmado el despliegue.
+
   const deleteUsuario = useCallback(async (id)=>{
     // FIX_SEGURIDAD_SOFT_DELETE_20260531: no borrar usuarios físicamente; se conserva trazabilidad histórica.
 // FIX_CONTACTOS_TIENDA_NO_USUARIOS_20260531: Directorio 2026 carga jefes/gerentes como contactos operativos, no como usuarios.
@@ -1427,7 +1429,6 @@ function ChecklistApp() {
     await setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString()},{merge:true});
   },[]);
 
-  /* ── Toast helper — debe declararse ANTES de cualquier useCallback que lo use ── */
   const showToast = msg=>{
     setToast(msg);
     if(toastRef.current)clearTimeout(toastRef.current);
@@ -1464,6 +1465,7 @@ function ChecklistApp() {
     }
   },[]); // sin dependencias — siempre usa refs actualizados
 
+  /* ── Toast helper — debe declararse ANTES de cualquier useCallback que lo use ── */
   /* ── GPS ── */
   const obtenerGPS = useCallback(()=>new Promise((res,rej)=>{
     if(!navigator.geolocation){rej("GPS no disponible");return;}
@@ -1545,7 +1547,6 @@ function ChecklistApp() {
         // mods ya contiene los módulos correctos definidos arriba
         let bodyLines=[`Auditoría realizada por: ${uName||uDni}`,`Tienda: Vega ${tiendaObj?.n||auditTiendaSel} · ${fecha}`,``];
         scoresPorModulo.forEach(sm=>{
-          const pct=sm.score?sm.score.pct:"S/D";
           const icon=sm.score?.pct>=90?"✓":sm.score?.pct>=75?"✓":"⚠";
           const ob=sm.score?.ob??"S/D"; const mx=sm.score?.mx??""; const pctFmt=sm.score?.pct!=null?`${sm.score.pct}%`:"S/D";
           bodyLines.push(`${sm.moduloLabel}: ${sm.score?`${ob}/${mx} pts (${pctFmt})`:"S/D"} ${icon}`);
@@ -1585,7 +1586,6 @@ function ChecklistApp() {
   },[auditExclusiones,uName,showToast]);
 
   const dow = getDow(fecha);
-  const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa&&tiendaYaAperturada(ti,fecha)),[tiendas,fecha]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&(a.dias||[]).includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
@@ -1600,11 +1600,9 @@ function ChecklistApp() {
   const isCoord       = role==="coordinador";
   const isEjecutor    = role==="ejecutor";
   const isViewer      = role==="visor";
-  const canEdit       = role==="admin"||role==="coordinador";
   // cargo e indicadores del usuario logueado
   const loggedUser    = usuarios.find(u=>u.id===uDni||u.dni===uDni)||{};
   const uCargo        = loggedUser.cargo||"";
-  const uArea         = loggedUser.area||"";
   const cargoRef   = useRef(uCargo);
   useEffect(()=>{ cargoRef.current=uCargo; },[uCargo]);
   // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: "Auditor" deja de ser rol del sistema y pasa
@@ -1624,8 +1622,6 @@ function ChecklistApp() {
   const isDisenoViewer   = role==="visor";
   /* ET_FIX_TIENDA_HELPERS_SCOPE_20260615 — helpers de tienda accesibles en todo el render */
   const nomTienda=(t)=>String(t?.n||t?.nombre||t?.tienda||"").trim();
-  const fmtTienda=(t)=>String(t?.f||t?.formato||"").trim();
-  const distTienda=(t)=>String(t?.dist||t?.distrito||"").trim();
 
   // B1 fix: regsIndex declarado ANTES de getReg que lo referencia
   // Bug 10 fix: índice memoizado de regs para O(1) lookups — evita 6500 llamadas por render
@@ -1697,7 +1693,6 @@ function ChecklistApp() {
   },[]);
 
   /* ── cálculos KPI ── */
-
   // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
   const actsConRegistroIds = useMemo(()=>{
     const ids = new Set();
@@ -1709,20 +1704,26 @@ function ChecklistApp() {
         ids.add(r.actividadId);
         return;
       }
-      // Fallback: extraer fecha del docId (formato fecha--tiendaId--actividadId)
+      // Bug 2 fix: fallback — extraer fecha del docId (formato fecha--tiendaId--actividadId)
+      // docId = "YYYY-MM-DD--tXX--aXX"
       const partes = docId.split("--");
-      if(partes.length>=3 && partes[0].startsWith(ymPrefix)) ids.add(r.actividadId);
+      if(partes.length>=3 && partes[0].startsWith(ymPrefix)) {
+        ids.add(r.actividadId);
+      }
     });
     return ids;
   },[regs,vYear,vMonth]);
 
   // calcEficiencia — motor base. Acepta filtro opcional de categoría.
-  // Denominador dinámico: solo cuenta días/actividades con historial operativo real.
+  // Denominador dinámico: solo cuenta días donde la actividad tiene
+  // al menos 1 registro en el período para CUALQUIER tienda (actsConRegistroIds).
+  // FIX Ad-hoc: actividades no-AlwaysOn solo suman al denominador en días concretos
+  // donde hay al menos 1 registro real (evita inflar denominador en semanas sin historial).
   const calcEficiencia = useCallback((tId, days, catFilter=null)=>{
     let obtenidos=0, maximos=0, registros=[];
     const hoy=todayStr();
+    // Precalcular días con registro real por actividad Ad-hoc (para no inflar denominador)
     const adHocDiasConReg = {};
-
     days.forEach(ds=>{
       if(ds>hoy) return;
       acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
@@ -1736,7 +1737,6 @@ function ChecklistApp() {
         }
       });
     });
-
     days.forEach(ds=>{
       if(ds>hoy) return;
       const dw=getDow(ds);
@@ -1744,22 +1744,19 @@ function ChecklistApp() {
         a.activa &&
         (a.dias||[]).includes(dw) &&
         !isExc(tId,a.id,ds) &&
-        actsConRegistroIds.has(a.id) &&
+        actsConRegistroIds.has(a.id) && // solo actividades operativamente activas
         (catFilter===null || a.cat===catFilter) &&
+        // Ad-hoc: solo contar este día si hay registro real de alguna tienda en ese día
         (a.cat==="Always On" || (adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
       ).forEach(a=>{
         const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
         maximos+=10;
-        if(p!==null){
-          obtenidos+=p;
-          registros.push({fecha:ds,act:a.n,cat:a.cat,pts:p,max:10});
-        }
+        if(p!==null){ obtenidos+=p; registros.push({fecha:ds,act:a.n,cat:a.cat,pts:p,max:10}); }
       });
     });
-
     if(maximos===0) return null;
     return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,tiAct,actsConRegistroIds,isExc,getReg,getRangoActivo]);
+  },[acts,tiAct,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -2408,7 +2405,6 @@ function ChecklistApp() {
     const AR = getRangoActivo(actSel, fecha); // Bug 1: fuente única de verdad
     const pv = horaEx ? calcP(horaEx, AR) : null;
     const tier = getTierPts(pv);
-    const esAdHoc = actInfo?.cat==="Ad-hoc"||actInfo?.cat==="Promocional";
     const franjas=[
       {icon:"🥇",label:"ORO — 10 pts",   desde:"00:00",hasta:AR.c100,c:"#f6a623",bg:"#fff8ec"},
       {icon:"🥈",label:"PLATA — 8 pts",  desde:AR.c100,hasta:AR.c80, c:"#74b9ff",bg:"#e8f4fd"},
@@ -2698,7 +2694,6 @@ function ChecklistApp() {
 
                           {semsVis.flatMap(sem=>{
                             const semArr=sem.days.flatMap(d=>{
-                            const wd=new Date(vYear,vMonth,d).getDay();
                             const ds=dStr(vYear,vMonth,d);
                             return getColsForDay(sem,d).map(a=>{
                               const excepcion=isExc(tr.id,a.id,ds);
@@ -2708,7 +2703,6 @@ function ChecklistApp() {
                               const anulado=rv?.anulado||false;
                               const hoyC=todayStr();
                               const enPasado=ds<=hoyC;
-                              const maxP=actsConRegistroIds.has(a.id)&&enPasado&&!excepcion?10:0;
                               const docId=rKey(ds,tr.id,a.id).replace(/\|/g,"--");
                               const docIds=(regs[docId]||regs[rKey(ds,tr.id,a.id)])?[{docId,docData:regs[docId]||regs[rKey(ds,tr.id,a.id)],fecha:ds,actividadId:a.id}]:[];
                               const menuId=`ctx-${tr.id}-${ds}-${a.id}`;
@@ -2794,7 +2788,6 @@ function ChecklistApp() {
                       <td style={{padding:"8px 12px",fontWeight:800,fontSize:10,color:"#1a2f4a",position:"sticky",left:0,background:"#f0f4f8",zIndex:2,boxShadow:"2px 0 4px rgba(0,0,0,.06)"}}>TOTAL {fmt.toUpperCase()}</td>
                       {semsVis.flatMap(sem=>{
                         const tfArr=sem.days.flatMap(d=>{
-                          const wd=new Date(vYear,vMonth,d).getDay();
                           const ds=dStr(vYear,vMonth,d);
                           const hoyT=todayStr();
                           return getColsForDay(sem,d).map(a=>{
@@ -3185,12 +3178,11 @@ function ChecklistApp() {
           const esMesActualDash = vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
 
           // Período de referencia: semana seleccionada o semana actual/última con datos
-          let iSemRef, periodoLabel, vSemRef, vSemAntRef, deltaRef;
+          let iSemRef, vSemRef, vSemAntRef, deltaRef;
 
           if(selWeek!==null){
             // Semana seleccionada explícitamente por el usuario
             iSemRef = selWeek;
-            periodoLabel = semanasDelMes[selWeek]?.label || `S${selWeek+1}`;
             vSemRef = tendencia[selWeek];
             vSemAntRef = selWeek>0 ? tendencia[selWeek-1] : null;
           } else {
@@ -3199,7 +3191,6 @@ function ChecklistApp() {
               ? semanasDelMes.findIndex(s=>s.days.some(d=>dStr(vYear,vMonth,d)===_hoyDash))
               : tendencia.reduce((last,v,i)=>v!==null?i:last,-1);
             iSemRef = semActual>=0 ? semActual : semanasDelMes.length-1;
-            periodoLabel = selWeek===null ? `${MESES[vMonth]} ${vYear}` : semanasDelMes[iSemRef]?.label;
             vSemRef = tendencia[iSemRef];
             vSemAntRef = iSemRef>0 ? tendencia[iSemRef-1] : null;
           }
@@ -4231,7 +4222,7 @@ function ChecklistApp() {
             ftsEval.forEach(ti=>{ const ef=calcEficienciaFiltrada(ti.id); if(ef){fmtOb+=ef.obtenidos;fmtMx+=ef.maximos;} });
             const prom=fmtMx>0?Math.round((fmtOb/fmtMx)*100):null;
             const tier=getTier(prom);
-                  return(
+            return(
               <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
                 onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
@@ -5578,7 +5569,7 @@ function ChecklistApp() {
 
                         {rutasSemana.filter(r=>rutasFiltro==="todas"||r.activo!==false).map(r=>{
                           const auditor=usuarios.find(u=>u.id===r.auditorId);
-                            const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
+                          const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
                           const auditadasSemana=Object.values(auditorias||{}).filter(a=>a.auditorId===r.auditorId&&a.semana===semanaActual&&(r.tiendas||[]).includes(a.tiendaId));
                           const pct=tiendasRuta.length>0?Math.round(auditadasSemana.length/tiendasRuta.length*100):0;
                           const initials=(auditor?.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -6667,7 +6658,6 @@ function ChecklistApp() {
           String(u?.rol||"").toLowerCase().includes("admin")
         ));
         const fmtActual=fmtTab||"Mayorista";
-        const fc=FMT[fmtActual]||FMT.Market;
         const PILL_ON ={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:800,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.25)",display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
         const PILL_OFF={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#5a7a9a",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
         const filtroTxt=String(tiendaFiltroTxt||"").trim().toLowerCase();
@@ -6688,47 +6678,46 @@ function ChecklistApp() {
         const resetNewT=()=>setNewT({n:"",f:"Market",idTienda:"",activa:true,zonaId:"",dir:"",dist:"",lat:"",lng:"",maps:"",emailTienda:"",gerenteTienda:"",dniGerente:"",celular:"",jefeZonalNombre:"",emailJefeZonal:"",usuarioZonalId:""});
         const activarInactivar=(ti)=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);saveConfig({tiendas:np});return np;});
         const tiendaTieneHistorial=(ti)=>{
+          // Revisa histórico por id interno, ID_TIENDA y nombre para evitar borrado físico
+          // de tiendas que ya tengan evidencias/auditorías legacy o registros sin evidencias[].
           const id=String(ti?.id||"");
           const idTienda=String(ti?.idTienda||"");
           const nombre=String(ti?.n||ti?.sucursal||"").toLowerCase();
-          const tieneRegistros=Object.values(regs||{}).some(r=>{
+          const tieneRegistros=Object.entries(regs||{}).some(([docId,r])=>{
             if(!r||r.anulado||r.activo===false) return false;
-            const rTienda=String(r.tiendaId||"");
+            const partes=String(docId||"").split("--");
+            const docTiendaId=partes.length>=3?String(partes[1]||""):"";
+            const rTienda=String(r.tiendaId||docTiendaId||"");
             const rIdTienda=String(r.idTienda||"");
             const rNombre=String(r.tiendaNombre||r.tienda||"").toLowerCase();
-            return (id&&rTienda===id)||(idTienda&&rIdTienda===idTienda)||(nombre&&rNombre.includes(nombre));
+            return (id&&rTienda===id)||(id&&docTiendaId===id)||(idTienda&&rIdTienda===idTienda)||(nombre&&rNombre&&rNombre.includes(nombre));
           });
+          if(tieneRegistros) return true;
           const tieneAuditorias=Object.values(auditorias||{}).some(a=>{
             if(!a||a.estado==="anulada"||a.activo===false||a.deletedAt) return false;
             const aTienda=String(a.tiendaId||"");
             const aIdTienda=String(a.idTienda||"");
             const aNombre=String(a.tiendaNombre||a.tienda||"").toLowerCase();
-            return (id&&aTienda===id)||(idTienda&&aIdTienda===idTienda)||(nombre&&aNombre.includes(nombre));
+            return (id&&aTienda===id)||(idTienda&&aIdTienda===idTienda)||(nombre&&aNombre&&aNombre.includes(nombre));
           });
-          return tieneRegistros||tieneAuditorias;
+          return tieneAuditorias;
         };
         const eliminarTienda=(ti)=>{
-          if(!isAdmin) return;
-          const conHistorial=tiendaTieneHistorial(ti);
-          if(conHistorial){
-            if(!window.confirm(`"Vega ${ti.n}" ya tiene evidencias o auditorías. No se puede borrar físicamente. ¿Deseas inactivarla permanentemente conservando el histórico?`)) return;
-            setTiendas(p=>{
-              const np=p.map(x=>x.id===ti.id?{...x,activa:false,bloqueadaPermanente:true,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);
-              saveConfig({tiendas:np});
-              return np;
-            });
-            registrarHistorial("Inactivar permanentemente por histórico",ti);
-            showToast(`Tienda Vega ${ti.n} inactivada permanentemente; histórico conservado`);
+          if(!isAdmin) return; // SECURITY: solo admin puede eliminar/inactivar
+          if(tiendaTieneHistorial(ti)){
+            // HISTÓRICO INTOCABLE: si ya tiene evidencias o auditorías registradas, no se puede borrar
+            // físicamente — se inactiva de forma permanente para no perder trazabilidad.
+            if(!window.confirm(`"Vega ${ti.n}" ya tiene evidencias o auditorías registradas, por lo que no se puede eliminar sin perder ese historial. ¿Inactivar permanentemente en su lugar? No se podrá reactivar.`)) return;
+            setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:false,bloqueadaPermanente:true,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);saveConfig({tiendas:np});return np;});
+            registrarHistorial("Inactivar permanentemente",ti);
+            showToast(`Tienda Vega ${ti.n} inactivada permanentemente (histórico conservado)`);
             return;
           }
-          if(!window.confirm(`"Vega ${ti.n}" no tiene evidencias ni auditorías registradas. ¿Eliminarla físicamente de la configuración? Esta acción no afecta históricos porque no existen registros asociados.`)) return;
-          setTiendas(p=>{
-            const np=p.filter(x=>x.id!==ti.id);
-            saveConfig({tiendas:np});
-            return np;
-          });
-          registrarHistorial("Eliminar físicamente sin histórico",ti);
-          showToast(`Tienda Vega ${ti.n} eliminada de la configuración`);
+          // Sin evidencias ni auditorías: es seguro eliminarla físicamente, no hay nada que proteger.
+          if(!window.confirm(`"Vega ${ti.n}" no tiene evidencias ni auditorías registradas. ¿Eliminarla permanentemente? Esta acción no se puede deshacer.`)) return;
+          setTiendas(p=>{const np=p.filter(x=>x.id!==ti.id);saveConfig({tiendas:np});return np;});
+          registrarHistorial("Eliminar (sin historial)",ti);
+          showToast(`Tienda Vega ${ti.n} eliminada`);
         };
         const crearTienda=()=>{
           const idT=String(newT.idTienda||"").trim();
@@ -7505,7 +7494,6 @@ function ChecklistApp() {
           <div style={{marginBottom:12}}>
             <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>POR FORMATO</div>
             {fmtEfV.map(({fmt,pct})=>{
-              const fc=FMT[fmt];
               const ftsV=tiAct.filter(ti=>ti.f===fmt);
               const ftsEvalV=ftsV.filter(ti=>actEfectV.some(({a})=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
               // Desglose por actividad para el tooltip
@@ -8237,7 +8225,7 @@ function ChecklistApp() {
         const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
         const usuarioIniciales=(uName||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
         const designerByInitial=(ini)=>disenadores.find(d=>(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase()===ini);
-        const ODT_BASE=[]; // sin ODT de prueba/mock; Firestore es el único origen
+        // sin ODT de prueba/mock; Firestore es el único origen
         const odtsMap=new Map();
         // Firestore es el único origen: no mocks, no localStorage, no merge por dispositivo
         [...(odtFirestore||[])].forEach(o=>{ if(o&&o.id) odtsMap.set(String(o.id),o); });
@@ -8384,8 +8372,6 @@ function ChecklistApp() {
         const canEditOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
         const canAssignOdt=(o)=>isDisenoAdmin||isDisenoCoordinator;
         const canDeleteOdt=(o)=>isDisenoAdmin;
-        const canApproveOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
-        const canDeliverOdt=(o)=>isDisenoAdmin||(isDisenoExecutor&&isAssignedOdt(o)&&String(o?.estado||"").toLowerCase()==="aprobado");
         const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
         const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
         const odtStateOptions=(o)=>{
@@ -8401,7 +8387,6 @@ function ChecklistApp() {
           if(estado&&!allowed.includes(estado)) allowed=[estado,...allowed];
           return [...new Set(allowed)];
         };
-        const canManageOdt=canCreateOdt;
         const odtsRol=odtsBaseFiltradas.filter(canViewOdt);
         // ET_CIERRE_DISENO_ADMIN_DASH_ROLES_20260614 — Dashboard por rol/cargo sin cambiar secciones aprobadas.
         // Admin ve Dirección + Gerencia + Operativo. Visor con cargo gerencia ve Dirección/Gerencia.
@@ -8429,7 +8414,6 @@ function ChecklistApp() {
           const col=st==="retrasado"||((o.fechaEntrega||o.entrega)&&todayStr()>(o.fechaEntrega||o.entrega)&&!isOdtFinalizada(o))?"#dc2626":isOdtFinalizada(o)?"#00b894":st==="aprobacion"?"#0984e3":st==="correccion"?"#f6a623":"#6C6EF5";
           return {id:o.id,titulo:o.titulo||`ODT ${idx+1}`,start,end,color:col,label:pillE(st).txt};
         });
-        const estadoLabel=(e)=>pillE(e).txt;
         const odtStateMeta=(e)=>{const raw=String(e||"pendiente").toLowerCase();const p=pillE(raw);let ico="clock";if(raw==="diseño"||raw==="en_diseno")ico="pen";else if(raw==="aprobacion")ico="eye";else if(raw==="correccion"||raw==="observado")ico="pen";else if(raw==="aprobado")ico="check";else if(raw==="entregado"||raw==="finalizado"||raw==="terminado")ico="check";else if(raw==="retrasado")ico="alert";else if(raw==="cancelado")ico="alert";return{...p,ico};};
         const renderPriorityChip=(value,compact=false)=>{const pr=odtPriorityMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:compact?"2px 7px":"3px 9px",borderRadius:20,fontSize:compact?9:10,fontWeight:800,color:pr.col,background:pr.bg,border:`1px solid ${pr.col}22`,whiteSpace:"nowrap"}}><OdtSvgIcon kind={pr.id==="Urgente"?"alert":"clock"} color={pr.col} size={compact?9:10}/>{pr.label}</span>;};
         const renderTypeChip=(value,compact=false)=>{const tm=odtTypeMeta(value);return <span style={{display:"inline-flex",alignItems:"center",gap:7,padding:compact?"3px 8px":"7px 11px",borderRadius:compact?20:11,border:`1px solid ${tm.col}26`,background:tm.bg,fontSize:compact?9:11,fontWeight:800,color:tm.col,whiteSpace:"nowrap"}}><span style={{width:compact?16:20,height:compact?16:20,borderRadius:6,background:"#fff",border:`1px solid ${tm.col}33`,display:"inline-grid",placeItems:"center",flexShrink:0}}><OdtSvgIcon kind={tm.ico} color={tm.col} size={compact?10:13}/></span>{tm.label}</span>;};
@@ -8445,7 +8429,6 @@ function ChecklistApp() {
         });
         const reportStats=[{v:odtsRol.length,l:"Total",c:"#6C6EF5"},{v:odtsRol.filter(o=>isOdtFinalizada(o)).length,l:"Entregadas",c:"#00b894"},{v:odtsRol.filter(o=>["diseño","en_diseno","aprobacion","correccion","aprobado"].includes(o.estado)).length,l:"En proceso",c:"#0984e3"},{v:odtsRol.filter(o=>o.estado==="pendiente").length,l:"Pendientes",c:"#f6a623"},{v:odtsRol.filter(o=>o.alerta?.startsWith("Con retraso")||o.estado==="retrasado").length,l:"Con retraso",c:"#dc2626"}];
         const odtIsOverdue=(o)=>Boolean(o?.estado==="retrasado"||(o?.alerta&&String(o.alerta).toLowerCase().includes("retraso"))||(o?.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o)));
-        const odtIsCorrection=(o)=>String(o?.estado||"").toLowerCase()==="correccion"||String(o?.estadoPlanner||"").toLowerCase().includes("correcci");
         const odtHasObservation=(o)=>String(o?.motivoCorreccion||o?.observacionesCorreccion||o?.comentarioCorreccion||o?.correccionMotivo||"").trim().length>0;
         const correccionMotivosCount=odtsRol.reduce((acc,o)=>{
           const m=String(o?.motivoCorreccion||o?.motivoPredeterminadoCorreccion||o?.observacionesCorreccion||"").trim();
@@ -8463,11 +8446,9 @@ function ChecklistApp() {
         const lbl={fontSize:11,fontWeight:700,color:"#8aaabb",letterSpacing:".05em",textTransform:"uppercase",display:"block",marginBottom:5};
         const SH={background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,.05)"};
         const subT=tab===7?"nueva":tab===8?"reporte":"dashboard";
-        const adminOnly=isDisenoAdmin;
         const selectedDesigner=disenadores.find(u=>u.id===odtForm.disenadorId);
         // ET_FIX_ODT_CAPACIDAD_DISENADOR_20260614: no asignar mas de 3 ODT activas por diseñador.
         const ODT_MAX_ACTIVAS_POR_DISENADOR=3;
-        const odtFinalStates=["entregado","finalizado","terminado","cancelado"];
         const designerKey=(d)=>({
           ids:[d?.id,d?.userId,d?.dni,d?.documento,d?.usuario,d?.credencial].map(normOdt).filter(Boolean),
           digits:[d?.dni,d?.documento,d?.usuario,d?.credencial,d?.id].map(normDigits).filter(Boolean),
@@ -8499,7 +8480,6 @@ function ChecklistApp() {
         ];
         /* ET_FIX_MAIL_URL_BRACKETS_FALLBACK_20260614 */
         /* ET_FIX_MAIL_LINK_20260613_1615 */
-        const escapeHtml=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
         const buildOdtMail=(o,modo="asignacion")=>{
           const entregada=isOdtFinalizada(o)||modo==="entrega";
           const revision=modo==="revision"||modo==="aprobacion";
@@ -8616,7 +8596,6 @@ Saludos.`;
           setOdtCorrectionNotifyModal({odt:{...o,...(updated||{}),demail:disenador.email,dcel:disenador.celular},disenador});
         };
         const maybeNotifyRequesterAfterState=(o,nuevoEstado,updated)=>{const estado=String(nuevoEstado||"").toLowerCase();if(!(isDisenoExecutor&&isAssignedOdt(o)))return;if(estado!=="aprobacion"&&estado!=="entregado"&&estado!=="finalizado"&&estado!=="terminado")return;const solicitante=getOdtRequesterContact(o);setOdtSolicitanteNotifyModal({odt:{...o,...(updated||{}),demail:solicitante.email,dcel:solicitante.celular},modo:estado==="aprobacion"?"revision":"entrega",solicitante});};
-        const persistOdtCreated=(items)=>{setOdtCreated(items||[]);};
         const saveOdtToFirestore=async(odt)=>{try{const {id,...data}=odt;await setDoc(doc(db,"diseno_odts",id),{...data,creadoEn:data.creadoEn||new Date().toISOString(),updatedAt:new Date().toISOString()});}catch(e){console.warn("[ODT Firestore]",e?.message);}};
         const updateOdtInFirestore=async(id,patch)=>{try{await setDoc(doc(db,"diseno_odts",id),{...patch,updatedAt:new Date().toISOString()},{merge:true});}catch(e){console.warn("[ODT update Firestore]",e?.message);}};
         const updateOdtEstado=async(o,nuevoEstado,extra={})=>{const cierreExtra=(nuevoEstado==="entregado"||nuevoEstado==="finalizado"||nuevoEstado==="terminado")?{entregadoEn:extra.entregadoEn||new Date().toISOString(),fechaCierre:extra.fechaCierre||todayStr(),estadoPlanner:"Entregado"}:{};const avanceByEstado={pendiente:0,diseño:45,en_diseno:45,aprobacion:85,correccion:55,aprobado:92,entregado:100,finalizado:100,terminado:100,retrasado:o?.avance||0,cancelado:o?.avance||0};const estadoFirestore=(nuevoEstado==="finalizado"||nuevoEstado==="terminado")?"entregado":nuevoEstado;const updated=calcOdtPlan({...o,estado:estadoFirestore,avance:avanceByEstado[nuevoEstado]??o.avance,...extra,...cierreExtra});await updateOdtInFirestore(o.id,{estado:estadoFirestore,avance:updated.avance,...extra,...cierreExtra});setOdtFirestore(prev=>(prev||[]).map(x=>String(x.id)===String(o.id)?{...x,...updated}:x));setOdtHighlighted(o.id);setTimeout(()=>setOdtHighlighted(null),1800);maybeNotifyRequesterAfterState(o,estadoFirestore,updated);maybeNotifyDesignerAfterCorrection(o,estadoFirestore,updated);showToast("Estado actualizado: "+pillE(estadoFirestore).txt);return updated;};
@@ -8624,7 +8603,6 @@ Saludos.`;
         const resetOdtFormAndGoDash=()=>{setOdtForm({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});setOdtFormDraft({});setTab(9);};
         const createOdtAndNotify=()=>{if(!canCreateOdt){showToast("No tienes permiso para crear ODT");return;}const d=selectedDesigner||null;if(d&&designerBloqueadoAsignacion(d)){showToast("Diseñador inhabilitado para asignación: tiene 3 ODT activas.");return;}const ini=d?(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).slice(0,2).join("").toUpperCase():"—";const tipoObj=TIPOS_TRABAJO.find(t=>t.label===odtForm.tipo)||{};const nowId=`odt-${Date.now()}`;const nueva={id:nowId,tipo:(odtForm.tipo||"ODT").replace("Material ","").slice(0,8)||"ODT",tipoTrabajo:odtForm.tipo||"No especificado",titulo:odtFormDraft.titulo||odtForm.titulo||"Nueva ODT",area:odtForm.area||"Trade Marketing",subtipo:`${odtForm.tipo||"ODT"} · ${odtForm.area||"Área"}`,did:ini,disenadorId:d?.id||"",disenadorDni:d?.dni||d?.documento||d?.usuario||d?.id||"",responsableId:d?.id||"",responsableDni:d?.dni||d?.documento||d?.usuario||d?.id||"",dnombre:d?.nombre||"Sin asignar",demail:d?.email||"",dcel:d?.celular||"",fechaInicio:odtForm.fechaInicio||todayStr(),fechaEntrega:odtForm.fechaEntrega||"",entrega:odtForm.fechaEntrega||"—",horaCorte:odtForm.horaCorte||"",estado:"pendiente",estadoPlanner:"Pendiente",prioridad:odtForm.prioridad||"Normal",colorD:"#6C6EF5",hh:String(tipoObj.hh||"—"),tiempo:"0d/1d lab",dias:"<1d",avance:0,objetivo:odtFormDraft.objetivo||odtForm.objetivo||"",mensaje:odtFormDraft.mensaje||odtForm.mensaje||"",materiales:odtForm.materiales||[],medidas:odtForm.medidas||"",tonalidad:odtForm.tonalidad||"",mecanica:odtFormDraft.mecanica||odtForm.mecanica||"",productos:odtFormDraft.productos||odtForm.productos||"",restricciones:odtFormDraft.restricciones||odtForm.restricciones||"",referencias:odtFormDraft.referencias||odtForm.referencias||"",activo:true,creadoPor:uName||uDni,creadoRol:role,solicitanteId:uDni||"",solicitanteNombre:uName||"",solicitanteEmail:loggedUser?.email||"",historial:[{accion:"CREADA",de:null,a:"Pendiente",usuarioId:uDni||"",usuarioNombre:uName||"",fecha:new Date().toISOString(),comentario:d?"ODT creada con diseñador asignado":"ODT creada sin diseñador asignado"}],creadoEn:new Date().toISOString()};saveOdtToFirestore(nueva);setOdtFirestore(prev=>[nueva,...(prev||[]).filter(x=>String(x.id)!==String(nowId))]);setOdtReporteSearch("");setOdtReporteEstado("todos");setOdtReporteTipo("todos");setOdtReporteResp("todos");if(d){setOdtNotifyModal({disenador:d,odt:nueva});showToast("ODT creada correctamente en Firebase");}else{showToast("ODT creada sin asignar en Firebase");resetOdtFormAndGoDash();}};
         const deleteOdt=(o)=>{ if(!canDeleteOdt(o)){showToast("Acción disponible solo para administrador");return;} if(!window.confirm(`¿Eliminar definitivamente la ODT ${o.id} de Firebase?`))return; const id=String(o.id); deleteOdtInFirestore(id); setOdtFirestore(prev=>(prev||[]).filter(x=>String(x.id)!==id)); setOdtViewModal(null); setOdtEditModal(null); setOdtAssignModal(null); showToast("ODT eliminada definitivamente de Firebase"); };
-        const tableCols="170px 360px 190px 220px 140px 120px 160px 120px 170px 120px 190px";
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
         const IcoEdit=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
         const IcoTrash=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>;
