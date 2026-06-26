@@ -1,3 +1,5 @@
+// ET_DIA1_CIERRE_MARCHA_BLANCA_20260626
+// Incluye borrado inteligente de tiendas, limpieza zombie confirmada y base para smoke test de roles.
 // ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
 /* ET_FIX_RENDER_UNDEF_DISENO_TIENDA_HELPERS_20260615 */
 /* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
@@ -52,9 +54,6 @@ class AppErrorBoundary extends React.Component {
 
 /* ══ DATOS ══════════════════════════════════════════════ */
 // Fallback local — Firestore es la fuente de verdad (ver useEffect de sync config/app)
-// ET_FIX_FINAL_NO_TIENDAS_INIT_SEED_20260614: Tiendas no se precargan desde semilla local; Firestore config/app.tiendas es la fuente de verdad.
-const TIENDAS_INIT = [];
-
 
 
 
@@ -221,6 +220,15 @@ function isValidCorpEmail(value){
   const email=sanitizeEmailInput(value);
   return !email || /^[a-z0-9._%+-]+@corporacionvega\.pe$/.test(email);
 }
+function tiendaYaAperturada(ti,fechaRef){
+  // Tiendas 2.0: una tienda no debe afectar evidencia, auditoría ni reportes antes de su fecha de apertura.
+  // Si no tiene fecha registrada, se asume habilitada (retrocompatibilidad con tiendas ya existentes).
+  if(!ti?.fechaApertura) return true;
+  const ref=fechaRef?new Date(fechaRef+"T00:00:00"):new Date();
+  const apertura=new Date(ti.fechaApertura+"T00:00:00");
+  if(Number.isNaN(apertura.getTime())) return true;
+  return ref>=apertura;
+}
 function cleanStoreEditDraft(draft){
   return {
     ...draft,
@@ -255,6 +263,7 @@ function validateStoreEditDraft(draft){
   if(d.lat!=="" && (!Number.isFinite(d.lat) || d.lat < -90 || d.lat > 90)) return {ok:false,msg:"Latitud inválida. Debe estar entre -90 y 90."};
   if(d.lng!=="" && (!Number.isFinite(d.lng) || d.lng < -180 || d.lng > 180)) return {ok:false,msg:"Longitud inválida. Debe estar entre -180 y 180."};
   if(d.maps && !/^https?:\/\//i.test(d.maps)) return {ok:false,msg:"El link de Google Maps debe iniciar con http o https."};
+  if(d.fechaApertura && !/^\d{4}-\d{2}-\d{2}$/.test(d.fechaApertura)) return {ok:false,msg:"Fecha de apertura inválida."};
   return {ok:true,draft:d};
 }
 function getRouteMetaFromTiendas(lista){
@@ -431,35 +440,6 @@ function getContactoPrincipalTienda(tienda){
   const contactos=(tienda?.contactosTienda||[]).filter(c=>c&&c.activo!==false);
   return contactos.find(c=>c.id==="gerente_tienda")||contactos[0]||null;
 }
-function mergeDirectorioTiendas(tiendasActuales, directorio=DIRECTORIO_TIENDAS_2026){
-  const normName=t=>normalizeTxt(String(t?.n||"").replace(/^VEGA /i,""));
-  const current=[...(tiendasActuales||[])];
-  directorio.forEach(row=>{
-    const n=compactStoreName(row.sucursal);
-    if(!n) return;
-    let idx=current.findIndex(t=>String(t.idTienda||"")===String(row.idTienda));
-    if(idx<0) idx=current.findIndex(t=>normName(t)===normalizeTxt(n)||normalizeTxt(n).includes(normName(t))||normName(t).includes(normalizeTxt(n)));
-    const contactosTienda=buildContactosTiendaFromDirectorio(row);
-    const contactoPrincipal=contactosTienda.find(c=>c.id==="gerente_tienda")||null;
-    const patch={
-      idTienda:row.idTienda,n:n,f:mapFormatoDirectorio(row.formato),dir:row.direccion,dist:row.distrito,zonaId:row.zonaId,
-      email:row.emailTienda,emailTienda:row.emailTienda,
-      contactoTienda:contactoPrincipal,contactosTienda,
-      gerenteTienda:contactoPrincipal?.nombre||"",dniGerente:contactoPrincipal?.dni||"",celular:contactoPrincipal?.celular||"",
-      jefeZonalNombre:contactosTienda.find(c=>c.id==="jefe_zonal")?.nombre||"",emailJefeZonal:row.emailJefeZonal,
-      jefeTiendaEsUsuario:false,usuarioJefeTiendaId:null,requiereUsuarioTienda:false,rolSugeridoSiAccede:"viewer_tienda",
-      horarioLunJue:row.horarioLunJue,horarioVieSab:row.horarioVieSab,horarioDom:row.horarioDom,
-      horario:{lunJue:row.horarioLunJue,vieSab:row.horarioVieSab,domingo:row.horarioDom},
-      tiendaAuditada:true,activa:true,actualizadoDirectorio:"2026"
-    };
-    if(idx>=0) current[idx]={...current[idx],...patch};
-    else current.push({id:"td"+row.idTienda,...patch});
-  });
-  return current;
-}
-
-// FIX_AUTONORM_TIENDAS_20260602 — normaliza tiendas sin idTienda cuyo nombre sucio matchea el directorio
-// Corre silenciosamente al cargar config. Solo toca n, idTienda y f — nunca borra registros.
 function autoNormalizeTiendasSucias(tiendas, directorio=DIRECTORIO_TIENDAS_2026){
   const tokenes=s=>normalizeTxt(s).split(/\s+/).filter(w=>w.length>2);
   const score=(a,b)=>{const ta=tokenes(a),tb=tokenes(b);const matches=ta.filter(w=>tb.includes(w));return matches.length/Math.max(ta.length,tb.length,1);};
@@ -678,37 +658,6 @@ const FmtIcon=({fmt,size=18,color})=>{
   const Ico={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket}[fmt];
   return Ico?<Ico size={size} color={color||FMT[fmt]?.c||"currentColor"}/>:null;
 };
-
-const AdminAccessIcon = ({ size=54 } = {}) => (
-  <div style={{
-    width:size,
-    height:size,
-    borderRadius:Math.round(size*.25),
-    background:"#EAF7FF",
-    display:"flex",
-    alignItems:"center",
-    justifyContent:"center",
-    flexShrink:0
-  }}>
-    <svg width={Math.round(size*.72)} height={Math.round(size*.72)} viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <rect x="10" y="8" width="38" height="44" rx="6" fill="#DDF3FF"/>
-      <rect x="15" y="13" width="28" height="34" rx="4" fill="#BFE4FF"/>
-      <circle cx="25" cy="24" r="7" fill="#F2A1A7"/>
-      <path d="M15 43c2-9 8-14 16-14s14 5 16 14" fill="#8E86D8" opacity=".95"/>
-      <rect x="33" y="17" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <rect x="33" y="25" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <rect x="33" y="33" width="10" height="3" rx="1.5" fill="#5D5A93"/>
-      <circle cx="47" cy="46" r="13" fill="#52BD72"/>
-      <path d="M40.5 46.2l4 4.1 8.2-9" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  </div>
-);
-const PUNTAJES = [
-  {pct:10,icon:"🥇",label:"ORO",    c:"#f6a623",bg:"#fff8ec",key:"c100"},
-  {pct:8, icon:"🥈",label:"PLATA",  c:"#74b9ff",bg:"#e8f4fd",key:"c80"},
-  {pct:6, icon:"🥉",label:"BRONCE", c:"#a29bfe",bg:"#f0edff",key:"c60"},
-  {pct:0, icon:"🔴",label:"FUERA",  c:"#d63031",bg:"#ffeae6",key:null},
-];
 
 /* ══ UTILS ══════════════════════════════════════════════ */
 const horaHHMM=(d=new Date())=>`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
@@ -950,6 +899,11 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             <input value={draft.idTienda||""} readOnly style={inputStyle({background:"#f0f4f8",color:"#8aaabb"})}/>
           </div>
         </div>
+        <TiendaEditField S={S} label="FECHA DE APERTURA / ACTIVACIÓN">
+          <input type="date" value={draft.fechaApertura||""} onChange={e=>!draft._readOnly&&patch({fechaApertura:e.target.value})}
+            readOnly={!!draft._readOnly} autoComplete="off" style={inputStyle({background:draft._readOnly?"#f0f4f8":"#f8fafc"})}/>
+          <div style={{fontSize:9,color:"#8aaabb",marginTop:3}}>Antes de esta fecha la tienda no participa en evidencias, auditoría ni reportes.</div>
+        </TiendaEditField>
         <TiendaEditField S={S} label="EMAIL TIENDA">
           <input type="email" value={draft.emailTienda||draft.email||""} onChange={e=>patch({emailTienda:e.target.value,email:e.target.value})}
             placeholder="tiendasmcollique@corporacionvega.pe" inputMode="email" autoComplete="off" style={inputStyle()}/>
@@ -1045,7 +999,6 @@ function ChecklistApp() {
   const [uDni,    setUDni]    = useState("");
   const [pins,    setPins]    = useState({admin:"",auditor:"",viewer:""});
   const [pinMod,  setPinMod]  = useState(false);
-  const [auditores, setAuditores] = useState([]); // [{dni,nombre,activo}] — legacy
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
@@ -1064,7 +1017,6 @@ function ChecklistApp() {
   const [paso,    setPaso]    = useState(1);
   const [actSel,  setActSel]  = useState(null);
   const [tSel,    setTSel]    = useState(new Set());
-  const [rango,   setRango]   = useState(null);
   const [horaEx,  setHoraEx]  = useState(()=>horaHHMM());
   const [obsEx,   setObsEx]   = useState("");
   /* ── filtros ── */
@@ -1086,7 +1038,6 @@ function ChecklistApp() {
   /* ── auditoría config ── */
   const [audCfgTab,  setAudCfgTab]  = useState("score");
   // FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606
-  const [odtSubTab,  setOdtSubTab]  = useState("reporte");
   const [odtDashLvl, setOdtDashLvl] = useState("direccion");
   const [odtForm,    setOdtForm]    = useState({titulo:"",area:"Trade Marketing",tipo:"",materiales:[],tonalidad:"",objetivo:"",mensaje:"",mecanica:"",productos:"",restricciones:"",referencias:"",medidas:"",disenadorId:"",prioridad:"Normal",fechaInicio:"",fechaEntrega:"",horaInicio:"",horaCorte:""});
   const [odtFormDraft, setOdtFormDraft] = useState({});
@@ -1099,8 +1050,6 @@ function ChecklistApp() {
   const ODT_MATERIALES_BASE = ["Feed Instagram (1080×1080)","Historia Instagram (1080×1920)","Banner WhatsApp","Banner Web","Pieza física (afiche/vinil)","Diseño góndola/cabecera","Reel / Video","Otro"];
   // ODT 100% Firestore — no localStorage, no mocks, no datos por dispositivo
   const [odtFirestore, setOdtFirestore] = useState([]);
-  const [odtDeletedIds, setOdtDeletedIds] = useState([]);
-  const [odtCreated, setOdtCreated] = useState([]);
   const [odtReporteSearch, setOdtReporteSearch] = useState("");
   const [odtReporteEstado, setOdtReporteEstado] = useState("todos");
   const [odtReporteTipo, setOdtReporteTipo] = useState("todos");
@@ -1146,7 +1095,6 @@ function ChecklistApp() {
   // Cortes de supervisión independientes de los rangos de puntaje
   // Admin los configura; se usan en la tarjeta Estado de Registros
   const [cortesSupervision, setCortesSupervision] = useState({c1:"08:30", c2:"09:30"});
-  const [showNT,  setShowNT]  = useState(false);
   const [showNA,  setShowNA]  = useState(false);
   const [showNUsuario, setShowNUsuario] = useState(false);
   const [showDetalleAccesos, setShowDetalleAccesos] = useState(false);
@@ -1158,7 +1106,6 @@ function ChecklistApp() {
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market"});
-  const [bulkImportLog,setBulkImportLog]=useState(null);
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
@@ -1181,7 +1128,6 @@ function ChecklistApp() {
   const [dashAct,   setDashAct]   = useState("Todas");
   const [dashHora,  setDashHora]  = useState("Todas");
   /* ── long press excepciones en paso 2 ── */
-  const longExcRef = useRef(null);
   /* ── módulo auditoría de campo ── */
   const [checklistModulos,  setChecklistModulos]  = useState(CHECKLIST_MODULOS_INIT);
   const [auditorias,        setAuditorias]        = useState({});
@@ -1278,12 +1224,7 @@ function ChecklistApp() {
       const cleaned = Object.fromEntries(
         Object.entries(exc).filter(([,v])=>{
           if(!Array.isArray(v)) return false; // descarta legacy boolean true
-          // Mantener si tiene al menos una entrada presente o futura
-          const tieneVigentes = v.some(e=>{
-            const f = typeof e==="string"?e:e?.fecha;
-            return f && f >= hoyClean;
-          });
-          // Mantener si tiene entradas (aunque sean pasadas) — el admin las gestiona
+          // Mantener si tiene entradas; el admin gestiona incluso las pasadas.
           return v.length > 0;
         })
       );
@@ -1305,14 +1246,12 @@ function ChecklistApp() {
   const pinsRef    = useRef(pins);
   const excepsRef  = useRef(exceps);
   const rangosDiaRef = useRef(rangosDia);
-  const auditoresRef = useRef(auditores);
   const cortesSupervisionRef = useRef(cortesSupervision);
   useEffect(()=>{ actsRef.current=acts; },[acts]);
   useEffect(()=>{ tiendasRef.current=tiendas; },[tiendas]);
   useEffect(()=>{ pinsRef.current=pins; },[pins]);
   useEffect(()=>{ excepsRef.current=exceps; },[exceps]);
   useEffect(()=>{ rangosDiaRef.current=rangosDia; },[rangosDia]);
-  useEffect(()=>{ auditoresRef.current=auditores; },[auditores]);
   useEffect(()=>{ cortesSupervisionRef.current=cortesSupervision; },[cortesSupervision]);
 
   // Sync colección usuarios desde Firestore
@@ -1477,21 +1416,6 @@ function ChecklistApp() {
     return()=>unsub();
   },[]);
 
-  // Guardar o actualizar un usuario en Firestore
-  // NOTA ARQUITECTURA: campo "credencial" eliminado — el DNI es LA credencial para todos los roles.
-  // Si hay registros legacy con campo "credencial" en Firestore, no causan error (se ignoran).
-  // Puedes borrarlos manualmente en Firebase Console una vez confirmado el despliegue.
-  const saveUsuario = useCallback(async (u)=>{
-    const ref = u.id ? doc(db,"usuarios",u.id) : doc(collection(db,"usuarios"));
-    await setDoc(ref,{
-      nombre:       u.nombre,
-      rol:          u.rol,
-      dni:          u.dni,          // DNI es la credencial universal
-      activo:       u.activo!==false,
-      ultimoAcceso: u.ultimoAcceso||null,
-    });
-  },[]);
-
   const deleteUsuario = useCallback(async (id)=>{
     // FIX_SEGURIDAD_SOFT_DELETE_20260531: no borrar usuarios físicamente; se conserva trazabilidad histórica.
 // FIX_CONTACTOS_TIENDA_NO_USUARIOS_20260531: Directorio 2026 carga jefes/gerentes como contactos operativos, no como usuarios.
@@ -1502,6 +1426,13 @@ function ChecklistApp() {
     if(!id) return;
     await setDoc(doc(db,"usuarios",id),{ultimoAcceso:new Date().toISOString()},{merge:true});
   },[]);
+
+  /* ── Toast helper — debe declararse ANTES de cualquier useCallback que lo use ── */
+  const showToast = msg=>{
+    setToast(msg);
+    if(toastRef.current)clearTimeout(toastRef.current);
+    toastRef.current=setTimeout(()=>setToast(""),2500);
+  };
 
   const saveConfig = useCallback(async (overrides={})=>{
     // Usa refs para evitar stale closure — siempre tiene el valor más reciente
@@ -1532,13 +1463,6 @@ function ChecklistApp() {
       }
     }
   },[]); // sin dependencias — siempre usa refs actualizados
-
-  /* ── Toast helper — debe declararse ANTES de cualquier useCallback que lo use ── */
-  const showToast = msg=>{
-    setToast(msg);
-    if(toastRef.current)clearTimeout(toastRef.current);
-    toastRef.current=setTimeout(()=>setToast(""),2500);
-  };
 
   /* ── GPS ── */
   const obtenerGPS = useCallback(()=>new Promise((res,rej)=>{
@@ -1662,7 +1586,7 @@ function ChecklistApp() {
 
   const dow = getDow(fecha);
   const esFS = dow===0; // Solo domingo bloquea — sábado habilitado (tiendas abren)
-  const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa),[tiendas]);
+  const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa&&tiendaYaAperturada(ti,fecha)),[tiendas,fecha]);
   const actsDia = useMemo(()=>acts.filter(a=>a.activa&&(a.dias||[]).includes(dow)),[acts,dow]);
   const actInfo = useMemo(()=>acts.find(a=>a.id===actSel),[acts,actSel]);
   const getRangoActivo = useCallback((actId, fechaStr)=>{
@@ -1688,9 +1612,10 @@ function ChecklistApp() {
   // módulo Auditoría que antes tenía role==="auditor".
   const isCargoAuditorTrade = String(uCargo).toLowerCase().trim()==="auditor trade"||String(uCargo).toLowerCase().trim()==="auditor";
   const isAuditor     = role==="admin"||role==="coordinador"||(role==="ejecutor"&&isCargoAuditorTrade);
-  const canViewReports= role==="admin"||role==="coordinador"||role==="visor"||(role==="ejecutor"&&isCargoAuditorTrade);
-  // Solicitante: cualquier cargo distinto a Diseñador/Admin que puede crear y seguir ODTs pero no asignar
-  const isSolicitante = ["coordinador","visor","user"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador");
+  // Solicitante: coordinador/visor/user pueden solicitar por rol; un ejecutor (no Diseñador)
+  // solo si tiene la excepción individual "Crear ODT" (permisos.diseno.crear) — ver sección 7 del doc funcional.
+  const uPermisoCrearOdt = loggedUser?.permisos?.diseno?.crear===true;
+  const isSolicitante = ["coordinador","visor","user"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador"&&uPermisoCrearOdt);
   /* ET_FIX_DISENO_VARS_SCOPE_20260615 — variables de rol para módulo Diseño/ODT */
   const isDisenoCargo    = String(uCargo).toLowerCase().trim()==="diseñador"||String(uCargo).toLowerCase().trim()==="disenador";
   const isDisenoAdmin    = role==="admin";
@@ -1772,136 +1697,6 @@ function ChecklistApp() {
   },[]);
 
   /* ── cálculos KPI ── */
-  const kpisDia = useMemo(()=>{
-    if(!actSel)return{total:0,IC:0,IP:0,SE:0,TR:0,SG:0,al100:0,conEnvio:0};
-    const AR=getRangoActivo(actSel,fecha);
-    const ts=tiAct.filter(ti=>!isExc(ti.id,actSel,fecha));
-    const total=ts.length;
-    // B13 fix: cachear getReg+puntajeReg una sola vez por tienda — evita 7 llamadas duplicadas
-    const ptsMap=new Map(ts.map(ti=>[ti.id, puntajeReg(getReg(fecha,ti.id,actSel),AR)]));
-    const withEnv=ts.filter(ti=>ptsMap.get(ti.id)!==null);
-    const pts=[...ptsMap.values()];
-    const IC=total>0?Math.round((withEnv.length/total)*100):0;
-    const valid=pts.filter(p=>p!==null);
-    const IP_pts=valid.length>0?(valid.reduce((a,b)=>a+b,0)/valid.length):0;
-    const IP=Math.round((IP_pts/10)*100);
-    const al100=pts.filter(p=>p===10).length;
-    const SE=total>0?Math.round((al100/total)*100):0;
-    const TR=total>0?Math.round((ts.filter(ti=>ptsMap.get(ti.id)===null).length/total)*100):0;
-    const SG=Math.round((IC*IP)/100);
-    const r100=withEnv.filter(ti=>ptsMap.get(ti.id)===10);
-    const r80=withEnv.filter(ti=>ptsMap.get(ti.id)===8);
-    const r60=withEnv.filter(ti=>ptsMap.get(ti.id)===6);
-    const r0=ts.filter(ti=>ptsMap.get(ti.id)===null);
-    return{total,IC,IP,SE,TR,SG,al100,conEnvio:withEnv.length,r100,r80,r60,r0};
-  },[actSel,tiAct,isExc,getReg,getRangoActivo,rangosDia,fecha]); // B2 fix: quitar actInfo (derivado), agregar getRangoActivo+rangosDia
-
-  // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
-  const actsConRegistroIds = useMemo(()=>{
-    const ids = new Set();
-    const ymPrefix = `${vYear}-${String(vMonth+1).padStart(2,"0")}`;
-    Object.entries(regs).forEach(([docId, r])=>{
-      if(!r?.actividadId||!r?.evidencias?.length||r.anulado) return;
-      const f = r.fecha||"";
-      if(f.startsWith(ymPrefix) && f.length===10) {
-        ids.add(r.actividadId);
-        return;
-      }
-      // Bug 2 fix: fallback — extraer fecha del docId (formato fecha--tiendaId--actividadId)
-      // docId = "YYYY-MM-DD--tXX--aXX"
-      const partes = docId.split("--");
-      if(partes.length>=3 && partes[0].startsWith(ymPrefix)) {
-        ids.add(r.actividadId);
-      }
-    });
-    return ids;
-  },[regs,vYear,vMonth]);
-
-  // calcEficiencia — motor base. Acepta filtro opcional de categoría.
-  // Denominador dinámico: solo cuenta días donde la actividad tiene
-  // al menos 1 registro en el período para CUALQUIER tienda (actsConRegistroIds).
-  // FIX Ad-hoc: actividades no-AlwaysOn solo suman al denominador en días concretos
-  // donde hay al menos 1 registro real (evita inflar denominador en semanas sin historial).
-  const calcEficiencia = useCallback((tId, days, catFilter=null)=>{
-    let obtenidos=0, maximos=0, registros=[];
-    const hoy=todayStr();
-    // Precalcular días con registro real por actividad Ad-hoc (para no inflar denominador)
-    const adHocDiasConReg = {};
-    days.forEach(ds=>{
-      if(ds>hoy) return;
-      acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
-        const tieneReg=tiAct.some(ti=>{
-          const r=getReg(ds,ti.id,a.id);
-          return r?.evidencias?.length>0&&!r?.anulado;
-        });
-        if(tieneReg){
-          if(!adHocDiasConReg[a.id]) adHocDiasConReg[a.id]=new Set();
-          adHocDiasConReg[a.id].add(ds);
-        }
-      });
-    });
-    days.forEach(ds=>{
-      if(ds>hoy) return;
-      const dw=getDow(ds);
-      acts.filter(a=>
-        a.activa &&
-        (a.dias||[]).includes(dw) &&
-        !isExc(tId,a.id,ds) &&
-        actsConRegistroIds.has(a.id) && // solo actividades operativamente activas
-        (catFilter===null || a.cat===catFilter) &&
-        // Ad-hoc: solo contar este día si hay registro real de alguna tienda en ese día
-        (a.cat==="Always On" || (adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
-      ).forEach(a=>{
-        const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
-        maximos+=10;
-        if(p!==null){ obtenidos+=p; registros.push({fecha:ds,act:a.n,cat:a.cat,pts:p,max:10}); }
-      });
-    });
-    if(maximos===0) return null;
-    return {pct:Math.round((obtenidos/maximos)*100), obtenidos, maximos, registros};
-  },[acts,tiAct,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
-
-  // calcEficienciaModular — devuelve score por módulo + score final ponderado
-  // por cantidad de actividades registradas en cada módulo.
-  // FIX Ad-hoc: misma guarda de días con registro real que calcEficiencia.
-  const calcEficienciaModular = useCallback((tId, days)=>{
-    const hoy=todayStr();
-    const mods = {AO:{ob:0,mx:0,n:0}, AH:{ob:0,mx:0,n:0}, PR:{ob:0,mx:0,n:0}};
-    const catKey = {"Always On":"AO","Ad-hoc":"AH","Promocional":"PR"};
-    const adHocDiasConReg = {};
-    days.forEach(ds=>{
-      if(ds>hoy) return;
-      acts.filter(a=>a.activa&&a.cat!=="Always On"&&actsConRegistroIds.has(a.id)).forEach(a=>{
-        const tieneReg=tiAct.some(ti=>{const r=getReg(ds,ti.id,a.id);return r?.evidencias?.length>0&&!r?.anulado;});
-        if(tieneReg){if(!adHocDiasConReg[a.id]) adHocDiasConReg[a.id]=new Set();adHocDiasConReg[a.id].add(ds);}
-      });
-    });
-    days.forEach(ds=>{
-      if(ds>hoy) return;
-      const dw=getDow(ds);
-      acts.filter(a=>
-        a.activa && (a.dias||[]).includes(dw) &&
-        !isExc(tId,a.id,ds) && actsConRegistroIds.has(a.id) &&
-        (a.cat==="Always On"||(adHocDiasConReg[a.id]&&adHocDiasConReg[a.id].has(ds)))
-      ).forEach(a=>{
-        const mk=catKey[a.cat]||"AH";
-        const p=puntajeReg(getReg(ds,tId,a.id),getRangoActivo(a.id,ds));
-        mods[mk].mx+=10;
-        mods[mk].n+=1;
-        if(p!==null) mods[mk].ob+=p;
-      });
-    });
-    const modResults={};
-    let totalN=0, weightedSum=0;
-    Object.entries(mods).forEach(([k,m])=>{
-      if(m.mx===0){modResults[k]=null;return;}
-      const pct=Math.round((m.ob/m.mx)*100);
-      modResults[k]={pct,ob:m.ob,mx:m.mx,n:m.n};
-      totalN+=m.n; weightedSum+=pct*m.n;
-    });
-    const finalPct=totalN>0?Math.round(weightedSum/totalN):null;
-    return {modulos:modResults, pct:finalPct, totalN};
-  },[acts,tiAct,regs,regsIndex,actsConRegistroIds,isExc,getReg,getRangoActivo]);
 
   const calcSemana = useCallback((tId,sem)=>{
     const days=sem.days.map(d=>dStr(vYear,vMonth,d));
@@ -2011,7 +1806,7 @@ function ChecklistApp() {
     try {
       await Promise.all(promises);
       showToast(`✅ ${n} tienda${n!==1?"s":""} · ${horaEx} · ${pct} pts ${tier.icon} ${tier.label}`);
-      setTSel(new Set());setRango(null);
+      setTSel(new Set());
       setHoraEx(horaHHMM());
       setObsEx("");setPaso(2);setVerRegistradas(false);
     } catch(e) {
@@ -2292,11 +2087,6 @@ function ChecklistApp() {
     // Tiendas sin datos para mostrar en la leyenda
     const sinDatosCount=scoresMesV.filter(s=>s.sinDatos).length;
 
-    // FIX: usar localDateAdd+getDow evita UTC midnight parse bug (getDay() devolvía día erróneo)
-    const DIAS_ES=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-    const semAntStr = localDateAdd(hoy, -7);
-    const diaSemAnt = DIAS_ES[getDow(semAntStr)];
-
     const actMejor=actEfectV[0];
     const actPeor=actEfectV[actEfectV.length-1];
 
@@ -2333,7 +2123,7 @@ function ChecklistApp() {
   },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,
      vYear,vMonth,selWeek]);
 
-  if(!role) return <LoginScreen pins={pins} auditores={auditores} usuarios={usuarios}
+  if(!role) return <LoginScreen pins={pins} usuarios={usuarios}
     onAcceso={(id)=>registrarAcceso(id)}
     onLogin={(r,n,dni,cargo)=>{
       setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setModulo(0);
@@ -2350,7 +2140,7 @@ function ChecklistApp() {
         {DIAS_N[dow].toUpperCase()} · {actsDia.length} ACTIVIDAD{actsDia.length!==1?"ES":""} PROGRAMADA{actsDia.length!==1?"S":""}
       </p>
       {actsDia.map(a=>(
-        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setVerRegistradas(false);setTSel(new Set());setRango(null);setRangoExt(null);}}
+        <button key={a.id} onClick={()=>{setActSel(a.id);setPaso(2);setVerRegistradas(false);setTSel(new Set());setRangoExt(null);}}
           style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,border:`2px solid ${actSel===a.id?a.c:"#e2e8f0"}`,background:actSel===a.id?a.c+"15":"#fff",cursor:"pointer",width:"100%",textAlign:"left",marginBottom:10}}>
           <span style={{fontSize:26}}>{a.e}</span>
           <div style={{flex:1}}>
@@ -3935,7 +3725,6 @@ function ChecklistApp() {
                           const cs=hCell(eficDia);
                           // Issue 5 fix: construir desglose por actividad para este día específico
                           const actsTipDia=dm?acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actsConRegistroIds.has(a.id)).map(a=>{
-                            const reg=getReg(ds,null,a.id); // buscar cualquier registro de cualquier tienda ese día
                             // Contar tiendas con registro y su distribución horaria
                             const tiConReg=tsBase.filter(ti=>{
                               const r=getReg(ds,ti.id,a.id);
@@ -4080,7 +3869,7 @@ function ChecklistApp() {
           const _dsRef = semsVis2.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d))).find(d=>d<=hoyF)||hoyF;
           const AR0 = actsH2[0] ? getRangoActivo(actsH2[0].id, _dsRef) : {c100:"08:30",c80:"09:30",c60:"10:30"};
 
-          let gTotal=0,gDisp=0,gOro=0,gPlata=0,gBronce=0,gFuera=0,gPend=0,gExc=0;
+          let gDisp=0,gOro=0,gPlata=0,gFuera=0,gPend=0;
           let oroMin="99:99",oroMax="00:00",plataMin="99:99",plataMax="00:00";
           let bronceMin="99:99",bronceMax="00:00",fueraMin="99:99",fueraMax="00:00";
 
@@ -4131,7 +3920,7 @@ function ChecklistApp() {
                 });
               });
             });
-            gTotal+=fTotal;gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gBronce+=fBronce;gFuera+=fFuera;gPend+=fPend;gExc+=fExc;
+            gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gFuera+=fFuera;gPend+=fPend;
             return {fmt,nd:fTotal,fDisp,fOro,fPlata,fBronce,fFuera,fPend,fExc,
               fOroMin,fOroMax,fPlataMin,fPlataMax,
               fc:FMT[fmt],icon:<FmtIcon fmt={fmt} size={18}/>};
@@ -4379,8 +4168,7 @@ function ChecklistApp() {
             ftsEval.forEach(ti=>{ const ef=calcEficienciaFiltrada(ti.id); if(ef){fmtOb+=ef.obtenidos;fmtMx+=ef.maximos;} });
             const prom=fmtMx>0?Math.round((fmtOb/fmtMx)*100):null;
             const tier=getTier(prom);
-            const excCount=fts.length-ftsEval.length;
-            return(
+                  return(
               <div key={fmt} style={{...S.card,padding:"14px",borderLeft:`4px solid ${fc.c}`,position:"relative",cursor:"default"}}
                 onMouseEnter={e=>e.currentTarget.querySelector(".fmt-tip").style.display="block"}
                 onMouseLeave={e=>e.currentTarget.querySelector(".fmt-tip").style.display="none"}
@@ -4650,7 +4438,6 @@ function ChecklistApp() {
     const needsTienda=CARGOS_CON_TIENDA.includes(newUsuario.cargo);
     const dniLen=(newUsuario.dni||"").length;
     const dniOk=dniLen>=docCfg.min&&dniLen<=docCfg.max;
-    const activeMod=USR_MODS.find(m=>m.id===usrTab)||null;
 
     return(
     <div style={{padding:"16px"}}>
@@ -4937,6 +4724,19 @@ function ChecklistApp() {
                 }
                 showToast(`Migración completa: ${afectados.length} usuario${afectados.length!==1?"s":""} actualizado${afectados.length!==1?"s":""}`);
               }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Migrar roles antiguos ahora</button>
+            </div>
+          )}
+          {usuarios.some(u=>u.rol==="ejecutor"&&String(u.cargo||"").toLowerCase().trim()!=="diseñador"&&String(u.cargo||"").toLowerCase().trim()!=="disenador"&&u.permisos?.diseno?.crear!==true)&&(
+            <div style={{...S.card,padding:"12px 14px",marginBottom:10,border:"1.5px solid #f6a623",background:"#fff8ec"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#854F0B",marginBottom:4}}>Permiso "Crear ODT" pendiente de migrar</div>
+              <div style={{fontSize:11,color:"#854F0B",marginBottom:10}}>Ahora la acción de solicitar ODT para un Ejecutor requiere el permiso individual "Crear ODT" (sección 7 del doc funcional). Esta acción otorga el permiso a los Ejecutores que ya usaban esta función antes, para no quitarles acceso sin aviso. Revísalo luego en Usuarios → Permisos.</div>
+              <button onClick={async()=>{
+                const afectados=usuarios.filter(u=>u.rol==="ejecutor"&&String(u.cargo||"").toLowerCase().trim()!=="diseñador"&&String(u.cargo||"").toLowerCase().trim()!=="disenador"&&u.permisos?.diseno?.crear!==true);
+                for(const u of afectados){
+                  await setDoc(doc(db,"usuarios",u.id),{permisos:{...(u.permisos||{}),diseno:{...(u.permisos?.diseno||{}),crear:true}}},{merge:true}).catch(()=>{});
+                }
+                showToast(`Permiso otorgado a ${afectados.length} ejecutor${afectados.length!==1?"es":""}`);
+              }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Otorgar permiso "Crear ODT" ahora</button>
             </div>
           )}
           {roles.map(r=>{
@@ -5405,7 +5205,6 @@ function ChecklistApp() {
           {id:"diseno",     label:"Diseño",     Ico:IcoDiseñoCfg},
         ];
         const TAB_PILL_A={padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
-        const TAB_PILL_I={padding:"9px 20px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#6B7280",fontWeight:600,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
 
         return(
           <div>
@@ -5716,8 +5515,7 @@ function ChecklistApp() {
 
                         {rutasSemana.filter(r=>rutasFiltro==="todas"||r.activo!==false).map(r=>{
                           const auditor=usuarios.find(u=>u.id===r.auditorId);
-                          const modulo=modulosAud.find(m=>m.id===r.moduloId);
-                          const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
+                            const tiendasRuta=(r.tiendas||[]).map(tid=>tiendas.find(t=>t.id===tid)).filter(Boolean);
                           const auditadasSemana=Object.values(auditorias||{}).filter(a=>a.auditorId===r.auditorId&&a.semana===semanaActual&&(r.tiendas||[]).includes(a.tiendaId));
                           const pct=tiendasRuta.length>0?Math.round(auditadasSemana.length/tiendasRuta.length*100):0;
                           const initials=(auditor?.nombre||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -6817,11 +6615,58 @@ function ChecklistApp() {
           const hay=(String(t.n||"")+" "+String(t.idTienda||"")+" "+String(t.dir||"")+" "+String(t.dist||"")+" "+String(t.emailTienda||t.email||"")+" "+String(t.gerenteTienda||"")).toLowerCase();
           return estadoOk && zonaOk && (!filtroTxt || hay.includes(filtroTxt));
         });
-        const registrarHistorial=(accion,tienda)=>setTiendaHistorial(p=>[{id:"hist-"+Date.now(),fecha:new Date().toISOString(),accion,tienda:tienda?.n||tienda?.sucursal||"Tienda",usuario:uName||uDni||"Usuario"},...(p||[])].slice(0,30));
+        const registrarHistorial=(accion,tienda)=>{
+          const entry={id:"hist-"+Date.now(),fecha:new Date().toISOString(),accion,tiendaId:tienda?.id||"",tienda:tienda?.n||tienda?.sucursal||"Tienda",usuario:uName||uDni||"Usuario"};
+          setTiendaHistorial(p=>[entry,...(p||[])].slice(0,200));
+          // HISTÓRICO INTOCABLE: persistir en Firestore además de memoria, para que no se pierda al refrescar.
+          try{addDoc(collection(db,"tiendas_historial"),entry);}catch(e){console.error("tiendas_historial write failed:",e?.code||e?.message||"unknown");}
+        };
         const validarCoords=(lat,lng)=>Number.isFinite(Number(lat))&&Number(lat)>=-90&&Number(lat)<=90&&Number.isFinite(Number(lng))&&Number(lng)>=-180&&Number(lng)<=180;
         const resetNewT=()=>setNewT({n:"",f:"Market",idTienda:"",activa:true,zonaId:"",dir:"",dist:"",lat:"",lng:"",maps:"",emailTienda:"",gerenteTienda:"",dniGerente:"",celular:"",jefeZonalNombre:"",emailJefeZonal:"",usuarioZonalId:""});
         const activarInactivar=(ti)=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);saveConfig({tiendas:np});return np;});
-        const eliminarTienda=(ti)=>{if(!window.confirm(`¿Eliminar permanentemente "Vega ${ti.n}"? Esta acción no se puede deshacer.`)) return;setTiendas(p=>{const np=p.filter(x=>x.id!==ti.id);saveConfig({tiendas:np});return np;});registrarHistorial("Eliminar",ti);showToast(`Tienda Vega ${ti.n} eliminada`);};
+        const tiendaTieneHistorial=(ti)=>{
+          const id=String(ti?.id||"");
+          const idTienda=String(ti?.idTienda||"");
+          const nombre=String(ti?.n||ti?.sucursal||"").toLowerCase();
+          const tieneRegistros=Object.values(regs||{}).some(r=>{
+            if(!r||r.anulado||r.activo===false) return false;
+            const rTienda=String(r.tiendaId||"");
+            const rIdTienda=String(r.idTienda||"");
+            const rNombre=String(r.tiendaNombre||r.tienda||"").toLowerCase();
+            return (id&&rTienda===id)||(idTienda&&rIdTienda===idTienda)||(nombre&&rNombre.includes(nombre));
+          });
+          const tieneAuditorias=Object.values(auditorias||{}).some(a=>{
+            if(!a||a.estado==="anulada"||a.activo===false||a.deletedAt) return false;
+            const aTienda=String(a.tiendaId||"");
+            const aIdTienda=String(a.idTienda||"");
+            const aNombre=String(a.tiendaNombre||a.tienda||"").toLowerCase();
+            return (id&&aTienda===id)||(idTienda&&aIdTienda===idTienda)||(nombre&&aNombre.includes(nombre));
+          });
+          return tieneRegistros||tieneAuditorias;
+        };
+        const eliminarTienda=(ti)=>{
+          if(!isAdmin) return;
+          const conHistorial=tiendaTieneHistorial(ti);
+          if(conHistorial){
+            if(!window.confirm(`"Vega ${ti.n}" ya tiene evidencias o auditorías. No se puede borrar físicamente. ¿Deseas inactivarla permanentemente conservando el histórico?`)) return;
+            setTiendas(p=>{
+              const np=p.map(x=>x.id===ti.id?{...x,activa:false,bloqueadaPermanente:true,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);
+              saveConfig({tiendas:np});
+              return np;
+            });
+            registrarHistorial("Inactivar permanentemente por histórico",ti);
+            showToast(`Tienda Vega ${ti.n} inactivada permanentemente; histórico conservado`);
+            return;
+          }
+          if(!window.confirm(`"Vega ${ti.n}" no tiene evidencias ni auditorías registradas. ¿Eliminarla físicamente de la configuración? Esta acción no afecta históricos porque no existen registros asociados.`)) return;
+          setTiendas(p=>{
+            const np=p.filter(x=>x.id!==ti.id);
+            saveConfig({tiendas:np});
+            return np;
+          });
+          registrarHistorial("Eliminar físicamente sin histórico",ti);
+          showToast(`Tienda Vega ${ti.n} eliminada de la configuración`);
+        };
         const crearTienda=()=>{
           const idT=String(newT.idTienda||"").trim();
           const nombre=sanitizeTextInput(newT.n,80).trim();
@@ -6874,7 +6719,7 @@ function ChecklistApp() {
                 <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
                   {[{l:"Tiendas",v:tiendasFormato.length,c:"#6C6EF5"},{l:"Activas",v:tiendasFormato.filter(t=>t.activa!==false).length,c:"#00b894"},{l:"Inactivas",v:tiendasFormato.filter(t=>t.activa===false).length,c:"#dc2626"},{l:"Sin contacto",v:tiendasFormato.filter(t=>!getContactoPrincipalTienda(t)).length,c:"#f6a623"},{l:"Coords pendientes",v:tiendasFormato.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length,c:"#0984e3"}].map(k=><div key={k.l} style={{...S.card,padding:14,textAlign:"center",borderTop:`3px solid ${k.c}`}}><div style={{fontSize:28,fontWeight:900,color:k.c,lineHeight:1}}>{k.v}</div><div style={{fontSize:9,fontWeight:900,color:"#8aaabb",textTransform:"uppercase",letterSpacing:".05em",marginTop:6}}>{k.l}</div></div>)}
                 </div>
-                {tiendasFiltradas.map(ti=>{const contacto=getContactoPrincipalTienda(ti);const gerente=contacto?.nombre||ti.gerenteTienda||"";const zonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.nombre||ti.jefeZonalNombre||"";return <div key={ti.id} style={{...S.card,marginBottom:10,opacity:ti.activa===false?0.62:1}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{minWidth:0}}><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:16,fontWeight:900,color:ti.activa===false?"#94a3b8":"#1a2f4a"}}>Vega {ti.n}<span style={{fontSize:10,fontWeight:800,color:"#8aaabb",background:"#f0f4f8",padding:"3px 7px",borderRadius:6}}>#{ti.idTienda||"s/id"}</span><span style={{fontSize:10,fontWeight:900,color:ti.activa===false?"#8aaabb":"#00b894",background:ti.activa===false?"#f0f4f8":"#e8faf5",padding:"3px 10px",borderRadius:20}}>{ti.activa===false?"Inactiva":"Activa"}</span></div><div style={{fontSize:11,color:"#8aaabb",display:"flex",gap:10,flexWrap:"wrap",marginTop:8}}>{(ti.emailTienda||ti.email)&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.emailTienda||ti.email}</span>}{gerente&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{gerente}</span>}{zonal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {zonal}</span>}<span>Contacto referencial, sin acceso</span></div></div><div style={{display:"flex",gap:8,flexShrink:0}}>{(isAdmin||isCoord)&&<button onClick={()=>setTiendaEditModal({...ti,_zonalUserId:ti.usuarioZonalId||"__manual__",_readOnly:isCoord&&!isAdmin})} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Editar</button>}{isAdmin&&<button onClick={()=>{activarInactivar(ti);registrarHistorial(ti.activa===false?"Activar":"Inactivar",ti);}} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${ti.activa===false?"#bbf7d0":"#fecaca"}`,background:ti.activa===false?"#f0fdf4":"#fff1f2",color:ti.activa===false?"#16a34a":"#dc2626",fontWeight:800,cursor:"pointer"}}>{ti.activa===false?"Activar":"Inactivar"}</button>}{isAdmin&&<button onClick={()=>eliminarTienda(ti)} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",fontWeight:800,cursor:"pointer"}}>Eliminar</button>}</div></div></div>})}
+                {tiendasFiltradas.map(ti=>{const contacto=getContactoPrincipalTienda(ti);const gerente=contacto?.nombre||ti.gerenteTienda||"";const zonal=ti.contactosTienda?.find(c=>c.id==="jefe_zonal")?.nombre||ti.jefeZonalNombre||"";return <div key={ti.id} style={{...S.card,marginBottom:10,opacity:ti.activa===false?0.62:1}}><div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><div style={{minWidth:0}}><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:16,fontWeight:900,color:ti.activa===false?"#94a3b8":"#1a2f4a"}}>Vega {ti.n}<span style={{fontSize:10,fontWeight:800,color:"#8aaabb",background:"#f0f4f8",padding:"3px 7px",borderRadius:6}}>#{ti.idTienda||"s/id"}</span><span style={{fontSize:10,fontWeight:900,color:ti.activa===false?"#8aaabb":"#00b894",background:ti.activa===false?"#f0f4f8":"#e8faf5",padding:"3px 10px",borderRadius:20}}>{ti.activa===false?"Inactiva":"Activa"}</span>{ti.activa!==false&&!tiendaYaAperturada(ti)&&<span style={{fontSize:10,fontWeight:900,color:"#854F0B",background:"#fff8ec",padding:"3px 10px",borderRadius:20}}>Pendiente de apertura ({ti.fechaApertura})</span>}</div><div style={{fontSize:11,color:"#8aaabb",display:"flex",gap:10,flexWrap:"wrap",marginTop:8}}>{(ti.emailTienda||ti.email)&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>{ti.emailTienda||ti.email}</span>}{gerente&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0113 0"/></svg>{gerente}</span>}{zonal&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-5"/></svg>Zonal: {zonal}</span>}<span>Contacto referencial, sin acceso</span></div></div><div style={{display:"flex",gap:8,flexShrink:0}}>{(isAdmin||isCoord)&&<button onClick={()=>setTiendaEditModal({...ti,_zonalUserId:ti.usuarioZonalId||"__manual__",_readOnly:isCoord&&!isAdmin})} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#5a7a9a",fontWeight:800,cursor:"pointer"}}>Editar</button>}{isAdmin&&!ti.bloqueadaPermanente&&<button onClick={()=>{activarInactivar(ti);registrarHistorial(ti.activa===false?"Activar":"Inactivar",ti);}} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${ti.activa===false?"#bbf7d0":"#fecaca"}`,background:ti.activa===false?"#f0fdf4":"#fff1f2",color:ti.activa===false?"#16a34a":"#dc2626",fontWeight:800,cursor:"pointer"}}>{ti.activa===false?"Activar":"Inactivar"}</button>}{isAdmin&&!ti.bloqueadaPermanente&&<button onClick={()=>eliminarTienda(ti)} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",fontWeight:800,cursor:"pointer"}}>Eliminar</button>}{ti.bloqueadaPermanente&&<span style={{padding:"9px 14px",borderRadius:10,fontSize:11,fontWeight:800,color:"#94a3b8"}}>Inactivada permanentemente</span>}</div></div></div>})}
                 {tiendasFiltradas.length===0&&<div style={{textAlign:"center",padding:"26px",fontSize:12,color:"#8aaabb"}}>Sin tiendas para los filtros seleccionados</div>}
               </div>
             )}
@@ -8122,7 +7967,7 @@ function ChecklistApp() {
   const HOME_MAIN_TABS = [
     {id:"actividades",label:"Evidencias",defaultTab:isViewer?1:0,show:isAdmin||isAuditor||isViewer},
     {id:"auditoria", label:"Auditoría",  defaultTab:4,show:isAdmin||isAuditor},
-    {id:"diseno",    label:"Diseño",     defaultTab:7,show:isAdmin||role==="coordinador"||role==="ejecutor"},
+    {id:"diseno",    label:"Diseño",     defaultTab:7,show:isAdmin||role==="coordinador"||isDisenoCargo||isSolicitante},
   ].filter(m=>m.show);
 
   const SUB_EVIDENCIAS = isViewer
@@ -8215,7 +8060,7 @@ function ChecklistApp() {
           <div className="et-topbar-logo-spacer" style={{flex:1,display:"none"}} aria-hidden="true"/>
           <div className="et-topbar-desktop-spacer" style={{flex:1}} aria-hidden="true"/>
           <input type="date" value={fecha}
-            onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());setRango(null);}}
+            onChange={e=>{const d=e.target.value;if(!isAdmin&&d!==todayStr())return;setFecha(d);setActSel(null);setPaso(1);setTSel(new Set());}}
             disabled={isViewer}
             style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.08)",color:"#fff",fontSize:11,outline:"none"}}/>
           {isAuditor&&<button className="et-topbar-estado" onClick={()=>setShowStatusCard(true)} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(253,203,110,.4)",background:"rgba(253,203,110,.1)",color:"#fdcb6e",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/><path d="M8.3 11.6a3.4 3.4 0 015.9-2.3"/><polyline points="14.5 7.4 14.5 9.3 12.6 9.3"/><path d="M15.7 9.4a3.4 3.4 0 01-5.9 2.3"/><polyline points="9.5 13.6 9.5 11.7 11.4 11.7"/></svg>Estado</button>}
@@ -9211,7 +9056,7 @@ Saludos.`;
                 setOdtAssignModal(null);
                 showToast("ODT reasignada correctamente");
               };
-              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14}}>
+              return <div style={{position:"fixed",inset:0,background:"rgba(26,47,74,.65)",zIndex:124,display:"flex",alignItems:"center",justifyContent:"center",padding:14,overflowY:"auto"}}>
                 <div style={{background:"#fff",borderRadius:18,width:"min(520px,100%)",boxShadow:"0 18px 60px rgba(0,0,0,.25)",overflow:"hidden"}}>
                   <div style={{padding:"16px 20px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
                     <div><div style={{fontSize:15,fontWeight:900,color:"#fff"}}>Asignar ODT</div><div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>{current.titulo}</div></div>
@@ -9315,15 +9160,6 @@ Saludos.`;
           const misSemana=misAuditorias.filter(esSemana);
           const scores=misAuditorias.map(a=>a.scoreFinal).filter(s=>s!==null&&s!==undefined);
           const miProm=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
-          // Ranking vs otros auditores
-          const porAuditor={};
-          Object.values(auditorias).filter(a=>a.estado==="enviado"&&a.scoreFinal!==null).forEach(a=>{
-            if(!porAuditor[a.auditorId]){porAuditor[a.auditorId]={n:0,sum:0,nombre:a.auditorNombre||a.auditorId};}
-            porAuditor[a.auditorId].n++;
-            porAuditor[a.auditorId].sum+=a.scoreFinal;
-          });
-          const ranking=Object.entries(porAuditor).map(([id,v])=>({id,nombre:v.nombre,prom:v.sum/v.n,n:v.n})).sort((a,b)=>b.prom-a.prom);
-          const miPos=ranking.findIndex(r=>r.id===uDni)+1;
           return(
           <div style={{padding:"14px 16px",paddingBottom:8}}>
             <div style={{fontWeight:800,fontSize:18,color:"#1a2f4a",marginBottom:14}}>Panel de Avances</div>
@@ -9645,8 +9481,6 @@ Saludos.`;
           : (actsRefCard.filter(a=>a.id===statusActFiltro).length>0
               ? actsRefCard.filter(a=>a.id===statusActFiltro)
               : actsRefCard);
-        // Rangos de corte desde la actividad de referencia (respeta config del Admin)
-        const actRefRango = actsParaStatus.length>0 ? getRangoActivo(actsParaStatus[0].id, hoy) : RANGOS_DEFAULT;
         // Cortes de supervisión: configurables por Admin (independientes del puntaje)
         const bloque1Hasta = cortesSupervision.c1 || "08:30";
         const bloque2Hasta = cortesSupervision.c2 || "09:30";
@@ -10666,7 +10500,7 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,auditores,usuarios,onLogin,onAcceso}){
+function LoginScreen({pins,usuarios,onLogin,onAcceso}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
   const credInputRef=useRef(null);
