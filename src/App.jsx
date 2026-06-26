@@ -1350,7 +1350,6 @@ function ChecklistApp() {
         const ROLES_INIT=[
           {id:"admin",      nombre:"Admin",       desc:"Acceso total a todos los módulos",                           color:"#f6a623",sistema:true,activo:true},
           {id:"coordinador",nombre:"Coordinador", desc:"Gestión según módulo",      color:"#6C6EF5",sistema:true,activo:true},
-          {id:"user",nombre:"User", desc:"Gestión según módulo",      color:"#00b5b4",sistema:true,activo:true},
           {id:"ejecutor",   nombre:"Ejecutor",    desc:"Ejecuta tareas según cargo y alcance",             color:"#0984e3",sistema:true,activo:true},
           {id:"visor",      nombre:"Visor",       desc:"Solo lectura según alcance",color:"#8aaabb",sistema:true,activo:true},
         ];
@@ -1364,8 +1363,8 @@ function ChecklistApp() {
         // MEMORIA aquí (sin deleteDoc/setDoc dentro del listener, para evitar loops);
         // la limpieza persistente en Firestore se hace una sola vez desde el botón
         // "Migrar roles antiguos" en Configuración.
-        const dataLimpia=data.filter(d=>d.id!=="auditor");
-        const ord=["admin","coordinador","user","ejecutor","visor"];
+        const dataLimpia=data.filter(d=>!["auditor","user"].includes(d.id));
+        const ord=["admin","coordinador","ejecutor","visor"];
         dataLimpia.sort((a,b)=>{const ai=ord.indexOf(a.id),bi=ord.indexOf(b.id);if(ai>=0&&bi>=0)return ai-bi;if(ai>=0)return -1;if(bi>=0)return 1;return(a.nombre||"").localeCompare(b.nombre||"");});
         setRoles(dataLimpia);
       }
@@ -1633,7 +1632,7 @@ function ChecklistApp() {
   // Solicitante: coordinador/visor/user pueden solicitar por rol; un ejecutor (no Diseñador)
   // solo si tiene la excepción individual "Crear ODT" (permisos.diseno.crear) — ver sección 7 del doc funcional.
   const uPermisoCrearOdt = loggedUser?.permisos?.diseno?.crear===true;
-  const isSolicitante = ["coordinador","visor","user"].includes(role)||(role==="ejecutor"&&uCargo!=="Diseñador"&&uPermisoCrearOdt);
+  const isSolicitante = role==="coordinador"||(role==="ejecutor"&&uCargo!=="Diseñador"&&uPermisoCrearOdt);
   /* ET_FIX_DISENO_VARS_SCOPE_20260615 — variables de rol para módulo Diseño/ODT */
   const isDisenoCargo    = String(uCargo).toLowerCase().trim()==="diseñador"||String(uCargo).toLowerCase().trim()==="disenador";
   const isDisenoAdmin    = role==="admin";
@@ -4483,7 +4482,7 @@ function ChecklistApp() {
         ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>},
     ];
 
-    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},user:{label:"User",c:"#00b5b4",bg:"#e0fafa"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
+    const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
     const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global",solo_lectura:"Solo lectura"};
     const PERMISOS_MODULOS={
       diseno:{label:"Diseño / ODT",acciones:[
@@ -4630,7 +4629,7 @@ function ChecklistApp() {
                 <div style={{marginBottom:10}}>
                   <label style={S.lbl}>ROL *</label>
                   <select value={newUsuario.rol||"ejecutor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))} style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
-                    {roles.filter(r=>r.activo!==false).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
+                    {roles.filter(r=>r.activo!==false&&r.id!=="user").map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
                   </select>
                   <div style={{fontSize:10,color:ROL_CFG_U[newUsuario.rol]?.c||"#8aaabb",marginTop:3}}>{roles.find(r=>r.id===newUsuario.rol)?.desc||""}</div>
                 </div>
@@ -4790,7 +4789,6 @@ function ChecklistApp() {
               <div style={{fontSize:11,color:"#854F0B",marginBottom:10}}>El rol "Auditor" ya no existe en el sistema, pero sigue guardado en Firestore. Esta acción lo corrige de forma permanente: elimina el rol Auditor y reasigna a los usuarios afectados como Ejecutor + cargo "Auditor Trade".</div>
               <button onClick={async()=>{
                 if(roles.some(r=>r.id==="auditor")) await deleteDoc(doc(db,"roles","auditor")).catch(()=>{});
-                if(!roles.some(r=>r.id==="user")) await setDoc(doc(db,"roles","user"),{nombre:"User",desc:"Gestión según módulo",color:"#00b5b4",sistema:true,activo:true}).catch(()=>{});
                 const afectados=usuarios.filter(u=>u.rol==="auditor");
                 for(const u of afectados){
                   await setDoc(doc(db,"usuarios",u.id),{rol:"ejecutor",cargo:u.cargo||"Auditor Trade"},{merge:true}).catch(()=>{});
@@ -4799,7 +4797,7 @@ function ChecklistApp() {
               }} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#854F0B",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Migrar roles antiguos ahora</button>
             </div>
           )}
-                    {roles.map(r=>{
+                    {roles.filter(r=>r.id!=="user").map(r=>{
             const usrCount=usuarios.filter(u=>u.rol===r.id).length;
             const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
             return(
@@ -4893,9 +4891,10 @@ function ChecklistApp() {
                         <span style={{fontSize:12,color:"#1a2f4a"}}>{c.nombre}</span>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <span style={{fontSize:10,color:"#b2bec3"}}>{usuarios.filter(u=>u.cargo===c.nombre).length} usr</span>
-                          <div onClick={async()=>{const cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:x.activo===false}:x);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});}} style={{width:30,height:17,borderRadius:9,background:c.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
+                          <div title={c.activo===false?"Activar cargo":"Inactivar cargo"} onClick={async()=>{const cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:x.activo===false}:x);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});showToast(c.activo===false?"Cargo activado":"Cargo inactivado");}} style={{width:30,height:17,borderRadius:9,background:c.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
                             <div style={{width:13,height:13,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:c.activo===false?2:15,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
                           </div>
+                          <button title="Eliminar cargo inteligente" onClick={async e=>{e.stopPropagation();const asignados=usuarios.filter(u=>u.cargo===c.nombre&&(u.area===a.id||u.area===a.nombre));let cargos;if(asignados.length>0){if(!confirm(`Este cargo tiene ${asignados.length} usuario(s) asignado(s). No se eliminará; quedará inactivo para no romper históricos. ¿Continuar?`))return;cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:false}:x);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});showToast("Cargo inactivado por tener usuarios asignados");}else{if(!confirm("Este cargo no tiene usuarios asignados. Se eliminará de la lista. ¿Continuar?"))return;cargos=(a.cargos||[]).filter((_,xi)=>xi!==ci);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});showToast("Cargo eliminado");}}} style={{padding:"4px 8px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:800}}>Eliminar</button>
                         </div>
                       </div>
                     ))}
@@ -5020,7 +5019,7 @@ function ChecklistApp() {
       {usrTab==="permisos"&&(()=>{
         const modActivo=permisosModActivo||"diseno";
         const modDef=PERMISOS_MODULOS[modActivo];
-        const rolesCols=["admin","coordinador","user","ejecutor","visor"];
+        const rolesCols=["admin","coordinador","ejecutor","visor"];
         return(
         <div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
@@ -6282,7 +6281,7 @@ function ChecklistApp() {
                       <label style={S.lbl}>ROL *</label>
                       <select value={newUsuario.rol||"ejecutor"} onChange={e=>setNewUsuario(p=>({...p,rol:e.target.value}))}
                         style={{...S.inp,cursor:"pointer",borderColor:ROL_CFG_U[newUsuario.rol]?.c||"#e2e8f0",background:ROL_CFG_U[newUsuario.rol]?.bg||"#f8fafc",color:ROL_CFG_U[newUsuario.rol]?.c||"#1a2f4a",fontWeight:600}}>
-                        {roles.filter(r=>r.activo!==false).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
+                        {roles.filter(r=>r.activo!==false&&r.id!=="user").map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}
                       </select>
                       <div style={{fontSize:10,color:ROL_CFG_U[newUsuario.rol]?.c||"#8aaabb",marginTop:3,paddingLeft:4}}>
                         {roles.find(r=>r.id===newUsuario.rol)?.desc||""}
@@ -6418,7 +6417,7 @@ function ChecklistApp() {
                 </div>
               )}
               <div style={{fontSize:10,color:"#8aaabb",marginBottom:8,fontWeight:600,letterSpacing:".04em"}}>ROLES DEL SISTEMA — no eliminables</div>
-              {roles.map(r=>{
+              {roles.filter(r=>r.id!=="user").map(r=>{
                 const usrCount=usuarios.filter(u=>u.rol===r.id).length;
                 const clr=r.color||ROL_CFG_U[r.id]?.c||"#8aaabb";
                 return(
@@ -6519,12 +6518,14 @@ function ChecklistApp() {
                             <span style={{fontSize:12,color:"#1a2f4a"}}>{c.nombre}</span>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
                               <span style={{fontSize:10,color:"#b2bec3"}}>{usuarios.filter(u=>u.cargo===c.nombre).length} usr</span>
-                              <div onClick={async()=>{
+                              <div title={c.activo===false?"Activar cargo":"Inactivar cargo"} onClick={async()=>{
                                 const cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:x.activo===false}:x);
                                 await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});
+                                showToast(c.activo===false?"Cargo activado":"Cargo inactivado");
                               }} style={{width:30,height:17,borderRadius:9,background:c.activo===false?"#e2e8f0":"#00b5b4",position:"relative",cursor:"pointer",flexShrink:0}}>
                                 <div style={{width:13,height:13,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:c.activo===false?2:15,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
                               </div>
+                              <button title="Eliminar cargo inteligente" onClick={async e=>{e.stopPropagation();const asignados=usuarios.filter(u=>u.cargo===c.nombre&&(u.area===a.id||u.area===a.nombre));let cargos;if(asignados.length>0){if(!confirm(`Este cargo tiene ${asignados.length} usuario(s) asignado(s). No se eliminará; quedará inactivo para no romper históricos. ¿Continuar?`))return;cargos=(a.cargos||[]).map((x,xi)=>xi===ci?{...x,activo:false}:x);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});showToast("Cargo inactivado por tener usuarios asignados");}else{if(!confirm("Este cargo no tiene usuarios asignados. Se eliminará de la lista. ¿Continuar?"))return;cargos=(a.cargos||[]).filter((_,xi)=>xi!==ci);await setDoc(doc(db,"areas",a.id),{cargos},{merge:true});showToast("Cargo eliminado");}}} style={{padding:"4px 8px",borderRadius:8,border:"1px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:800}}>Eliminar</button>
                             </div>
                           </div>
                         ))}
@@ -8177,7 +8178,7 @@ function ChecklistApp() {
       {modulo===0&&tab===5&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {modulo===0&&tab===6&&isAuditor&&(()=>{ if(cfgTab!==3) setTimeout(()=>setCfgTab(3),0); return renderConfig({hideTabs:true}); })()}
       {/* FIX_DISENO_ODT_EVIDENCIAS_TRACKING_20260606 — Módulo Diseño/ODT tabs 7-9 */}
-      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","user","ejecutor","visor"].includes(role))&&(()=>{
+      {modulo===0&&(tab===7||tab===8||tab===9)&&(["admin","coordinador","ejecutor","visor"].includes(role))&&(()=>{
         const TIPOS_BASE=[
           {id:"pop",label:"Material POP",hh:3,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e17055" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>},
           {id:"cat",label:"Catálogo",hh:8,ico:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f6a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>},
