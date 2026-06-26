@@ -219,6 +219,26 @@ function isValidCorpEmail(value){
   const email=sanitizeEmailInput(value);
   return !email || /^[a-z0-9._%+-]+@corporacionvega\.pe$/.test(email);
 }
+
+function isUsuarioJefeZonal(u){
+  // Tiendas 2.0: el responsable zonal NO es un rol separado.
+  // Se determina por cargo zonal + rol operativo o permiso funcional de solicitante/crear ODT.
+  // No incluir Admin general, Visor, Diseñador ni ejecutores sin cargo zonal.
+  if(!u || u.activo===false) return false;
+  const rol=String(u.rol||"").toLowerCase().trim();
+  const cargo=normalizeTxt(u.cargo||u.Cargo||u.puesto||"");
+  const esCargoZonal=cargo.includes("JEFE ZONAL") || cargo.includes("ZONAL");
+  const esDisenador=cargo.includes("DISEÑADOR") || cargo.includes("DISENADOR");
+  const tieneCapacidadSolicitante=
+    u.permisos?.diseno?.crear===true ||
+    u.permisos?.odt?.crear===true ||
+    u.permisos?.tiendas?.responsable===true ||
+    u.capacidades?.solicitante===true ||
+    u.funciones?.solicitante===true;
+  const esRolOperativo=rol==="ejecutor" || rol==="coordinador" || rol==="user";
+  return esCargoZonal && !esDisenador && (esRolOperativo || tieneCapacidadSolicitante);
+}
+
 function tiendaYaAperturada(ti,fechaRef){
   // Tiendas 2.0: una tienda no debe afectar evidencia, auditoría ni reportes antes de su fecha de apertura.
   // Si no tiene fecha registrada, se asume habilitada (retrocompatibilidad con tiendas ya existentes).
@@ -934,8 +954,8 @@ function TiendaEditModal({initial,usuarios,S,onClose,onSave}){
             if(u) patch({_zonalUserId:uid,jefeZonalNombre:u.nombre,emailJefeZonal:u.email||""});
           }} style={inputStyle({padding:"9px 12px"})}>
             <option value="__manual__">— Sin asignar —</option>
-            {usuarios.filter(u=>["admin","coordinador","ejecutor","visor"].includes(u.rol)&&u.activo!==false).map(u=>(
-              <option key={u.id} value={u.id}>{u.nombre} · {u.rol}{u.zona?` · ${u.zona}`:""}</option>
+            {usuarios.filter(isUsuarioJefeZonal).map(u=>(
+              <option key={u.id} value={u.id}>{u.nombre} · {u.cargo||u.rol}{u.zona?` · ${u.zona}`:""}</option>
             ))}
           </select>
         </TiendaEditField>
@@ -6652,11 +6672,7 @@ function ChecklistApp() {
         const FMT_ICO={Mayorista:IcoMayorista,Supermayorista:IcoSupermayorista,Market:IcoMarket};
         const FMT_LABELS={Mayorista:"Mayorista",Supermayorista:"Supermayorista",Market:"Market"};
         const zonasDisponibles=[...new Set((tiendas||[]).map(getZonaIdTienda).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"es",{numeric:true}));
-        const zonalesUsuarios=(usuarios||[]).filter(u=>u?.activo!==false && (
-          String(u?.cargo||"").toLowerCase().includes("zonal") ||
-          String(u?.rol||"").toLowerCase().includes("coordinador") ||
-          String(u?.rol||"").toLowerCase().includes("admin")
-        ));
+        const zonalesUsuarios=(usuarios||[]).filter(isUsuarioJefeZonal);
         const fmtActual=fmtTab||"Mayorista";
         const PILL_ON ={padding:"10px 22px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:800,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.25)",display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
         const PILL_OFF={padding:"10px 22px",borderRadius:50,border:"1.5px solid #D1D5DB",cursor:"pointer",background:"#fff",color:"#5a7a9a",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:8,transition:"all .15s",whiteSpace:"nowrap"};
@@ -6789,7 +6805,7 @@ function ChecklistApp() {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",display:"flex",gap:10,alignItems:"center",marginBottom:12}}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00b5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>Coordenadas registradas</div><div style={{padding:14,border:"1px solid #e2e8f0",borderRadius:12,background:"#f8fafc",color:"#5a7a9a",fontSize:13,lineHeight:1.5,marginBottom:14}}>Las coordenadas se registran manualmente desde Google Maps. La app valida formato y rango.</div><div style={{height:280,border:"1px solid #e2e8f0",borderRadius:14,background:"linear-gradient(#e8f4fd 1px,transparent 1px),linear-gradient(90deg,#e8f4fd 1px,transparent 1px)",backgroundSize:"46px 46px",position:"relative",overflow:"hidden"}}>{tiendas.filter(t=>Number.isFinite(Number(t.lat))&&Number.isFinite(Number(t.lng))).slice(0,18).map((t,i)=><span key={t.id} style={{position:"absolute",left:`${14+(i*19)%72}%`,top:`${18+(i*31)%68}%`,background:"#fff",border:"1px solid #e2e8f0",borderRadius:999,padding:"6px 10px",fontSize:11,fontWeight:900,color:"#1a2f4a",boxShadow:"0 4px 12px rgba(26,47,74,.08)"}}>⌖ {t.n}</span>)}</div></div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Pendientes / validación</div>{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).slice(0,12).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #f0f4f8",padding:"10px 0"}}><div><b style={{color:"#1a2f4a"}}>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>#{t.idTienda||"s/id"} · {t.dist||"sin distrito"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"8px 12px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar coords</button></div>)}{tiendas.filter(t=>!Number.isFinite(Number(t.lat))||!Number.isFinite(Number(t.lng))).length===0&&<div style={{fontSize:12,color:"#00b894",fontWeight:800}}>Todas las tiendas tienen coordenadas válidas.</div>}</div></div>
             )}
             {tpTab==="responsables"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Jefes zonales desde Usuarios</div>{zonalesUsuarios.map(u=><div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8"}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontWeight:900}}>{String(u.nombre||"U").split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{u.nombre}</b><div style={{fontSize:11,color:"#8aaabb"}}>{u.cargo||u.rol} · {u.email||"sin correo"}</div></div></div>)}{zonalesUsuarios.length===0&&<div style={{fontSize:12,color:"#8aaabb"}}>Aún no hay usuarios con cargo Jefe Zonal o rol Coordinador.</div>}</div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Asignación por tienda</div>{tiendas.slice(0,14).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",gap:10,borderBottom:"1px solid #f0f4f8",padding:"9px 0"}}><div><b>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>{t.jefeZonalNombre||"sin zonal"} · {t.gerenteTienda||"sin jefe tienda"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar</button></div>)}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Jefes zonales desde Usuarios</div>{zonalesUsuarios.map(u=><div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8"}}><span style={{width:34,height:34,borderRadius:"50%",background:"#6C6EF5",color:"#fff",display:"grid",placeItems:"center",fontWeight:900}}>{String(u.nombre||"U").split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{u.nombre}</b><div style={{fontSize:11,color:"#8aaabb"}}>{u.cargo||u.rol} · {u.email||"sin correo"}</div></div></div>)}{zonalesUsuarios.length===0&&<div style={{fontSize:12,color:"#8aaabb"}}>Aún no hay usuarios activos con cargo Jefe Zonal/Zonal y permiso operativo.</div>}</div><div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Asignación por tienda</div>{tiendas.slice(0,14).map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",gap:10,borderBottom:"1px solid #f0f4f8",padding:"9px 0"}}><div><b>Vega {nomTienda(t)}</b><div style={{fontSize:11,color:"#8aaabb"}}>{t.jefeZonalNombre||"sin zonal"} · {t.gerenteTienda||"sin jefe tienda"}</div></div><button onClick={()=>setTiendaEditModal({...t,_zonalUserId:t.usuarioZonalId||"__manual__"})} style={{padding:"7px 10px",borderRadius:10,border:"1px solid #c8d8e8",background:"#fff",fontWeight:800,color:"#5a7a9a"}}>Editar</button></div>)}</div></div>
             )}
             {tpTab==="historial"&&(
               <div style={{...S.card,padding:20}}><div style={{fontSize:18,fontWeight:900,color:"#1a2f4a",marginBottom:12}}>Historial de cambios</div>{(tiendaHistorial||[]).length===0&&<div style={{fontSize:12,color:"#8aaabb",padding:14,background:"#f8fafc",borderRadius:12}}>Aún no hay cambios registrados en esta sesión.</div>}{(tiendaHistorial||[]).map(h=><div key={h.id} style={{display:"grid",gridTemplateColumns:"180px 1fr 180px",gap:10,padding:"10px 0",borderBottom:"1px solid #f0f4f8",fontSize:12}}><span style={{color:"#8aaabb"}}>{new Date(h.fecha).toLocaleString()}</span><b style={{color:"#1a2f4a"}}>{h.accion} · {h.tienda}</b><span style={{color:"#5a7a9a"}}>{h.usuario}</span></div>)}</div>
