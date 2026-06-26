@@ -3923,7 +3923,7 @@ function ChecklistApp() {
           const _dsRef = semsVis2.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d))).find(d=>d<=hoyF)||hoyF;
           const AR0 = actsH2[0] ? getRangoActivo(actsH2[0].id, _dsRef) : {c100:"08:30",c80:"09:30",c60:"10:30"};
 
-          let gDisp=0,gOro=0,gPlata=0,gFuera=0,gPend=0;
+          let gDisp=0,gOro=0,gPlata=0,gBronce=0,gFuera=0,gPend=0;
           let oroMin="99:99",oroMax="00:00",plataMin="99:99",plataMax="00:00";
           let bronceMin="99:99",bronceMax="00:00",fueraMin="99:99",fueraMax="00:00";
 
@@ -3974,7 +3974,7 @@ function ChecklistApp() {
                 });
               });
             });
-            gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gFuera+=fFuera;gPend+=fPend;
+            gDisp+=fDisp;gOro+=fOro;gPlata+=fPlata;gBronce+=fBronce;gFuera+=fFuera;gPend+=fPend;
             return {fmt,nd:fTotal,fDisp,fOro,fPlata,fBronce,fFuera,fPend,fExc,
               fOroMin,fOroMax,fPlataMin,fPlataMax,
               fc:FMT[fmt],icon:<FmtIcon fmt={fmt} size={18}/>};
