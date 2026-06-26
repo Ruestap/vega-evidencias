@@ -1104,7 +1104,7 @@ function ChecklistApp() {
   const NU_INIT={nombre:"",rol:"ejecutor",tipoDoc:"dni",dni:"",email:"",telefono:"",whatsapp:"",area:"",cargo:"",tiendaId:"",alcance:"",permisos:{},editId:null};
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
-  const [newT,    setNewT]    = useState({n:"",f:"Market"});
+  const [newT,    setNewT]    = useState({n:"",f:"Market",fechaApertura:todayStr()});
   const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc"});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
@@ -6675,7 +6675,7 @@ function ChecklistApp() {
           try{addDoc(collection(db,"tiendas_historial"),entry);}catch(e){console.error("tiendas_historial write failed:",e?.code||e?.message||"unknown");}
         };
         const validarCoords=(lat,lng)=>Number.isFinite(Number(lat))&&Number(lat)>=-90&&Number(lat)<=90&&Number.isFinite(Number(lng))&&Number(lng)>=-180&&Number(lng)<=180;
-        const resetNewT=()=>setNewT({n:"",f:"Market",idTienda:"",activa:true,zonaId:"",dir:"",dist:"",lat:"",lng:"",maps:"",emailTienda:"",gerenteTienda:"",dniGerente:"",celular:"",jefeZonalNombre:"",emailJefeZonal:"",usuarioZonalId:""});
+        const resetNewT=()=>setNewT({n:"",f:"Market",idTienda:"",fechaApertura:todayStr(),activa:true,zonaId:"",dir:"",dist:"",lat:"",lng:"",maps:"",emailTienda:"",gerenteTienda:"",dniGerente:"",celular:"",jefeZonalNombre:"",emailJefeZonal:"",usuarioZonalId:""});
         const activarInactivar=(ti)=>setTiendas(p=>{const np=p.map(x=>x.id===ti.id?{...x,activa:!x.activa,actualizadoEn:new Date().toISOString(),actualizadoPor:uName||uDni||"admin"}:x);saveConfig({tiendas:np});return np;});
         const tiendaTieneHistorial=(ti)=>{
           // Revisa histórico por id interno, ID_TIENDA y nombre para evitar borrado físico
@@ -6728,7 +6728,7 @@ function ChecklistApp() {
           if((newT.lat||newT.lng) && !validarCoords(newT.lat,newT.lng)) return showToast("Coordenadas inválidas");
           const zonal=zonalesUsuarios.find(u=>u.id===newT.usuarioZonalId);
           const nt={
-            id:"t"+Date.now(),idTienda:idT,n:nombre.toUpperCase(),f:newT.f||fmtActual,activa:newT.activa!==false,
+            id:"t"+Date.now(),idTienda:idT,n:nombre.toUpperCase(),f:newT.f||fmtActual,fechaApertura:newT.fechaApertura||todayStr(),activa:newT.activa!==false,
             zonaId:sanitizeTextInput(newT.zonaId,20),dir:sanitizeTextInput(newT.dir,SAFE_LIMITS.longText),dist:sanitizeTextInput(newT.dist,80),
             lat:newT.lat===""?"":Number(String(newT.lat).replace(",",".")),lng:newT.lng===""?"":Number(String(newT.lng).replace(",",".")),maps:sanitizeTextInput(newT.maps,SAFE_LIMITS.longText),
             emailTienda:sanitizeEmailInput(newT.emailTienda),email:sanitizeEmailInput(newT.emailTienda),
@@ -6777,7 +6777,7 @@ function ChecklistApp() {
             )}
             {tpTab==="nueva"&&(
               <div style={{background:"#fff",borderRadius:"0 14px 14px 14px",padding:20,border:"1px solid #E2E8F0",borderTop:"none"}}>
-                <div style={{display:"grid",gridTemplateColumns:"150px 1fr 210px 180px",gap:10,marginBottom:10}}><div><label style={S.lbl}>ID_TIENDA *</label><input value={newT.idTienda||""} onChange={e=>setNewT(p=>({...p,idTienda:sanitizeDigits(e.target.value,6)}))} style={S.inp}/></div><div><label style={S.lbl}>Nombre *</label><input value={newT.n||""} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Formato</label><select value={newT.f||"Market"} onChange={e=>setNewT(p=>({...p,f:e.target.value}))} style={S.inp}><option>Mayorista</option><option>Supermayorista</option><option>Market</option></select></div><div><label style={S.lbl}>Estado</label><select value={newT.activa===false?"Inactiva":"Activa"} onChange={e=>setNewT(p=>({...p,activa:e.target.value==="Activa"}))} style={S.inp}><option>Activa</option><option>Inactiva</option></select></div></div>
+                <div style={{display:"grid",gridTemplateColumns:"150px 1fr 180px 210px 160px",gap:10,marginBottom:10}}><div><label style={S.lbl}>ID_TIENDA *</label><input value={newT.idTienda||""} onChange={e=>setNewT(p=>({...p,idTienda:sanitizeDigits(e.target.value,6)}))} style={S.inp}/></div><div><label style={S.lbl}>Nombre *</label><input value={newT.n||""} onChange={e=>setNewT(p=>({...p,n:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Fecha de apertura</label><input type="date" value={newT.fechaApertura||todayStr()} onChange={e=>setNewT(p=>({...p,fechaApertura:e.target.value||todayStr()}))} style={S.inp}/></div><div><label style={S.lbl}>Formato</label><select value={newT.f||"Market"} onChange={e=>setNewT(p=>({...p,f:e.target.value}))} style={S.inp}><option>Mayorista</option><option>Supermayorista</option><option>Market</option></select></div><div><label style={S.lbl}>Estado</label><select value={newT.activa===false?"Inactiva":"Activa"} onChange={e=>setNewT(p=>({...p,activa:e.target.value==="Activa"}))} style={S.inp}><option>Activa</option><option>Inactiva</option></select></div></div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 180px 140px 140px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Dirección</label><input value={newT.dir||""} onChange={e=>setNewT(p=>({...p,dir:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Distrito</label><input value={newT.dist||""} onChange={e=>setNewT(p=>({...p,dist:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Latitud</label><input value={newT.lat||""} onChange={e=>setNewT(p=>({...p,lat:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Longitud</label><input value={newT.lng||""} onChange={e=>setNewT(p=>({...p,lng:e.target.value}))} placeholder="" style={S.inp}/></div></div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 170px",gap:10,marginBottom:10}}><div><label style={S.lbl}>Link Google Maps</label><input value={newT.maps||""} onChange={e=>setNewT(p=>({...p,maps:e.target.value}))} placeholder="" style={S.inp}/></div><div><label style={S.lbl}>Zona</label><input value={newT.zonaId||""} onChange={e=>setNewT(p=>({...p,zonaId:e.target.value}))} placeholder="" style={S.inp}/></div></div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 140px 160px 1fr",gap:10,marginBottom:10}}><div><label style={S.lbl}>Jefe de tienda</label><input value={newT.gerenteTienda||""} onChange={e=>setNewT(p=>({...p,gerenteTienda:e.target.value}))} style={S.inp}/></div><div><label style={S.lbl}>DNI</label><input value={newT.dniGerente||""} onChange={e=>setNewT(p=>({...p,dniGerente:sanitizeDigits(e.target.value,8)}))} style={S.inp}/></div><div><label style={S.lbl}>Teléfono</label><input value={newT.celular||""} onChange={e=>setNewT(p=>({...p,celular:sanitizeDigits(e.target.value,12)}))} style={S.inp}/></div><div><label style={S.lbl}>Email tienda</label><input value={newT.emailTienda||""} onChange={e=>setNewT(p=>({...p,emailTienda:e.target.value}))} style={S.inp}/></div></div>
