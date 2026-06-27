@@ -5263,8 +5263,6 @@ function ChecklistApp() {
           {id:"auditoria",  label:"Auditoría",  Ico:IcoAudCfg},
           {id:"diseno",     label:"Diseño",     Ico:IcoDiseñoCfg},
         ];
-        const TAB_PILL_A={padding:"9px 20px",borderRadius:50,border:"none",cursor:"pointer",background:"#6C6EF5",color:"#fff",fontWeight:700,fontSize:14,boxShadow:"0 2px 8px rgba(108,110,245,.3)",display:"flex",alignItems:"center",gap:8,transition:"all .15s"};
-
         return(
           <div>
             {/* ── Botón "Panel de control" con dropdown ── */}
@@ -5316,25 +5314,51 @@ function ChecklistApp() {
               )}
             </div>
 
-            {/* Línea separadora */}
-            {cfgMod&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
-
-            {/* ── Pill activa del módulo seleccionado ── */}
-            {cfgMod&&(
-              <div style={{display:"flex",gap:8,marginBottom:0,paddingTop:12,flexWrap:"wrap"}}>
-                {MODS.map(m=>{
-                  const active=cfgMod===m.id;
-                  if(!active) return null;
-                  return(
-                    <button key={m.id} onClick={()=>{setCfgMod(null);setDdOpen(false);}}
-                      style={TAB_PILL_A}>
-                      <m.Ico active={true}/>
-                      {m.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {/* Contexto funcional del módulo activo: evita repetir el nombre del dropdown */}
+            {cfgMod&&(()=>{
+              const m=MODS.find(x=>x.id===cfgMod);
+              const ctx={
+                evidencias:{
+                  title:"Reglas de Evidencias",
+                  desc:"Controla actividades, rangos de puntaje y cortes de supervisión sin afectar históricos.",
+                  meta:[
+                    `${(acts||[]).filter(a=>a.activa!==false).length} actividades activas`,
+                    cfgTab===1?"Sección: Actividades":cfgTab===4?"Sección: Rangos Día":"Sección: Cortes",
+                    "Pausar conserva registros históricos"
+                  ]
+                },
+                auditoria:{
+                  title:"Reglas de Auditoría",
+                  desc:"Administra score, tareas y rutas vigentes manteniendo versionado e historial operativo.",
+                  meta:[
+                    `${(modulosAud||[]).filter(x=>x.activo!==false).length} módulos activos`,
+                    cfgAudTab==="score"?"Sección: Score":cfgAudTab==="tareas"?"Sección: Tareas":"Sección: Rutas",
+                    "Cambios no deben reescribir auditorías pasadas"
+                  ]
+                },
+                diseno:{
+                  title:"Reglas de Diseño / ODT",
+                  desc:"Configura tipos de trabajo, materiales, equipo, aprobaciones y notificaciones del flujo ODT.",
+                  meta:[
+                    `${(odtTiposBase||[]).length+(odtTiposExtra||[]).length} tipos de trabajo`,
+                    `${(odtMateriales||[]).length+(odtMaterialesExtra||[]).length} materiales configurados`,
+                    "Solicitante se define por permisos, no por rol"
+                  ]
+                }
+              }[cfgMod];
+              return(
+                <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:16,padding:"16px 18px",margin:"0 0 12px",boxShadow:"0 8px 22px rgba(15,27,45,.04)",display:"grid",gridTemplateColumns:"auto 1fr",gap:14,alignItems:"center"}}>
+                  <div style={{width:44,height:44,borderRadius:14,background:"#EEEFFE",display:"grid",placeItems:"center",color:"#6C6EF5"}}>{m&&<m.Ico active={true}/>}</div>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:900,color:"#1a2f4a",marginBottom:4}}>{ctx.title}</div>
+                    <div style={{fontSize:12,color:"#6f8cab",lineHeight:1.45,marginBottom:9}}>{ctx.desc}</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {ctx.meta.map(x=><span key={x} style={{fontSize:10,fontWeight:800,color:"#5a7a9a",background:"#f8fafc",border:"1px solid #E2E8F0",borderRadius:999,padding:"5px 9px"}}>{x}</span>)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── PASO 2a: Evidencias → subpestañas ── */}
             {cfgMod==="evidencias"&&(()=>{
@@ -6112,7 +6136,7 @@ function ChecklistApp() {
               const cfgResumen=[
                 {n:String((acts||[]).filter(a=>a.activa!==false).length),t:"Actividades activas",s:"Evidencias",ico:<IcoEvidenciasTab active={true}/>},
                 {n:String((modulosAud||[]).filter(m=>m.activo!==false).length),t:"Módulos auditoría",s:"Score / tareas",ico:<IcoAuditoriaTab active={true}/>},
-                {n:String(((odtMaterialesExtra||[]).length)+(odtTiposExtra||[]).length),t:"Config. Diseño",s:"Tipos y materiales extra",ico:<IcoDisenoTab active={true}/>},
+                {n:String(((odtMaterialesExtra||[]).length)+(odtTiposExtra||[]).length),t:"Config. Diseño",s:"Tipos y materiales extra",ico:<IcoDiseñoCfg active={true}/>},
                 {n:"3",t:"Pendientes integración",s:"Tiendas · Usuarios · Gantt",ico:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-6"/><path d="M6 20V10"/><path d="M18 20V4"/></svg>},
               ];
               return(
