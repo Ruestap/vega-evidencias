@@ -6124,24 +6124,40 @@ function ChecklistApp() {
               );
             })()}
 
-            {/* ── Estado vacío cuando no hay módulo seleccionado ── */}
-            {!cfgMod&&(
-              <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",
-                padding:"48px 20px",textAlign:"center",marginTop:8}}>
-                <svg width="56" height="56" viewBox="0 0 64 64" fill="none"
-                  style={{marginBottom:12}} aria-hidden="true">
-                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
-                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
-                  <rect x="16" y="34" width="6" height="4" rx="2" fill="#FDB347"/>
-                  <path d="M6 42h52" stroke="#E8973A" strokeWidth="1.5"/>
-                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
-                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
-                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
-                </svg>
-                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
-                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
-              </div>
-            )}
+            {/* ── Resumen funcional cuando no hay módulo seleccionado ── */}
+            {!cfgMod&&(()=>{
+              const cfgResumen=[
+                {n:String((acts||[]).filter(a=>a.activa!==false).length),t:"Actividades activas",s:"Evidencias",ico:<IcoEvidenciasTab active={true}/>},
+                {n:String((modulosAud||[]).filter(m=>m.activo!==false).length),t:"Módulos auditoría",s:"Score / tareas",ico:<IcoAuditoriaTab active={true}/>},
+                {n:String(((odtMaterialesExtra||[]).length)+(odtTiposExtra||[]).length),t:"Config. Diseño",s:"Tipos y materiales extra",ico:<IcoDiseñoCfg active={true}/>},
+                {n:"3",t:"Pendientes integración",s:"Tiendas · Usuarios · Gantt",ico:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-6"/><path d="M6 20V10"/><path d="M18 20V4"/></svg>},
+              ];
+              return(
+                <div style={{background:"#fff",borderRadius:16,border:"1px solid #E2E8F0",padding:"22px 24px",marginTop:8,boxShadow:"0 10px 26px rgba(15,27,45,.04)"}}>
+                  <div style={{fontSize:11,fontWeight:800,color:"#8aaabb",letterSpacing:".08em",textTransform:"uppercase",textAlign:"center",marginBottom:22}}>Resumen de configuración</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+                    {cfgResumen.map((x,i)=>(
+                      <div key={x.t} style={{background:"#f8fafc",border:"1px solid #edf2f7",borderRadius:14,minHeight:130,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+                        <div style={{fontSize:28,fontWeight:900,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",marginBottom:18}}>{x.n}</div>
+                        <div style={{fontSize:13,color:"#86a0b8",textAlign:"center",fontWeight:600}}>{x.t}</div>
+                        <div style={{fontSize:10,color:"#9db1c6",textAlign:"center",marginTop:8}}>{x.s}</div>
+                        <div style={{position:"absolute",right:18,top:20,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",opacity:.95}}>{x.ico}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginTop:16,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
+                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Uso recomendado</div>
+                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Selecciona una sección desde el dropdown superior solo cuando necesites cambiar reglas operativas.</div>
+                    </div>
+                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Regla de arquitectura</div>
+                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Configuración define reglas; Usuarios define roles, cargos, alcances y permisos por acción.</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
