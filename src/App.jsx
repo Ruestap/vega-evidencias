@@ -4483,7 +4483,7 @@ function ChecklistApp() {
     ];
 
     const ROL_CFG_U={admin:{label:"Admin",c:"#f6a623",bg:"#fff8ec"},coordinador:{label:"Coordinador",c:"#6C6EF5",bg:"#EEEFFE"},ejecutor:{label:"Ejecutor",c:"#0984e3",bg:"#e6f1fb"},visor:{label:"Visor",c:"#8aaabb",bg:"#f0f4f8"}};
-    const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global",solo_lectura:"Solo lectura"};
+    const ALCANCE_LABELS={odt_asignadas:"ODT asignadas",area:"Área",zona:"Zona",tiendas_asignadas:"Tiendas asignadas",global:"Global"};
     const PERMISOS_MODULOS={
       diseno:{label:"Diseño / ODT",acciones:[
         {id:"crear",label:"Crear ODT"},{id:"verTodo",label:"Ver todas las ODT"},{id:"verAsignadas",label:"Ver ODT asignadas/propias"},
@@ -4521,9 +4521,9 @@ function ChecklistApp() {
           <button
             onClick={()=>setDdUsrOpen(o=>!o)}
             style={{display:"inline-flex",alignItems:"center",gap:8,padding:"8px 14px",
-              borderRadius:20,border:ddUsrOpen||usrTab?"1.5px solid #6C6EF5":"1.5px solid #E2E8F0",
+              borderRadius:20,border:"1.5px solid #E2E8F0",borderBottom:"2px solid #6C6EF5",
               background:"#fff",cursor:"pointer",fontSize:13,fontWeight:600,
-              fontFamily:"inherit",color:ddUsrOpen||usrTab?"#6C6EF5":"#1a2f4a",transition:"all .15s"}}>
+              fontFamily:"inherit",color:"#5a7a9a",transition:"all .15s",boxShadow:ddUsrOpen?"0 8px 24px rgba(15,27,45,.10)":"none"}}>
             {/* ••• icon */}
             <span style={{display:"flex",gap:3,alignItems:"center"}}>
               {[0,1,2].map(i=>(<span key={i} style={{width:4,height:4,borderRadius:"50%",background:"currentColor",display:"block"}}/>))}
@@ -6108,47 +6108,39 @@ function ChecklistApp() {
             })()}
 
             {/* ── Estado inicial funcional de Configuración ── */}
-            {!cfgMod&&(
-              <div style={{background:"#fff",borderRadius:16,border:"1px solid #E2E8F0",padding:"22px",marginTop:8,boxShadow:"0 10px 26px rgba(15,27,45,.04)"}}>
-                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:18,marginBottom:18,flexWrap:"wrap"}}>
-                  <div style={{maxWidth:680}}>
-                    <div style={{fontSize:11,fontWeight:800,color:"#8aaabb",letterSpacing:".08em",textTransform:"uppercase",marginBottom:7}}>Centro de configuración</div>
-                    <div style={{fontSize:22,fontWeight:800,color:"#0f1b2d",lineHeight:1.18}}>Panel de control del sistema</div>
-                    <div style={{fontSize:13,color:"#6f8cab",marginTop:7,lineHeight:1.55}}>Administra parámetros que afectan la operación diaria sin tocar código: evidencias, auditoría, diseño y módulos que se integrarán después. Selecciona una sección desde el dropdown superior.</div>
+            {!cfgMod&&(()=>{
+              const cfgResumen=[
+                {n:String((acts||[]).filter(a=>a.activa!==false).length),t:"Actividades activas",s:"Evidencias",ico:<IcoEvidenciasTab active={true}/>},
+                {n:String((modulosAud||[]).filter(m=>m.activo!==false).length),t:"Módulos auditoría",s:"Score / tareas",ico:<IcoAuditoriaTab active={true}/>},
+                {n:String(((odtMaterialesExtra||[]).length)+(odtTiposExtra||[]).length),t:"Config. Diseño",s:"Tipos y materiales extra",ico:<IcoDisenoTab active={true}/>},
+                {n:"3",t:"Pendientes integración",s:"Tiendas · Usuarios · Gantt",ico:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-6"/><path d="M6 20V10"/><path d="M18 20V4"/></svg>},
+              ];
+              return(
+                <div style={{background:"#fff",borderRadius:16,border:"1px solid #E2E8F0",padding:"22px 24px",marginTop:8,boxShadow:"0 10px 26px rgba(15,27,45,.04)"}}>
+                  <div style={{fontSize:11,fontWeight:800,color:"#8aaabb",letterSpacing:".08em",textTransform:"uppercase",textAlign:"center",marginBottom:22}}>Resumen de configuración</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+                    {cfgResumen.map((x,i)=>(
+                      <div key={x.t} style={{background:"#f8fafc",border:"1px solid #edf2f7",borderRadius:14,minHeight:130,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+                        <div style={{fontSize:28,fontWeight:900,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",marginBottom:18}}>{x.n}</div>
+                        <div style={{fontSize:13,color:"#86a0b8",textAlign:"center",fontWeight:600}}>{x.t}</div>
+                        <div style={{fontSize:10,color:"#9db1c6",textAlign:"center",marginTop:8}}>{x.s}</div>
+                        <div style={{position:"absolute",right:18,top:20,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",opacity:.95}}>{x.ico}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{background:"linear-gradient(135deg,#E9FDFC,#F5F4FF)",border:"1px solid #DCEBFF",borderRadius:14,padding:"13px 15px",minWidth:230}}>
-                    <div style={{fontSize:11,fontWeight:800,color:"#0f1b2d",marginBottom:5}}>Regla de arquitectura</div>
-                    <div style={{fontSize:11,color:"#5a7a9a",lineHeight:1.45}}>Configuración define reglas. Usuarios y permisos definen quién puede aplicarlas.</div>
-                  </div>
-                </div>
-
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
-                  {MODS.map(m=>(
-                    <button key={m.id} onClick={()=>{setCfgMod(m.id);setDdOpen(false);if(m.id==="evidencias")setCfgTab(1);}}
-                      style={{textAlign:"left",background:"#f8fafc",border:"1px solid #E2E8F0",borderRadius:14,padding:"16px",cursor:"pointer",fontFamily:"inherit",display:"flex",gap:12,alignItems:"flex-start",transition:"all .15s"}}>
-                      <span style={{width:38,height:38,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",background:"#fff",border:"1px solid #E2E8F0",color:"#6C6EF5",flex:"0 0 auto"}}><m.Ico active={true}/></span>
-                      <span style={{display:"block"}}>
-                        <span style={{display:"block",fontSize:14,fontWeight:800,color:"#0f1b2d",marginBottom:4}}>{m.label}</span>
-                        <span style={{display:"block",fontSize:11,color:"#6f8cab",lineHeight:1.45}}>{m.id==="evidencias"?"Actividades, rangos del día, cortes y reglas de puntaje.":m.id==="auditoria"?"Score, tareas, rutas y configuración vigente sin tocar históricos.":"Tipos de trabajo, materiales, reglas ODT y flujo de aprobación."}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{marginTop:14,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
-                  {[
-                    {t:"Tiendas 2.0",d:"Formato, apertura, responsables, coordenadas e historial."},
-                    {t:"Usuarios",d:"Roles, cargos, alcances y permisos por acción."},
-                    {t:"Integraciones",d:"Espacio reservado para Gantt/Actividades y módulos futuros."},
-                  ].map(x=>(
-                    <div key={x.t} style={{border:"1px dashed #D7E3F0",borderRadius:13,padding:"13px 14px",background:"#fff"}}>
-                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:4}}>{x.t}</div>
-                      <div style={{fontSize:11,color:"#7b96b2",lineHeight:1.4}}>{x.d}</div>
+                  <div style={{marginTop:16,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
+                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Uso recomendado</div>
+                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Selecciona una sección desde el dropdown superior solo cuando necesites cambiar reglas operativas.</div>
                     </div>
-                  ))}
+                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Regla de arquitectura</div>
+                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Configuración define reglas; Usuarios define roles, cargos, alcances y permisos por acción.</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         );
       })()}
