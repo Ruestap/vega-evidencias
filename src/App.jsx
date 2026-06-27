@@ -2721,7 +2721,6 @@ function ChecklistApp() {
                               const auditor=rv?.evidencias?.[0]?.auditor||null;
                               const anulado=rv?.anulado||false;
                               const hoyC=todayStr();
-                              const enPasado=ds<=hoyC;
                               const docId=rKey(ds,tr.id,a.id).replace(/\|/g,"--");
                               const docIds=(regs[docId]||regs[rKey(ds,tr.id,a.id)])?[{docId,docData:regs[docId]||regs[rKey(ds,tr.id,a.id)],fecha:ds,actividadId:a.id}]:[];
                               const menuId=`ctx-${tr.id}-${ds}-${a.id}`;
@@ -4524,7 +4523,7 @@ function ChecklistApp() {
               borderRadius:20,border:"1.5px solid #E2E8F0",borderBottom:"2px solid #6C6EF5",
               background:"#fff",cursor:"pointer",fontSize:13,fontWeight:600,
               fontFamily:"inherit",color:"#5a7a9a",transition:"all .15s",boxShadow:ddUsrOpen?"0 8px 24px rgba(15,27,45,.10)":"none"}}>
-            {/* ••• icon */}
+            {/* ícono ··· */}
             <span style={{display:"flex",gap:3,alignItems:"center"}}>
               {[0,1,2].map(i=>(<span key={i} style={{width:4,height:4,borderRadius:"50%",background:"currentColor",display:"block"}}/>))}
             </span>
@@ -5332,7 +5331,7 @@ function ChecklistApp() {
                   desc:"Administra score, tareas y rutas vigentes manteniendo versionado e historial operativo.",
                   meta:[
                     `${(modulosAud||[]).filter(x=>x.activo!==false).length} módulos activos`,
-                    cfgAudTab==="score"?"Sección: Score":cfgAudTab==="tareas"?"Sección: Tareas":"Sección: Rutas",
+                    audCfgTab==="score"?"Sección: Score":audCfgTab==="tareas"?"Sección: Tareas":"Sección: Rutas",
                     "Cambios no deben reescribir auditorías pasadas"
                   ]
                 },
@@ -6786,7 +6785,6 @@ function ChecklistApp() {
           setTiendas(p=>{const np=[...p,nt];saveConfig({tiendas:np});return np;});
           registrarHistorial("Crear tienda",nt);setFmtTab(nt.f);setTpTab("lista");resetNewT();showToast("Tienda creada correctamente");
         };
-        const TiendaTabIcon=({children})=><span style={{display:"flex",alignItems:"center"}}>{children}</span>;
         return(
           <div>
             <div style={{background:"#F5F7FB",padding:"12px 0 0",marginBottom:0}}>
@@ -8266,8 +8264,6 @@ function ChecklistApp() {
         };
         const MATERIALES_TODOS=[...ODT_MATERIALES_BASE,...odtMaterialesExtra];
         const disenadores=usuarios.filter(u=>u.rol==="ejecutor"&&u.cargo==="Diseñador"&&u.activo!==false);
-        const usuarioIniciales=(uName||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
-        const designerByInitial=(ini)=>disenadores.find(d=>(d.nombre||"").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase()===ini);
         // sin ODT de prueba/mock; Firestore es el único origen
         const odtsMap=new Map();
         // Firestore es el único origen: no mocks, no localStorage, no merge por dispositivo
@@ -8279,11 +8275,7 @@ function ChecklistApp() {
         const makeDateTime=(fecha,hora="00:00")=>{const d=toLocalDate(fecha);if(!d)return null;const [h,m]=parseHora(hora,"00:00");d.setHours(h,m,0,0);return d;};
         const ODT_WEEK_SCHEDULE={1:["08:30","18:30"],2:["08:30","18:30"],3:["08:30","18:30"],4:["08:30","18:30"],5:["08:30","18:30"]};const ODT_SAT_SCHEDULE={6:["08:30","11:30"]};const ODT_WORK_SCHEDULE={...ODT_WEEK_SCHEDULE,...ODT_SAT_SCHEDULE};
         const daySchedule=(d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null;
-        const isWorkDayOdt=(d)=>!!daySchedule(d);
-        const countWorkDaysInclusive=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let ini=da<=db?da:db,fin=da<=db?db:da,c=0;for(let d=new Date(ini);d<=fin;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return Math.max(1,c);};
-        const countWorkDaysBefore=(start,ref)=>{const ini=toLocalDate(start),r=toLocalDate(ref);if(!ini||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<ini)return 0;let c=0;for(let d=new Date(ini);d<=end;d.setDate(d.getDate()+1)){if(isWorkDayOdt(d))c++;}return c;};
         const businessMinutesBetween=(start,end)=>{if(!start||!end||isNaN(start)||isNaN(end))return 0;let a=start<=end?new Date(start):new Date(end),b=start<=end?new Date(end):new Date(start),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=daySchedule(d);if(!sch)continue;const [sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
-        const formatHm=(mins)=>{const n=Math.max(0,Math.round(Math.abs(mins)));const h=Math.floor(n/60),m=n%60;if(h&&m)return`${h}h ${m}m`;if(h)return`${h}h`;return`${m}m`;};
         const MINS_DIA_LAB=600;/* L-V 08:30-18:30 */
         const formatDiasTb=(mins)=>{
           const n=Math.max(0,Math.round(Math.abs(mins)));
@@ -8311,25 +8303,19 @@ function ChecklistApp() {
           */
           const estado=String(o?.estado||"pendiente").toLowerCase();
           const entregada=isOdtFinalizada(o);
-          const esCorrección=estado==="correccion";
           const now=new Date();
           const hoy=toLocalDate(todayStr());
           const fi=toLocalDate(o?.fechaInicio)||hoy;
           const fe=toLocalDate(o?.fechaEntrega||o?.entrega);
-          const inicioDT=makeDateTime(o?.fechaInicio||todayStr(),"08:30")||new Date(now.getFullYear(),now.getMonth(),now.getDate(),8,30,0,0);
           const due=toDueDateTime(o);
           const fin=toFinishDateTime(o);
           const ref=entregada?(fin||due||now):now;
           // TIEMPO TRANSCURRIDO: solo L-V (sin sábado) para HH estimadas
           const weekDaySchedule=(d)=>ODT_WEEK_SCHEDULE[d?.getDay?.()]||null;
           const countWeekDays=(a,b)=>{const da=toLocalDate(a),db=toLocalDate(b);if(!da||!db)return 1;let c=0;for(let d=new Date(da<=db?da:db);d<=(da<=db?db:da);d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return Math.max(1,c);};
-          const weekMinsBetween=(s,e)=>{if(!s||!e||isNaN(s)||isNaN(e))return 0;let a=s<=e?new Date(s):new Date(e),b=s<=e?new Date(e):new Date(s),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=weekDaySchedule(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);};
           const totalLab=fi&&fe?countWeekDays(fi,fe):1;
           const transLab=entregada?Math.min(totalLab,countWeekDays(fi,ref)):Math.min(totalLab,(()=>{const da=toLocalDate(o?.fechaInicio||todayStr()),r=hoy;if(!da||!r)return 0;let end=new Date(r);end.setDate(end.getDate()-1);if(end<da)return 0;let c=0;for(let d=new Date(da);d<=end;d.setDate(d.getDate()+1))if(weekDaySchedule(d))c++;return c;})());
           const tiempo=`${transLab}/${totalLab} lab`;
-          // HH usadas: L-V para todos; incluir sábado solo si está en corrección
-          const schedFn=esCorrección?((d)=>ODT_WORK_SCHEDULE[d?.getDay?.()]||null):weekDaySchedule;
-          const usedMins=(()=>{if(!inicioDT||isNaN(inicioDT))return 0;let a=inicioDT<=ref?new Date(inicioDT):new Date(ref),b=inicioDT<=ref?new Date(ref):new Date(inicioDT),mins=0;for(let d=new Date(a.getFullYear(),a.getMonth(),a.getDate());d<=b;d.setDate(d.getDate()+1)){const sch=schedFn(d);if(!sch)continue;const[sh,sm]=parseHora(sch[0]),[eh,em]=parseHora(sch[1]);const ds=new Date(d);ds.setHours(sh,sm,0,0);const de=new Date(d);de.setHours(eh,em,0,0);const x=new Date(Math.max(ds.getTime(),a.getTime()));const y=new Date(Math.min(de.getTime(),b.getTime()));if(y>x)mins+=(y-x)/60000;}return Math.round(mins);})();
           // DÍAS TB (detalle): formato (Hoy), (+2d), (-1d), (a tiempo), (retraso 4h 34m), (adelanto +1d)
           let diasTb="(<1d)";
           let progreso="Pendiente";
@@ -8649,7 +8635,6 @@ Saludos.`;
         const IcoEye=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0984e3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>;
         const IcoEdit=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
         const IcoTrash=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>;
-        const IcoAssign=()=> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6EF5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M17 11h6"/></svg>;
         return(
           <div className="odt-responsive-root" style={{padding:"clamp(10px,2vw,20px) clamp(10px,2.5vw,24px) 48px",background:"#f0f4f8",minHeight:"100%",overflowX:"hidden"}}>
             <style>{`
