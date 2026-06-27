@@ -4514,13 +4514,13 @@ function ChecklistApp() {
     return(
     <div style={{padding:"16px"}}>
       {/* ── FIX_RUTA_MODULOS_MULTISELECT_20260520 — Dropdown ••• Gestión de Usuarios (reemplaza tabs horizontales) ── */}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,marginLeft:-16,marginTop:-16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:16,marginLeft:-16,marginTop:-16}}>
         {/* Dropdown ••• */}
         <div style={{position:"relative",display:"inline-block"}}>
           <button
             onClick={()=>setDdUsrOpen(o=>!o)}
             className={`dropdown-pill${usrTab?" active":""}`}>
-            <span className="dots">···</span>
+            <span className="dots"><span/><span/><span/></span>
             {usrTab?USR_MODS.find(m=>m.id===usrTab)?.label||"Gestión de Usuarios":"Gestión de Usuarios"}
           </button>
           {/* Menú dropdown */}
@@ -5278,9 +5278,10 @@ function ChecklistApp() {
         return(
           <div>
             {/* ── Botón "Panel de control" con dropdown ── */}
-            <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+              <div style={{position:"relative",display:"inline-block"}}>
               <button onClick={()=>setDdOpen(o=>!o)} className={`dropdown-pill${cfgMod?" active":""}`}>
-                <span className="dots">···</span>
+                <span className="dots"><span/><span/><span/></span>
                 {cfgMod
                   ? (()=>{const m=MODS.find(x=>x.id===cfgMod);return m?<>{<m.Ico active={false}/>} {m.label}</>:"Panel de control";})()
                   : "Panel de control"}
@@ -5314,6 +5315,7 @@ function ChecklistApp() {
                   ))}
                 </div>
               )}
+              </div>
             </div>
 
             {/* Línea separadora */}
@@ -8071,8 +8073,8 @@ function ChecklistApp() {
 
   return (
     <div className="et-app-root" style={{fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",height:"100vh",overflow:"hidden",background:"#F5F7FB"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800;9..40,900&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-      <style>{`*{box-sizing:border-box;} .dropdown-pill{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:20px;background:#ffffff;border:1.5px solid #e2e8f0;border-bottom:2px solid #6c6ef5;color:#5a7a9a;font-family:'DM Sans',Inter,system-ui,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 22px rgba(15,27,45,.06);cursor:pointer;transition:all .15s;} .dropdown-pill.active{color:#6c6ef5;} .dropdown-pill .dots{color:inherit;font-weight:900;letter-spacing:2px;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Michroma&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+      <style>{`*{box-sizing:border-box;} .dropdown-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#5a7a9a;transition:all .15s;border-bottom:2px solid #6c6ef5;} .dropdown-pill.active{color:#6c6ef5;border-bottom:1.5px solid #e2e8f0;} .dropdown-pill .dots{display:flex;gap:3px;align-items:center;} .dropdown-pill .dots span{width:4px;height:4px;border-radius:50%;background:currentColor;display:block;} .vr-table{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vr-table table{min-width:480px;} @media(max-width:1024px) and (min-width:769px){.et-sidebar{width:72px!important;min-width:72px!important;} .et-sidebar-label{display:none!important;} .et-sidebar-logo-text{display:none!important;} .et-sidebar-nav-btn{justify-content:center!important;padding:14px 0!important;} .et-topbar-logo-spacer{display:none!important;} .et-topbar-desktop-spacer{display:block!important;} .et-main-content{padding-bottom:0!important;} .et-bottom-nav{display:none!important;}} @media(max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} @media(pointer:coarse) and (max-width:768px){.et-sidebar{display:none!important;} .et-main-content{padding-bottom:0!important;} .et-topbar{height:48px!important;padding:0 10px!important;} .et-bottom-nav{display:none!important;} .et-topbar-hamburger{display:flex!important;} .et-topbar-logo{display:flex!important;} .et-topbar-logo-spacer{display:block!important;} .et-topbar-desktop-spacer{display:none!important;} .et-topbar-estado{display:none!important;} .et-topbar-pdf{display:none!important;} .et-topbar-user-name{display:none!important;}} button,select,input[type=date]{touch-action:manipulation;min-height:36px;} .vr-pill{white-space:nowrap;flex-shrink:0;} .et-nav-item:hover{background:#1E293B!important;} .et-bottom-nav{display:none;} .et-topbar-hamburger{display:none;} .et-topbar-logo{display:none;} .et-topbar-logo-spacer{display:none;} .et-app-root,.et-sidebar{height:100vh;height:100dvh;} .et-sidebar-label{} .et-sidebar-logo-text{} .et-sidebar-nav-btn{} @media(max-width:480px){.et-topbar-logo-sub{display:none!important;}}`}</style>
 
 
       {/* ══ SIDEBAR ══ */}
