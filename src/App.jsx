@@ -235,7 +235,7 @@ function isUsuarioJefeZonal(u){
     u.permisos?.tiendas?.responsable===true ||
     u.capacidades?.solicitante===true ||
     u.funciones?.solicitante===true;
-  const esRolOperativo=rol==="ejecutor" || rol==="coordinador" || rol==="user";
+  const esRolOperativo=rol==="ejecutor" || rol==="coordinador";
   return esCargoZonal && !esDisenador && (esRolOperativo || tieneCapacidadSolicitante);
 }
 
@@ -4519,37 +4519,41 @@ function ChecklistApp() {
         <div style={{position:"relative",display:"inline-block"}}>
           <button
             onClick={()=>setDdUsrOpen(o=>!o)}
-            style={{display:"inline-flex",alignItems:"center",gap:8,padding:"8px 14px",
-              borderRadius:20,border:"1.5px solid #E2E8F0",borderBottom:"2px solid #6C6EF5",
-              background:"#fff",cursor:"pointer",fontSize:13,fontWeight:600,
-              fontFamily:"inherit",color:"#5a7a9a",transition:"all .15s",boxShadow:ddUsrOpen?"0 8px 24px rgba(15,27,45,.10)":"none"}}>
+            style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
+              borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
+              cursor:"pointer",color:usrTab?"#6C6EF5":"#5a7a9a",
+              fontWeight:600,fontSize:13,fontFamily:"inherit",transition:"all .15s",
+              borderBottom:!usrTab?"2px solid #6C6EF5":"1.5px solid #E2E8F0"}}>
             {/* ícono ··· */}
-            <span style={{display:"flex",gap:3,alignItems:"center"}}>
-              {[0,1,2].map(i=>(<span key={i} style={{width:4,height:4,borderRadius:"50%",background:"currentColor",display:"block"}}/>))}
-            </span>
-            <span>{usrTab?USR_MODS.find(m=>m.id===usrTab)?.label||"Gestión de Usuarios":"Gestión de Usuarios"}</span>
-            <svg style={{transition:"transform .2s",transform:ddUsrOpen?"rotate(180deg)":"rotate(0deg)"}} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+            </svg>
+            {usrTab?USR_MODS.find(m=>m.id===usrTab)?.label||"Gestión de Usuarios":"Gestión de Usuarios"}
           </button>
           {/* Menú dropdown */}
           {ddUsrOpen&&(
-            <div style={{position:"absolute",top:"calc(100% + 5px)",left:0,minWidth:230,
+            <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,minWidth:200,
               background:"#fff",borderRadius:12,border:"1.5px solid #E2E8F0",
               boxShadow:"0 8px 24px rgba(0,0,0,.10)",zIndex:300,overflow:"hidden"}}>
-              <div style={{padding:"8px 13px 6px",fontSize:9,fontWeight:700,
-                color:"#8aaabb",letterSpacing:".07em",textTransform:"uppercase",
-                borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",gap:5}}>
-                Seleccione sección
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{padding:"10px 14px 6px",fontSize:11,fontWeight:700,
+                color:"#8aaabb",letterSpacing:".06em",borderBottom:"1px solid #F1F5F9",
+                display:"flex",alignItems:"center",gap:6}}>
+                Seleccione Módulo
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b894" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20,6 9,17 4,12"/>
+                </svg>
               </div>
               {USR_MODS.map(m=>(
                 <button key={m.id}
                   onClick={()=>{setUsrTab(m.id);setDdUsrOpen(false);setShowNUsuario(false);}}
-                  style={{width:"100%",padding:"10px 14px",border:"none",
-                    borderBottom:"1px solid #F8FAFC",
-                    background:usrTab===m.id?"#F5F4FF":"#fff",
+                  style={{width:"100%",padding:"12px 16px",border:"none",
+                    borderBottom:"1px solid #F8FAFC",background:"#fff",
                     display:"flex",alignItems:"center",justifyContent:"space-between",
-                    cursor:"pointer",fontSize:12,fontWeight:usrTab===m.id?700:500,
-                    color:usrTab===m.id?"#6C6EF5":"#1a2f4a",fontFamily:"inherit",transition:"background .1s"}}>
+                    cursor:"pointer",color:usrTab===m.id?"#6C6EF5":"#1a2f4a",
+                    fontWeight:usrTab===m.id?700:500,fontSize:13,fontFamily:"inherit",
+                    transition:"background .1s"}}>
                   {m.label}
                   {React.cloneElement(m.ico,{stroke:usrTab===m.id?"#6C6EF5":"#8aaabb",width:"14",height:"14"})}
                 </button>
@@ -4575,6 +4579,17 @@ function ChecklistApp() {
           </button>
         )}
       </div>
+
+      {/* ── Breadcrumb: módulo activo, con volver integrado ── */}
+      {usrTab&&(
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:16,marginTop:-8,fontSize:12,color:"#5a7a9a"}}>
+          <button onClick={()=>{setUsrTab(null);setDdUsrOpen(false);}} title="Volver a Gestión de Usuarios"
+            style={{display:"flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",color:"#5a7a9a",cursor:"pointer",flexShrink:0}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <span style={{fontWeight:700,color:"#1a2f4a"}}>{USR_MODS.find(m=>m.id===usrTab)?.label}</span>
+        </div>
+      )}
 
       {/* ── CONTENIDO USUARIOS ── */}
       {usrTab==="usuarios"&&(()=>{
@@ -5262,10 +5277,17 @@ function ChecklistApp() {
           {id:"auditoria",  label:"Auditoría",  Ico:IcoAudCfg},
           {id:"diseno",     label:"Diseño",     Ico:IcoDiseñoCfg},
         ];
+        // Sub-sección activa para el breadcrumb — espejo liviano de EV_TABS/audTabs (sin duplicar su render).
+        const cfgSubLabel = cfgMod==="evidencias"
+          ? ({1:"Actividades",4:"Rangos Día",5:"Cortes"}[cfgTab]||null)
+          : cfgMod==="auditoria"
+          ? ({score:"Score",tareas:"Tareas",rutas:"Rutas"}[audCfgTab]||null)
+          : null;
+
         return(
           <div>
             {/* ── Botón "Panel de control" con dropdown ── */}
-            <div style={{position:"relative",display:"block",width:"fit-content",marginBottom:16,marginLeft:0,marginRight:"auto",textAlign:"left"}}>
+            <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
               <button onClick={()=>setDdOpen(o=>!o)}
                 style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
                   borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
@@ -5313,51 +5335,23 @@ function ChecklistApp() {
               )}
             </div>
 
-            {/* Contexto funcional del módulo activo: evita repetir el nombre del dropdown */}
-            {cfgMod&&(()=>{
-              const m=MODS.find(x=>x.id===cfgMod);
-              const ctx={
-                evidencias:{
-                  title:"Reglas de Evidencias",
-                  desc:"Controla actividades, rangos de puntaje y cortes de supervisión sin afectar históricos.",
-                  meta:[
-                    `${(acts||[]).filter(a=>a.activa!==false).length} actividades activas`,
-                    cfgTab===1?"Sección: Actividades":cfgTab===4?"Sección: Rangos Día":"Sección: Cortes",
-                    "Pausar conserva registros históricos"
-                  ]
-                },
-                auditoria:{
-                  title:"Reglas de Auditoría",
-                  desc:"Administra score, tareas y rutas vigentes manteniendo versionado e historial operativo.",
-                  meta:[
-                    `${(modulosAud||[]).filter(x=>x.activo!==false).length} módulos activos`,
-                    audCfgTab==="score"?"Sección: Score":audCfgTab==="tareas"?"Sección: Tareas":"Sección: Rutas",
-                    "Cambios no deben reescribir auditorías pasadas"
-                  ]
-                },
-                diseno:{
-                  title:"Reglas de Diseño / ODT",
-                  desc:"Configura tipos de trabajo, materiales, equipo, aprobaciones y notificaciones del flujo ODT.",
-                  meta:[
-                    `${(odtTiposBase||[]).length+(odtTiposExtra||[]).length} tipos de trabajo`,
-                    `${(odtMateriales||[]).length+(odtMaterialesExtra||[]).length} materiales configurados`,
-                    "Solicitante se define por permisos, no por rol"
-                  ]
-                }
-              }[cfgMod];
-              return(
-                <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:16,padding:"16px 18px",margin:"0 0 12px",boxShadow:"0 8px 22px rgba(15,27,45,.04)",display:"grid",gridTemplateColumns:"auto 1fr",gap:14,alignItems:"center"}}>
-                  <div style={{width:44,height:44,borderRadius:14,background:"#EEEFFE",display:"grid",placeItems:"center",color:"#6C6EF5"}}>{m&&<m.Ico active={true}/>}</div>
-                  <div>
-                    <div style={{fontSize:15,fontWeight:900,color:"#1a2f4a",marginBottom:4}}>{ctx.title}</div>
-                    <div style={{fontSize:12,color:"#6f8cab",lineHeight:1.45,marginBottom:9}}>{ctx.desc}</div>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      {ctx.meta.map(x=><span key={x} style={{fontSize:10,fontWeight:800,color:"#5a7a9a",background:"#f8fafc",border:"1px solid #E2E8F0",borderRadius:999,padding:"5px 9px"}}>{x}</span>)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Línea separadora */}
+            {cfgMod&&<div style={{borderBottom:"1px solid #E2E8F0",marginBottom:0}}/>}
+
+            {/* ── Breadcrumb: módulo activo + sub-sección, con volver integrado ── */}
+            {cfgMod&&(()=>{const m=MODS.find(x=>x.id===cfgMod);return(
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:0,paddingTop:12,fontSize:12,color:"#5a7a9a"}}>
+                <button onClick={()=>{setCfgMod(null);setDdOpen(false);}} title="Volver a Panel de control"
+                  style={{display:"flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",color:"#5a7a9a",cursor:"pointer",flexShrink:0}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <span style={{fontWeight:700,color:"#1a2f4a"}}>{m?.label}</span>
+                {cfgSubLabel&&(<>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8d8e8" strokeWidth="2" strokeLinecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  <span style={{color:"#6C6EF5",fontWeight:700}}>{cfgSubLabel}</span>
+                </>)}
+              </div>
+            );})()}
 
             {/* ── PASO 2a: Evidencias → subpestañas ── */}
             {cfgMod==="evidencias"&&(()=>{
@@ -6130,40 +6124,24 @@ function ChecklistApp() {
               );
             })()}
 
-            {/* ── Estado inicial funcional de Configuración ── */}
-            {!cfgMod&&(()=>{
-              const cfgResumen=[
-                {n:String((acts||[]).filter(a=>a.activa!==false).length),t:"Actividades activas",s:"Evidencias",ico:<IcoEvidenciasTab active={true}/>},
-                {n:String((modulosAud||[]).filter(m=>m.activo!==false).length),t:"Módulos auditoría",s:"Score / tareas",ico:<IcoAuditoriaTab active={true}/>},
-                {n:String(((odtMaterialesExtra||[]).length)+(odtTiposExtra||[]).length),t:"Config. Diseño",s:"Tipos y materiales extra",ico:<IcoDiseñoCfg active={true}/>},
-                {n:"3",t:"Pendientes integración",s:"Tiendas · Usuarios · Gantt",ico:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-6"/><path d="M6 20V10"/><path d="M18 20V4"/></svg>},
-              ];
-              return(
-                <div style={{background:"#fff",borderRadius:16,border:"1px solid #E2E8F0",padding:"22px 24px",marginTop:8,boxShadow:"0 10px 26px rgba(15,27,45,.04)"}}>
-                  <div style={{fontSize:11,fontWeight:800,color:"#8aaabb",letterSpacing:".08em",textTransform:"uppercase",textAlign:"center",marginBottom:22}}>Resumen de configuración</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
-                    {cfgResumen.map((x,i)=>(
-                      <div key={x.t} style={{background:"#f8fafc",border:"1px solid #edf2f7",borderRadius:14,minHeight:130,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
-                        <div style={{fontSize:28,fontWeight:900,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",marginBottom:18}}>{x.n}</div>
-                        <div style={{fontSize:13,color:"#86a0b8",textAlign:"center",fontWeight:600}}>{x.t}</div>
-                        <div style={{fontSize:10,color:"#9db1c6",textAlign:"center",marginTop:8}}>{x.s}</div>
-                        <div style={{position:"absolute",right:18,top:20,color:i===0?"#1a2f4a":i===1?"#6C6EF5":i===2?"#00b5b4":"#e67e22",opacity:.95}}>{x.ico}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{marginTop:16,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
-                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
-                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Uso recomendado</div>
-                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Selecciona una sección desde el dropdown superior solo cuando necesites cambiar reglas operativas.</div>
-                    </div>
-                    <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
-                      <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Regla de arquitectura</div>
-                      <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Configuración define reglas; Usuarios define roles, cargos, alcances y permisos por acción.</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* ── Estado vacío cuando no hay módulo seleccionado ── */}
+            {!cfgMod&&(
+              <div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",
+                padding:"48px 20px",textAlign:"center",marginTop:8}}>
+                <svg width="56" height="56" viewBox="0 0 64 64" fill="none"
+                  style={{marginBottom:12}} aria-hidden="true">
+                  <rect x="6" y="34" width="52" height="22" rx="6" fill="#FDB347"/>
+                  <rect x="6" y="34" width="26" height="8" rx="3" fill="#E8973A"/>
+                  <rect x="16" y="34" width="6" height="4" rx="2" fill="#FDB347"/>
+                  <path d="M6 42h52" stroke="#E8973A" strokeWidth="1.5"/>
+                  <rect x="10" y="18" width="44" height="18" rx="4" fill="#74b9e8"/>
+                  <path d="M10 28l22-12 22 12" fill="#5ba3d4"/>
+                  <rect x="24" y="18" width="16" height="14" rx="2" fill="#5ba3d4"/>
+                </svg>
+                <div style={{fontSize:13,color:"#b2bec3",fontWeight:500}}>Selecciona una sección del menú</div>
+                <div style={{fontSize:11,color:"#c8d8e8",marginTop:4}}>Usuarios · Áreas · Roles · Log de accesos</div>
+              </div>
+            )}
           </div>
         );
       })()}
