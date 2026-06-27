@@ -4514,7 +4514,7 @@ function ChecklistApp() {
     return(
     <div style={{padding:"16px"}}>
       {/* ── FIX_RUTA_MODULOS_MULTISELECT_20260520 — Dropdown ••• Gestión de Usuarios (reemplaza tabs horizontales) ── */}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,marginLeft:-16,marginTop:-16}}>
         {/* Dropdown ••• */}
         <div style={{position:"relative",display:"inline-block"}}>
           <button
@@ -5292,7 +5292,7 @@ function ChecklistApp() {
                 style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",
                   borderRadius:20,border:"1.5px solid #E2E8F0",background:"#fff",
                   cursor:"pointer",color:cfgMod?"#6C6EF5":"#5a7a9a",
-                  fontWeight:600,fontSize:13,transition:"all .15s",
+                  fontWeight:600,fontSize:13,fontFamily:"inherit",transition:"all .15s",
                   borderBottom:!cfgMod?"2px solid #6C6EF5":"1.5px solid #E2E8F0"}}>
                 {/* ícono ··· */}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -6124,7 +6124,7 @@ function ChecklistApp() {
               );
             })()}
 
-            {/* ── Resumen funcional cuando no hay módulo seleccionado ── */}
+            {/* ── Estado inicial funcional de Configuración ── */}
             {!cfgMod&&(()=>{
               const cfgResumen=[
                 {n:String((acts||[]).filter(a=>a.activa!==false).length),t:"Actividades activas",s:"Evidencias",ico:<IcoEvidenciasTab active={true}/>},
@@ -8422,6 +8422,8 @@ function ChecklistApp() {
             ? ["direccion","gerencia"]
             : ["operativo"];
         const odtDashLevelActive=odtDashLevelsAllowed.includes(odtDashLvl)?odtDashLvl:odtDashLevelsAllowed[0];
+        const puedeVerKanbanEquipo=isDisenoAdmin||isDisenoCoordinator||isDisenoCargo||isDisenoViewer;
+        const odtDashViewActive=puedeVerKanbanEquipo?odtDashView:"panel";
         const odtDashLevelItems=[
           {id:"direccion",t:"Dirección",d:"Visión ejecutiva",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V5M8 19v-8M12 19V7M16 19v-5M20 19V9"/></svg>},
           {id:"gerencia",t:"Gerencia",d:"Análisis y causas",ico:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9M12 17V6M16 17v-4"/></svg>},
@@ -8805,7 +8807,8 @@ Saludos.`;
               </div></>
             )}
             {subT==="dashboard"&&(<>
-              {/* ── tabs Kanban / Panel ── */}
+              {/* ── tabs Kanban / Panel — Kanban oculto para solicitante puro (doc func. sección 4) ── */}
+              {(isDisenoAdmin||isDisenoCoordinator||isDisenoCargo||isDisenoViewer)&&(
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"10px 14px",display:"flex",gap:20,marginBottom:14}}>
                 <button onClick={()=>setOdtDashView("kanban")} style={{padding:"9px 0",border:"none",background:"transparent",borderBottom:`3px solid ${odtDashView==="kanban"?"#6C6EF5":"transparent"}`,color:odtDashView==="kanban"?"#6C6EF5":"#5a7a9a",fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
@@ -8816,8 +8819,9 @@ Saludos.`;
                   Panel
                 </button>
               </div>
+              )}
 
-              {odtDashView==="kanban"&&<>
+              {odtDashViewActive==="kanban"&&(isDisenoAdmin||isDisenoCoordinator||isDisenoCargo||isDisenoViewer)&&<>
                 {/* ── Kanban filter bar ── */}
                 <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
                   {/* designer avatars */}
@@ -8919,7 +8923,7 @@ Saludos.`;
                 </div>
               </>}
 
-              {odtDashView==="panel"&&<>
+              {odtDashViewActive==="panel"&&<>
                 <div style={{display:"grid",gridTemplateColumns:`repeat(${odtDashLevelItems.length},1fr)`,gap:10,marginBottom:14}}>
                   {odtDashLevelItems.map(l=>{const on=odtDashLevelActive===l.id;return(
                     <button key={l.id} onClick={()=>setOdtDashLvl(l.id)} style={{...SH,padding:"14px 10px",minHeight:68,textAlign:"center",border:on?"2px solid #6C6EF5":"1px solid #e2e8f0",background:on?"#1a2f4a":"#fff",color:on?"#fff":"#5a7a9a",cursor:"pointer"}}>
