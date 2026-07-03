@@ -8184,7 +8184,7 @@ function ChecklistApp() {
         })()}
 
         {/* ── CONTENIDO ── */}
-        <div className="et-main-content" style={{flex:1,overflowY:"auto",background:"#F5F7FB"}}>
+        <div className="et-main-content" style={{flex:1,minWidth:0,overflowY:"auto",background:"#F5F7FB"}}>
       {modulo===0&&tab===0&&isAuditor&&renderRegistro()}
       {modulo===0&&tab===1&&renderReporte()}
       {modulo===0&&tab===2&&(isViewer?renderViewerDash():renderDashboard())}
