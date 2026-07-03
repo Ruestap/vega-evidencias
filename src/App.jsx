@@ -4514,7 +4514,7 @@ function ChecklistApp() {
     return(
     <div style={{padding:"16px"}}>
       {/* ── FIX_RUTA_MODULOS_MULTISELECT_20260520 — Dropdown ••• Gestión de Usuarios (reemplaza tabs horizontales) ── */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:16,marginLeft:-16,marginTop:-16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:16,marginLeft:-16,marginTop:0}}>
         {/* Dropdown ••• */}
         <div style={{position:"relative",display:"inline-block"}}>
           <button
