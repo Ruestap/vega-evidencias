@@ -1,3 +1,4 @@
+// ET_FIX_DIA1_ODT_SCOPE_VISOR_RESPONSIVE_20260704
 // ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
 /* ET_FIX_RENDER_UNDEF_DISENO_TIENDA_HELPERS_20260615 */
 /* ET_FIX_CIERRE_ODT_TIENDAS_LOGIN_CAPACIDAD_20260614 */
@@ -4678,9 +4679,9 @@ function ChecklistApp() {
               </div>
               <div style={{borderTop:"1px solid #f0f4f8",paddingTop:14,marginBottom:14}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#5a7a9a",marginBottom:10}}>PERMISOS POR MÓDULO</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:10}}>
                   {Object.entries(PERMISOS_MODULOS).map(([modId,modDef])=>(
-                    <div key={modId} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"9px 11px"}}>
+                    <div key={modId} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"9px 11px",minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:11,color:"#1a2f4a",marginBottom:6}}>{modDef.label}</div>
                       {modDef.acciones.map(acc=>{
                         const checked=!!newUsuario.permisos?.[modId]?.[acc.id];
@@ -8352,35 +8353,53 @@ function ChecklistApp() {
         const normOdt=(v)=>String(v??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         const normDigits=(v)=>String(v??"").replace(/\D/g,"");
         const sameAny=(a,b)=>a.filter(Boolean).some(x=>b.filter(Boolean).includes(x));
+        const stableText=(arr,min=4)=>arr.map(normOdt).filter(x=>x && x.length>=min);
+        const stableDigits=(arr,min=6)=>arr.map(normDigits).filter(x=>x && x.length>=min);
+        const stableEmails=(arr)=>arr.map(normOdt).filter(x=>x && x.includes("@"));
         const isAssignedOdt=(o)=>{
-          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
-          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
-          const myNames=[uName,loggedUser?.nombre].map(normOdt);
-          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
-          const odtIds=[o?.disenadorId,o?.disenadorDni,o?.responsableDni,o?.responsableId].map(normOdt);
-          const odtDigits=[o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId].map(normDigits);
-          const odtNames=[o?.dnombre,o?.disenadorNombre,o?.responsableNombre].map(normOdt);
-          const odtEmails=[o?.demail,o?.disenadorEmail,o?.responsableEmail].map(normOdt);
+          // Día 1 cierre: no comparar iniciales ni ids cortos ("PA", "V") porque cruzaban ODT entre diseñadores.
+          // Prioridad: id/documento/email estable y, como fallback, nombre completo exacto.
+          const myIds=stableText([uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial,loggedUser?.documento]);
+          const myDigits=stableDigits([uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial,loggedUser?.id]);
+          const myNames=stableText([uName,loggedUser?.nombre],4);
+          const myEmails=stableEmails([loggedUser?.email,loggedUser?.correo]);
+          const odtIds=stableText([o?.disenadorId,o?.disenadorDni,o?.responsableDni,o?.responsableId,o?.disenadorUid,o?.responsableUid,o?.disenadorCredencial,o?.responsableCredencial]);
+          const odtDigits=stableDigits([o?.disenadorDni,o?.responsableDni,o?.disenadorId,o?.responsableId,o?.disenadorCredencial,o?.responsableCredencial]);
+          const odtNames=stableText([o?.dnombre,o?.disenadorNombre,o?.responsableNombre],4);
+          const odtEmails=stableEmails([o?.demail,o?.disenadorEmail,o?.responsableEmail]);
           return sameAny(myIds,odtIds)||sameAny(myDigits,odtDigits)||sameAny(myEmails,odtEmails)||sameAny(myNames,odtNames);
         };
         const isRequesterOdt=(o)=>{
-          const myIds=[uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial].map(normOdt);
-          const myDigits=[uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial].map(normDigits);
-          const myNames=[uName,loggedUser?.nombre].map(normOdt);
-          const myEmails=[loggedUser?.email,loggedUser?.correo].map(normOdt);
-          const reqIds=[o?.creadoPor,o?.solicitanteId,o?.solicitanteDni].map(normOdt);
-          const reqDigits=[o?.solicitanteDni,o?.solicitanteId].map(normDigits);
-          const reqNames=[o?.solicitanteNombre,o?.creadoPorNombre,o?.creadoPor].map(normOdt);
-          const reqEmails=[o?.solicitanteEmail,o?.creadoPorEmail].map(normOdt);
+          const myIds=stableText([uDni,loggedUser?.dni,loggedUser?.id,loggedUser?.userId,loggedUser?.credencial,loggedUser?.documento]);
+          const myDigits=stableDigits([uDni,loggedUser?.dni,loggedUser?.documento,loggedUser?.credencial,loggedUser?.id]);
+          const myNames=stableText([uName,loggedUser?.nombre],4);
+          const myEmails=stableEmails([loggedUser?.email,loggedUser?.correo]);
+          const reqIds=stableText([o?.creadoPor,o?.solicitanteId,o?.solicitanteDni,o?.solicitanteUid,o?.solicitanteCredencial]);
+          const reqDigits=stableDigits([o?.solicitanteDni,o?.solicitanteId,o?.solicitanteCredencial]);
+          const reqNames=stableText([o?.solicitanteNombre,o?.creadoPorNombre,o?.creadoPor],4);
+          const reqEmails=stableEmails([o?.solicitanteEmail,o?.creadoPorEmail]);
           return sameAny(myIds,reqIds)||sameAny(myDigits,reqDigits)||sameAny(myEmails,reqEmails)||sameAny(myNames,reqNames);
         };
-        const canViewOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||isRequesterOdt(o)||isAssignedOdt(o)||(isDisenoViewer&&(isRequesterOdt(o)||isAssignedOdt(o)));
+        const odtUserScope=normOdt(loggedUser?.alcance||"");
+        const odtSameArea=(o)=>!!normOdt(o?.area)&&!!normOdt(loggedUser?.area)&&normOdt(o?.area)===normOdt(loggedUser?.area);
+        const canViewOdtByScope=(o)=>{
+          if(odtUserScope==="global") return true;
+          if(odtUserScope==="area") return odtSameArea(o)||isAssignedOdt(o)||isRequesterOdt(o);
+          if(odtUserScope==="odt_asignadas"||odtUserScope==="odt asignadas") return isAssignedOdt(o)||isRequesterOdt(o);
+          return isAssignedOdt(o)||isRequesterOdt(o);
+        };
+        const canViewOdt=(o)=>{
+          if(isDisenoAdmin||isDisenoCoordinator) return true;
+          if(isDisenoViewer) return canViewOdtByScope(o);
+          if(loggedUser?.permisos?.diseno?.verTodo===true && odtUserScope!=="odt_asignadas" && odtUserScope!=="odt asignadas") return true;
+          return canViewOdtByScope(o);
+        };
         const canCreateOdt=isDisenoAdmin||isDisenoCoordinator||isSolicitante;
-        const canEditOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
-        const canAssignOdt=(o)=>isDisenoAdmin||isDisenoCoordinator;
-        const canDeleteOdt=(o)=>isDisenoAdmin;
-        const canNotifyOdt=(o)=>isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o));
-        const canUpdateOdtState=(o)=>isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o));
+        const canEditOdt=(o)=>!isDisenoViewer&&(isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o)));
+        const canAssignOdt=(o)=>!isDisenoViewer&&(isDisenoAdmin||isDisenoCoordinator);
+        const canDeleteOdt=(o)=>!isDisenoViewer&&isDisenoAdmin;
+        const canNotifyOdt=(o)=>!isDisenoViewer&&(isDisenoAdmin||isDisenoCoordinator||(isSolicitante&&isRequesterOdt(o)));
+        const canUpdateOdtState=(o)=>!isDisenoViewer&&(isDisenoAdmin||isDisenoCoordinator||(isDisenoExecutor&&isAssignedOdt(o))||(isSolicitante&&isRequesterOdt(o)));
         const odtStateOptions=(o)=>{
           /* ET_FIX_STATE_OPTIONS_PROGRESO_20260615 */
           const estado=String(o?.estado||"pendiente").toLowerCase();
