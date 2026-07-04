@@ -9166,7 +9166,6 @@ Saludos.`;
                   <div style={{padding:"10px 14px",background:"linear-gradient(135deg,#1a2f4a,#0f1f33)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexShrink:0,flexWrap:"nowrap"}}>
                     <div style={{minWidth:0}}><div style={{fontSize:14,fontWeight:900,color:"#fff"}}>Editar ODT</div><div style={{fontSize:10,color:"rgba(255,255,255,.65)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220}}>{cur.id}</div></div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                      <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{padding:"8px 12px",borderRadius:10,border:"1px solid rgba(255,255,255,.18)",background:"rgba(255,255,255,.08)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:12}}>Cancelar</button>
                       <button onClick={saveEdit} style={{padding:"8px 14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#00b5b4,#0984e3)",color:"#fff",fontWeight:900,cursor:"pointer",fontSize:12,boxShadow:"0 8px 18px rgba(0,181,180,.22)"}}>Guardar cambios</button>
                       <button onClick={()=>{setOdtEditModal(null);setOdtEditForm({});}} style={{width:30,height:30,borderRadius:9,border:"1px solid rgba(255,255,255,.15)",background:"rgba(255,255,255,.1)",color:"#fff",cursor:"pointer",fontWeight:900,flexShrink:0}}>×</button>
                     </div>
