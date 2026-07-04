@@ -2601,7 +2601,7 @@ function ChecklistApp() {
             <div key={s.i} style={{display:"flex",alignItems:"center",flex:1}}>
               <div onClick={()=>{if(s.i<paso||(s.i===2&&actSel))setPaso(s.i);}}
                 style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
-                <div style={{width:22,height:22,borderRadius:"50%",background:paso>=s.i?"#1a2f4a":"#e2e8f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:paso>=s.i?"#fff":"#8aaabb",flexShrink:0}}>
+                <div style={{width:20,height:20,borderRadius:"50%",background:paso>=s.i?"#1a2f4a":"#e2e8f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:paso>=s.i?"#fff":"#8aaabb",flexShrink:0}}>
                   {paso>s.i?"✓":s.i}
                 </div>
                 <span style={{fontSize:11,fontWeight:700,color:paso===s.i?"#1a2f4a":paso>s.i?"#00b5b4":"#8aaabb",whiteSpace:"nowrap"}}>{s.n}</span>
@@ -8855,7 +8855,8 @@ Saludos.`;
                   </div>
                 </div>
                 {/* ── Kanban columns ── */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(230px,1fr))",gap:14}}>
+                <div style={{overflowX:"auto",overflowY:"visible",maxWidth:"100%",paddingBottom:10,scrollbarWidth:"thin"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(180px,1fr))",gap:10,minWidth:"min(980px,100%)"}}>
                   {[
                     {id:"pendiente",  label:"Pendiente",     c:"#f6a623", estados:["pendiente"]},
                     {id:"diseno",     label:"En diseño",     c:"#6C6EF5", estados:["diseño","en_diseno"]},
@@ -8883,7 +8884,7 @@ Saludos.`;
                             const isHL=odtHighlighted===o.id;
                             const vencida=o.fechaEntrega&&todayStr()>o.fechaEntrega&&!isOdtFinalizada(o);
                             return(
-                              <div key={o.id} style={{background:isHL?"rgba(108,110,245,.07)":"#fff",borderRadius:12,border:"1px solid #e2e8f0",borderLeft:`3px solid ${col.c}`,padding:12,boxShadow:"0 1px 4px rgba(0,0,0,.05)",transition:"background .4s"}}>
+                              <div key={o.id} style={{background:isHL?"rgba(108,110,245,.07)":"#fff",borderRadius:12,border:"1px solid #e2e8f0",borderLeft:`3px solid ${col.c}`,padding:"10px 9px",boxShadow:"0 1px 4px rgba(0,0,0,.05)",transition:"background .4s"}}>
                                 <div style={{fontWeight:700,color:"#1a2f4a",fontSize:12,marginBottom:5,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.titulo}</div>
                                 <div style={{display:"flex",gap:5,marginBottom:9,flexWrap:"wrap"}}>
                                   {renderTypeChip(o.tipoTrabajo||o.tipo,true)}
@@ -8897,7 +8898,7 @@ Saludos.`;
                                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                                   {(o.did||o.dnombre)?<div style={{display:"flex",alignItems:"center",gap:5}}>
                                     <span style={{width:22,height:22,borderRadius:"50%",background:o.colorD||"#6C6EF5",display:"grid",placeItems:"center",fontSize:9,fontWeight:800,color:"#fff"}}>{o.did||"?"}</span>
-                                    <span style={{fontSize:10,color:"#5a7a9a",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(o.dnombre||"").split(" ")[0]}</span>
+                                    <span style={{fontSize:10,color:"#5a7a9a",maxWidth:70,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(o.dnombre||"").split(" ")[0]}</span>
                                   </div>:<span style={{fontSize:10,color:"#b2bec3"}}>Sin asignar</span>}
                                   <span style={{fontSize:10,color:vencida?"#dc2626":"#8aaabb",fontWeight:vencida?700:400}}>{o.fechaEntrega||o.entrega||"—"}</span>
                                 </div>
@@ -8923,6 +8924,7 @@ Saludos.`;
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </>}
 
