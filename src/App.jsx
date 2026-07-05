@@ -1224,7 +1224,13 @@ function ChecklistApp() {
     });
 
     const issues=[];
-    const push=(id,label,count,level,detail)=>{ if(count>0) issues.push({id,label,count,level,detail}); };
+    const userLabel=u=>`${u?.nombre||u?.name||u?.email||u?.dni||u?.credencial||u?.id||"Usuario sin nombre"}${u?.rol?` · rol: ${u.rol}`:""}${u?.cargo?` · cargo: ${u.cargo}`:""}${u?.alcance?` · alcance: ${u.alcance}`:""}`;
+    const storeLabel=t=>`${t?.codigo||t?.cod||t?.id||"s/código"} · ${t?.nombre||t?.n||t?.tienda||"Tienda sin nombre"}${t?.zona?` · zona: ${t.zona}`:""}${t?.formato?` · formato: ${t.formato}`:""}`;
+    const odtLabel=o=>`${o?.titulo||o?.nombre||o?.title||o?.id||"ODT sin título"}${o?.estado?` · estado: ${o.estado}`:""}${(o?.dnombre||o?.disenadorNombre||o?.responsableNombre)?` · resp: ${o.dnombre||o.disenadorNombre||o.responsableNombre}`:""}`;
+    const roleLabel=r=>`${r?.nombre||r?.label||r?.id||"Rol sin nombre"}`;
+    const push=(id,label,count,level,detail,items=[])=>{
+      if(count>0) issues.push({id,label,count,level,detail,items:(items||[]).slice(0,12)});
+    };
 
     const usuariosRolLegacy=activeUsers.filter(u=>["user","solicitante","auditor"].includes(normD2(u.rol)));
     const usuariosRolInvalido=activeUsers.filter(u=>!validRoles.has(normD2(u.rol)));
@@ -1259,16 +1265,16 @@ function ChecklistApp() {
     }));
     const cargosDuplicados=[...cargoKeys.values()].filter(n=>n>1).length;
 
-    push("rol_legacy","Usuarios con rol legacy/no operativo",usuariosRolLegacy.length,"alto","User, Solicitante o Auditor deben migrarse a rol base + cargo/capacidad.");
-    push("rol_invalido","Usuarios con rol inválido",usuariosRolInvalido.length,"alto","Solo se aceptan Admin, Coordinador, Ejecutor y Visor.");
-    push("sin_alcance","Usuarios activos sin alcance válido",usuariosSinAlcance.length,"medio","Todo usuario no admin debe tener alcance definido.");
-    push("sin_identidad","Usuarios sin identificador estable",usuariosSinIdentidad.length,"alto","DNI, email o ID estable será necesario antes de Firestore Rules.");
-    push("visor_write","Visores con permisos de escritura",visoresConEscritura.length,"alto","El rol Visor debe quedar en solo lectura real.");
-    push("roles_invalidos","Roles no operativos en catálogo",rolesNoOperativos.length,"medio","Limpiar catálogo antes de seguridad.");
-    push("odt_sin_resp","ODT sin responsable estable",odtSinResponsable.length,"alto","Necesario para alcance ODT asignadas.");
-    push("odt_no_match","ODT con responsable no encontrado",odtResponsableNoMatch.length,"medio","Puede indicar nombres antiguos o asignaciones ambiguas.");
-    push("tienda_sin_apertura","Tiendas sin fecha de apertura",tiendasSinApertura.length,"medio","Define desde cuándo participan en reportes.");
-    push("tienda_sin_zonal","Tiendas sin zonal/responsable",tiendasSinZonal.length,"medio","Revisar operación por zona.");
+    push("rol_legacy","Usuarios con rol legacy/no operativo",usuariosRolLegacy.length,"alto","User, Solicitante o Auditor deben migrarse a rol base + cargo/capacidad.",usuariosRolLegacy.map(userLabel));
+    push("rol_invalido","Usuarios con rol inválido",usuariosRolInvalido.length,"alto","Solo se aceptan Admin, Coordinador, Ejecutor y Visor.",usuariosRolInvalido.map(userLabel));
+    push("sin_alcance","Usuarios activos sin alcance válido",usuariosSinAlcance.length,"medio","Todo usuario no admin debe tener alcance definido.",usuariosSinAlcance.map(userLabel));
+    push("sin_identidad","Usuarios sin identificador estable",usuariosSinIdentidad.length,"alto","DNI, email o ID estable será necesario antes de Firestore Rules.",usuariosSinIdentidad.map(userLabel));
+    push("visor_write","Visores con permisos de escritura",visoresConEscritura.length,"alto","El rol Visor debe quedar en solo lectura real.",visoresConEscritura.map(userLabel));
+    push("roles_invalidos","Roles no operativos en catálogo",rolesNoOperativos.length,"medio","Limpiar catálogo antes de seguridad.",rolesNoOperativos.map(roleLabel));
+    push("odt_sin_resp","ODT sin responsable estable",odtSinResponsable.length,"alto","Necesario para alcance ODT asignadas.",odtSinResponsable.map(odtLabel));
+    push("odt_no_match","ODT con responsable no encontrado",odtResponsableNoMatch.length,"medio","Puede indicar nombres antiguos o asignaciones ambiguas.",odtResponsableNoMatch.map(odtLabel));
+    push("tienda_sin_apertura","Tiendas sin fecha de apertura",tiendasSinApertura.length,"medio","Define desde cuándo participan en reportes.",tiendasSinApertura.map(storeLabel));
+    push("tienda_sin_zonal","Tiendas sin zonal/responsable",tiendasSinZonal.length,"medio","Revisar operación por zona.",tiendasSinZonal.map(storeLabel));
     push("cargo_dup","Cargos duplicados por área",cargosDuplicados,"bajo","Unificar nombres para evitar permisos inconsistentes.");
 
     const altos=issues.filter(i=>i.level==="alto").reduce((a,b)=>a+b.count,0);
@@ -6215,8 +6221,8 @@ function ChecklistApp() {
                   <div style={{marginTop:16,border:"1.5px solid #E2E8F0",borderRadius:14,background:"#fff",overflow:"hidden"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"14px 16px",borderBottom:"1px solid #EEF2F7",background:"linear-gradient(135deg,#f8fafc,#ffffff)"}}>
                       <div>
-                        <div style={{fontSize:12,fontWeight:900,color:"#1a2f4a",letterSpacing:".03em"}}>D2.1 · Auditoría previa a Firestore Rules</div>
-                        <div style={{fontSize:10,color:"#6f8cab",marginTop:4}}>Solo lectura. No cambia datos ni aplica reglas; sirve para validar marcha blanca antes de seguridad.</div>
+                        <div style={{fontSize:12,fontWeight:900,color:"#1a2f4a",letterSpacing:".03em"}}>D2.1.1 · Auditoría detallada previa a Firestore Rules</div>
+                        <div style={{fontSize:10,color:"#6f8cab",marginTop:4}}>Solo lectura. Muestra el detalle de limpieza antes de probar seguridad; no cambia datos ni aplica reglas.</div>
                       </div>
                       <span style={{padding:"7px 10px",borderRadius:20,fontSize:10,fontWeight:900,whiteSpace:"nowrap",color:d2Readiness.altos>0?"#991B1B":d2Readiness.medios>0?"#854F0B":"#085041",background:d2Readiness.altos>0?"#FCEBEB":d2Readiness.medios>0?"#FFF4DE":"#E1F5EE",border:`1px solid ${d2Readiness.altos>0?"#F5C2C7":d2Readiness.medios>0?"#F6D7A7":"#BCE8D8"}`}}>{d2Readiness.estado}</span>
                     </div>
@@ -6232,13 +6238,17 @@ function ChecklistApp() {
                       {d2Readiness.issues.length===0 ? (
                         <div style={{fontSize:11,color:"#085041",background:"#E1F5EE",border:"1px solid #BCE8D8",borderRadius:12,padding:"10px 12px",fontWeight:700}}>Sin alertas críticas para iniciar pruebas de seguridad en staging.</div>
                       ) : (
-                        <div style={{display:"grid",gap:8,maxHeight:210,overflowY:"auto",paddingRight:4}}>
-                          {d2Readiness.issues.slice(0,8).map(i=>(
+                        <div style={{display:"grid",gap:8,maxHeight:360,overflowY:"auto",paddingRight:4}}>
+                          {d2Readiness.issues.map(i=>(
                             <div key={i.id} style={{display:"grid",gridTemplateColumns:"42px 1fr",gap:10,alignItems:"flex-start",border:"1px solid #EDF2F7",borderRadius:11,padding:"9px 10px",background:"#fff"}}>
                               <div style={{height:30,borderRadius:9,display:"grid",placeItems:"center",fontSize:12,fontWeight:900,color:i.level==="alto"?"#991B1B":i.level==="medio"?"#854F0B":"#475569",background:i.level==="alto"?"#FCEBEB":i.level==="medio"?"#FFF4DE":"#F1F5F9"}}>{i.count}</div>
                               <div>
                                 <div style={{fontSize:11,fontWeight:900,color:"#1a2f4a"}}>{i.label}</div>
                                 <div style={{fontSize:10,color:"#6f8cab",lineHeight:1.35,marginTop:2}}>{i.detail}</div>
+                                {Array.isArray(i.items)&&i.items.length>0&&(<div style={{marginTop:7,display:"grid",gap:4}}>
+                                  {i.items.map((it,idx)=><div key={idx} style={{fontSize:10,color:"#405f7d",background:"#F8FAFC",border:"1px solid #EEF2F7",borderRadius:8,padding:"5px 7px",lineHeight:1.25}}>• {it}</div>)}
+                                  {i.count>i.items.length&&<div style={{fontSize:10,color:"#8aaabb",fontWeight:800}}>+ {i.count-i.items.length} más. Revisar en Usuarios/Tiendas para limpieza.</div>}
+                                </div>)}
                               </div>
                             </div>
                           ))}
