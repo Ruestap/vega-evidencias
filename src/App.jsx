@@ -1206,6 +1206,79 @@ function ChecklistApp() {
   },[]);
   const statusCardRef = useRef(null);
 
+  /* ══ D2.1 — Auditoría segura de usuarios, permisos y datos base (solo lectura) ══ */
+  const d2Readiness = useMemo(()=>{
+    const normD2=v=>String(v??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const digitsD2=v=>String(v??"").replace(/\D/g,"");
+    const validRoles=new Set(["admin","coordinador","ejecutor","visor"]);
+    const validScopes=new Set(["global","area","zona","tiendas_asignadas","tiendas asignadas","odt_asignadas","odt asignadas"]);
+    const activeUsers=(usuarios||[]).filter(u=>u&&u.activo!==false);
+    const roleDocs=(roles||[]).filter(r=>r&&r.activo!==false);
+    const activeStores=(tiendas||[]).filter(t=>t&&t.activa!==false&&t.bloqueadaPermanente!==true);
+    const activeOdts=(odtFirestore||[]).filter(o=>o&&o.activo!==false);
+
+    const userTokens=new Set();
+    activeUsers.forEach(u=>{
+      [u.id,u.uid,u.authUid,u.dni,u.credencial,u.email,u.nombre].forEach(v=>{const n=normD2(v);if(n&&n.length>=4)userTokens.add(n);});
+      const d=digitsD2(u.dni||u.credencial||u.id); if(d&&d.length>=8) userTokens.add(d);
+    });
+
+    const issues=[];
+    const push=(id,label,count,level,detail)=>{ if(count>0) issues.push({id,label,count,level,detail}); };
+
+    const usuariosRolLegacy=activeUsers.filter(u=>["user","solicitante","auditor"].includes(normD2(u.rol)));
+    const usuariosRolInvalido=activeUsers.filter(u=>!validRoles.has(normD2(u.rol)));
+    const usuariosSinAlcance=activeUsers.filter(u=>normD2(u.rol)!=="admin"&&!validScopes.has(normD2(u.alcance)));
+    const usuariosSinIdentidad=activeUsers.filter(u=>!digitsD2(u.dni||u.credencial)&&!normD2(u.email)&&!normD2(u.id));
+    const rolesNoOperativos=roleDocs.filter(r=>["user","solicitante","auditor"].includes(normD2(r.id||r.nombre))||!validRoles.has(normD2(r.id||r.nombre)));
+
+    const permisosEscritura=(perms={})=>Object.entries(perms||{}).some(([mod,actions])=>{
+      if(!actions||typeof actions!=="object") return false;
+      return Object.entries(actions).some(([k,v])=>v===true&&!/^ver|^read|consulta|dashboard|reporte/i.test(String(k)));
+    });
+    const visoresConEscritura=activeUsers.filter(u=>normD2(u.rol)==="visor"&&permisosEscritura(u.permisos||{}));
+
+    const odtSinResponsable=activeOdts.filter(o=>![o.disenadorId,o.responsableId,o.disenadorUid,o.responsableUid,o.disenadorDni,o.responsableDni,o.disenadorEmail,o.responsableEmail,o.dnombre,o.disenadorNombre,o.responsableNombre].some(v=>normD2(v)));
+    const odtResponsableNoMatch=activeOdts.filter(o=>{
+      const vals=[o.disenadorId,o.responsableId,o.disenadorUid,o.responsableUid,o.disenadorDni,o.responsableDni,o.disenadorEmail,o.responsableEmail,o.dnombre,o.disenadorNombre,o.responsableNombre]
+        .map(v=>normD2(v)).filter(v=>v&&v.length>=4);
+      const digs=[o.disenadorDni,o.responsableDni,o.disenadorId,o.responsableId].map(digitsD2).filter(v=>v&&v.length>=8);
+      if(!vals.length&&!digs.length) return false;
+      return ![...vals,...digs].some(v=>userTokens.has(v));
+    });
+
+    const tiendasSinApertura=activeStores.filter(t=>!t.fechaApertura&&!t.apertura&&!t.fecha_apertura);
+    const tiendasSinZonal=activeStores.filter(t=>!t.usuarioZonalId&&!t.zonalId&&!t.zonal&&!t.jefeZonal);
+
+    const cargoKeys=new Map();
+    (areas||[]).forEach(a=>(a?.cargos||[]).forEach(c=>{
+      if(c?.activo===false) return;
+      const key=`${normD2(a.id||a.nombre)}|${normD2(c.nombre||c)}`;
+      if(!normD2(c.nombre||c)) return;
+      cargoKeys.set(key,(cargoKeys.get(key)||0)+1);
+    }));
+    const cargosDuplicados=[...cargoKeys.values()].filter(n=>n>1).length;
+
+    push("rol_legacy","Usuarios con rol legacy/no operativo",usuariosRolLegacy.length,"alto","User, Solicitante o Auditor deben migrarse a rol base + cargo/capacidad.");
+    push("rol_invalido","Usuarios con rol inválido",usuariosRolInvalido.length,"alto","Solo se aceptan Admin, Coordinador, Ejecutor y Visor.");
+    push("sin_alcance","Usuarios activos sin alcance válido",usuariosSinAlcance.length,"medio","Todo usuario no admin debe tener alcance definido.");
+    push("sin_identidad","Usuarios sin identificador estable",usuariosSinIdentidad.length,"alto","DNI, email o ID estable será necesario antes de Firestore Rules.");
+    push("visor_write","Visores con permisos de escritura",visoresConEscritura.length,"alto","El rol Visor debe quedar en solo lectura real.");
+    push("roles_invalidos","Roles no operativos en catálogo",rolesNoOperativos.length,"medio","Limpiar catálogo antes de seguridad.");
+    push("odt_sin_resp","ODT sin responsable estable",odtSinResponsable.length,"alto","Necesario para alcance ODT asignadas.");
+    push("odt_no_match","ODT con responsable no encontrado",odtResponsableNoMatch.length,"medio","Puede indicar nombres antiguos o asignaciones ambiguas.");
+    push("tienda_sin_apertura","Tiendas sin fecha de apertura",tiendasSinApertura.length,"medio","Define desde cuándo participan en reportes.");
+    push("tienda_sin_zonal","Tiendas sin zonal/responsable",tiendasSinZonal.length,"medio","Revisar operación por zona.");
+    push("cargo_dup","Cargos duplicados por área",cargosDuplicados,"bajo","Unificar nombres para evitar permisos inconsistentes.");
+
+    const altos=issues.filter(i=>i.level==="alto").reduce((a,b)=>a+b.count,0);
+    const medios=issues.filter(i=>i.level==="medio").reduce((a,b)=>a+b.count,0);
+    const bajos=issues.filter(i=>i.level==="bajo").reduce((a,b)=>a+b.count,0);
+    const total=altos+medios+bajos;
+    const estado=altos>0?"Bloquear Rules":medios>0?"Preparar limpieza":"Listo para staging";
+    return {issues,altos,medios,bajos,total,estado,activeUsers:activeUsers.length,activeStores:activeStores.length,activeOdts:activeOdts.length};
+  },[usuarios,roles,areas,tiendas,odtFirestore]);
+
   /* ══ FIREBASE SYNC ══ */
   useEffect(()=>{
     const unsub = onSnapshot(collection(db,"registros"), snap=>{
@@ -6137,6 +6210,41 @@ function ChecklistApp() {
                     <div style={{border:"1px solid #E2E8F0",borderRadius:13,padding:"14px 16px",background:"#fff"}}>
                       <div style={{fontSize:12,fontWeight:800,color:"#1a2f4a",marginBottom:5}}>Regla de arquitectura</div>
                       <div style={{fontSize:11,color:"#6f8cab",lineHeight:1.45}}>Configuración define reglas; Usuarios define roles, cargos, alcances y permisos por acción.</div>
+                    </div>
+                  </div>
+                  <div style={{marginTop:16,border:"1.5px solid #E2E8F0",borderRadius:14,background:"#fff",overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"14px 16px",borderBottom:"1px solid #EEF2F7",background:"linear-gradient(135deg,#f8fafc,#ffffff)"}}>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:900,color:"#1a2f4a",letterSpacing:".03em"}}>D2.1 · Auditoría previa a Firestore Rules</div>
+                        <div style={{fontSize:10,color:"#6f8cab",marginTop:4}}>Solo lectura. No cambia datos ni aplica reglas; sirve para validar marcha blanca antes de seguridad.</div>
+                      </div>
+                      <span style={{padding:"7px 10px",borderRadius:20,fontSize:10,fontWeight:900,whiteSpace:"nowrap",color:d2Readiness.altos>0?"#991B1B":d2Readiness.medios>0?"#854F0B":"#085041",background:d2Readiness.altos>0?"#FCEBEB":d2Readiness.medios>0?"#FFF4DE":"#E1F5EE",border:`1px solid ${d2Readiness.altos>0?"#F5C2C7":d2Readiness.medios>0?"#F6D7A7":"#BCE8D8"}`}}>{d2Readiness.estado}</span>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,padding:"14px 16px",background:"#fff"}}>
+                      {[{t:"Usuarios",n:d2Readiness.activeUsers},{t:"Tiendas",n:d2Readiness.activeStores},{t:"ODT",n:d2Readiness.activeOdts},{t:"Alertas altas",n:d2Readiness.altos},{t:"Alertas medias",n:d2Readiness.medios},{t:"Alertas bajas",n:d2Readiness.bajos}].map((x,i)=>(
+                        <div key={x.t} style={{border:"1px solid #EDF2F7",borderRadius:12,padding:"10px 12px",background:i>=3&&x.n>0?"#fffaf0":"#f8fafc"}}>
+                          <div style={{fontSize:20,fontWeight:900,color:i===3&&x.n>0?"#dc2626":i===4&&x.n>0?"#e67e22":"#1a2f4a"}}>{x.n}</div>
+                          <div style={{fontSize:10,color:"#86a0b8",fontWeight:800,textTransform:"uppercase",letterSpacing:".04em"}}>{x.t}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{padding:"0 16px 14px"}}>
+                      {d2Readiness.issues.length===0 ? (
+                        <div style={{fontSize:11,color:"#085041",background:"#E1F5EE",border:"1px solid #BCE8D8",borderRadius:12,padding:"10px 12px",fontWeight:700}}>Sin alertas críticas para iniciar pruebas de seguridad en staging.</div>
+                      ) : (
+                        <div style={{display:"grid",gap:8,maxHeight:210,overflowY:"auto",paddingRight:4}}>
+                          {d2Readiness.issues.slice(0,8).map(i=>(
+                            <div key={i.id} style={{display:"grid",gridTemplateColumns:"42px 1fr",gap:10,alignItems:"flex-start",border:"1px solid #EDF2F7",borderRadius:11,padding:"9px 10px",background:"#fff"}}>
+                              <div style={{height:30,borderRadius:9,display:"grid",placeItems:"center",fontSize:12,fontWeight:900,color:i.level==="alto"?"#991B1B":i.level==="medio"?"#854F0B":"#475569",background:i.level==="alto"?"#FCEBEB":i.level==="medio"?"#FFF4DE":"#F1F5F9"}}>{i.count}</div>
+                              <div>
+                                <div style={{fontSize:11,fontWeight:900,color:"#1a2f4a"}}>{i.label}</div>
+                                <div style={{fontSize:10,color:"#6f8cab",lineHeight:1.35,marginTop:2}}>{i.detail}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{fontSize:10,color:"#8aaabb",lineHeight:1.45,marginTop:10}}>Criterio D2: primero limpiar usuarios/alcances/ODT, luego probar reglas en preview. No publicar Firestore Rules estrictas en producción hasta que este panel no tenga alertas altas.</div>
                     </div>
                   </div>
                 </div>
