@@ -1144,7 +1144,7 @@ function ChecklistApp() {
   const [newUsuario,   setNewUsuario]   = useState(NU_INIT);
   const [busqUsuario,  setBusqUsuario]  = useState("");
   const [newT,    setNewT]    = useState({n:"",f:"Market",fechaApertura:todayStr()});
-  const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc",vigenteDesde:todayStr()});
+  const [newA,    setNewA]    = useState({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc",vigenteDesde:todayStr(),vigenteHasta:""});
   const [toast,   setToast]   = useState("");
   const toastRef = useRef();
   const exportPDFRef = useRef(null); // ref para exponer exportPDF al header desde renderDashboard
@@ -1638,10 +1638,23 @@ function ChecklistApp() {
   const dow = getDow(fecha);
   const tiAct = useMemo(()=>tiendas.filter(ti=>ti.activa&&tiendaYaAperturada(ti,fecha)),[tiendas,fecha]);
   const tiendasPorId=useMemo(()=>new Map(tiendas.map(ti=>[ti.id,ti])),[tiendas]);
+  // D2: una tienda inactiva HOY conserva su periodo histórico. Fecha de cierre
+  // explícita limita nuevas evaluaciones. Sin fecha de cierre no se inventa.
+  const fechaFinTienda=(ti)=>String(ti?.fechaCierre||ti?.fechaFinEvidencias||ti?.inactivaDesde||"").slice(0,10);
   const tiendaVigenteEnFecha=useCallback((id,ds)=>{
-    const ti=tiendasPorId.get(id);
-    return !!ti&&ti.activa!==false&&tiendaYaAperturada(ti,ds);
+    const ti=tiendasPorId.get(String(id));
+    if(!ti||!tiendaYaAperturada(ti,ds)) return false;
+    const cierre=fechaFinTienda(ti);
+    return !/^\d{4}-\d{2}-\d{2}$/.test(cierre)||ds<=cierre;
   },[tiendasPorId]);
+  const tiHistoricas=useMemo(()=>{
+    const inicioMes=dStr(vYear,vMonth,1);
+    const finMes=dStr(vYear,vMonth,new Date(vYear,vMonth+1,0).getDate());
+    return tiendas.filter(ti=>{
+      const cierre=fechaFinTienda(ti);
+      return tiendaYaAperturada(ti,finMes)&&(!/^\d{4}-\d{2}-\d{2}$/.test(cierre)||cierre>=inicioMes);
+    });
+  },[tiendas,vYear,vMonth]);
   // D2 EVIDENCIAS — índice único de activación REAL por fecha+actividad+formato.
   // Solo evidencias válidas; no inventa obligaciones por tener una actividad en el catálogo.
   const indiceActivacion = useMemo(()=>{
@@ -1827,7 +1840,7 @@ function ChecklistApp() {
     days.forEach(ds=>{
       if(ds>hoy) return;
       const dw=getDow(ds);
-      acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)
+      acts.filter(a=>(a.dias||[]).includes(dw)
         &&(catFilter===null||a.cat===catFilter)
         &&(actFilter===null||a.id===actFilter)
         &&!isExc(tId,a.id,ds)
@@ -2106,12 +2119,12 @@ function ChecklistApp() {
     const esMesActual=vYear===new Date().getFullYear()&&vMonth===new Date().getMonth();
     const tendenciaViewer=semanasDelMes.map(s=>{
       let ob=0,mx=0;
-      tiAct.forEach(ti=>{
+      tiHistoricas.forEach(ti=>{
         s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return; // no contar días futuros
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+          acts.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2142,12 +2155,12 @@ function ChecklistApp() {
     let nOroV=0,nC2V=0,nFueraV=0,nSinRegV=0,nTotalEsperadoV=0;
     // Determinar el rango de corte dominante para mostrar en el KPI
     const rangosUsados=new Set();
-    tiAct.forEach(ti=>{
+    tiHistoricas.forEach(ti=>{
       semanasDelMes.forEach(s=>s.days.forEach(d=>{
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return;
         const dw=getDow(ds);
-        acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+        acts.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
           nTotalEsperadoV++;
           const rango=getRangoActivo(a.id,ds);
           const c1=toMin(rango.c100||"08:30");
@@ -2167,11 +2180,11 @@ function ChecklistApp() {
     const rangoMostrar=[...rangosUsados].sort()[0]||"08:30";
 
     // Actividades por eficiencia — mes visualizado
-    const actEfectV=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+    const actEfectV=acts.filter(a=>actsConRegistroIds.has(a.id)).map(a=>{
       let ob=0,mx=0,nC1=0,nC2act=0;
       const rango=getRangoActivo(a.id,hoy);
       const c1=toMin(rango.c100||"08:30");
-      tiAct.forEach(ti=>{
+      tiHistoricas.forEach(ti=>{
         semanasDelMes.forEach(s=>s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy||!(a.dias||[]).includes(getDow(ds))||isExc(ti.id,a.id,ds)||!actividadEvaluableActivada(ti.id,a,ds)) return;
@@ -2191,12 +2204,12 @@ function ChecklistApp() {
     // Formato eficiencia
     const fmtEfV=["Mayorista","Supermayorista","Market"].map(fmt=>{
       let ob=0,mx=0;
-      tiAct.filter(ti=>ti.f===fmt).forEach(ti=>{
+      tiHistoricas.filter(ti=>ti.f===fmt).forEach(ti=>{
         semanasDelMes.forEach(s=>s.days.forEach(d=>{
           const ds=dStr(vYear,vMonth,d);
           if(ds>hoy) return;
           const dw=getDow(ds);
-          acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+          acts.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
             mx+=10;
             const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
             if(p!==null) ob+=p;
@@ -2208,18 +2221,18 @@ function ChecklistApp() {
 
     // Issue 1 fix: tiendas en riesgo SOLO si tuvieron al menos 1 registro real en el mes
     // Esto evita el falso positivo de tiendas con 0% por nunca haber registrado (no evaluadas)
-    const scoresMesV=tiAct.map(ti=>{
+    const scoresMesV=tiHistoricas.map(ti=>{
       const ef=calcMesDetalle(ti.id);
       // Requiere días evaluables Y al menos 1 registro real
       const tuvoDiasEvaluables=semanasDelMes.some(s=>s.days.some(d=>{
         const ds=dStr(vYear,vMonth,d);
         if(ds>hoy) return false;
         const dw=getDow(ds);
-        return acts.some(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds));
+        return acts.some(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds));
       }));
       const tuvoRegistros=semanasDelMes.some(s=>s.days.some(d=>{
         const ds=dStr(vYear,vMonth,d);
-        return acts.some(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&actividadEvaluableActivada(ti.id,a,ds)&&(()=>{
+        return acts.some(a=>(a.dias||[]).includes(getDow(ds))&&actividadEvaluableActivada(ti.id,a,ds)&&(()=>{
           const reg=getReg(ds,ti.id,a.id);
           return reg?.evidencias?.length>0&&!reg?.anulado;
         })());
@@ -2265,7 +2278,7 @@ function ChecklistApp() {
             nOroV,nC2V,nFueraV,nSinRegV,nTotalEsperadoV,totalContadoV,rangoMostrar,
             actEfectV,fmtEfV,scoresMesV,enRiesgo,enAtención,sinDatosCount,
             actMejor,actPeor,periodoLabel,semLabel,esAlerta,narrativa};
-  },[semanasDelMes,tiAct,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,actividadEvaluable,
+  },[semanasDelMes,tiHistoricas,acts,actsConRegistroIds,regs,isExc,getReg,getRangoActivo,actividadEvaluable,
      vYear,vMonth,selWeek]);
 
   if(!role) return <LoginScreen pins={pins} usuarios={usuarios}
@@ -2696,14 +2709,14 @@ function ChecklistApp() {
 
   /* ══ TAB REPORTE SEMANAL ══ */
   const renderReporte = ()=>{
-    const actsActivas=acts.filter(a=>a.activa);
+    const actsActivas=acts;
     const semanasBase=selWeek!==null?[semanasDelMes[selWeek]].filter(Boolean):semanasDelMes;
     const semsVis=reporteDia==="Todos"?semanasBase:semanasBase
       .map(sem=>({...sem,days:sem.days.filter(d=>dStr(vYear,vMonth,d)===reporteDia)}))
       .filter(sem=>sem.days.length);
     const diasVisibles=semsVis.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d)));
     const formatsVis=reporteFormato==="Todas"?["Mayorista","Supermayorista","Market"]:[reporteFormato];
-    const tsReporte=tiAct.filter(ti=>reporteFormato==="Todas"||ti.f===reporteFormato);
+    const tsReporte=tiHistoricas.filter(ti=>reporteFormato==="Todas"||ti.f===reporteFormato);
     const calculaReporte=(tid,days)=>calcEficiencia(tid,days,null,reporteActividad==="Todas"?null:reporteActividad);
     const getColsForDay=(sem,d,fmt=null)=>{
       const ds=dStr(vYear,vMonth,d);
@@ -3041,9 +3054,9 @@ function ChecklistApp() {
   /* ══ TAB DASHBOARD ══ */
   const renderDashboard = ()=>{
     // filtrar tiendas según dashFmt
-    const tsBase = dashFmt==="Todas" ? tiAct : tiAct.filter(ti=>ti.f===dashFmt);
+    const tsBase = dashFmt==="Todas" ? tiHistoricas : tiHistoricas.filter(ti=>ti.f===dashFmt);
     // filtrar por actividad
-    const actsBase = dashAct==="Todas" ? acts.filter(a=>a.activa) : acts.filter(a=>a.activa&&a.id===dashAct);
+    const actsBase = dashAct==="Todas" ? acts : acts.filter(a=>a.id===dashAct);
     // tiendas evaluables: excluir las que tienen N/A en TODAS las actividades del filtro
     const tsEval = tsBase.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
     // calcular score con filtros aplicados
@@ -3057,7 +3070,7 @@ function ChecklistApp() {
           const ds=dStr(vYear,vMonth,day);
           if(ds>_hoyDash) return; // día futuro
           const dw=getDow(ds);
-          actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actividadEvaluableActivada(tId,a,ds)).forEach(a=>{
+          actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actividadEvaluableActivada(tId,a,ds)).forEach(a=>{
             maximos+=10;
             const reg=getReg(ds,tId,a.id);
             const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3085,7 +3098,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return; // B3 fix: no contar días futuros en denominador
         const dw=getDow(ds);
-        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actividadEvaluableActivada(tId,a,ds)).forEach(a=>{
+        actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(tId,a.id,ds)&&actividadEvaluableActivada(tId,a,ds)).forEach(a=>{
           mx+=10;
           const reg=getReg(ds,tId,a.id);
           const p=puntajeReg(reg,getRangoActivo(a.id,ds));
@@ -3124,7 +3137,7 @@ function ChecklistApp() {
         const ds=dStr(vYear,vMonth,day);
         if(ds>_hoyDash) return;
         const dw=getDow(ds);
-        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+        actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
           const reg=getReg(ds,ti.id,a.id);
           if(!reg?.evidencias||reg.anulado) return;
           const AR=getRangoActivo(a.id,ds);
@@ -3151,7 +3164,7 @@ function ChecklistApp() {
     const bot5=[...sorted].reverse().filter(s=>s.score!==null).slice(0,5);
 
     // efectividad por actividad — pts obtenidos / pts máximos (correcto, no promedio de promedios)
-    const actEfect=acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+    const actEfect=acts.filter(a=>actsConRegistroIds.has(a.id)).map(a=>{
       let ob=0,mx=0;
       const hoy=todayStr();
       tsBase.forEach(ti=>{
@@ -3268,7 +3281,7 @@ function ChecklistApp() {
               <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
               <select value={dashAct} onChange={e=>setDashAct(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
                 <option value="Todas">Todas</option>
-                {acts.filter(a=>a.activa).map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
+                {acts.map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
               </select>
             </div>
             <div>
@@ -3314,7 +3327,7 @@ function ChecklistApp() {
             : (totalMx>0 ? Math.round((totalOb/totalMx)*100) : null);
 
           // Actividad con mayor y menor eficiencia
-          const actEfectDash = acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+          const actEfectDash = acts.filter(a=>actsConRegistroIds.has(a.id)).map(a=>{
             let ob=0,mx=0;
             const semsVis = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
             tsEval.forEach(ti=>{
@@ -3509,7 +3522,7 @@ function ChecklistApp() {
               const barH=v!==null?Math.max(8,Math.round((v/maxV)*80)):0;
               const trend=i>0&&tendencia[i-1]!==null&&v!==null?(v>tendencia[i-1]?"↑":v<tendencia[i-1]?"↓":"→"):null;
               // Tooltip detalle por actividad para esta semana
-              const actTip = actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+              const actTip = actsBase.filter(a=>actsConRegistroIds.has(a.id)).map(a=>{
                 let aOb=0,aMx=0;
                 s.days.forEach(d=>{
                   const ds=dStr(vYear,vMonth,d);
@@ -3675,7 +3688,6 @@ function ChecklistApp() {
               tsBase.forEach(ti=>{
                 actsBase
                   .filter(a=>
-                    a.activa &&
                     (a.dias||[]).includes(dw) &&
                     !isExc(ti.id,a.id,ds) &&
                     actividadEvaluableActivada(ti.id,a,ds)
@@ -3741,7 +3753,7 @@ function ChecklistApp() {
                 const dw=getDow(ds);
                 tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
                   actsBase
-                    .filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds))
+                    .filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds))
                     .forEach(a=>{
                       fExp++;
                       const reg=getReg(ds,ti.id,a.id);
@@ -3819,7 +3831,7 @@ function ChecklistApp() {
                   if(ds>hoy) return;
                   const dw=getDow(ds);
                   tsBase.filter(ti=>ti.f===fmt).forEach(ti=>{
-                    actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+                    actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
                       const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                       if(p===0) fFuera++;
                     });
@@ -3890,7 +3902,7 @@ function ChecklistApp() {
                           const eficDia=dm&&dm.ptsMax>0?Math.round((dm.ptsObt/dm.ptsMax)*100):null;
                           const cs=hCell(eficDia);
                           // Issue 5 fix: construir desglose por actividad para este día específico
-                          const actsTipDia=dm?acts.filter(a=>a.activa&&(a.dias||[]).includes(getDow(ds))&&tsBase.some(ti=>actividadEvaluableActivada(ti.id,a,ds))).map(a=>{
+                          const actsTipDia=dm?acts.filter(a=>(a.dias||[]).includes(getDow(ds))&&tsBase.some(ti=>actividadEvaluableActivada(ti.id,a,ds))).map(a=>{
                             // Contar tiendas con registro y su distribución horaria
                             const tiConReg=tsBase.filter(ti=>{
                               const r=getReg(ds,ti.id,a.id);
@@ -4027,9 +4039,9 @@ function ChecklistApp() {
           const hoyF = todayStr();
           const semsVis2 = selWeek!==null ? [semanasDelMes[selWeek]] : semanasDelMes;
           const actsH2 = dashAct==="Todas"
-            ? acts.filter(a=>a.activa&&actsConRegistroIds.has(a.id))
-            : acts.filter(a=>a.activa&&a.id===dashAct&&actsConRegistroIds.has(a.id));
-          const tsFH = dashFmt==="Todas" ? tiAct : tiAct.filter(ti=>ti.f===dashFmt);
+            ? acts.filter(a=>actsConRegistroIds.has(a.id))
+            : acts.filter(a=>a.id===dashAct&&actsConRegistroIds.has(a.id));
+          const tsFH = dashFmt==="Todas" ? tiHistoricas : tiHistoricas.filter(ti=>ti.f===dashFmt);
           if(actsH2.length===0||tsFH.length===0) return null;
 
           const _dsRef = semsVis2.flatMap(s=>s.days.map(d=>dStr(vYear,vMonth,d))).find(d=>d<=hoyF)||hoyF;
@@ -4145,7 +4157,7 @@ function ChecklistApp() {
                   <div style={{fontSize:9,color:"#8aaabb",fontWeight:700,marginBottom:3}}>ACTIVIDAD</div>
                   <select value={dashAct} onChange={e=>setDashAct(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid #c8d8e8",background:"#f8fafc",color:"#1a2f4a",fontSize:12,outline:"none"}}>
                     <option value="Todas">Todas las actividades</option>
-                    {acts.filter(a=>a.activa).map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
+                    {acts.map(a=><option key={a.id} value={a.id}>{a.e} {a.n}</option>)}
                   </select>
                 </div>
                 <div>
@@ -4327,7 +4339,7 @@ function ChecklistApp() {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:14}}>
           {["Mayorista","Supermayorista","Market"].map(fmt=>{
             const fc=FMT[fmt];
-            const fts=tiAct.filter(ti=>ti.f===fmt);
+            const fts=tiHistoricas.filter(ti=>ti.f===fmt);
             // solo las evaluables (sin excepción en todas las actividades)
             const ftsEval=fts.filter(ti=>actsBase.some(a=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
             // eficiencia acumulada del formato: sum(obtenidos) / sum(maximos)
@@ -4368,7 +4380,7 @@ function ChecklistApp() {
                         const ds=dStr(vYear,vMonth,d);
                         if(ds>todayStr()) return;
                         const dw=getDow(ds);
-                        actsBase.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+                        actsBase.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
                           mx+=10;
                           const p=puntajeReg(getReg(ds,ti.id,a.id),getRangoActivo(a.id,ds));
                           if(p!==null) ob+=p;
@@ -4407,7 +4419,7 @@ function ChecklistApp() {
                   <div style={{color:"rgba(255,255,255,.7)"}}>{ftsEval.length} de {fts.length} tiendas evaluables{fts.length-ftsEval.length>0?` · ${fts.length-ftsEval.length} excluidas N/A`:""}</div>
                   {/* Desglose por actividad para este formato */}
                   {(()=>{
-                    const actRows=actsBase.filter(a=>a.activa&&actsConRegistroIds.has(a.id)).map(a=>{
+                    const actRows=actsBase.filter(a=>actsConRegistroIds.has(a.id)).map(a=>{
                       let aOb=0,aMx=0;
                       ftsEval.forEach(ti=>{
                         semanasDelMes.forEach(s=>s.days.forEach(d=>{
@@ -6672,14 +6684,26 @@ function ChecklistApp() {
                   </button>
                 ))}
               </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+                {["Always On","Promocional","Campaña","BTL","Ad-hoc"].map(cat=>(
+                  <button key={cat} onClick={()=>setNewA(v=>({...v,cat}))}
+                    style={{padding:"7px 12px",borderRadius:8,border:`1.5px solid ${newA.cat===cat?"#6c5ce7":"#e2e8f0"}`,background:newA.cat===cat?"#f0edff":"#fff",color:newA.cat===cat?"#6c5ce7":"#5a7a9a",cursor:"pointer",fontSize:11,fontWeight:700}}>{cat}</button>
+                ))}
+              </div>
               <div style={{marginBottom:10}}>
                 <label style={S.lbl}>INICIO DE EVALUACIÓN *</label>
                 <input type="date" value={newA.vigenteDesde||todayStr()} min={todayStr()}
                   onChange={e=>setNewA(p=>({...p,vigenteDesde:e.target.value}))} style={S.inp}/>
                 <div style={{fontSize:10,color:"#8aaabb",marginTop:4}}>No se evaluará ni penalizará antes de esta fecha.</div>
               </div>
+              <div style={{marginBottom:10}}>
+                <label style={S.lbl}>FIN DE VIGENCIA (OPCIONAL)</label>
+                <input type="date" value={newA.vigenteHasta||""} min={newA.vigenteDesde||todayStr()}
+                  onChange={e=>setNewA(v=>({...v,vigenteHasta:e.target.value}))} style={S.inp}/>
+                <div style={{fontSize:10,color:"#8aaabb",marginTop:4}}>Para actividades puntuales, inicio y fin pueden ser la misma fecha. No modifica registros anteriores.</div>
+              </div>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>{if(!newA.n||!newA.dias.length)return;const vigencia=newA.vigenteDesde||todayStr();if(vigencia<todayStr()){showToast("La vigencia no puede iniciar antes de hoy");return;}const na={...newA,vigenteDesde:vigencia,creadoEn:new Date().toISOString(),id:"a"+Date.now(),cat:"Ad-hoc",r:null,activa:true};setActs(p=>{const np=[...p,na];saveConfig({actividades:np});return np;});setNewA({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc",vigenteDesde:todayStr()});setShowNA(false);}}
+                <button onClick={()=>{if(!newA.n?.trim()||!newA.dias.length){showToast("Nombre y días son obligatorios");return;}const vigencia=newA.vigenteDesde||todayStr();if(vigencia<todayStr()){showToast("La vigencia no puede iniciar antes de hoy");return;}if(newA.vigenteHasta&&newA.vigenteHasta<vigencia){showToast("Fin de vigencia anterior al inicio");return;}const na={...newA,n:newA.n.trim(),vigenteDesde:vigencia,creadoEn:new Date().toISOString(),id:"a"+Date.now(),r:null,activa:true};setActs(p=>{const np=[...p,na];saveConfig({actividades:np});return np;});setNewA({n:"",e:"📌",c:"#6c5ce7",dias:[1,2,3,4,5],cat:"Ad-hoc",vigenteDesde:todayStr(),vigenteHasta:""});setShowNA(false);}}
                   style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>Agregar</button>
                 <button onClick={()=>setShowNA(false)} style={{padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"#fff",color:"#5a7a9a",cursor:"pointer",fontSize:12}}>Cancelar</button>
               </div>
@@ -6694,7 +6718,7 @@ function ChecklistApp() {
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:a.activa?a.c:"#94a3b8"}}>{a.n}</div>
                   <div style={{fontSize:10,color:"#8aaabb",marginTop:2}}>
-                    {a.dias.map(d=>({0:"D",1:"L",2:"M",3:"X",4:"J",5:"V",6:"S"})[d]||"?").join("·")} · {a.cat} · {a.vigenteDesde?`Desde ${a.vigenteDesde}`:"Histórica (sin fecha configurada)"}
+                    {a.dias.map(d=>({0:"D",1:"L",2:"M",3:"X",4:"J",5:"V",6:"S"})[d]||"?").join("·")} · {a.cat} · {a.vigenteDesde?`Desde ${a.vigenteDesde}${a.vigenteHasta?" hasta "+a.vigenteHasta:""}`:"Histórica (sin fecha configurada)"}
                     {a.r&&<span style={{color:"#f6a623",marginLeft:4}}>⏱️ rangos custom</span>}
                   </div>
                 </div>
@@ -6708,7 +6732,7 @@ function ChecklistApp() {
                   style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${a.activa?"#fecaca":"#bbf7d0"}`,background:a.activa?"#fff1f2":"#f0fdf4",color:a.activa?"#dc2626":"#16a34a",cursor:"pointer",fontSize:12,fontWeight:800}}>
                   {a.activa?"⏸":"▶"}
                 </button>
-                <button onClick={()=>{ if(window.confirm(`¿Eliminar "${a.n}"? Se perderá del listado (los registros históricos se conservan en Firebase).`)){setActs(p=>{const np=p.filter(x=>x.id!==a.id);saveConfig({actividades:np});return np;});}}}
+                <button onClick={()=>showToast("D2: por seguridad no se eliminan actividades desde el catálogo. Usa pausa o fecha de fin para preservar el historial.")}
                   title="Eliminar actividad"
                   style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #fecaca",background:"#fff1f2",color:"#dc2626",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑️</button>
               </div>
@@ -6728,14 +6752,18 @@ function ChecklistApp() {
                     ))}
                   </div>
                   <div style={{display:"flex",gap:5,marginBottom:8}}>
-                    {["Always On","Promocional","Ad-hoc"].map(cat=>(
+                    {["Always On","Promocional","Campaña","BTL","Ad-hoc"].map(cat=>(
                       <button key={cat} onClick={()=>setActs(p=>p.map(x=>x.id===a.id?{...x,cat}:x))}
                         style={{flex:1,padding:"6px",borderRadius:8,border:`1.5px solid ${a.cat===cat?"#0984e3":"#e2e8f0"}`,background:a.cat===cat?"#e8f4fd":"#fff",color:a.cat===cat?"#0984e3":"#5a7a9a",cursor:"pointer",fontSize:10,fontWeight:700}}>
                         {cat}
                       </button>
                     ))}
                   </div>
-                  <button onClick={()=>{setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8,marginBottom:8}}>
+                    <div><label style={S.lbl}>VIGENTE DESDE (CAMBIOS CON IMPACTO HISTÓRICO)</label><input type="date" value={a.vigenteDesde||""} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,vigenteDesde:e.target.value}:x))} style={S.inp}/></div>
+                    <div><label style={S.lbl}>VIGENTE HASTA</label><input type="date" value={a.vigenteHasta||""} onChange={e=>setActs(p=>p.map(x=>x.id===a.id?{...x,vigenteHasta:e.target.value}:x))} style={S.inp}/></div>
+                  </div>
+                  <button onClick={()=>{if(a.vigenteHasta&&a.vigenteDesde&&a.vigenteHasta<a.vigenteDesde){showToast("Fin de vigencia anterior al inicio");return;}setActs(p=>{const np=p.map(x=>x.id===a.id?{...x,_edit:false}:x);saveConfig({actividades:np});return np;});}}
                     style={{width:"100%",padding:"9px",borderRadius:8,border:"none",background:"#0984e3",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>
                     💾 Guardar cambios
                   </button>
@@ -7413,7 +7441,7 @@ function ChecklistApp() {
     // actsBase y calcEficienciaFiltrada se definen aquí para que la sección
     // de ranking operativa pueda reutilizar la misma lógica que el dashboard.
     // actsBase: actividades activas (todas las actividades)
-    const actsBase = acts.filter(a => a.activa);
+    const actsBase = acts;
     // calcEficienciaFiltrada: acumula puntos obtenidos y máximos para un ID de tienda
     const calcEficienciaFiltrada = (tId) => {
       let obtenidos = 0, maximos = 0;
@@ -7613,10 +7641,10 @@ function ChecklistApp() {
           <div style={{marginBottom:12}}>
             <div style={{fontSize:10,fontWeight:700,color:"#5a7a9a",letterSpacing:".04em",marginBottom:8}}>POR FORMATO</div>
             {fmtEfV.map(({fmt,pct})=>{
-              const ftsV=tiAct.filter(ti=>ti.f===fmt);
+              const ftsV=tiHistoricas.filter(ti=>ti.f===fmt);
               const ftsEvalV=ftsV.filter(ti=>actEfectV.some(({a})=>semanasDelMes.some(s=>s.days.some(d=>!isExc(ti.id,a.id,dStr(vYear,vMonth,d))))));
               // Desglose por actividad para el tooltip
-              const actRowsV=actEfectV.filter(({a})=>a.activa).map(({a,ob,mx,pct:aPct})=>({a,ob,mx,pct:aPct}));
+              const actRowsV=actEfectV.map(({a,ob,mx,pct:aPct})=>({a,ob,mx,pct:aPct}));
               return(
               <div key={fmt} style={{position:"relative",marginBottom:8}}
                 onMouseEnter={e=>{const t=e.currentTarget.querySelector(".fmt-tip-v");if(t)t.style.display="block";}}
@@ -7755,13 +7783,13 @@ function ChecklistApp() {
         const totalDispV = new Set();
         const conRegV = new Set();
 
-        tiAct.forEach(ti=>{
+        tiHistoricas.forEach(ti=>{
           semsVisV.forEach(s=>{
             s.days.forEach(day=>{
               const ds=dStr(vYear,vMonth,day);
               if(ds>hoyFV) return;
               const dw=getDow(ds);
-              acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+              acts.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
                 totalDispV.add(ti.id);
                 const reg=getReg(ds,ti.id,a.id);
                 if(!reg?.evidencias?.length||reg.anulado) return;
@@ -7787,7 +7815,7 @@ function ChecklistApp() {
 
         // Por formato
         const fmtFHV=["Mayorista","Supermayorista","Market"].map(fmt=>{
-          const tsFmt=tiAct.filter(ti=>ti.f===fmt);
+          const tsFmt=tiHistoricas.filter(ti=>ti.f===fmt);
           const fD=new Set(),fR=new Set(),fM=new Map();
           tsFmt.forEach(ti=>{
             semsVisV.forEach(s=>{
@@ -7795,7 +7823,7 @@ function ChecklistApp() {
                 const ds=dStr(vYear,vMonth,day);
                 if(ds>hoyFV) return;
                 const dw=getDow(ds);
-                acts.filter(a=>a.activa&&(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
+                acts.filter(a=>(a.dias||[]).includes(dw)&&!isExc(ti.id,a.id,ds)&&actividadEvaluableActivada(ti.id,a,ds)).forEach(a=>{
                   fD.add(ti.id);
                   const reg=getReg(ds,ti.id,a.id);
                   if(!reg?.evidencias?.length||reg.anulado) return;
