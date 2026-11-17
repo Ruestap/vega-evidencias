@@ -1,3 +1,4 @@
+// HOTFIX_D2_LOGIN_ESPERAR_FIRESTORE_20261116 - validar solo tras snapshots de servidor
 // HOTFIX_D2_VIGENCIA_EVIDENCIAS_PREVIEW_20261116
 // ET_FIX_DIA1_ODT_SCOPE_VISOR_RESPONSIVE_20260704
 // ET_FIX_RENDER_TIENDAS_SEED_ODT_CAPACITY_FINAL_20260614
@@ -1030,6 +1031,10 @@ function ChecklistApp() {
   const [pins,    setPins]    = useState({admin:"",auditor:"",viewer:""});
   const [pinMod,  setPinMod]  = useState(false);
   const [usuarios,  setUsuarios]  = useState([]); // [{id,nombre,rol,credencial,activo,ultimoAcceso}]
+  // No aceptar credenciales antes de recibir usuarios y configuración desde el servidor.
+  const [authUsuariosReady,setAuthUsuariosReady] = useState(false);
+  const [authConfigReady,setAuthConfigReady] = useState(false);
+  const [authLoadError,setAuthLoadError] = useState("");
   /* ── app state ── */
   const [tab,     setTab]     = useState(0);
   const [modulo,  setModulo]  = useState(0); // 0=Evidencias, 1=Auditoria, 2=Config
@@ -1229,7 +1234,10 @@ function ChecklistApp() {
 
   useEffect(()=>{
     // Usar onSnapshot para config — reactivo y siempre actualizado
-    const unsub = onSnapshot(doc(db,"config","app"), snap=>{
+    const unsub = onSnapshot(doc(db,"config","app"), {includeMetadataChanges:true}, snap=>{
+      // Un snapshot exclusivamente cacheado no garantiza tener los PIN actuales.
+      if(snap.metadata.fromCache) return;
+      setAuthConfigReady(true);
       if(!snap.exists()) return;
       const d=snap.data();
       if(d.actividades) setActs(d.actividades);
@@ -1261,6 +1269,9 @@ function ChecklistApp() {
       if(hasLegacy){
         setDoc(doc(db,"config","app"),{...d, excepciones:cleaned, updatedAt:new Date().toISOString()});
       }
+    }, err=>{
+      console.error("[ET Login] No se pudo leer configuración:",err?.code||"unknown");
+      setAuthLoadError("No se pudo cargar la configuración de acceso. Recarga la página o contacta al administrador.");
     });
     return ()=>unsub();
   },[]);
@@ -1283,7 +1294,9 @@ function ChecklistApp() {
 
   // Sync colección usuarios desde Firestore
   useEffect(()=>{
-    const unsub = onSnapshot(collection(db,"usuarios"), snap=>{
+    const unsub = onSnapshot(collection(db,"usuarios"), {includeMetadataChanges:true}, snap=>{
+      // Evita validar contra una lista vacía o desactualizada del caché local.
+      if(snap.metadata.fromCache) return;
       const data=[];
       snap.forEach(d=>{ data.push({id:d.id,...d.data()}); });
       // ET_MIGRACION_AUDITOR_ROL_A_CARGO_20260621: usuarios guardados con rol="auditor"
@@ -1297,6 +1310,10 @@ function ChecklistApp() {
         }
       });
       setUsuarios(data);
+      setAuthUsuariosReady(true);
+    }, err=>{
+      console.error("[ET Login] No se pudieron leer usuarios:",err?.code||"unknown");
+      setAuthLoadError("No se pudo cargar el directorio de usuarios. Recarga la página o contacta al administrador.");
     });
     return ()=>unsub();
   },[]);
@@ -2226,6 +2243,7 @@ function ChecklistApp() {
      vYear,vMonth,selWeek]);
 
   if(!role) return <LoginScreen pins={pins} usuarios={usuarios}
+    authReady={authUsuariosReady&&authConfigReady&&!authLoadError} authLoadError={authLoadError}
     onAcceso={(id)=>registrarAcceso(id)}
     onLogin={(r,n,dni,cargo)=>{
       setRole(r);setUName(n);setUDni(dni||"");setVerRegistradas(false);setModulo(0);
@@ -10603,7 +10621,7 @@ export default function App(props){
 }
 
 /* ══ LOGIN ══════════════════════════════════════════════ */
-function LoginScreen({pins,usuarios,onLogin,onAcceso}){
+function LoginScreen({pins,usuarios,onLogin,onAcceso,authReady=false,authLoadError=""}){
   const usuariosActivos=(usuarios||[]).filter(u=>u.activo!==false);
   const[cred,setCred]=useState("");
   const credInputRef=useRef(null);
@@ -10679,6 +10697,11 @@ function LoginScreen({pins,usuarios,onLogin,onAcceso}){
   };
 
   const tryAcceso=()=>{
+    // Nunca registrar fallo ni consumir intentos durante la carga o error de Firebase.
+    if(!authReady){
+      setErr(authLoadError||"Cargando usuarios y configuración de acceso. No se ha consumido ningún intento.");
+      return;
+    }
     if(bloqueo){setErr(`Bloqueado — espera ${Math.floor(bloqueo.restante/60)}:${String(bloqueo.restante%60).padStart(2,"0")}`);return;}
     /* ET_FIX_LOGIN_FAST_ENTER_20260620: leer valor del DOM para capturar el último carácter antes de que React procese el onChange pendiente */
     const rawVal=credInputRef.current?.value??cred;
@@ -10775,16 +10798,20 @@ function LoginScreen({pins,usuarios,onLogin,onAcceso}){
             <div style={{fontSize:10,color:"#8aaabb",marginBottom:16,textAlign:"left"}}>
               DNI (8 díg.) · RUC (11 díg.) · CE / Código interno (8–12 alfanum.)
             </div>
+            {!authReady&&<div role="status" style={{fontSize:12,lineHeight:1.5,marginBottom:12,padding:"10px 12px",background:authLoadError?"#fff1f2":"#eff6ff",color:authLoadError?"#b91c1c":"#375477",borderRadius:9,border:`1px solid ${authLoadError?"#fecaca":"#bfdbfe"}`}}>
+              {authLoadError||"Cargando usuarios y configuración de acceso desde Firebase..."}
+              {authLoadError&&<button type="button" onClick={()=>window.location.reload()} style={{display:"block",margin:"8px auto 0",padding:"6px 12px",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",background:"#fff"}}>Reintentar conexión</button>}
+            </div>}
             {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:12,padding:"8px 12px",background:"#fff1f2",borderRadius:9,border:"1px solid #fecaca"}}>{err}</div>}
-            <button onClick={tryAcceso} disabled={cred.length<4}
+            <button onClick={tryAcceso} disabled={cred.length<4||!authReady}
               style={{width:"100%",padding:"14px",borderRadius:12,border:"none",
-                background:cred.length>=4?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",
-                color:cred.length>=4?"#fff":"#94a3b8",
-                cursor:cred.length>=4?"pointer":"not-allowed",
+                background:cred.length>=4&&authReady?"linear-gradient(135deg,#00b5b4,#1a2f4a)":"#e2e8f0",
+                color:cred.length>=4&&authReady?"#fff":"#94a3b8",
+                cursor:cred.length>=4&&authReady?"pointer":"not-allowed",
                 fontSize:15,fontWeight:700,marginBottom:0,
-                boxShadow:cred.length>=4?"0 4px 14px rgba(0,181,180,.3)":"none",
+                boxShadow:cred.length>=4&&authReady?"0 4px 14px rgba(0,181,180,.3)":"none",
                 transition:"all .2s"}}>
-              Ingresar →
+              {authLoadError?"Conexión no disponible":!authReady?"Cargando acceso...":"Ingresar →"}
             </button>
           </>
         )}
