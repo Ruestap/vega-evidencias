@@ -17,6 +17,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import React from "react";
 import { db } from "./firebase";
 import { analizarD2Shadow } from "./analisisShadowD2.mjs";
+import ProgramacionesD2 from "./ProgramacionesD2.jsx";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
 import {
   collection, doc, onSnapshot,
@@ -5410,7 +5411,7 @@ function ChecklistApp() {
         ];
         // Sub-sección activa para el breadcrumb — espejo liviano de EV_TABS/audTabs (sin duplicar su render).
         const cfgSubLabel = cfgMod==="evidencias"
-          ? ({1:"Actividades",4:"Rangos Día",5:"Cortes"}[cfgTab]||null)
+          ? ({1:"Actividades",4:"Rangos Día",5:"Cortes",6:"Programaciones D2"}[cfgTab]||null)
           : cfgMod==="auditoria"
           ? ({score:"Score",tareas:"Tareas",rutas:"Rutas"}[audCfgTab]||null)
           : null;
@@ -5480,6 +5481,7 @@ function ChecklistApp() {
             {cfgMod==="evidencias"&&(()=>{
               const EV_TABS=[
                 {i:1, label:"Actividades"},
+                {i:6, label:"Programaciones D2"},
                 {i:4, label:"Rangos Día"},
                 {i:5, label:"Cortes"},
               ];
@@ -6696,6 +6698,10 @@ function ChecklistApp() {
         </div>
         );
       })()}
+
+      {cfgTab===6&&cfgMod==="evidencias"&&isAdmin&&(
+        <ProgramacionesD2 actividades={acts} tiendas={tiendas} programaciones={programacionesD2Shadow} usuarioId={uDni} habilitado={estadoProgramacionesD2Shadow==="listo"}/>
+      )}
 
       {cfgTab===1&&(hideTabs||cfgMod==="evidencias")&&(
         <div>

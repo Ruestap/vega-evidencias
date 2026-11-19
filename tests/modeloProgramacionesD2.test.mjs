@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {armarBorradorD2,proyectarBorradorD2} from '../src/modeloProgramacionesD2.mjs';
+const tiendas=[{id:'minka',n:'MINKA CASH',f:'Supermayorista',zonaId:'02',fechaApertura:'2020-01-01'},{id:'otra',n:'OTRA',f:'Market',zonaId:'01'}];
+const act={id:'grid',n:'Grid Promocional',cat:'Promocional'};
+const p=(extra={})=>armarBorradorD2({actividad:act,descripcion:'Grid en gondola',inicio:'2026-11-16',fin:'2026-11-22',frecuencia:'semanal',diasSemana:[1,2,3],tiendasElegidas:['minka'],...extra});
+test('Minka tiene 3 obligaciones, no incluye otra tienda',()=>{const r=proyectarBorradorD2(p(),tiendas);assert.deepEqual(r.errores,[]);assert.equal(r.totales.obligaciones,3);assert.equal(r.totales.tiendas,1)});
+test('La frecuencia diaria genera siete dias',()=>{const r=proyectarBorradorD2(p({frecuencia:'diaria'}),tiendas);assert.equal(r.totales.obligaciones,7)});
+test('Dos tiendas y tres dias generan seis obligaciones',()=>{const r=proyectarBorradorD2(p({tiendasElegidas:['minka','otra']}),tiendas);assert.equal(r.totales.obligaciones,6)});
+test('La ventana solo genera una obligacion por tienda',()=>{const r=proyectarBorradorD2(p({frecuencia:'ventana'}),tiendas);assert.equal(r.totales.obligaciones,1)});
+test('El horario especial se conserva en la asignacion',()=>{assert.equal(p({horasPorTienda:{minka:'08:30'}}).asignaciones[0].horaCorte,'08:30')});
+test('Sin tiendas elegidas no hay programacion valida',()=>{assert.ok(proyectarBorradorD2(p({tiendasElegidas:[]}),tiendas).errores.length)});
+test('No se aceptan duraciones mayores a un ano',()=>{assert.ok(proyectarBorradorD2(p({fin:'2028-01-01'}),tiendas).errores.some(s=>s.includes('366')))});
+test('Semana comercial fija, noviembre 16-22 cruza S3 y S4',()=>{const r=proyectarBorradorD2(p({frecuencia:'diaria'}),tiendas);assert.deepEqual(r.totales.porSemana,[['2026-11 · S3',6],['2026-11 · S4',1]])});
+test('Frecuencia mensual toma dias indicados',()=>{const r=proyectarBorradorD2(p({inicio:'2026-11-01',fin:'2026-11-30',frecuencia:'mensual',fechas:'5,15,25'}),tiendas);assert.equal(r.totales.obligaciones,3)});
+test('Fecha unica genera una obligacion',()=>{const r=proyectarBorradorD2(p({frecuencia:'unica'}),tiendas);assert.equal(r.totales.obligaciones,1)});
+test('No se inventa evidencia ni puntaje de cumplimiento',()=>{const r=proyectarBorradorD2(p(),tiendas);assert.equal(r.obligaciones.every(o=>o.obtenidos===0),true)});
