@@ -16,6 +16,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 /* ET_TIENDAS_1_5_FORMULARIO_LIMPIO_20260614 */
 import React from "react";
 import { db } from "./firebase";
+import { analizarD2Shadow } from "./analisisShadowD2.mjs";
 /* ET_ODT_FINAL_FIX_20260608_2335: reporte lee localStorage en vivo, Outlook compose directo, ErrorBoundary SVG */
 import {
   collection, doc, onSnapshot,
@@ -1050,6 +1051,9 @@ function ChecklistApp() {
   const [reporteDia,setReporteDia] = useState("Todos");
   const [tiendas, setTiendas] = useState([]);
   const [acts,    setActs]    = useState(ACTIVIDADES_INIT);
+  // D2 SHADOW: programaciones explicitas; lectura aislada, sin impactar score historico.
+  const [programacionesD2Shadow,setProgramacionesD2Shadow] = useState([]);
+  const [estadoProgramacionesD2Shadow,setEstadoProgramacionesD2Shadow] = useState('sin_iniciar');
   const [regs,    setRegs]    = useState({});
   const [exceps,  setExceps]  = useState({});
   /* ── registro flow ── */
@@ -1806,6 +1810,35 @@ function ChecklistApp() {
     const interval=setInterval(check,30000); // revisa cada 30 seg
     return()=>clearInterval(interval);
   },[]);
+
+  // D2 SHADOW - escucha solo lectura. No modifica config/app ni registra nuevas evidencias.
+  // La coleccion puede estar vacia o carecer de permisos. No se ejecuta antes del login admin.
+  useEffect(()=>{
+    if(role!=="admin"){
+      setProgramacionesD2Shadow([]);
+      setEstadoProgramacionesD2Shadow('sin_iniciar');
+      return;
+    }
+    setEstadoProgramacionesD2Shadow('cargando');
+    const unsub=onSnapshot(collection(db,"programaciones_evidencias_d2"),snap=>{
+      const items=[];
+      snap.forEach(d=>items.push({id:d.id,...d.data()}));
+      setProgramacionesD2Shadow(items);
+      setEstadoProgramacionesD2Shadow('listo');
+    },err=>{
+      console.warn('[D2 Shadow] Lectura no disponible:',err?.code||'error');
+      setProgramacionesD2Shadow([]);
+      setEstadoProgramacionesD2Shadow('no_disponible');
+    });
+    return ()=>unsub();
+  },[role]);
+  // Diagnostico paralelo. NO aporta datos al Reporte o Dashboard oficiales.
+  const diagnosticoD2Shadow=useMemo(()=>{
+    const ahora=new Date();
+    const f=`${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    const h=`${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}`;
+    return analizarD2Shadow({tiendas,actividades:acts,programaciones:programacionesD2Shadow,fechaHoraConsulta:`${f}T${h}`});
+  },[tiendas,acts,programacionesD2Shadow]);
 
   /* ── cálculos KPI ── */
   // Bug 2+5 fix: actsConRegistroIds con fallback al docId para registros legacy sin .fecha
@@ -6670,6 +6703,15 @@ function ChecklistApp() {
             <div style={{fontWeight:800,fontSize:14,color:"#1a2f4a"}}>Actividades</div>
             <button onClick={()=>setShowNA(!showNA)} style={{padding:"8px 14px",borderRadius:9,border:"none",background:"#6c5ce7",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:12}}>＋ Nueva</button>
           </div>
+          {isAdmin&&(
+            <div style={{...S.card,padding:12,marginBottom:12,borderLeft:"4px solid #6c5ce7"}}>
+              <div style={{fontWeight:800,fontSize:12,color:"#1a2f4a"}}>D2 · Diagnóstico paralelo (solo lectura)</div>
+              <div style={{fontSize:11,color:"#5a7a9a",marginTop:6,lineHeight:1.7}}>
+                Fuente: programaciones_evidencias_d2 · Estado: {estadoProgramacionesD2Shadow} · Programaciones: {diagnosticoD2Shadow.conteos.programaciones} · Obligaciones teóricas: {diagnosticoD2Shadow.conteos.obligaciones} · Definiciones inválidas: {diagnosticoD2Shadow.conteos.errores} · Alertas de maestros: {diagnosticoD2Shadow.diagnostico.avisos.length}.
+              </div>
+              <div style={{fontSize:10,color:"#a56d10",marginTop:4}}>No homologa evidencias antiguas, no calcula puntajes oficiales ni modifica Firebase. Un catálogo de actividades por sí solo no crea programación D2.</div>
+            </div>
+          )}
           {showNA&&(
             <div style={{...S.card,padding:"14px",marginBottom:14}}>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
