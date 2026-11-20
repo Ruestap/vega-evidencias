@@ -2,6 +2,7 @@ import React, {useMemo,useState} from 'react';
 import {collection,doc,setDoc} from 'firebase/firestore';
 import { db } from './firebase';
 import {armarBorradorD2,escuelas,NOMBRES_DIAS,proyectarBorradorD2} from './modeloProgramacionesD2.mjs';
+import {prevalidarActivacionD2} from './prevalidacionActivacionD2.mjs';
 
 const hoy=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const ST={campo:{width:'100%',boxSizing:'border-box',padding:'9px 10px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:12,background:'#fff',color:'#1a2f4a'},tarjeta:{padding:16,background:'#fff',borderRadius:12,border:'1px solid #e2e8f0',marginBottom:12},rotulo:{display:'block',fontSize:11,fontWeight:700,color:'#5a7a9a',marginBottom:5}};
@@ -27,6 +28,8 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
  const act=actividades.find(a=>String(a.id)===actividadId);
  const borrador=useMemo(()=>armarBorradorD2({actividad:act,descripcion,inicio,fin,frecuencia,diasSemana:dias,fechas,horaCorte:hora,tiendasElegidas:seleccion,horasPorTienda:horas,puntos:Number(puntos)}),[act,descripcion,inicio,fin,frecuencia,dias,fechas,hora,seleccion,horas,puntos]);
  const previa=useMemo(()=>proyectarBorradorD2(borrador,tiendas),[borrador,tiendas]);
+ const consultaLocal=useMemo(()=>{const d=new Date(),pad=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;},[]);
+ const revision=useMemo(()=>prevalidarActivacionD2({propuesta:borrador,tiendas,programaciones,fechaHoraConsulta:consultaLocal}),[borrador,tiendas,programaciones,consultaLocal]);
  const cambios=filtradas.map(t=>t.id);
  const todosVisibles=cambios.length>0&&cambios.every(id=>seleccion.includes(id));
  const toggle=id=>setSeleccion(prev=>prev.includes(id)?prev.filter(v=>v!==id):[...prev,id]);
@@ -80,6 +83,13 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
       <div style={{fontSize:11,fontWeight:700,marginBottom:5}}>Cortes semanales fijos: S1 (1–7), S2 (8–14), S3 (15–21), S4 (22–28), S5 (29–fin)</div>
       <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>{previa.totales.porSemana.map(([k,n])=><span key={k} style={{padding:'6px 10px',background:'#f0edff',borderRadius:8,fontSize:11,color:'#6c5ce7',fontWeight:700}}>{k}: {n}</span>)}</div>
     </>}
+  </div>
+  <div style={{...ST.tarjeta,borderLeft:`4px solid ${revision.listoParaRevision?'#089981':'#f59e0b'}`}}>
+    <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>Prevalidación para revisión (solo lectura)</div>
+    <div style={{fontSize:12,fontWeight:750,color:revision.listoParaRevision?'#047857':'#b45309',marginBottom:6}}>{revision.listoParaRevision?'Lista para revisión administrativa':'Revisión bloqueada: corregir los puntos indicados'}</div>
+    {revision.errores.map((e,i)=><div key={`error-${i}`} style={{fontSize:11,color:'#b45309',padding:'3px 0'}}>• {e}</div>)}
+    {revision.avisos.map((e,i)=><div key={`aviso-${i}`} style={{fontSize:11,color:'#64748b',padding:'3px 0'}}>• {e}</div>)}
+    <div style={{fontSize:11,color:'#64748b',marginTop:7}}>No activa programaciones, no escribe en Firebase y no sustituye la aprobación ni el control de permisos.</div>
   </div>
   <div style={{...ST.tarjeta}}><div style={{fontSize:13,fontWeight:800,marginBottom:10}}>Borradores almacenados ({programaciones.filter(p=>p.estado==='borrador').length})</div>{programaciones.filter(p=>p.estado==='borrador').slice(0,15).map(p=><div key={p.id} style={{fontSize:11,padding:'7px 0',borderBottom:'1px solid #f1f5f9'}}><b>{p.actividadNombre||p.actividadId}</b> · {p.inicio} a {p.fin} · {(p.alcance?.tiendaIds||[]).length} tiendas <span style={{color:'#a56d10'}}>· BORRADOR</span></div>)}{!programaciones.some(p=>p.estado==='borrador')&&<div style={{fontSize:11,color:'#64748b'}}>No hay borradores guardados en Firebase.</div>}</div>
   <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><button onClick={guardar} disabled={!habilitado||guardando||previa.errores.length>0} style={{padding:'11px 18px',borderRadius:9,border:'none',background:!habilitado||previa.errores.length?'#cbd5e1':'#6c5ce7',color:'#fff',fontWeight:800,cursor:'pointer'}}>{guardando?'Guardando…':'Guardar como borrador D2'}</button><span style={{fontSize:11,color:'#b45309'}}>Solo administrador. Guarda en Firebase compartido; NO activa la programación ni afecta la eficiencia oficial.</span></div>
