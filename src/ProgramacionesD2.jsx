@@ -3,6 +3,7 @@ import {collection,doc,setDoc} from 'firebase/firestore';
 import { db } from './firebase';
 import {armarBorradorD2,escuelas,NOMBRES_DIAS,proyectarBorradorD2} from './modeloProgramacionesD2.mjs';
 import {prevalidarActivacionD2} from './prevalidacionActivacionD2.mjs';
+import {prepararPlanActivacionD2} from './planActivacionD2.mjs';
 
 const hoy=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const ST={campo:{width:'100%',boxSizing:'border-box',padding:'9px 10px',borderRadius:8,border:'1px solid #cbd5e1',fontSize:12,background:'#fff',color:'#1a2f4a'},tarjeta:{padding:16,background:'#fff',borderRadius:12,border:'1px solid #e2e8f0',marginBottom:12},rotulo:{display:'block',fontSize:11,fontWeight:700,color:'#5a7a9a',marginBottom:5}};
@@ -23,6 +24,7 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
  const [buscar,setBuscar]=useState('');
  const [guardando,setGuardando]=useState(false);
  const [mensaje,setMensaje]=useState('');
+ const [mostrarPlan,setMostrarPlan]=useState(false);
  const maestras=useMemo(()=>escuelas(tiendas),[tiendas]);
  const filtradas=useMemo(()=>maestras.filter(t=>(formato==='Todas'||t.formatoId===formato)&&(zona==='Todas'||String(t.zonaId)===zona)&&(`${t.nombre} ${t.codigoTienda||''}`).toUpperCase().includes(buscar.toUpperCase())),[maestras,formato,zona,buscar]);
  const act=actividades.find(a=>String(a.id)===actividadId);
@@ -30,6 +32,7 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
  const previa=useMemo(()=>proyectarBorradorD2(borrador,tiendas),[borrador,tiendas]);
  const consultaLocal=useMemo(()=>{const d=new Date(),pad=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;},[]);
  const revision=useMemo(()=>prevalidarActivacionD2({propuesta:borrador,tiendas,programaciones,fechaHoraConsulta:consultaLocal}),[borrador,tiendas,programaciones,consultaLocal]);
+ const plan=useMemo(()=>prepararPlanActivacionD2({propuesta:borrador,tiendas,programaciones,fechaHoraConsulta:consultaLocal}),[borrador,tiendas,programaciones,consultaLocal]);
  const cambios=filtradas.map(t=>t.id);
  const todosVisibles=cambios.length>0&&cambios.every(id=>seleccion.includes(id));
  const toggle=id=>setSeleccion(prev=>prev.includes(id)?prev.filter(v=>v!==id):[...prev,id]);
@@ -90,6 +93,23 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
     {revision.errores.map((e,i)=><div key={`error-${i}`} style={{fontSize:11,color:'#b45309',padding:'3px 0'}}>• {e}</div>)}
     {revision.avisos.map((e,i)=><div key={`aviso-${i}`} style={{fontSize:11,color:'#64748b',padding:'3px 0'}}>• {e}</div>)}
     <div style={{fontSize:11,color:'#64748b',marginTop:7}}>No activa programaciones, no escribe en Firebase y no sustituye la aprobación ni el control de permisos.</div>
+  </div>
+  <div style={{...ST.tarjeta,borderLeft:'4px solid #6c5ce7'}}>
+    <div style={{fontWeight:800,fontSize:14,marginBottom:8}}>Plan de activación · simulación sin guardado</div>
+    <p style={{fontSize:11,color:'#64748b',lineHeight:1.6}}>Este análisis identifica el impacto por tienda y periodo. No aprueba, no activa, no registra evidencias ni cambia la eficiencia oficial.</p>
+    <button type='button' onClick={()=>setMostrarPlan(p=>!p)} style={{padding:'9px 13px',borderRadius:8,border:'1px solid #b9a9fa',background:'#f3f0ff',color:'#5943bd',fontWeight:750,cursor:'pointer'}}>{mostrarPlan?'Ocultar análisis':'Ver plan de activación (simulación)'}</button>
+    {mostrarPlan&&<div style={{marginTop:12}}>
+      <div style={{fontWeight:800,color:plan.estado==='bloqueado'?'#b45309':'#047857',fontSize:12,marginBottom:8}}>{plan.estado==='bloqueado'?'Revisión bloqueada':'Apta para solicitar revisión (NO aprobada)'}</div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:18,fontSize:12,marginBottom:12}}>{[['Obligaciones',plan.resumen.obligaciones],['Tiendas',plan.resumen.tiendas],['Puntos máximos',plan.resumen.puntosMaximos],['Fechas anteriores',plan.resumen.anteriores],['Hoy',plan.resumen.hoy],['Futuras',plan.resumen.futuras]].map(([k,v])=><div key={k}><b style={{fontSize:18}}>{v}</b><div style={{color:'#64748b',fontSize:10}}>{k}</div></div>)}</div>
+      {plan.errores.map((e,i)=><div key={`bloq-${i}`} style={{color:'#b45309',fontSize:11,padding:'3px 0'}}>• {e}</div>)}
+      {plan.avisos.map((a,i)=><div key={`adv-${i}`} style={{color:'#64748b',fontSize:11,padding:'3px 0'}}>• {a}</div>)}
+      <div style={{fontWeight:750,fontSize:12,marginTop:10}}>Por tienda</div>
+      <div style={{maxHeight:200,overflowY:'auto',border:'1px solid #e2e8f0',borderRadius:8}}>{plan.porTienda.length?plan.porTienda.map(t=><div key={t.tiendaId} style={{padding:'7px 10px',fontSize:11,borderBottom:'1px solid #f1f5f9'}}>Tienda #{t.tiendaId}: <b>{t.obligaciones}</b> implementaciones · {t.puntosMaximos} puntos posibles · {t.primerDia} a {t.ultimoDia}</div>):<div style={{padding:10,fontSize:11}}>No hay obligaciones proyectadas.</div>}</div>
+      <div style={{fontWeight:750,fontSize:12,marginTop:10}}>Por semana (S1–S5)</div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:5}}>{plan.porSemana.map(t=><span key={t.periodo} style={{padding:'6px 9px',borderRadius:7,background:'#eeeafe',color:'#5943bd',fontSize:11}}>{t.periodo}: {t.obligaciones} · {t.puntosMaximos} pts</span>)}</div>
+      <div style={{fontSize:11,fontWeight:750,marginTop:13}}>Requisitos pendientes para una activación real</div>
+      {plan.controlRequerido.map((r,i)=><div key={i} style={{fontSize:11,color:'#64748b',padding:'2px 0'}}>• {r}</div>)}
+    </div>}
   </div>
   <div style={{...ST.tarjeta}}><div style={{fontSize:13,fontWeight:800,marginBottom:10}}>Borradores almacenados ({programaciones.filter(p=>p.estado==='borrador').length})</div>{programaciones.filter(p=>p.estado==='borrador').slice(0,15).map(p=><div key={p.id} style={{fontSize:11,padding:'7px 0',borderBottom:'1px solid #f1f5f9'}}><b>{p.actividadNombre||p.actividadId}</b> · {p.inicio} a {p.fin} · {(p.alcance?.tiendaIds||[]).length} tiendas <span style={{color:'#a56d10'}}>· BORRADOR</span></div>)}{!programaciones.some(p=>p.estado==='borrador')&&<div style={{fontSize:11,color:'#64748b'}}>No hay borradores guardados en Firebase.</div>}</div>
   <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><button onClick={guardar} disabled={!habilitado||guardando||previa.errores.length>0} style={{padding:'11px 18px',borderRadius:9,border:'none',background:!habilitado||previa.errores.length?'#cbd5e1':'#6c5ce7',color:'#fff',fontWeight:800,cursor:'pointer'}}>{guardando?'Guardando…':'Guardar como borrador D2'}</button><span style={{fontSize:11,color:'#b45309'}}>Solo administrador. Guarda en Firebase compartido; NO activa la programación ni afecta la eficiencia oficial.</span></div>

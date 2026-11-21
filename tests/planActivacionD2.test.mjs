@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { prepararPlanActivacionD2 } from '../src/planActivacionD2.mjs';
+const tiendas=[{id:'minka',n:'Minka Cash',f:'Supermayorista',fechaApertura:'2020-01-01'},{id:'nueva',n:'Tienda Nueva',f:'Market',fechaApertura:'2026-12-01'}];
+const base={id:'previa',actividadId:'grid',tipo:'Promocional',objetoEvaluacion:'Grid en góndola',inicio:'2026-11-23',fin:'2026-11-27',frecuencia:'semanal',diasSemana:[1,2,3,4,5],horaCorte:'10:30',alcance:{tiendaIds:['minka']},asignaciones:[{tiendaId:'minka'}],entregables:[{id:'implementacion',nombre:'Grid',puntosMaximos:10}],estado:'borrador',activo:false};
+const correr=(propuesta=base,programaciones=[],fechaHoraConsulta='2026-11-19T14:00')=>prepararPlanActivacionD2({propuesta,tiendas,programaciones,fechaHoraConsulta});
+test('Minka 5 obligaciones en S4 con 50 puntos, solo simulacion',()=>{const r=correr();assert.equal(r.resumen.obligaciones,5);assert.equal(r.resumen.puntosMaximos,50);assert.equal(r.resumen.tiendas,1);assert.equal(r.porSemana[0].periodo,'2026-11 · S4');assert.equal(r.porSemana[0].obligaciones,5);assert.equal(r.estado,'apto_para_solicitar_revision');assert.equal(r.puedeActivarse,false);assert.equal(r.soloSimulacion,true);});
+test('Obligaciones futuras no generan penalizacion',()=>{const r=correr();assert.deepEqual([r.resumen.anteriores,r.resumen.hoy,r.resumen.futuras],[0,0,5]);assert.equal(r.puedeModificarPuntajes,false);});
+test('No inventa obligaciones para tienda sin apertura',()=>{const r=correr({...base,alcance:{tiendaIds:['nueva']},asignaciones:[{tiendaId:'nueva'}]});assert.equal(r.estado,'bloqueado');assert.equal(r.resumen.obligaciones,0);});
+test('Programacion activa igual provoca bloqueo sin escribir',()=>{const r=correr(base,[{...base,id:'existente',activo:true,estado:'activa'}]);assert.equal(r.estado,'bloqueado');assert.equal(r.puedeActivarse,false);assert.ok(r.errores.some(e=>e.includes('duplicidad')));});
+test('Otra actividad puede coexistir con Grid',()=>{const r=correr(base,[{...base,id:'existente',actividadId:'otra',activo:true,estado:'activa'}]);assert.equal(r.estado,'apto_para_solicitar_revision');});
+test('Dos tiendas, dos fechas, puntos agrupados separadamente',()=>{const p={...base,inicio:'2026-11-23',fin:'2026-11-24',alcance:{tiendaIds:['minka','nueva']},asignaciones:[{tiendaId:'minka'},{tiendaId:'nueva'}]};const r=correr(p);assert.equal(r.resumen.tiendas,1);assert.equal(r.resumen.obligaciones,2);assert.equal(r.resumen.puntosMaximos,20);});
+test('Fechas pasadas identificadas con aviso',()=>{const r=correr({...base,inicio:'2026-11-16',fin:'2026-11-20'});assert.equal(r.resumen.anteriores,3);assert.equal(r.resumen.hoy,1);assert.equal(r.resumen.futuras,1);assert.ok(r.avisos.some(x=>x.includes('retroactivamente')));});
+test('Ventana genera una obligacion por tienda',()=>{const r=correr({...base,frecuencia:'ventana'});assert.equal(r.resumen.obligaciones,1);});
+test('Programacion sin tiendas es bloqueada y no tiene puntos posibles',()=>{const r=correr({...base,alcance:{tiendaIds:[]},asignaciones:[]});assert.equal(r.estado,'bloqueado');assert.equal(r.resumen.puntosMaximos,0);});
+test('Resultado enumera controles de aprobacion y auditoria faltantes',()=>{const r=correr();assert.ok(r.controlRequerido.some(x=>x.includes('auditoria')));assert.equal(r.puedeActivarse,false);});
