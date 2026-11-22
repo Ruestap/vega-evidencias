@@ -5411,7 +5411,7 @@ function ChecklistApp() {
         ];
         // Sub-sección activa para el breadcrumb — espejo liviano de EV_TABS/audTabs (sin duplicar su render).
         const cfgSubLabel = cfgMod==="evidencias"
-          ? ({1:"Actividades",4:"Rangos Día",5:"Cortes",6:"Programaciones D2"}[cfgTab]||null)
+          ? ({1:"Actividades",4:"Rangos Día",5:"Cortes",6:"Programaciones"}[cfgTab]||null)
           : cfgMod==="auditoria"
           ? ({score:"Score",tareas:"Tareas",rutas:"Rutas"}[audCfgTab]||null)
           : null;
@@ -5481,7 +5481,7 @@ function ChecklistApp() {
             {cfgMod==="evidencias"&&(()=>{
               const EV_TABS=[
                 {i:1, label:"Actividades"},
-                {i:6, label:"Programaciones D2"},
+                {i:6, label:"Programaciones"},
                 {i:4, label:"Rangos Día"},
                 {i:5, label:"Cortes"},
               ];

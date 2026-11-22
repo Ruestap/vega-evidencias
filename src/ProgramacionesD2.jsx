@@ -1,5 +1,5 @@
 import React, {useMemo,useState} from 'react';
-import {collection,doc,setDoc} from 'firebase/firestore';
+import {collection,doc,setDoc,runTransaction} from 'firebase/firestore';
 import { db } from './firebase';
 import {armarBorradorD2,escuelas,NOMBRES_DIAS,proyectarBorradorD2} from './modeloProgramacionesD2.mjs';
 import {prevalidarActivacionD2} from './prevalidacionActivacionD2.mjs';
@@ -25,6 +25,7 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
  const [guardando,setGuardando]=useState(false);
  const [mensaje,setMensaje]=useState('');
  const [mostrarPlan,setMostrarPlan]=useState(false);
+ const [solicitandoId,setSolicitandoId]=useState('');
  const maestras=useMemo(()=>escuelas(tiendas),[tiendas]);
  const filtradas=useMemo(()=>maestras.filter(t=>(formato==='Todas'||t.formatoId===formato)&&(zona==='Todas'||String(t.zonaId)===zona)&&(`${t.nombre} ${t.codigoTienda||''}`).toUpperCase().includes(buscar.toUpperCase())),[maestras,formato,zona,buscar]);
  const act=actividades.find(a=>String(a.id)===actividadId);
@@ -48,9 +49,41 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
    }catch(e){console.error('[D2 Programaciones] Fallo guardado:',e?.code||'error');setMensaje('No se pudo guardar el borrador. Verifica los permisos de Firestore; no se cambio el calculo oficial.');}
    finally{setGuardando(false);}
  };
+  // P6: solicitud de revision, NO aprobacion ni activacion. Revalidar con datos actuales.
+  const solicitarRevision=async(p)=>{
+    if(!habilitado||solicitandoId||!p?.id||p.estado!=='borrador') return;
+    const chequeo=prevalidarActivacionD2({
+      propuesta:p,tiendas,programaciones:programaciones.filter(x=>String(x.id)!==String(p.id)),
+      fechaHoraConsulta:consultaLocal
+    });
+    if(!chequeo.listoParaRevision){
+      setMensaje('No se puede solicitar revision: '+(chequeo.errores||[]).join(' | '));
+      return;
+    }
+    if(!window.confirm('Solicitar REVISION del borrador '+(p.actividadNombre||p.actividadId||p.id)+'? No lo aprueba ni lo activa.'))return;
+    setSolicitandoId(p.id);
+    setMensaje('');
+    try {
+      await runTransaction(db,async tx=>{
+        const ref=doc(db,'programaciones_evidencias_d2',String(p.id));
+        const snap=await tx.get(ref);
+        if(!snap.exists()||snap.data().estado!=='borrador'||snap.data().activo===true)throw new Error('estado_desactualizado');
+        // Solo campos de revision. Se conserva intacta la definicion original.
+        tx.update(ref,{
+          estado:'en_revision',activo:false,
+          revisionSolicitadaPor:String(usuarioId||''),
+          revisionSolicitadaEn:new Date().toISOString()
+        });
+      });
+      setMensaje('Solicitud registrada: pendiente de revision. Sigue INACTIVA y sin impacto oficial.');
+    }catch(e){
+      console.warn('[D2] Solicitud de revision rechazada:',e?.code||e?.message||'error');
+      setMensaje('No se pudo solicitar revision. Comprueba permisos y estado del borrador.');
+    }finally{setSolicitandoId('');}
+  };
  return <div style={{padding:'14px 0',color:'#1a2f4a'}}>
   <div style={{...ST.tarjeta,borderLeft:'4px solid #6c5ce7'}}>
-    <div style={{fontWeight:800,fontSize:16}}>Programaciones D2 · Definir obligaciones</div>
+    <div style={{fontWeight:800,fontSize:16}}>Programaciones · Definir obligaciones</div>
     <p style={{fontSize:12,lineHeight:1.6,color:'#5a7a9a',marginBottom:0}}>Seleccione una actividad, defina qué se implementa, a qué tiendas corresponde y cuándo debe cumplirse. Los cálculos siguientes son una simulación; los indicadores oficiales de Registro, Reporte y Dashboard no cambian.</p>
   </div>
   <div style={ST.tarjeta}>
@@ -111,8 +144,19 @@ export default function ProgramacionesD2({actividades=[],tiendas=[],programacion
       {plan.controlRequerido.map((r,i)=><div key={i} style={{fontSize:11,color:'#64748b',padding:'2px 0'}}>• {r}</div>)}
     </div>}
   </div>
-  <div style={{...ST.tarjeta}}><div style={{fontSize:13,fontWeight:800,marginBottom:10}}>Borradores almacenados ({programaciones.filter(p=>p.estado==='borrador').length})</div>{programaciones.filter(p=>p.estado==='borrador').slice(0,15).map(p=><div key={p.id} style={{fontSize:11,padding:'7px 0',borderBottom:'1px solid #f1f5f9'}}><b>{p.actividadNombre||p.actividadId}</b> · {p.inicio} a {p.fin} · {(p.alcance?.tiendaIds||[]).length} tiendas <span style={{color:'#a56d10'}}>· BORRADOR</span></div>)}{!programaciones.some(p=>p.estado==='borrador')&&<div style={{fontSize:11,color:'#64748b'}}>No hay borradores guardados en Firebase.</div>}</div>
-  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><button onClick={guardar} disabled={!habilitado||guardando||previa.errores.length>0} style={{padding:'11px 18px',borderRadius:9,border:'none',background:!habilitado||previa.errores.length?'#cbd5e1':'#6c5ce7',color:'#fff',fontWeight:800,cursor:'pointer'}}>{guardando?'Guardando…':'Guardar como borrador D2'}</button><span style={{fontSize:11,color:'#b45309'}}>Solo administrador. Guarda en Firebase compartido; NO activa la programación ni afecta la eficiencia oficial.</span></div>
+   <div style={{...ST.tarjeta}}>
+     <div style={{fontSize:13,fontWeight:800,marginBottom:10}}>Borradores y solicitudes ({programaciones.filter(p=>['borrador','en_revision'].includes(p.estado)).length})</div>
+     {programaciones.filter(p=>['borrador','en_revision'].includes(p.estado)).slice(0,30).map(p=>{
+       const r=p.estado==='borrador'?prevalidarActivacionD2({propuesta:p,tiendas,programaciones:programaciones.filter(x=>String(x.id)!==String(p.id)),fechaHoraConsulta:consultaLocal}):null;
+       return <div key={p.id} style={{display:'flex',flexWrap:'wrap',gap:8,alignItems:'center',padding:'9px 0',borderBottom:'1px solid #f1f5f9',fontSize:11}}>
+         <span style={{flex:'1 1 230px'}}><b>{p.actividadNombre||p.actividadId}</b> · {p.inicio} a {p.fin} · {(p.alcance?.tiendaIds||[]).length} tiendas · <b style={{color:p.estado==='en_revision'?'#047857':'#a56d10'}}>{p.estado==='en_revision'?'EN REVISIÓN':'BORRADOR'}</b></span>
+         {p.estado==='borrador'&&<button type='button' disabled={!habilitado||!!solicitandoId||!r?.listoParaRevision} onClick={()=>solicitarRevision(p)} title={!r?.listoParaRevision?(r?.errores||[]).join(' · '):'No aprueba ni activa'} style={{padding:'7px 10px',border:'1px solid #c8d8e8',borderRadius:8,background:r?.listoParaRevision?'#f0fdf4':'#f1f5f9',color:r?.listoParaRevision?'#047857':'#94a3b8',fontWeight:750,cursor:r?.listoParaRevision?'pointer':'not-allowed'}}>{solicitandoId===p.id?'Solicitando…':'Solicitar revisión'}</button>}
+       </div>;
+     })}
+     {!programaciones.some(p=>['borrador','en_revision'].includes(p.estado))&&<div style={{fontSize:11,color:'#64748b'}}>No hay borradores ni solicitudes de revisión.</div>}
+     <div style={{marginTop:9,fontSize:10,color:'#64748b'}}>P6: esta etapa registra solicitudes, nunca aprueba ni activa. La aprobación y los permisos deben verificarse con reglas de Firestore y una identidad autenticada.</div>
+   </div>
+  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><button onClick={guardar} disabled={!habilitado||guardando||previa.errores.length>0} style={{padding:'11px 18px',borderRadius:9,border:'none',background:!habilitado||previa.errores.length?'#cbd5e1':'#6c5ce7',color:'#fff',fontWeight:800,cursor:'pointer'}}>{guardando?'Guardando…':'Guardar como borrador'}</button><span style={{fontSize:11,color:'#b45309'}}>Solo administrador. Guarda en Firebase compartido; NO activa la programación ni afecta la eficiencia oficial.</span></div>
   {mensaje&&<div role='status' style={{padding:12,marginTop:10,background:'#f0fdf4',borderRadius:9,fontSize:12,color:'#166534'}}>{mensaje}</div>}
  </div>;
 }
